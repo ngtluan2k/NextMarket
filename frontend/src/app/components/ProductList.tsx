@@ -6,7 +6,7 @@ interface Product {
   id: number;
   uuid: string;
   name: string;
-  price: number;
+  base_price: number;
   image?: string;
 }
 
@@ -47,7 +47,7 @@ export const ProductList: React.FC = () => {
           <div key={product.id} className="col-6 col-md-3">
             <ProductCard
               name={product.name}
-              price={product.price}
+              base_price={product.base_price}
               image={product.image}
             />
           </div>
