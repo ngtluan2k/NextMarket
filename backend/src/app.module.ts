@@ -10,13 +10,15 @@ import { RoleModule } from './modules/role/role.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RolePermissionModule } from './modules/role-permission/role-permission.module';
 import { UserRoleModule } from './modules/user-role/user-role.module';
+import { StoreRating } from './modules/store-rating/store-rating.entity';
+
 
 @Module({
   imports: [
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
-      envFilePath: './config/.env',
+      
     }),
 
     // Cấu hình DB dùng ConfigService
@@ -28,7 +30,7 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
         host: configService.get<string>('DB_HOST'),
         port: configService.get<number>('DB_PORT'),
         username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
+        password: configService.get<string>('DB_PASSWORD') ?? '',
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: false, //change to true if you want to start server;
@@ -38,6 +40,7 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
     ProductModule,
     UserModule,
     CategoryModule,
+    StoreRating,
     StoreModule,
     BrandModule,
     RoleModule,
