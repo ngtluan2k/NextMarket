@@ -7,7 +7,8 @@ import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiBearerAuth } from '@nestjs/swagger';
-
+import { CreateProductDto } from './dto/create-product.dto';
+import { Req } from '@nestjs/common';
 @ApiBearerAuth('access-token')
 @ApiTags('products')
 @Controller('products')
@@ -36,26 +37,29 @@ export class ProductController {
 
   @Post()
   @Permissions('create_product')
-  async create(@Body() body: Partial<Product>) {
-    const product = await this.productService.create(body);
-    return {
-      message: 'Tạo sản phẩm thành công',
-      data: product,
-    };
+  async create(@Body() dto: CreateProductDto, @Req() req: any) {
+    const userId = req.user.id; // JWT payload đã decode
+    return this.productService.createProduct(dto, userId);
   }
 
-  @Put(':id')
-  @Permissions('update_product')
-  async update(@Param('id') id: number,@Body()dto: UpdateProductDto){
-    const data = await this.productService.update(id,dto)
-    return data
+@Put(':id')
+@Permissions('update_product')
+async update(
+  @Param('id') id: number,
+  @Body() dto: UpdateProductDto,
+  @Req() req: any,
+) {
+  const userId = req.user.id; // lấy từ JWT payload
+  return this.productService.update(id, dto, userId);
+}
 
-  }
 
   @Delete(':id')
   @Permissions('delete_product')
   async remove(@Param('id') id :number){
     await this.productService.remove(id)
-    return id
-  }
+  return {
+    message: 'Xóa sản phẩm thành công',
+  };  
+}
 }

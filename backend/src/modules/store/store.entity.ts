@@ -1,5 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated, BeforeInsert } from 'typeorm';
 import { User } from '../user/user.entity';
+import { OneToMany } from 'typeorm';
+import { Product } from '../product/product.entity';
 
 @Entity('stores')
 export class Store {
@@ -43,4 +45,7 @@ setDefaultStatus() {
 
   @Column({ type: 'datetime', nullable: true })
   updated_at!: Date;
+
+ @OneToMany(() => Product, product => product.store)
+  products!: Product[];   // <-- thêm dòng này
 }

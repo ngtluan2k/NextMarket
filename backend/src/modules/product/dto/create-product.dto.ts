@@ -1,22 +1,14 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+// src/modules/product/dto/create-product.dto.ts
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateProductDto {
   @IsNotEmpty()
   @IsString()
   name!: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  slug?: string;
-
-  @IsOptional()
-  store_id?: number;
-
-  @IsOptional()
-  brand_id?: number;
-
-  @IsOptional()
-  category_id?: number;
+  slug!: string;
 
   @IsOptional()
   @IsString()
@@ -26,11 +18,19 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
-  base_price?: number;
+  base_price!: number;
 
   @IsOptional()
   @IsString()
   status?: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  brandId!: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  categoryId!: number;
 }

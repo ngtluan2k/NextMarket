@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Product } from '../product/product.entity';
 
 @Entity('categories')
 export class Category {
@@ -29,4 +30,7 @@ export class Category {
 
   @Column({ type: 'datetime', nullable: true })
   created_at!: Date;
+
+    @OneToMany(() => Product, product => product.category)
+  products!: Product[];   // <-- thêm dòng này
 }
