@@ -9,6 +9,7 @@ import { message } from 'antd';
 // import EveryMartHeader from './components/Navbar';
 import Home from './page/Home';
 import CategoryPage from './page/CategoryPage';
+import SellerMainLayout from './page/Seller/MainLayout';
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -37,6 +38,7 @@ const App: React.FC = () => {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="*" element={<Navigate to="/" />} />
           <Route path="/cart" element={<Cart showMessage={showMessage}/>} />
+           <Route path="/test" element={<SellerMainLayout />} />
         </Routes>
       </CartProvider>
       ?

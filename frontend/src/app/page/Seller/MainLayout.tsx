@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Layout } from 'antd';
 import Sidebar from '../../components/seller/Sidebar';
-import SellerDashboard from './subpage/SellerDashboard';
-import Sale from './subpage/Sale';
-import Customer from './subpage/Customer';
-import Setting from './subpage/Setting';
-import Invoice from './subpage/Invoice';
-import Teams from './subpage/Teams';
-import StoreInventory from './subpage/StoreInventory';
+import SellerDashboard from './tab/SellerDashboard';
+import Sale from './tab/Sale';
+import Customer from './tab/Customer';
+import Setting from './tab/Setting';
+import Invoice from './tab/Invoice';
+import Teams from './tab/Teams';
+import StoreInventory from './tab/StoreInventory';
 const { Content, Footer } = Layout;
 
 const pages: Record<string, React.ReactNode> = {
