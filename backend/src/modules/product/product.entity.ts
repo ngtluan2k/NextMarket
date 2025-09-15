@@ -52,10 +52,6 @@ export class Product {
   @UpdateDateColumn()
   updated_at!: Date;
 
-<<<<<<< HEAD
-  @OneToMany(() => ProductMedia, media => media.product)
-  media!: ProductMedia[];
-=======
   // === Relations thêm vào ===
 @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
 categories!: ProductCategory[];
@@ -69,5 +65,4 @@ categories!: ProductCategory[];
 
   @OneToMany(() => PricingRules, pr => pr.product)
   pricing_rules!: PricingRules[];
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
 }

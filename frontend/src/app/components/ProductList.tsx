@@ -42,7 +42,6 @@ export const ProductList: React.FC = () => {
     });
   };
 
-  useEffect(() => {
 const fetchProducts = async () => {
   try {
     const token = localStorage.getItem("token");
@@ -134,7 +133,7 @@ const fetchProducts = async () => {
                   price={product.price}
                   image={product.image}
                   productId={product.id}
-                  onAddToCart={handleAddToCart}
+                  onAddToCart={addToCart}
                   showMessage={showMessage}
                 />
               </Col>
