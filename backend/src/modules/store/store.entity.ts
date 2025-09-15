@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated, BeforeInsert } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, Generated, OneToOne, UpdateDateColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../user/user.entity';
 
 @Entity('stores')
@@ -13,7 +13,7 @@ export class Store {
   @Column()
   user_id!: number;
 
-  @ManyToOne(() => User, (user) => user.id)
+  @OneToOne(() => User, (user) => user.id)
   @JoinColumn({ name: 'user_id' })
   owner!: User;
 
@@ -26,21 +26,22 @@ export class Store {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @Column({ length: 255, nullable: true })
-  logo_url!: string;
+  @Column({ length: 100, nullable: true })
+  email!: string;
 
-  @Column({ length: 255, default: 'ACTIVE' })
-  status!: string;
-  @BeforeInsert()
-setDefaultStatus() {
-  if (!this.status) {
-    this.status = 'ACTIVE';
-  }
-}
+  @Column({ length: 20, nullable: true })
+  phone!: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({
+    type: 'enum',
+    enum: ['active', 'inactive', 'suspended', 'closed'],
+    default: 'inactive',
+  })
+  status!: 'active' | 'inactive' | 'suspended' | 'closed';
+
+  @CreateDateColumn({ type: 'datetime'})
   created_at!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
 }

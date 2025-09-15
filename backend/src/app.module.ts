@@ -13,6 +13,7 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
 import { ProductCollectionModule } from './modules/product_collection/product_collection.module';
+import { StoreRating } from './modules/store-rating/store-rating.entity';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ProductCollectionModule } from './modules/product_collection/product_co
     ProductModule,
     UserModule,
     CategoryModule,
+    StoreRating,
     StoreModule,
     BrandModule,
     RoleModule,
