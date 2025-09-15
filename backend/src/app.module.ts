@@ -10,6 +10,7 @@ import { RoleModule } from './modules/role/role.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RolePermissionModule } from './modules/role-permission/role-permission.module';
 import { UserRoleModule } from './modules/user-role/user-role.module';
+<<<<<<< HEAD
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
 import { StoreRating } from './modules/store-rating/store-rating.entity';
@@ -19,6 +20,10 @@ import { VariantModule } from './modules/variant/variant.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
 
+=======
+import { VouchersModule } from './modules/vouchers/vouchers.module';
+import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module';
+>>>>>>> 0854cfc6fc670a18f75720a1d3bf4a4e46b43619
 @Module({
   imports: [
     // Đọc file .env
@@ -60,6 +65,7 @@ import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
     PermissionModule,
     RolePermissionModule,
     UserRoleModule,
+<<<<<<< HEAD
     CartModule,
     ProductCategoryModule,
     ProductMediaModule,
@@ -67,5 +73,10 @@ import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
     InventoryModule,
     PricingRuleModule,
   ],
+=======
+    VouchersModule,
+    VoucherUsageModule,
+  ]
+>>>>>>> 0854cfc6fc670a18f75720a1d3bf4a4e46b43619
 })
 export class AppModule {}
