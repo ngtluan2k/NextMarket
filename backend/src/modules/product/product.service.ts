@@ -19,10 +19,6 @@ export class ProductService {
     private readonly dataSource: DataSource,
   ) {}
 
-<<<<<<< HEAD
-   async findAll() {
-    return this.repo.find({ relations: ['media'] });
-=======
   async saveProduct(dto: CreateProductDto, userId: number, status: 'draft' | 'active') {
     return this.dataSource.transaction(async manager => {
     const store = await manager.findOne(Store, { where: { user_id: userId } });
@@ -100,7 +96,6 @@ await manager.save(product);
   uuid: require('uuid').v4(),
 });
 
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
   }
 }
 

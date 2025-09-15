@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Product } from './product.entity';
-import { ProductMedia } from './product-media.entity';
 import { ProductService } from './product.service';
 import { ProductController } from './product.controller';
 import { Store } from '../store/store.entity';
@@ -18,9 +17,6 @@ import { ProductCategory } from '../product_category/product_category.entity';
 import { ProductCategoryModule } from '../product_category/product_category.module';
 
 @Module({
-<<<<<<< HEAD
-  imports: [TypeOrmModule.forFeature([Product, ProductMedia])],
-=======
   imports: [
     TypeOrmModule.forFeature([
       Product,
@@ -37,7 +33,6 @@ import { ProductCategoryModule } from '../product_category/product_category.modu
     forwardRef(() => PricingRuleModule),
     forwardRef(() => ProductCategoryModule),
   ],
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],
   exports: [ProductService, ProductPublishService],

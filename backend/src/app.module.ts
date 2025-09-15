@@ -12,16 +12,12 @@ import { RolePermissionModule } from './modules/role-permission/role-permission.
 import { UserRoleModule } from './modules/user-role/user-role.module';
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
-<<<<<<< HEAD
-import { ProductCollectionModule } from './modules/product_collection/product_collection.module';
 import { StoreRating } from './modules/store-rating/store-rating.entity';
-=======
 import { ProductCategoryModule } from './modules/product_category/product_category.module';
 import { ProductMediaModule } from './modules/product_media/product_media.module';
 import { VariantModule } from './modules/variant/variant.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
 
 @Module({
   imports: [
@@ -64,16 +60,12 @@ import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
     PermissionModule,
     RolePermissionModule,
     UserRoleModule,
-<<<<<<< HEAD
-    ProductCollectionModule,
     CartModule,
-=======
     ProductCategoryModule,
     ProductMediaModule,
     VariantModule,
     InventoryModule,
     PricingRuleModule,
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
   ],
 })
 export class AppModule {}

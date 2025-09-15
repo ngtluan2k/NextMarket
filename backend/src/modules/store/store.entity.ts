@@ -46,11 +46,7 @@ export class Store {
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
-<<<<<<< HEAD
-}
-=======
 
  @OneToMany(() => Product, product => product.store)
   products!: Product[];   // <-- thêm dòng này
 }
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377

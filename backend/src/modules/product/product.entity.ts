@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { ProductMedia } from './product-media.entity';
-
-=======
 import { ProductCategory } from '../product_category/product_category.entity';
 import { ProductMedia } from '../product_media/product_media.entity';
 import { Variant } from '../variant/variant.entity';
@@ -10,7 +5,6 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { Store } from '../store/store.entity';
 import { Brand } from '../brands/brand.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, Generated, JoinColumn } from 'typeorm';
->>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
