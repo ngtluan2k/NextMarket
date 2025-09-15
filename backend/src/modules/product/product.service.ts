@@ -14,7 +14,7 @@ export class ProductService {
   ) {}
 
    async findAll() {
-    return this.repo.find();
+    return this.repo.find({ relations: ['media'] });
   }
    async findOne(id:number){
     const product = await this.repo.findOne({where :{id}})

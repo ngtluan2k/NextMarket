@@ -10,6 +10,7 @@ import { RoleModule } from './modules/role/role.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { RolePermissionModule } from './modules/role-permission/role-permission.module';
 import { UserRoleModule } from './modules/user-role/user-role.module';
+import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
 import { ProductCollectionModule } from './modules/product_collection/product_collection.module';
 
@@ -54,6 +55,7 @@ import { ProductCollectionModule } from './modules/product_collection/product_co
     RolePermissionModule,
     UserRoleModule,
     ProductCollectionModule,
+    CartModule,
   ],
 })
 export class AppModule {}

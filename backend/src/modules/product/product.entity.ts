@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { ProductMedia } from './product-media.entity';
 
 @Entity('products')
 export class Product {
@@ -40,4 +41,7 @@ export class Product {
 
   @Column({ type: 'datetime', nullable: true })
   updated_at!: Date;
+
+  @OneToMany(() => ProductMedia, media => media.product)
+  media!: ProductMedia[];
 }
