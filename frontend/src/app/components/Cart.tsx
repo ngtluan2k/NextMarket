@@ -125,6 +125,7 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                   </div>
                 </div>
 
+
                 <Divider />
 
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
