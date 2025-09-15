@@ -1,5 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, Generated, OneToOne, UpdateDateColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../user/user.entity';
+import { OneToMany } from 'typeorm';
+import { Product } from '../product/product.entity';
 
 @Entity('stores')
 export class Store {
@@ -44,4 +46,11 @@ export class Store {
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
+<<<<<<< HEAD
 }
+=======
+
+ @OneToMany(() => Product, product => product.store)
+  products!: Product[];   // <-- thêm dòng này
+}
+>>>>>>> a7ed62425b572e13be474147b8ed61db58b15377

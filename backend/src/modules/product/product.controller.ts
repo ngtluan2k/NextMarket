@@ -1,61 +1,75 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Req } from '@nestjs/common';
 import { ProductService } from './product.service';
-import { Product } from './product.entity';
-import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
-import { PermissionGuard } from '../../common/auth/permission.guard';
+import { CreateProductDto } from './dto/create-product.dto';
+import { NotFoundException } from '@nestjs/common/exceptions';
+import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { ApiTags } from '@nestjs/swagger';
-import { ApiBearerAuth } from '@nestjs/swagger';
-
-@ApiBearerAuth('access-token')
-@ApiTags('products')
 @Controller('products')
-@UseGuards(JwtAuthGuard, PermissionGuard)
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Get()
-  @Permissions('view_product')
-  async findAll() {
-    const products = await this.productService.findAll();
-    return {
-      message: 'Lấy danh sách sản phẩm thành công',
-      total: products.length,
-      data: products,
-    };
+  async getAllProduct() {
+    return this.productService.findAllProduct();
   }
 
+
+  // Lấy tất cả sản phẩm của store
+  @UseGuards(JwtAuthGuard)
+  @Get('store')
+  async findAll(@Req() req: any) {
+    const userId = req.user.id;
+    return this.productService.findAll(userId);
+  }
+
+  // Lấy 1 sản phẩm theo id
   @Get(':id')
-  @Permissions('view_product')
-  async findOne(@Param('id') id: number){
-    const data = await this.productService.findOne(id)
-    return data
+  async findOne(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user.id;
+    return this.productService.findOne(id, userId);
   }
 
-
+  // Tạo sản phẩm (draft)
+ @UseGuards(JwtAuthGuard)
   @Post()
-  @Permissions('create_product')
-  async create(@Body() body: Partial<Product>) {
-    const product = await this.productService.create(body);
-    return {
-      message: 'Tạo sản phẩm thành công',
-      data: product,
-    };
+  async create(@Body() dto: CreateProductDto, @Req() req: any) {
+    const userId = req.user.id; // đảm bảo req.user đã có
+    return this.productService.createProduct(dto, userId);
   }
 
+  
+
+  // Cập nhật sản phẩm
   @Put(':id')
-  @Permissions('update_product')
-  async update(@Param('id') id: number,@Body()dto: UpdateProductDto){
-    const data = await this.productService.update(id,dto)
-    return data
-
+  async update(@Param('id') id: number, @Body() dto: CreateProductDto, @Req() req: any) {
+    const userId = req.user.id;
+    return this.productService.updateProduct(id, dto, userId);
   }
 
+  // Xóa sản phẩm
   @Delete(':id')
-  @Permissions('delete_product')
-  async remove(@Param('id') id :number){
-    await this.productService.remove(id)
-    return id
+  async remove(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user.id;
+    return this.productService.remove(id, userId);
   }
+
+  // Publish sản phẩm (đăng lên store)
+  @Post(':id/publish')
+  async publishDraft(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user.id;
+
+    // Lấy sản phẩm hiện tại
+    const product = await this.productService.findOne(id, userId);
+    if (!product) throw new NotFoundException('Product not found');
+
+    // Publish bằng cách lưu lại với status 'active'
+    return this.productService.saveProduct(product as any, userId, 'active');
+  }
+
+  @Post('publish')
+@UseGuards(JwtAuthGuard)
+async publish(@Body() dto: CreateProductDto, @Req() req: any) {
+  const userId = req.user.id;
+  return this.productService.publishProduct(dto, userId);
+}
 }

@@ -43,6 +43,7 @@ export const ProductList: React.FC = () => {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     const fetchProducts = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -84,6 +85,36 @@ export const ProductList: React.FC = () => {
       throw error;
     }
   };
+=======
+const fetchProducts = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch("http://localhost:3000/products", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Unauthorized");
+
+    const data = await res.json();
+
+    const products = (data.data || data).map((p: any) => ({
+      id: p.id,
+      uuid: p.uuid,
+      name: p.name,
+      price: Number(p.base_price || 0),
+      image: p.media?.find((m: any) => m.is_primary)?.url,
+    }));
+
+    setProducts(products);
+  } catch (err) {
+    console.error("Fetch products error:", err);
+  }
+};
+
+>>>>>>> a7ed62425b572e13be474147b8ed61db58b15377
 
   const handleOpenCart = () => {
     navigate('/cart');
