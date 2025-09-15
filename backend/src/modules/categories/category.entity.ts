@@ -1,5 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
-import { Product } from '../product/product.entity';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  ManyToOne, 
+  OneToMany, 
+  JoinColumn, 
+  CreateDateColumn, 
+  Generated 
+} from 'typeorm';
+import { ProductCategory } from '../product_category/product_category.entity';
 
 @Entity('categories')
 export class Category {
@@ -7,6 +16,7 @@ export class Category {
   id!: number;
 
   @Column({ type: 'char', length: 36, unique: true })
+  @Generated('uuid')
   uuid!: string;
 
   @Column({ type: 'int', nullable: true })
@@ -19,6 +29,10 @@ export class Category {
   @OneToMany(() => Category, (c) => c.parent)
   children?: Category[];
 
+  // 🔥 Thêm quan hệ ngược
+  @OneToMany(() => ProductCategory, (pc) => pc.category)
+  productCategories!: ProductCategory[];
+
   @Column({ length: 255 })
   name!: string;
 
@@ -28,9 +42,7 @@ export class Category {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @CreateDateColumn()
   created_at!: Date;
 
-    @OneToMany(() => Product, product => product.category)
-  products!: Product[];   // <-- thêm dòng này
 }

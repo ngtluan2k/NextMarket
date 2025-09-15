@@ -12,10 +12,7 @@ export class CreateCategoryDto {
   @IsString()
   name!: string;
 
-  @ApiProperty({ description: 'Slug' })
-  @IsNotEmpty()
-  @IsString()
-  slug!: string;
+
 
   @ApiPropertyOptional({ description: 'Mô tả' })
   @IsOptional()

@@ -11,7 +11,11 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { RolePermissionModule } from './modules/role-permission/role-permission.module';
 import { UserRoleModule } from './modules/user-role/user-role.module';
 import { join } from 'path';
-import { ProductCollectionModule } from './modules/product_collection/product_collection.module';
+import { ProductCategoryModule } from './modules/product_category/product_category.module';
+import { ProductMediaModule } from './modules/product_media/product_media.module';
+import { VariantModule } from './modules/variant/variant.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
 
 @Module({
   imports: [
@@ -53,7 +57,11 @@ import { ProductCollectionModule } from './modules/product_collection/product_co
     PermissionModule,
     RolePermissionModule,
     UserRoleModule,
-    ProductCollectionModule,
+    ProductCategoryModule,
+    ProductMediaModule,
+    VariantModule,
+    InventoryModule,
+    PricingRuleModule,
   ],
 })
 export class AppModule {}

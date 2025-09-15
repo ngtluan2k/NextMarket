@@ -5,7 +5,7 @@ import { Category } from './category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { v4 as uuidv4 } from 'uuid';
-
+import {generateUniqueSlug } from '../../common/utils/slug.util';
 @Injectable()
 export class CategoryService {
   constructor(@InjectRepository(Category) private categoryRepo: Repository<Category>) {}
@@ -21,15 +21,18 @@ export class CategoryService {
         return cat;
   }
 
-  async create ( dto : CreateCategoryDto){
+   async create(dto: CreateCategoryDto) {
+    const slug = await generateUniqueSlug(this.categoryRepo, dto.name);
+
     const cat = this.categoryRepo.create({
-        ...dto,
-        uuid: uuidv4(),
-        created_at : new Date(),
-    })
+      ...dto,
+      uuid: uuidv4(),
+      slug,
+      created_at: new Date(),
+    });
+
     return this.categoryRepo.save(cat);
   }
-
   async update(id: number, dto: UpdateCategoryDto){
     const cat = await this.findOne(id)
     Object.assign(cat,dto)
