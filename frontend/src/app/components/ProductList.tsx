@@ -14,26 +14,34 @@ export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-  const fetchProducts = async () => {
-    try {
-      const token = localStorage.getItem("token"); // lấy token đã lưu
-      const res = await fetch("http://localhost:3000/products", {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // gửi token kèm request
-        },
-      });
+const fetchProducts = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch("http://localhost:3000/products", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      if (!res.ok) {
-        throw new Error("Unauthorized");
-      }
+    if (!res.ok) throw new Error("Unauthorized");
 
-      const data = await res.json();
-      setProducts(data.data);
-    } catch (err) {
-      console.error("Fetch products error:", err);
-    }
-  };
+    const data = await res.json();
+
+    const products = (data.data || data).map((p: any) => ({
+      id: p.id,
+      uuid: p.uuid,
+      name: p.name,
+      price: Number(p.base_price || 0),
+      image: p.media?.find((m: any) => m.is_primary)?.url,
+    }));
+
+    setProducts(products);
+  } catch (err) {
+    console.error("Fetch products error:", err);
+  }
+};
+
 
   fetchProducts();
 }, []);
