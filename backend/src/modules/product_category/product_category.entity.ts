@@ -25,10 +25,10 @@ export class ProductCategory {
   @JoinColumn({ name: 'category_id' })
   category!: Category;
 
-  @CreateDateColumn()
-  created_at!: Date;
+  // @CreateDateColumn()
+  // created_at!: Date;
 
-  @UpdateDateColumn()
-  updated_at!: Date;
+  // @UpdateDateColumn()
+  // updated_at!: Date;
 }
 

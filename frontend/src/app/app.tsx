@@ -28,12 +28,12 @@ const App: React.FC = () => {
    <>
       <Routes>
         {/* <Route path="/" element={<AuthForm />} /> */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<AuthForm />} />
         <Route path='/catepage' element={<CategoryPage/>}/>
+                <Route path='/login' element={<ProductList/>}/>
 
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/category/:slug/explore" element={<CategoryPage />} />
-        <Route path="/home" element={<Home />} />
         <Route path="/home" element={<ProductList />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" />} />

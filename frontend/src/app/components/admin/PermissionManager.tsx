@@ -1,3 +1,4 @@
+// src/components/admin/permissionMnager.tsx
 import React, { useEffect, useState } from 'react';
 
 interface Permission {

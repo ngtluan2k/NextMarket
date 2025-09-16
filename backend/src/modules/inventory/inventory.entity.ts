@@ -15,11 +15,8 @@ export class Inventory {
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
-
-
-
   @ManyToOne(() => Variant)
-    @JoinColumn({ name: 'variant_id' })
+  @JoinColumn({ name: 'variant_id' })
   variant!: Variant;
 
   @Column()
