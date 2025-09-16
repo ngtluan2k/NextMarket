@@ -12,8 +12,13 @@ export class CreateStoreIdentificationDto {
   @IsString()
   full_name!: string;
 
-  @ApiPropertyOptional({ description: 'URL hình ảnh' })
+  @ApiPropertyOptional({ description: 'Ảnh mặt trước' })
   @IsOptional()
   @IsString()
-  img?: string;
+  img_front?: string;
+
+  @ApiPropertyOptional({ description: 'Ảnh mặt sau' })
+  @IsOptional()
+  @IsString()
+  img_back?: string;
 }

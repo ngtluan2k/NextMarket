@@ -1,3 +1,4 @@
+
 import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, Generated, OneToOne, UpdateDateColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../user/user.entity';
 import { OneToMany } from 'typeorm';
@@ -14,10 +15,6 @@ export class Store {
 
   @Column()
   user_id!: number;
-
-  @OneToOne(() => User, (user) => user.id)
-  @JoinColumn({ name: 'user_id' })
-  owner!: User;
 
   @Column({ length: 255 })
   name!: string;
@@ -40,6 +37,9 @@ export class Store {
     default: 'inactive',
   })
   status!: 'active' | 'inactive' | 'suspended' | 'closed';
+
+  @Column({ type: 'boolean', default: false })
+  is_draft!: boolean;
 
   @CreateDateColumn({ type: 'datetime'})
   created_at!: Date;

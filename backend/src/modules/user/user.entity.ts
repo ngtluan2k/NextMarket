@@ -2,7 +2,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany } from 'typeorm';
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { UserRole } from '../user-role/user-role.entity';
-
+import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 
 
 @Entity('users')
@@ -41,6 +41,8 @@ profile!: UserProfile;
 
   @OneToMany(() => UserRole, userRole => userRole.user, { cascade: true })
   roles!: UserRole[];
-
+  
+  @OneToMany(() => VoucherUsage, (usage) => usage.user)
+  voucherUsages!: VoucherUsage[];
 
 }
