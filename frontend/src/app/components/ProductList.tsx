@@ -1,88 +1,150 @@
-// src/components/ProductList.tsx
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import {
+  Row,
+  Col,
+  Typography,
+  Button,
+  Badge,
+  Spin,
+  Empty,
+  message,
+} from 'antd';
+import { ShoppingOutlined } from '@ant-design/icons';
 import { ProductCard } from './ProductCard';
+import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+
+const { Title, Paragraph } = Typography;
 
 interface Product {
   id: number;
   uuid: string;
   name: string;
-  base_price: number;
+  price: number;
   image?: string;
 }
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [hasStore, setHasStore] = useState<boolean>(false); // 👈 lưu trạng thái user có cửa hàng chưa
+  const [loading, setLoading] = useState(true);
+  const { addToCart, cart } = useCart();
   const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        // lấy danh sách sản phẩm
-        const res = await fetch("http://localhost:3000/products", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error("Unauthorized");
-        }
-
-        const data = await res.json();
-        setProducts(data.data);
-
-        // gọi API check store
-        const resStore = await fetch("http://localhost:3000/stores/check-seller", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (resStore.ok) {
-          const storeData = await resStore.json();
-          setHasStore(!!storeData); // nếu có dữ liệu cửa hàng → true
-        }
-      } catch (err) {
-        console.error("Fetch products/store error:", err);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  const handleButtonClick = () => {
-    if (hasStore) {
-      navigate("/seller-dashboard");
-    } else {
-      navigate("/seller-registration");
-    }
+  const showMessage = (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => {
+    messageApi.open({
+      type,
+      content,
+    });
   };
 
-  return (
-    <div className="container mt-4">
-      {/* Button đăng ký hoặc xem cửa hàng */}
-      <div className="mb-3 d-flex justify-content-end">
-        <button className="btn btn-primary" onClick={handleButtonClick}>
-          {hasStore ? "Xem cửa hàng" : "Đăng kí trở thành người bán hàng"}
-        </button>
-      </div>
+const fetchProducts = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch("http://localhost:3000/products", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      <div className="row">
-        {products.map(product => (
-          <div key={product.id} className="col-6 col-md-3">
-            <ProductCard
-              name={product.name}
-              base_price={product.base_price}
-              image={product.image}
-            />
+    if (!res.ok) throw new Error("Unauthorized");
+
+    const data = await res.json();
+
+    const products = (data.data || data).map((p: any) => ({
+      id: p.id,
+      uuid: p.uuid,
+      name: p.name,
+      price: Number(p.base_price || 0),
+      image: p.media?.find((m: any) => m.is_primary)?.url,
+    }));
+
+    setProducts(products);
+  } catch (err) {
+    console.error("Fetch products error:", err);
+  }
+};
+
+
+  const handleOpenCart = () => {
+    navigate('/cart');
+  };
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', padding: '24px' }}>
+      {contextHolder}
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 32,
+          }}
+        >
+          <div>
+            <Title level={1} style={{ margin: 0 }}>
+              Featured Products
+            </Title>
+            <Paragraph style={{ fontSize: '16px', margin: '8px 0 0 0' }}>
+              Discover our curated collection of premium items
+            </Paragraph>
           </div>
-        ))}
+          <Badge count={cartItemCount} showZero>
+            <Button
+              type="primary"
+              size="large"
+              icon={<ShoppingOutlined />}
+              style={{ borderRadius: 8 }}
+              onClick={() => handleOpenCart()}
+            >
+              View Cart
+            </Button>
+          </Badge>
+        </div>
+
+        {products.length > 0 ? (
+          <Row gutter={[24, 24]}>
+            {products.map((product) => (
+              <Col key={product.id} xs={24} sm={12} md={8} lg={6}>
+                <ProductCard
+                  name={product.name}
+                  price={product.price}
+                  image={product.image}
+                  productId={product.id}
+                  onAddToCart={addToCart}
+                  showMessage={showMessage}
+                />
+              </Col>
+            ))}
+          </Row>
+        ) : (
+          <Empty
+            description="No products available at the moment"
+            style={{ padding: '64px 0' }}
+          />
+        )}
       </div>
     </div>
   );

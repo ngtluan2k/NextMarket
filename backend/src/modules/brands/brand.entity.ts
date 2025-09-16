@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, Generated } from 'typeorm';
-
+import { OneToMany } from 'typeorm';
+import { Product } from '../product/product.entity';
 @Entity('brands')
 export class Brand {
   @PrimaryGeneratedColumn()
@@ -20,4 +21,7 @@ export class Brand {
 
   @Column({ type: 'datetime', nullable: true })
   created_at!: Date;
+
+    @OneToMany(() => Product, product => product.brand)
+  products!: Product[];   // <-- thêm dòng này
 }

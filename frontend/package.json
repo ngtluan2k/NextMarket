@@ -1,5 +1,8 @@
 {
   "name": "@my-workspace/frontend",
   "version": "0.0.1",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "antd": "^5.27.3"
+  }
 }

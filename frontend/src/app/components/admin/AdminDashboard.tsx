@@ -18,10 +18,36 @@ export const AdminDashboard: React.FC = () => {
           <button className={`nav-link ${tab === 'roles' ? 'active' : ''}`} onClick={() => setTab('roles')}>Roles</button>
         </li>
         <li className="nav-item">
-          <button className={`nav-link ${tab === 'permissions' ? 'active' : ''}`} onClick={() => setTab('permissions')}>Permissions</button>
+          <button
+            className={`nav-link ${tab === 'permissions' ? 'active' : ''}`}
+            onClick={() => setTab('permissions')}
+          >
+            Permissions
+          </button>
         </li>
         <li className="nav-item">
-          <button className={`nav-link ${tab === 'userRoles' ? 'active' : ''}`} onClick={() => setTab('userRoles')}>User-Roles</button>
+          <button
+            className={`nav-link ${tab === 'userRoles' ? 'active' : ''}`}
+            onClick={() => setTab('userRoles')}
+          >
+            User-Roles
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${tab === 'categories' ? 'active' : ''}`}
+            onClick={() => setTab('categories')}
+          >
+            Categories
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${tab === 'brands' ? 'active' : ''}`}
+            onClick={() => setTab('brands')}
+          >
+            Brands
+          </button>
         </li>
       </ul>
 
@@ -30,6 +56,8 @@ export const AdminDashboard: React.FC = () => {
         {tab === 'roles' && <RoleManager />}
         {tab === 'permissions' && <PermissionManager />}
         {tab === 'userRoles' && <UserRoleManager />}
+        {tab === 'categories' && <CategoryManager />}
+        {tab === 'brands' && <BrandManager />}
       </div>
     </div>
   );
