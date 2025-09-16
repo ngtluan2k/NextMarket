@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Store } from './../store/store.entity';
 import { StoreDocument } from './../store-document/store-document.entity';
 import { StoreInformationEmail } from './../store-information-email/store-information-email.entity';
@@ -27,19 +27,15 @@ export class StoreInformation {
   @Column({ length: 50, nullable: true })
   tax_code!: string;
 
-  @Column({ nullable: true })
-  store_documents_id!: number;
+  @Column({ type: 'boolean', default: false })
+  is_draft!: boolean;
 
-  @ManyToOne(() => StoreDocument)
-  @JoinColumn({ name: 'store_documents_id' })
-  document!: StoreDocument;
+  // New relationships: One StoreInformation can have many emails and documents
+  @OneToMany(() => StoreInformationEmail, email => email.storeInformation)
+  emails!: StoreInformationEmail[];
 
-  @Column({ nullable: true })
-  store_information_email_id!: number;
-
-  @ManyToOne(() => StoreInformationEmail)
-  @JoinColumn({ name: 'store_information_email_id' })
-  email_info!: StoreInformationEmail;
+  @OneToMany(() => StoreDocument, document => document.storeInformation)
+  documents!: StoreDocument[];
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

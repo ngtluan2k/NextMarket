@@ -47,6 +47,9 @@ export class StoreAddress {
   @Column({ type: 'boolean', default: false })
   is_default!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_draft!: boolean;
+
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 }

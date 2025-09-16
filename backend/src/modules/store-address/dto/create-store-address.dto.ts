@@ -51,4 +51,9 @@ export class CreateStoreAddressDto {
   @IsOptional()
   @IsBoolean()
   is_default?: boolean;
+
+  @ApiPropertyOptional({ description: 'Là bản nháp' })
+  @IsOptional()
+  @IsBoolean()
+  is_draft?: boolean;
 }

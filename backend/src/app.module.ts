@@ -13,6 +13,7 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
 import { StoreRating } from './modules/store-rating/store-rating.entity';
+import { StoreDocumentModule } from './modules/store-document/store-document.module';
 import { ProductCategoryModule } from './modules/product_category/product_category.module';
 import { ProductMediaModule } from './modules/product_media/product_media.module';
 import { VariantModule } from './modules/variant/variant.module';
@@ -62,6 +63,7 @@ import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module
     PermissionModule,
     RolePermissionModule,
     UserRoleModule,
+    StoreDocumentModule,
     CartModule,
     ProductCategoryModule,
     ProductMediaModule,
