@@ -13,6 +13,7 @@ import { UserRoleModule } from './modules/user-role/user-role.module';
 import { join } from 'path';
 import { ProductCollectionModule } from './modules/product_collection/product_collection.module';
 import { StoreRating } from './modules/store-rating/store-rating.entity';
+import { StoreDocumentModule } from './modules/store-document/store-document.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { StoreRating } from './modules/store-rating/store-rating.entity';
     RolePermissionModule,
     UserRoleModule,
     ProductCollectionModule,
+    StoreDocumentModule,
   ],
 })
 export class AppModule {}
