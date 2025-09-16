@@ -9,6 +9,7 @@ import { ProductMedia } from '../product_media/product_media.entity';
 import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { generateUniqueSlug } from '../../common/utils/slug.util';
 @Injectable()
 export class ProductService {
   constructor(
@@ -23,10 +24,11 @@ export class ProductService {
     return this.dataSource.transaction(async manager => {
     const store = await manager.findOne(Store, { where: { user_id: userId } });
     if (!store) throw new NotFoundException('Store not found');
+    const slug = await generateUniqueSlug(this.productRepo, dto.name);
 
       const product = manager.create(Product, {
   name: dto.name,
-  slug: dto.slug,
+  slug,
   short_description: dto.short_description,
   description: dto.description,
   base_price: dto.base_price,

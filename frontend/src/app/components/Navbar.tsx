@@ -1,10 +1,11 @@
-// src/components/EveryMartHeader.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search, Home, Smile, ShoppingCart, MapPin, Store,
   CreditCard, Receipt, BadgeDollarSign,
 } from "lucide-react";
-import LoginModal, { LoginPayload } from "./LoginModal"; // 👈 import modal
+
+import LoginModal, { LoginPayload } from "./LoginModal";
+import AccountMenu, { Me } from "./AccountMenu";
 
 export type HeaderLabels = {
   logoSrc?: string;
@@ -29,20 +30,20 @@ const DEFAULT_LABELS: Required<HeaderLabels> = {
   searchPlaceholder: "Mo hinh Anime gia re",
   searchButton: "Tim kiem",
   home: "Trang chu",
-  account: "Tai khoan",
+  account: "Tài khoản",
   cart: "",
   categories: ["dien gia dung", "me va be", "dien thoai", "the thao", "lam dep"],
-  deliveryPrefix: "Giao den:",
+  deliveryPrefix: "Giao đến:",
   address: "H.Son Ha, TT.Di Lang, Quang Ngai",
-  qa1: "Uu dai the, vi",
-  qa2: "Dong tien, nap the",
-  qa3: "Mua truoc tra sau",
-  qa4: "Ban hang cung EveryMart",
+  qa1: "Ưu đãi thẻ, ví",
+  qa2: "Đóng tiền, nạp thẻ",
+  qa3: "Mua trước trả sau",
+  qa4: "Bán hàng cùng EveryMart",
 };
 
 export default function EveryMartHeader({
   labels,
-  onLogin, // optional: cho phép truyền hàm gọi API login
+  onLogin, // call API login ở ngoài nếu muốn
 }: {
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
@@ -50,22 +51,42 @@ export default function EveryMartHeader({
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
   const [query, setQuery] = useState("");
 
-  // 👇 Modal login
   const [openLogin, setOpenLogin] = useState(false);
-  // (tuỳ chọn) lưu user sau khi login thành công
-  const [me, setMe] = useState<{ email: string } | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
+
+  // Đọc trạng thái đăng nhập (mock) từ localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem("everymart.me");
+    if (raw) {
+try {
+  setMe(JSON.parse(raw));
+} catch (err) {
+  console.error("Failed to parse user from localStorage:", err);
+}
+    }
+  }, []);
+
+  // Lưu khi thay đổi
+  useEffect(() => {
+    if (me) localStorage.setItem("everymart.me", JSON.stringify(me));
+    else localStorage.removeItem("everymart.me");
+  }, [me]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     console.log("search:", query);
   }
 
+  const handleLogout = () => {
+    // Xoá token thật của bạn tại đây (nếu có)
+    setMe(null);
+  };
+
   return (
     <header className="w-full bg-white">
       <div className="mx-auto max-w-screen-2xl px-4">
         {/* Row 1 */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 py-3" aria-label="EveryMart home">
-
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 py-3">
           {/* Brand */}
           <a href="/" className="flex flex-col items-center gap-1 shrink-0" aria-label="EveryMart home">
             {L.logoSrc ? (
@@ -105,26 +126,21 @@ export default function EveryMartHeader({
 
           {/* Actions */}
           <nav className="flex items-center gap-0 divide-x divide-slate-200 text-sm text-slate-700">
-            <a href="/" className="group flex items-center gap-2 px-3 text-slate-700 no-underline">
+            <a href="/" className="group flex items-center gap-2 px-3">
               <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
                 <Home className="h-5 w-5" />
               </span>
               <span className="hidden md:inline">{L.home}</span>
             </a>
 
-            {/* 👇 Nút tài khoản: mở LoginModal */}
+            {/* Tài khoản */}
             {me ? (
-              <a href="/account" className="group flex items-center gap-2 px-3 text-slate-700 no-underline">
-                <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
-                  <Smile className="h-5 w-5" />
-                </span>
-                <span className="hidden md:inline truncate max-w-[160px]">{me.email}</span>
-              </a>
+              <AccountMenu me={me} onLogout={handleLogout} className="px-0" />
             ) : (
               <button
                 type="button"
                 onClick={() => setOpenLogin(true)}
-                className="group flex items-center gap-2 px-3 text-slate-700 no-underline"
+                className="group flex items-center gap-2 px-3 text-slate-700"
               >
                 <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
                   <Smile className="h-5 w-5" />
@@ -133,7 +149,7 @@ export default function EveryMartHeader({
               </button>
             )}
 
-            <a href="/cart" className="group relative flex items-center gap-2 px-3 text-slate-700 no-underline">
+            <a href="/cart" className="group relative flex items-center gap-2 px-3">
               <span className="rounded-lg border border-slate-200 p-2 transition group-hover:border-cyan-600 group-hover:text-cyan-700">
                 <ShoppingCart className="h-5 w-5" />
               </span>
@@ -174,25 +190,25 @@ export default function EveryMartHeader({
       {/* Quick features */}
       <div className="mx-auto max-w-screen-2xl px-4">
         <div className="flex flex-wrap items-stretch gap-0 border-t border-slate-200 pt-2 text-sm text-slate-700 divide-x divide-slate-200">
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch text-slate-700 no-underline">
+          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-amber-400 text-white">
               <CreditCard className="h-3.5 w-3.5" />
             </span>
             <span className="font-medium group-hover:text-cyan-700">{L.qa1}</span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch text-slate-700 no-underline">
+          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-green-500 text-white">
               <Receipt className="h-3.5 w-3.5" />
             </span>
             <span className="font-medium group-hover:text-cyan-700">{L.qa2}</span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch text-slate-700 no-underline">
+          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500 text-white">
               <BadgeDollarSign className="h-3.5 w-3.5" />
             </span>
             <span className="font-medium group-hover:text-cyan-700">{L.qa3}</span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch text-slate-700 no-underline">
+          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500 text-white">
               <Store className="h-3.5 w-3.5" />
             </span>
@@ -201,17 +217,30 @@ export default function EveryMartHeader({
         </div>
       </div>
 
-      {/* 👇 Modal đăng nhập */}
+      {/* Modal Đăng nhập */}
       <LoginModal
-        open={openLogin}
-        onClose={() => setOpenLogin(false)}
-        onLogin={async (data) => {
-          // Nếu có hàm onLogin từ props thì gọi nó (để dùng service của bạn)
-          await onLogin?.(data);
-          // (mock) lưu user để đổi nút “Tài khoản” thành email
-          setMe({ email: data.email });
-        }}
-      />
+  open={openLogin}
+  onClose={() => setOpenLogin(false)}
+  onLogin={async (data) => {
+    try {
+      const res = await fetch("http://localhost:3000/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || "Login thất bại");
+
+      // lưu token + user
+      localStorage.setItem("token", json.access_token);
+      localStorage.setItem("user", JSON.stringify(json.data));
+      setMe(json.data); // update header
+      setOpenLogin(false);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }}
+/>
     </header>
   );
 }

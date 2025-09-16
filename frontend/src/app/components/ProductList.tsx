@@ -1,151 +1,90 @@
-import type React from 'react';
-import { useEffect, useState } from 'react';
-import {
-  Row,
-  Col,
-  Typography,
-  Button,
-  Badge,
-  Spin,
-  Empty,
-  message,
-} from 'antd';
-import { ShoppingOutlined } from '@ant-design/icons';
-import { ProductCard } from './ProductCard';
-import { useCart } from '../context/CartContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import ProductCard, { Product } from "./ProductCard";
 
-const { Title, Paragraph } = Typography;
-
-interface Product {
+type ProductRaw = {
   id: number;
-  uuid: string;
   name: string;
-  price: number;
-  image?: string;
-}
-
-export const ProductList: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { addToCart, cart } = useCart();
-  const navigate = useNavigate();
-  const [messageApi, contextHolder] = message.useMessage();
-
-  const showMessage = (
-    type: 'success' | 'error' | 'warning',
-    content: string
-  ) => {
-    messageApi.open({
-      type,
-      content,
-    });
-  };
-
-const fetchProducts = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch("http://localhost:3000/products", {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!res.ok) throw new Error("Unauthorized");
-
-    const data = await res.json();
-
-    const products = (data.data || data).map((p: any) => ({
-      id: p.id,
-      uuid: p.uuid,
-      name: p.name,
-      price: Number(p.base_price || 0),
-      image: p.media?.find((m: any) => m.is_primary)?.url,
-    }));
-
-    setProducts(products);
-  } catch (err) {
-    console.error("Fetch products error:", err);
-  }
+  media?: { url: string; is_primary?: boolean }[];
+  base_price?: string;
+  variants?: { price: string }[];
+  brand?: { name: string };
 };
 
+type Props = {
+  products?: Product[]; // nếu có thì hiển thị luôn, không fetch
+  title?: string;
+  slug?: string; // ✅ thêm slug để lọc theo category
+};
 
-  const handleOpenCart = () => {
-    navigate('/cart');
+const ProductList: React.FC<Props> = ({ products: initialProducts, title, slug }) => {
+  const [products, setProducts] = useState<Product[]>(initialProducts || []);
+  const [loading, setLoading] = useState(!initialProducts);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialProducts) return; // có props rồi thì bỏ qua fetch
+
+    let cancelled = false;
+
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const token = localStorage.getItem("token");
+
+        // ✅ Nếu có slug thì query theo category
+let url = `http://localhost:3000/categories/${slug}/products`;
+        if (slug) url += `?category=${slug}`;
+
+const res = await fetch(url, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+
+if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+const json = await res.json(); // nhận object
+const rawProducts: ProductRaw[] = json.data || []; // lấy field data
+
+const mapped: Product[] = rawProducts.map((p) => {
+  const primaryMedia = p.media?.find((m) => m.is_primary) || p.media?.[0];
+  const mainVariant = p.variants?.[0];
+  return {
+    id: p.id,
+    name: p.name,
+    image: primaryMedia?.url || "https://via.placeholder.com/220x220?text=No+Image",
+    price: Number(mainVariant?.price || p.base_price || 0),
+    brandName: p.brand?.name,
   };
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+});
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Spin size="large" />
-      </div>
-    );
-  }
+if (!cancelled) setProducts(mapped);
+
+      } catch (e: any) {
+        if (!cancelled) setError(e.message || "Không tải được sản phẩm");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialProducts, slug]); // ✅ refetch khi slug đổi
+
+  if (loading) return <div>Đang tải sản phẩm…</div>;
+  if (error) return <div className="text-red-500">Lỗi: {error}</div>;
+  if (products.length === 0) return <div>Chưa có sản phẩm.</div>;
 
   return (
-    <div style={{ minHeight: '100vh', padding: '24px' }}>
-      {contextHolder}
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 32,
-          }}
-        >
-          <div>
-            <Title level={1} style={{ margin: 0 }}>
-              Featured Products
-            </Title>
-            <Paragraph style={{ fontSize: '16px', margin: '8px 0 0 0' }}>
-              Discover our curated collection of premium items
-            </Paragraph>
-          </div>
-          <Badge count={cartItemCount} showZero>
-            <Button
-              type="primary"
-              size="large"
-              icon={<ShoppingOutlined />}
-              style={{ borderRadius: 8 }}
-              onClick={() => handleOpenCart()}
-            >
-              View Cart
-            </Button>
-          </Badge>
-        </div>
-
-        {products.length > 0 ? (
-          <Row gutter={[24, 24]}>
-            {products.map((product) => (
-              <Col key={product.id} xs={24} sm={12} md={8} lg={6}>
-                <ProductCard
-                  name={product.name}
-                  price={product.price}
-                  image={product.image}
-                  productId={product.id}
-                  onAddToCart={addToCart}
-                  showMessage={showMessage}
-                />
-              </Col>
-            ))}
-          </Row>
-        ) : (
-          <Empty
-            description="No products available at the moment"
-            style={{ padding: '64px 0' }}
-          />
-        )}
+    <div>
+      {title && <h2 className="mb-3 text-lg font-bold">{title}</h2>}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {products.map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
       </div>
     </div>
   );
 };
+
+export default ProductList;

@@ -78,6 +78,7 @@ export class UserService {
 
     return {
       id: user.id,
+      username: user.username,
       email: user.email,
       roles: user.roles.map(ur => ur.role.name),
       permissions,

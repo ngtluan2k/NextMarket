@@ -1,12 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
-import { ApiTags } from '@nestjs/swagger';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiBearerAuth('access-token')
 @ApiTags('categories')
@@ -16,25 +15,25 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
-@Permissions('view_category')
-async findAll() {
-  const data = await this.categoryService.findAll();
-  return {
-    message: 'Lấy danh sách category thành công',
-    total: data.length,
-    data,
-  };
-}
+  @Permissions('view_category')
+  async findAll(@Query('search') search?: string) {
+    const data = await this.categoryService.findAll(search);
+    return {
+      message: 'Lấy danh sách category thành công',
+      total: data.length,
+      data,
+    };
+  }
 
 @Get(':id')
-@Permissions('view_category')
-async findOne(@Param('id') id: number) {
-  const data = await this.categoryService.findOne(id);
-  return {
-    message: data ? 'Lấy category thành công' : 'Không tìm thấy category',
-    data,
-  };
-}
+  @Permissions('view_category')
+  async findOne(@Param('id') id: number) {
+    const data = await this.categoryService.findOne(id);
+    return {
+      message: data ? 'Lấy category thành công' : 'Không tìm thấy category',
+      data,
+    };
+  }
 
 @Post()
 @Permissions('create_category')
@@ -46,23 +45,49 @@ async create(@Body() dto: CreateCategoryDto) {
   };
 }
 
-@Put(':id')
-@Permissions('update_category')
-async update(@Param('id') id: number, @Body() dto: UpdateCategoryDto) {
-  const data = await this.categoryService.update(id, dto);
+  @Put(':id')
+  @Permissions('update_category')
+  async update(@Param('id') id: number, @Body() dto: UpdateCategoryDto) {
+    const data = await this.categoryService.update(id, dto);
+    return {
+      message: 'Cập nhật category thành công',
+      data,
+    };
+  }
+
+  @Delete(':id')
+  @Permissions('delete_category')
+  async remove(@Param('id') id: number) {
+    await this.categoryService.remove(id);
+    return {
+      message: 'Xóa category thành công',
+    };
+  }
+
+  @Get(':slug/products')
+  @Permissions('view_category')
+  async findProductsBySlug(@Param('slug') slug: string) {
+    const data = await this.categoryService.findProductsBySlug(slug);
+    return {
+      message: data.length
+        ? `Lấy danh sách sản phẩm trong category ${slug} thành công`
+        : 'Không có sản phẩm nào trong category này',
+      total: data.length,
+      data,
+    };
+  }
+@Get(':id/children')
+@Permissions('view_category')
+async findChildren(@Param('id') id: number) {
+  const children = await this.categoryService.findChildren(id);
   return {
-    message: 'Cập nhật category thành công',
-    data,
+    message: children.length
+      ? `Lấy danh sách category con của category ${id} thành công`
+      : 'Category này không có danh mục con',
+    total: children.length,
+    data: children,
   };
 }
 
-@Delete(':id')
-@Permissions('delete_category')
-async remove(@Param('id') id: number) {
-  await this.categoryService.remove(id);
-  return {
-    message: 'Xóa category thành công',
-  };
-}
 
 }
