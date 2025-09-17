@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import LoginModal, { LoginPayload } from "./LoginModal"; // 👈 import modal
 
+
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;

@@ -45,6 +45,7 @@ function toResult(res?: FetchResult) {
   return { items: res.items ?? [], total: res.total ?? null };
 }
 
+
 export default function ProductGridToday({
   title = "Gợi ý hôm nay",
   items,

@@ -3,9 +3,11 @@ import { RoleManager } from './RoleManager';
 import { PermissionManager } from './PermissionManager';
 import { UserRoleManager } from './UserRoleManager';
 import { StoreManager } from '../register_seller/StoreManager';
+import  CategoryManager from './CategoryManager';
+import  BrandManager  from './BrandManager';
 
 export const AdminDashboard: React.FC = () => {
-  const [tab, setTab] = useState<'roles' | 'permissions' | 'userRoles' | 'stores'>('stores');
+  const [tab, setTab] = useState<'roles' | 'permissions' | 'userRoles' | 'categories' | 'brands' |'stores'>('stores');
 
   return (
     <div className="container mt-4">

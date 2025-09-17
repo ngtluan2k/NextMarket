@@ -10,7 +10,14 @@ import FeaturedBrands from "../components/FeaturedBrands";
 import Footer from "../components/Footer";
 import YouMayAlsoLike from "../components/YouMayAlsoLike";
 
+
 type Slide = { imageUrl: string; alt?: string; href?: string };
+interface ToastMessage {
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
+}
 
 function BootstrapTwoUpCarousel({
   id = "hero2up",

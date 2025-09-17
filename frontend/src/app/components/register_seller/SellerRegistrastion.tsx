@@ -127,7 +127,7 @@ export const SellerRegistration: React.FC = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
+      }); 
 
       console.log('📡 Response status:', response.status);
 
