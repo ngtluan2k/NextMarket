@@ -20,15 +20,11 @@ export default function Gallery({
 
   return (
     <section
-<<<<<<< HEAD
       className="self-start rounded-2xl bg-white p-4 ring-1 ring-slate-200 "
       style={{ width,
         top: stickyTop ?? 0,
        }}
-=======
-    className="self-start rounded-2xl bg-white p-4 ring-1 ring-slate-200 lg:sticky"
-      style={{ width, top: stickyTop ?? 0 }}
->>>>>>> 45287316b3ee477283821a21b168cc772f49f523
+
     >
       <div
         className="grid place-items-center overflow-hidden rounded-xl bg-slate-100"

@@ -153,9 +153,7 @@ export default function ProductFlashSale({
                       }}
                     />
                   </div>
-
                   <h3 className="font-medium">{p.name}</h3>
-
                   <div className="mt-2 text-center">
                     <div className="text-[13px] font-semibold text-rose-600">{formatVND(p.price)}</div>
                     {p.originalPrice && (

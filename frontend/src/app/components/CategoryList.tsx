@@ -11,8 +11,8 @@ const CategoryList: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
+  const token = localStorage.getItem("token"); // hoặc từ context/useAuth
   fetch("http://localhost:3000/categories", {
-
   })
     .then(res => {
       if (!res.ok) throw new Error("HTTP error " + res.status);

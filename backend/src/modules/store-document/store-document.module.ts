@@ -19,6 +19,3 @@ import { Store } from '../store/store.entity';
   exports: [StoreDocumentService],
 })
 export class StoreDocumentModule {}
-
-
-

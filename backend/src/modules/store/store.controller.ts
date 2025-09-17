@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
+
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException, ForbiddenException } from '@nestjs/common';
+
 import { StoreService } from './store.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -7,7 +9,6 @@ import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-
 
 @ApiTags('stores')
 @ApiBearerAuth('access-token')
@@ -133,5 +134,35 @@ export class StoreController {
   async remove(@Param('id') id: number) {
     const result = await this.storeService.remove(id);
     return result;
+  }
+
+  @Get('owner/:userId')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('view_own_store') // for all store have owned
+  async getStoresByUserId(@Param('userId') userId: string, @Req() req: any) {
+    console.log('Request URL:', req.url);
+    console.log('userId:', userId);
+    console.log('req.user:', req.user);
+    const targetUserId = parseInt(userId, 10);
+    console.log('targetUserId:', targetUserId);
+    if (isNaN(targetUserId)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+    const currentUserId = req.user?.userId;
+    console.log('currentUserId:', currentUserId);
+    if (!currentUserId || isNaN(currentUserId)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+    if (currentUserId !== targetUserId) {
+      throw new ForbiddenException(
+        'Bạn không có quyền xem cửa hàng của user khác'
+      );
+    }
+    const stores = await this.storeService.findStoresByUserId(targetUserId);
+    return {
+      message: 'Danh sách cửa hàng của user',
+      total: stores.length,
+      data: stores,
+    };
   }
 }

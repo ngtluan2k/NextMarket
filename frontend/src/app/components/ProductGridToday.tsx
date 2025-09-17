@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
@@ -22,16 +23,20 @@ type ProductCardData = {
 };
 
 type Props = {
-  containerClassName?: string;
-  cardClassName?: string;
+  containerClassName?: string; // class cho grid container
+  cardClassName?: string; // class cho từng card
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
 };
 
-export default function ProductGridToday({ containerClassName = "", cardClassName = "" }: Props) {
+export default function ProductGridToday({ containerClassName = "", cardClassName = "",showMessage }: Props) {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     let cancelled = false;
@@ -59,15 +64,31 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
 
         if (!cancelled) setProducts(mapped);
       } catch (e: any) {
-        if (!cancelled) setError(e.message || "Không tải được sản phẩm");
+        if (!cancelled) setError(e.message || 'Không tải được sản phẩm');
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     fetchProducts();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const handleAddToCart = async (product: ProductItem) => {
+    try {
+      await addToCart(product.id as number);
+      if (showMessage) {
+        console.log("ok")
+        showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
+      }
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
+  };
+   
+
 
   if (loading) return <div>Đang tải sản phẩm…</div>;
   if (error) return <div className="text-red-500">Lỗi: {error}</div>;

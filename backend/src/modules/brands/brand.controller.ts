@@ -16,11 +16,13 @@ export class BrandController {
    
 
   @Get()
+//   @Permissions('view_brand')
   async list(@Query('q') q?:string){
    return this.service.list(q)
   }
 
   @Get(':id')
+//   @Permissions('view_brand')
    async detail( @Param('id') id:number){
     const data= await this.service.detail(id)
     return{ data}

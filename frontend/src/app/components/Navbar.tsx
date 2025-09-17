@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import {
   Search, Home, Smile, ShoppingCart, MapPin, Store,
@@ -8,7 +9,6 @@ import { useCart } from "../context/CartContext";
 
 import LoginModal, { LoginPayload } from "./LoginModal";
 import AccountMenu, { Me } from "./AccountMenu";
-
 
 export type HeaderLabels = {
   logoSrc?: string;
@@ -46,15 +46,35 @@ const DEFAULT_LABELS: Required<HeaderLabels> = {
 
 export default function EveryMartHeader({
   labels,
-  onLogin,
+  onLogin, // call API login ở ngoài nếu muốn
 }: {
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
 }) {
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
-  const [query, setQuery] = useState("");
+
+  const [query, setQuery] = useState('');
   const [openLogin, setOpenLogin] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
+
+  // Đọc trạng thái đăng nhập (mock) từ localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem('everymart.me');
+    if (raw) {
+      try {
+        setMe(JSON.parse(raw));
+      } catch (err) {
+        console.error('Failed to parse user from localStorage:', err);
+      }
+    }
+  }, []);
+
+  // Lưu khi thay đổi
+  useEffect(() => {
+    if (me) localStorage.setItem('everymart.me', JSON.stringify(me));
+    else localStorage.removeItem('everymart.me');
+  }, [me]);
+
 
   const { cart } = useCart();
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -91,13 +111,19 @@ export default function EveryMartHeader({
     console.log("search:", query);
   };
 
+
+
   return (
     <header className="w-full bg-white">
       <div className="mx-auto max-w-screen-2xl px-4">
         {/* Row 1 */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 py-3">
           {/* Brand */}
-          <a href="/" className="flex flex-col items-center gap-1 shrink-0" aria-label="EveryMart home">
+          <a
+            href="/"
+            className="flex flex-col items-center gap-1 shrink-0"
+            aria-label="EveryMart home"
+          >
             {L.logoSrc ? (
               <img
                 src={L.logoSrc}
@@ -110,7 +136,9 @@ export default function EveryMartHeader({
                 <Store className="h-7 w-7" />
               </div>
             )}
-            <div className="text-xs md:text-sm font-semibold text-cyan-800">{L.brandTagline}</div>
+            <div className="text-xs md:text-sm font-semibold text-cyan-800">
+              {L.brandTagline}
+            </div>
           </a>
 
           {/* Search */}
@@ -142,6 +170,7 @@ export default function EveryMartHeader({
               <span className="hidden md:inline">{L.home}</span>
             </a>
 
+            {/* Tài khoản */}
             {me ? (
               <AccountMenu me={me} onLogout={handleLogout} className="px-0" />
             ) : (
@@ -156,7 +185,6 @@ export default function EveryMartHeader({
                 <span className="hidden md:inline">{L.account}</span>
               </button>
             )}
-
             {/* Cart button SPA */}
             <button
               type="button"
@@ -201,29 +229,39 @@ export default function EveryMartHeader({
       {/* Quick features */}
       <div className="mx-auto max-w-screen-2xl px-4">
         <div className="flex flex-wrap items-stretch gap-0 border-t border-slate-200 pt-2 text-sm text-slate-700 divide-x divide-slate-200">
+
           <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-amber-400 text-white">
               <CreditCard className="h-3.5 w-3.5" />
             </span>
-            <span className="font-medium group-hover:text-cyan-700">{L.qa1}</span>
+            <span className="font-medium group-hover:text-cyan-700">
+              {L.qa1}
+            </span>
           </a>
           <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-green-500 text-white">
               <Receipt className="h-3.5 w-3.5" />
             </span>
-            <span className="font-medium group-hover:text-cyan-700">{L.qa2}</span>
+            <span className="font-medium group-hover:text-cyan-700">
+              {L.qa2}
+            </span>
           </a>
           <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500 text-white">
               <BadgeDollarSign className="h-3.5 w-3.5" />
             </span>
-            <span className="font-medium group-hover:text-cyan-700">{L.qa3}</span>
+            <span className="font-medium group-hover:text-cyan-700">
+              {L.qa3}
+            </span>
           </a>
+
           <a href="seller-dashboard" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500 text-white">
               <Store className="h-3.5 w-3.5" />
             </span>
-            <span className="font-medium group-hover:text-cyan-700">{L.qa4}</span>
+            <span className="font-medium group-hover:text-cyan-700">
+              {L.qa4}
+            </span>
           </a>
         </div>
       </div>
@@ -234,24 +272,22 @@ export default function EveryMartHeader({
         onClose={() => setOpenLogin(false)}
         onLogin={async (data) => {
           try {
-            const res = await fetch("http://localhost:3000/users/login", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+            const res = await fetch('http://localhost:3000/users/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
             });
             const json = await res.json();
-            if (!res.ok) throw new Error(json.message || "Login thất bại");
+            if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
-<<<<<<< HEAD
+            // lưu token + user
+            localStorage.setItem('token', json.access_token);
+            localStorage.setItem('user', JSON.stringify(json.data));
+            setMe(json.data); // update header
             // lưu token + user
             localStorage.setItem("token", json.access_token);
             localStorage.setItem("user", JSON.stringify(json.data));
             setMe(json.data); // update header
-=======
-            localStorage.setItem("token", json.access_token);
-            localStorage.setItem("user", JSON.stringify(json.data));
-            setMe(json.data);
->>>>>>> 45287316b3ee477283821a21b168cc772f49f523
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

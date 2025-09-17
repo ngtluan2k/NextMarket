@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from './store.entity';
@@ -60,6 +64,29 @@ export class StoreService {
     });
   }
 
+  // async findByUserId(userId: number) {
+  //   const store = await this.storeRepo.findOne({
+  //     where: { user_id: userId },
+  //     // relations: ['owner'],
+  //   });
+  //   if (!store)
+  //     throw new NotFoundException('Store not found or not owned by user');
+  //   return store;
+  // }
+
+  async findStoresByUserId(userId: number): Promise<Store[]> {
+    if (!userId || isNaN(userId)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+    const stores = await this.storeRepo.find({
+      where: { user_id: userId },
+      relations: ['owner'],
+    });
+    if (!stores.length)
+      throw new NotFoundException('Không tìm thấy cửa hàng nào cho user này');
+    return stores;
+  }
+
   async create(userId: number, dto: CreateStoreDto) {
     const store = this.storeRepo.create({
       ...dto,
@@ -74,7 +101,7 @@ export class StoreService {
     // 1. Kiểm tra user có tồn tại không
     const user = await this.userRepo.findOne({
       where: { id: userId },
-      relations: ['roles', 'roles.role']
+      relations: ['roles', 'roles.role'],
     });
 
     if (!user) {
@@ -83,12 +110,13 @@ export class StoreService {
 
     // 2. Kiểm tra user đã có store chưa
     const existingStore = await this.storeRepo.findOne({
-      where: { user_id: userId }
+      where: { user_id: userId },
     });
 
     // Nếu đã có store và không phải draft, không cho tạo mới
     if (existingStore && !existingStore.is_draft && !dto.is_draft) {
       throw new BadRequestException('User already has a complete store');
+
     }
     
     // Nếu đây là update của store draft existing
@@ -106,6 +134,7 @@ export class StoreService {
     // 3. Tạo slug tự động nếu không được cung cấp và có name
     let slug = dto.slug;
     if (!slug && dto.name) {
+
       slug = dto.name.toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
@@ -138,11 +167,12 @@ export class StoreService {
 
     // 6. Gán role "seller" cho user (nếu chưa có)
     const sellerRole = await this.roleRepo.findOne({
-      where: { name: 'seller' }
+      where: { name: 'Store_Owner' },
     });
 
     if (sellerRole) {
-      const hasSellerRole = user.roles?.some(ur => ur.role.name === 'seller');
+      const hasSellerRole = user.roles?.some(ur => ur.role.name === 'Store_Owner'); 
+      console.log("has seller role : " + hasSellerRole)
 
       if (!hasSellerRole) {
         const userRole = this.userRoleRepo.create({
@@ -172,6 +202,7 @@ export class StoreService {
   }
 
   // Update draft store với data từ các steps
+
   async updateDraftStore(storeId: number, dto: RegisterSellerDto, userId: number) {
     const store = await this.storeRepo.findOne({ where: { id: storeId } });
     if (!store) {
@@ -219,7 +250,7 @@ export class StoreService {
   // Kiểm tra user có phải seller không
   async isUserSeller(userId: number): Promise<boolean> {
     const store = await this.storeRepo.findOne({
-      where: { user_id: userId }
+      where: { user_id: userId },
     });
     return !!store;
   }
@@ -241,8 +272,6 @@ export class StoreService {
     return this.storeRepo.save(store);
   }
 
-
-
   async deleteMyStore(userId: number) {
     const store = await this.findByUserId(userId);
     if (!store) {
@@ -258,10 +287,10 @@ export class StoreService {
 
   async remove(id: number) {
     const store = await this.findOne(id);
+
     
     // Trước tiên, tìm tất cả store_information để xóa emails và documents
     const storeInformations = await this.storeInformationRepo.find({ where: { store_id: id } });
-    
     // Xóa emails và documents theo store_information_id
     for (const storeInfo of storeInformations) {
       await Promise.all([
@@ -269,7 +298,6 @@ export class StoreService {
         this.storeDocumentRepo.delete({ store_information_id: storeInfo.id }),
       ]);
     }
-    
     // Xóa tất cả dữ liệu liên quan còn lại
     const deletedResults = await Promise.all([
       this.storeInformationRepo.delete({ store_id: id }),
@@ -303,7 +331,7 @@ export class StoreService {
       // Kiểm tra xem đã có store_information chưa
       const existingStoreInfo = await this.storeInformationRepo.findOne({
         where: { store_id: storeId }
-      });
+    });
 
       if (existingStoreInfo) {
         // Update existing
@@ -314,7 +342,7 @@ export class StoreService {
           tax_code: dto.store_information.tax_code,
         });
         storeInformation = await this.storeInformationRepo.findOne({
-          where: { id: existingStoreInfo.id }
+          where: { id: existingStoreInfo.id },
         });
       } else {
         // Create new
@@ -326,7 +354,9 @@ export class StoreService {
           tax_code: dto.store_information.tax_code,
           is_draft: dto.is_draft ?? false,
         });
-        storeInformation = await this.storeInformationRepo.save(storeInformation);
+        storeInformation = await this.storeInformationRepo.save(
+          storeInformation
+        );
       }
     }
 

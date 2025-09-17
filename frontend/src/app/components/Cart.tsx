@@ -64,7 +64,7 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
           />
           <div>
             <Title level={1} style={{ margin: 0 }}>
-              Shopping Cart
+              Giỏ hàng của bạn
             </Title>
             <Text type="secondary" style={{ fontSize: '16px' }}>
               {cart.length} {cart.length === 1 ? 'item' : 'items'} in your cart
@@ -80,8 +80,10 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
               }
               description={
                 <div>
-                  <Title level={3}>Your cart is empty</Title>
-                  <Text type="secondary">Add some products to get started</Text>
+                  <Title level={3}>Giỏ hàng của bạn trống</Title>
+                  <Text type="secondary">
+                    Cùng mua sắm để nhận được nhiều ưu đãi
+                  </Text>
                 </div>
               }
             >
@@ -91,7 +93,8 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                 style={{ marginTop: 16 }}
                 onClick={() => window.history.back()}
               >
-                Continue Shopping
+                Tiếp tục mua sắm
+
               </Button>
             </Empty>
           </Card>
@@ -202,7 +205,7 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                       marginBottom: 8,
                     }}
                   >
-                    <Text>Subtotal</Text>
+                    <Text>Tạm tính</Text>
                     <Text>${total}</Text>
                   </div>
                   <div
@@ -212,8 +215,8 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                       marginBottom: 8,
                     }}
                   >
-                    <Text>Shipping</Text>
-                    <Text>Free</Text>
+                    <Text>Phí ship</Text>
+                    <Text>Miễn phí</Text>
                   </div>
                 </div>
 
@@ -227,7 +230,7 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                   }}
                 >
                   <Text strong style={{ fontSize: '18px' }}>
-                    Total
+                    Tổng
                   </Text>
                   <Text strong style={{ fontSize: '18px' }}>
                     ${total}
@@ -240,7 +243,7 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                   block
                   style={{ borderRadius: 8 }}
                 >
-                  Proceed to Checkout
+                  Thanh toán ngay
                 </Button>
               </Card>
             </Col>
