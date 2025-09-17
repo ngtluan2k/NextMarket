@@ -15,12 +15,12 @@ interface Store {
 
 export const StoreManager: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem('token');
 
   const fetchStores = async () => {
     try {
       const res = await fetch('http://localhost:3000/stores', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setStores(data.data || []);
@@ -32,18 +32,21 @@ export const StoreManager: React.FC = () => {
   const handleApprove = async (storeId: number) => {
     console.log('🔍 Approving store ID:', storeId);
     try {
-      const res = await fetch(`http://localhost:3000/stores/${storeId}/approve`, {
-        method: 'PUT',
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const res = await fetch(
+        `http://localhost:3000/stores/${storeId}/approve`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         }
-      });
-      
+      );
+
       console.log('📡 Approve response status:', res.status);
       const data = await res.json();
       console.log('📡 Approve response data:', data);
-      
+
       if (res.ok) {
         alert('✅ Duyệt cửa hàng thành công!');
         fetchStores(); // Refresh list
@@ -57,24 +60,27 @@ export const StoreManager: React.FC = () => {
   };
 
   const handleReject = async (storeId: number) => {
-    if (!confirm('Bạn có chắc chắn muốn từ chối cửa hàng này?')) {
+    if (!window.confirm('Bạn có chắc chắn muốn từ chối cửa hàng này?')) {
       return;
     }
-    
+
     console.log('🔍 Rejecting store ID:', storeId);
     try {
-      const res = await fetch(`http://localhost:3000/stores/${storeId}/reject`, {
-        method: 'PUT',
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const res = await fetch(
+        `http://localhost:3000/stores/${storeId}/reject`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         }
-      });
-      
+      );
+
       console.log('📡 Reject response status:', res.status);
       const data = await res.json();
       console.log('📡 Reject response data:', data);
-      
+
       if (res.ok) {
         alert('✅ Từ chối cửa hàng thành công!');
         fetchStores(); // Refresh list
@@ -89,7 +95,8 @@ export const StoreManager: React.FC = () => {
 
   const handleDelete = async (storeId: number, storeName: string) => {
     // Xác nhận trực tiếp mà không cần preview (giống seller)
-    if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN cửa hàng "${storeName}"?
+    if (
+      !window.confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN cửa hàng "${storeName}"?
 
 🗑️ Hành động này sẽ xóa:
 • Toàn bộ thông tin cửa hàng
@@ -101,31 +108,36 @@ export const StoreManager: React.FC = () => {
 • Yêu cầu nâng cấp level
 • Tất cả dữ liệu liên quan
 
-⚠️ KHÔNG THỂ HOÀN TÁC!`)) {
+⚠️ KHÔNG THỂ HOÀN TÁC!`)
+    ) {
       return;
     }
-    
+
     // Double confirmation cho hành động quan trọng
-    if (!confirm(`🔴 XÁC NHẬN LẦN CUỐI: XÓA cửa hàng "${storeName}"?`)) {
+    if (!window.confirm(`🔴 XÁC NHẬN LẦN CUỐI: XÓA cửa hàng "${storeName}"?`)) {
       return;
     }
-    
+
     try {
       console.log('🗑️ Admin deleting store ID:', storeId);
       const res = await fetch(`http://localhost:3000/stores/${storeId}`, {
         method: 'DELETE',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-      
+
       console.log('📡 Delete response status:', res.status);
       const data = await res.json();
       console.log('📡 Delete response data:', data);
-      
+
       if (res.ok) {
-        alert(`✅ Xóa cửa hàng thành công!\n\n📊 Đã xóa ${data.deletedRecords || 'toàn bộ'} bản ghi dữ liệu`);
+        alert(
+          `✅ Xóa cửa hàng thành công!\n\n📊 Đã xóa ${
+            data.deletedRecords || 'toàn bộ'
+          } bản ghi dữ liệu`
+        );
         fetchStores(); // Refresh list
       } else {
         alert(`❌ Lỗi: ${data.message || 'Không thể xóa cửa hàng'}`);
@@ -156,32 +168,39 @@ export const StoreManager: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {stores.map(store => (
+            {stores.map((store) => (
               <tr key={store.id}>
                 <td>{store.name}</td>
                 <td>#{store.user_id}</td>
                 <td>{store.email || '-'}</td>
                 <td>
-                  <span className={`badge ${
-                    store.status === 'active' ? 'bg-success' :
-                    store.status === 'inactive' ? 'bg-warning' : 'bg-danger'
-                  }`}>
+                  <span
+                    className={`badge ${
+                      store.status === 'active'
+                        ? 'bg-success'
+                        : store.status === 'inactive'
+                        ? 'bg-warning'
+                        : 'bg-danger'
+                    }`}
+                  >
                     {store.status}
                   </span>
                 </td>
-                <td>{new Date(store.created_at).toLocaleDateString('vi-VN')}</td>
+                <td>
+                  {new Date(store.created_at).toLocaleDateString('vi-VN')}
+                </td>
                 <td>
                   <div className="d-flex gap-2">
                     {store.status === 'inactive' && (
                       <>
-                        <button 
+                        <button
                           className="btn btn-sm btn-success"
                           onClick={() => handleApprove(store.id)}
                           title="Duyệt cửa hàng"
                         >
                           Duyệt
                         </button>
-                        <button 
+                        <button
                           className="btn btn-sm btn-warning"
                           onClick={() => handleReject(store.id)}
                           title="Từ chối cửa hàng"
@@ -190,7 +209,7 @@ export const StoreManager: React.FC = () => {
                         </button>
                       </>
                     )}
-                    <button 
+                    <button
                       className="btn btn-sm btn-danger"
                       onClick={() => handleDelete(store.id, store.name)}
                       title="Xóa vĩnh viễn cửa hàng và toàn bộ dữ liệu"

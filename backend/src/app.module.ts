@@ -22,12 +22,19 @@ import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
 
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { ServeStaticModule } from '@nestjs/serve-static';
+
 @Module({
   imports: [
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
       envFilePath: join(process.cwd(), 'backend', 'src', 'config', '.env'),
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'src', 'assets'),
+      serveRoot: '/assets',
     }),
 
     // Cấu hình DB dùng ConfigService

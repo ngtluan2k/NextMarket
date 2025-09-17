@@ -284,7 +284,7 @@
               </form>
             ) : (
               <form onSubmit={handleRegister} className="mt-5 grid grid-cols-1 gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 required">
                   <Field
                     label="Username"
                     placeholder="Tên đăng nhập"

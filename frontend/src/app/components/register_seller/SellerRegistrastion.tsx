@@ -5,7 +5,9 @@ import { SellerFormData, defaultSellerFormData } from '../types';
 export const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<SellerFormData>(defaultSellerFormData);
+  const [formData, setFormData] = useState<SellerFormData>(
+    defaultSellerFormData
+  );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -56,21 +58,22 @@ export const SellerRegistration: React.FC = () => {
               Authorization: `Bearer ${token}`,
             },
           });
-          
+
           if (res.ok) {
             const data = await res.json();
             const store = data.data;
-            
+
             // Nếu có store và là draft, load đầy đủ thông tin từ server
             if (store && store.is_draft) {
-              setMessage('📝 Đã tải thông tin bản nháp từ server. Hãy tiếp tục hoàn tất!');
-              
+              setMessage(
+                '📝 Đã tải thông tin bản nháp từ server. Hãy tiếp tục hoàn tất!'
+              );
+
               // Fetch đầy đủ draft data từ backend
               await loadFullDraftData(store.id, savedFormData);
             }
           }
         }
-
       } catch (error) {
         console.error('Error loading saved data:', error);
         // Nếu có lỗi, clear localStorage để tránh conflict
@@ -109,25 +112,31 @@ export const SellerRegistration: React.FC = () => {
   }, [addresses]);
 
   // Load đầy đủ draft data từ server
-  const loadFullDraftData = async (storeId: number, savedFormData: string | null) => {
+  const loadFullDraftData = async (
+    storeId: number,
+    savedFormData: string | null
+  ) => {
     try {
       const token = localStorage.getItem('token');
-      
+
       // Prevent multiple concurrent calls
       if (loading) {
         console.log('🔄 Already loading draft data, skipping...');
         return;
       }
-      
+
       setLoading(true);
-      
+
       // Fetch draft data từ endpoint mới
       console.log(`🔍 Fetching draft data for store ${storeId}...`);
-      const response = await fetch(`http://localhost:3000/stores/${storeId}/draft-data`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:3000/stores/${storeId}/draft-data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       console.log('📡 Response status:', response.status);
 
@@ -136,11 +145,14 @@ export const SellerRegistration: React.FC = () => {
         const draftData = result.data; // Extract data từ response
         console.log('📊 Full response:', result);
         console.log('📊 Draft data từ server:', draftData);
-        
+
         // Map draft data về SellerFormData format
         const mappedFormData: SellerFormData = {
           // Basic store info - fix "undefined" name issue
-          name: (draftData.store?.name && draftData.store.name !== 'undefined') ? draftData.store.name : '',
+          name:
+            draftData.store?.name && draftData.store.name !== 'undefined'
+              ? draftData.store.name
+              : '',
           description: draftData.store?.description || '',
           email: draftData.store?.email || '',
           phone: draftData.store?.phone || '',
@@ -219,22 +231,32 @@ export const SellerRegistration: React.FC = () => {
           console.log('✅ Form data đã được set từ server');
         } else {
           const localData = JSON.parse(savedFormData);
-          
+
           // Smart merge: Chỉ dùng localStorage nếu có data thật sự
-          const hasLocalData = localData.name || localData.phone || localData.email;
-          
+          const hasLocalData =
+            localData.name || localData.phone || localData.email;
+
           if (hasLocalData) {
             const mergedData = {
               ...mappedFormData,
-              ...localData
+              ...localData,
             };
-            console.log('🔄 Merging server + localStorage:', { mappedFormData, localData, mergedData });
+            console.log('🔄 Merging server + localStorage:', {
+              mappedFormData,
+              localData,
+              mergedData,
+            });
             setFormData(mergedData);
             console.log('✅ Form data đã được merged');
           } else {
-            console.log('🔄 localStorage trống, dùng server data:', mappedFormData);
+            console.log(
+              '🔄 localStorage trống, dùng server data:',
+              mappedFormData
+            );
             setFormData(mappedFormData);
-            console.log('✅ Form data đã được set từ server (localStorage empty)');
+            console.log(
+              '✅ Form data đã được set từ server (localStorage empty)'
+            );
           }
         }
 
@@ -245,8 +267,12 @@ export const SellerRegistration: React.FC = () => {
         let step = 1;
         if (mappedFormData.name && mappedFormData.phone) step = 2;
         if (mappedFormData.store_information.name) step = 3;
-        if (mappedFormData.store_identification.full_name && mappedFormData.bank_account.bank_name) step = 4;
-        
+        if (
+          mappedFormData.store_identification.full_name &&
+          mappedFormData.bank_account.bank_name
+        )
+          step = 4;
+
         if (!savedFormData) {
           setCurrentStep(step);
         }
@@ -275,9 +301,13 @@ export const SellerRegistration: React.FC = () => {
   // Show confirmation before leaving if there's unsaved data
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const hasData = formData.name || formData.phone || formData.email || 
-                     formData.store_information.name || addresses.length > 0;
-      
+      const hasData =
+        formData.name ||
+        formData.phone ||
+        formData.email ||
+        formData.store_information.name ||
+        addresses.length > 0;
+
       if (hasData) {
         e.preventDefault();
         e.returnValue = '';
@@ -289,8 +319,12 @@ export const SellerRegistration: React.FC = () => {
   }, [formData, addresses]);
 
   // Update nested object
-  const handleInputChange = (section: keyof SellerFormData, field: string, value: any) => {
-    setFormData(prev => ({
+  const handleInputChange = (
+    section: keyof SellerFormData,
+    field: string,
+    value: any
+  ) => {
+    setFormData((prev) => ({
       ...prev,
       [section]: {
         ...(prev[section] as object),
@@ -301,7 +335,7 @@ export const SellerRegistration: React.FC = () => {
 
   // Update root fields
   const handleBasicChange = (field: keyof SellerFormData, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -322,7 +356,7 @@ export const SellerRegistration: React.FC = () => {
   });
 
   const handleAddressInputChange = (field: string, value: any) => {
-    setAddressFormData(prev => ({
+    setAddressFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -330,32 +364,40 @@ export const SellerRegistration: React.FC = () => {
 
   const handleAddAddress = () => {
     // Validate required fields
-    if (!addressFormData.recipient_name || !addressFormData.phone || !addressFormData.street || 
-        !addressFormData.city || !addressFormData.province || !addressFormData.postal_code) {
+    if (
+      !addressFormData.recipient_name ||
+      !addressFormData.phone ||
+      !addressFormData.street ||
+      !addressFormData.city ||
+      !addressFormData.province ||
+      !addressFormData.postal_code
+    ) {
       setMessage('❌ Vui lòng điền đầy đủ thông tin địa chỉ');
       return;
     }
 
     if (editingAddress) {
       // Update existing address
-      setAddresses(prev => prev.map(addr => 
-        addr.id === editingAddress.id 
-          ? { 
-              ...addressFormData, 
-              id: editingAddress.id, 
-              is_default: editingAddress.is_default,
-              // Removed is_draft reference
-            }
-          : addr
-      ));
+      setAddresses((prev) =>
+        prev.map((addr) =>
+          addr.id === editingAddress.id
+            ? {
+                ...addressFormData,
+                id: editingAddress.id,
+                is_default: editingAddress.is_default,
+                // Removed is_draft reference
+              }
+            : addr
+        )
+      );
 
       // Update formData if editing default address
       if (editingAddress.is_default) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          store_address: { 
-            ...addressFormData, 
-            is_default: true
+          store_address: {
+            ...addressFormData,
+            is_default: true,
           },
         }));
       }
@@ -364,21 +406,21 @@ export const SellerRegistration: React.FC = () => {
     } else {
       // Add new address
       const isFirstAddress = addresses.length === 0;
-      const newAddress = { 
-        ...addressFormData, 
-        id: Date.now(), 
+      const newAddress = {
+        ...addressFormData,
+        id: Date.now(),
         is_default: isFirstAddress,
         // Removed is_draft reference
       };
 
-      setAddresses(prev => [...prev, newAddress]);
-      
+      setAddresses((prev) => [...prev, newAddress]);
+
       // Update formData for backend submission (always use default address)
       if (isFirstAddress) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           store_address: {
-            ...addressFormData
+            ...addressFormData,
           },
         }));
       }
@@ -405,15 +447,17 @@ export const SellerRegistration: React.FC = () => {
 
   const handleSetDefaultAddress = (addressId: number) => {
     // Update addresses array - set new default and unset others
-    setAddresses(prev => prev.map(addr => ({
-      ...addr,
-      is_default: addr.id === addressId
-    })));
+    setAddresses((prev) =>
+      prev.map((addr) => ({
+        ...addr,
+        is_default: addr.id === addressId,
+      }))
+    );
 
     // Update formData with new default address
-    const newDefaultAddress = addresses.find(addr => addr.id === addressId);
+    const newDefaultAddress = addresses.find((addr) => addr.id === addressId);
     if (newDefaultAddress) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         store_address: newDefaultAddress,
       }));
@@ -438,12 +482,11 @@ export const SellerRegistration: React.FC = () => {
     setShowAddressModal(true);
   };
 
-
   const nextStep = () => {
     setMessage('');
     currentStep < steps.length && setCurrentStep(currentStep + 1);
   };
-  
+
   const prevStep = () => {
     setMessage('');
     currentStep > 1 && setCurrentStep(currentStep - 1);
@@ -456,34 +499,36 @@ export const SellerRegistration: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       // Chỉ lấy data của step hiện tại
       let stepData: any = {};
-      
+
       switch (currentStep) {
-        case 1:
+        case 1: {
           // Step 1: Thông tin shop cơ bản + địa chỉ
           stepData = {
             name: formData.name,
             description: formData.description,
             email: formData.email, // ✅ Thêm email
             phone: formData.phone,
-            is_draft: true
+            is_draft: true,
           };
 
           // Chỉ gửi store_address nếu user đã nhập thông tin (tương tự Step 3)
-          const hasAddressData = formData.store_address.recipient_name || 
-                                formData.store_address.phone || 
-                                formData.store_address.street ||
-                                formData.store_address.city ||
-                                formData.store_address.province;
-          
+          const hasAddressData =
+            formData.store_address.recipient_name ||
+            formData.store_address.phone ||
+            formData.store_address.street ||
+            formData.store_address.city ||
+            formData.store_address.province;
+
           if (hasAddressData) {
             stepData.store_address = formData.store_address;
           }
           break;
-          
-        case 2:
+        }
+
+        case 2: {
           // Step 2: Thông tin doanh nghiệp (bao gồm thông tin từ Step 1)
           stepData = {
             name: formData.name, // Required từ Step 1
@@ -492,22 +537,24 @@ export const SellerRegistration: React.FC = () => {
             phone: formData.phone,
             store_information: formData.store_information,
             store_information_email: formData.store_information_email,
-            is_draft: true
+            is_draft: true,
           };
 
           // Include address từ Step 1 nếu có
-          const hasAddressDataStep2 = formData.store_address.recipient_name || 
-                                     formData.store_address.phone || 
-                                     formData.store_address.street ||
-                                     formData.store_address.city ||
-                                     formData.store_address.province;
-          
+          const hasAddressDataStep2 =
+            formData.store_address.recipient_name ||
+            formData.store_address.phone ||
+            formData.store_address.street ||
+            formData.store_address.city ||
+            formData.store_address.province;
+
           if (hasAddressDataStep2) {
             stepData.store_address = formData.store_address;
           }
           break;
-          
-        case 3:
+        }
+
+        case 3: {
           // Step 3: Thông tin định danh + ngân hàng + địa chỉ (bao gồm tất cả steps trước)
           stepData = {
             name: formData.name, // Required từ Step 1
@@ -517,32 +564,36 @@ export const SellerRegistration: React.FC = () => {
             store_information: formData.store_information, // Từ Step 2
             store_information_email: formData.store_information_email,
             documents: formData.documents,
-            is_draft: true
+            is_draft: true,
           };
 
           // Chỉ gửi store_identification nếu user đã nhập thông tin
-          const hasIdentificationData = formData.store_identification.full_name || 
-                                       formData.store_identification.img_front ||
-                                       formData.store_identification.img_back;
-          
+          const hasIdentificationData =
+            formData.store_identification.full_name ||
+            formData.store_identification.img_front ||
+            formData.store_identification.img_back;
+
           if (hasIdentificationData) {
             stepData.store_identification = formData.store_identification;
           }
 
           // Chỉ gửi bank_account nếu user đã nhập thông tin
-          const hasBankData = formData.bank_account.bank_name || 
-                             formData.bank_account.account_number ||
-                             formData.bank_account.account_holder;
-          
+          const hasBankData =
+            formData.bank_account.bank_name ||
+            formData.bank_account.account_number ||
+            formData.bank_account.account_holder;
+
           if (hasBankData) {
             stepData.bank_account = formData.bank_account;
           }
 
           break;
-          
-        case 4:
+        }
+
+        case 4: {
           // Step 4: Submit toàn bộ (không phải draft)
           return handleFinalSubmit();
+        }
       }
 
       const res = await fetch('http://localhost:3000/stores/register-seller', {
@@ -555,11 +606,13 @@ export const SellerRegistration: React.FC = () => {
       });
 
       const data = await res.json();
-      
+
       if (res.ok) {
         setMessage(`✅ Đã lưu Step ${currentStep} thành công!`);
       } else {
-        setMessage(`❌ Lỗi lưu Step ${currentStep}: ${data.message || 'Thất bại'}`);
+        setMessage(
+          `❌ Lỗi lưu Step ${currentStep}: ${data.message || 'Thất bại'}`
+        );
       }
     } catch (error) {
       setMessage('❌ Lỗi kết nối');
@@ -575,11 +628,11 @@ export const SellerRegistration: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       // Gửi toàn bộ form data
       const submitData = {
         ...formData,
-        is_draft: false // Hoàn tất, không phải draft
+        is_draft: false, // Hoàn tất, không phải draft
       };
 
       const res = await fetch('http://localhost:3000/stores/register-seller', {
@@ -592,13 +645,13 @@ export const SellerRegistration: React.FC = () => {
       });
 
       const data = await res.json();
-      
+
       if (res.ok) {
         setMessage('✅ Đăng ký thành công! Cửa hàng đã được kích hoạt.');
-        
+
         // Clear saved data sau khi thành công
         clearSavedData();
-        
+
         setTimeout(() => navigate('/seller-dashboard'), 2000);
       } else {
         setMessage(data.message || 'Đăng ký thất bại');
@@ -610,11 +663,11 @@ export const SellerRegistration: React.FC = () => {
     }
   };
   const renderStep1 = () => (
-      <div className="card">
-        <div className="card-header">
+    <div className="card">
+      <div className="card-header">
         <h5>🏪 Thông tin Shop</h5>
-        </div>
-        <div className="card-body">
+      </div>
+      <div className="card-body">
         <div className="row">
           {/* Tên Shop */}
           <div className="col-md-6">
@@ -631,7 +684,7 @@ export const SellerRegistration: React.FC = () => {
               />
               <small className="text-muted">{formData.name.length}/30</small>
             </div>
-            </div>
+          </div>
         </div>
 
         {/* Địa chỉ lấy hàng */}
@@ -639,9 +692,11 @@ export const SellerRegistration: React.FC = () => {
           <label className="form-label">Địa chỉ lấy hàng</label>
           <div className="d-flex align-items-center gap-2 mb-2">
             <span className="text-muted">
-              {addresses.length > 0 ? `${addresses.length} địa chỉ đã thêm` : 'Chưa có địa chỉ'}
+              {addresses.length > 0
+                ? `${addresses.length} địa chỉ đã thêm`
+                : 'Chưa có địa chỉ'}
             </span>
-            <button 
+            <button
               type="button"
               className="btn btn-outline-primary btn-sm"
               onClick={() => setShowAddressModal(true)}
@@ -649,31 +704,43 @@ export const SellerRegistration: React.FC = () => {
               + Thêm
             </button>
           </div>
-          
+
           {/* Hiển thị địa chỉ mặc định */}
           {addresses.length > 0 && (
             <div className="border rounded p-3 bg-light">
               {(() => {
-                const defaultAddress = addresses.find(addr => addr.is_default);
+                const defaultAddress = addresses.find(
+                  (addr) => addr.is_default
+                );
                 if (!defaultAddress) return null;
-                
+
                 return (
                   <div className="bg-white rounded p-3 border">
                     <div className="d-flex justify-content-between align-items-start">
                       <div className="flex-grow-1">
-                        <div className="fw-bold text-primary mb-1">📍 {defaultAddress.recipient_name}</div>
-                        <div className="text-muted small mb-1">📞 {defaultAddress.phone}</div>
+                        <div className="fw-bold text-primary mb-1">
+                          📍 {defaultAddress.recipient_name}
+                        </div>
+                        <div className="text-muted small mb-1">
+                          📞 {defaultAddress.phone}
+                        </div>
                         <div className="mb-1">
-                          {defaultAddress.street}, {defaultAddress.city}, {defaultAddress.province}
-                          {defaultAddress.postal_code && ` - ${defaultAddress.postal_code}`}
+                          {defaultAddress.street}, {defaultAddress.city},{' '}
+                          {defaultAddress.province}
+                          {defaultAddress.postal_code &&
+                            ` - ${defaultAddress.postal_code}`}
                         </div>
                         {defaultAddress.detail && (
-                          <div className="text-muted small mb-2">💬 {defaultAddress.detail}</div>
+                          <div className="text-muted small mb-2">
+                            💬 {defaultAddress.detail}
+                          </div>
                         )}
-                        <span className="badge bg-success">Địa chỉ mặc định</span>
+                        <span className="badge bg-success">
+                          Địa chỉ mặc định
+                        </span>
                       </div>
                       <div className="d-flex gap-1">
-                        <button 
+                        <button
                           type="button"
                           className="btn btn-outline-success btn-sm"
                           onClick={() => handleEditAddress(defaultAddress)}
@@ -682,7 +749,7 @@ export const SellerRegistration: React.FC = () => {
                           ✏️ Cập nhật
                         </button>
                         {addresses.length > 1 && (
-                          <button 
+                          <button
                             type="button"
                             className="btn btn-outline-primary btn-sm"
                             onClick={() => setShowSelectAddressModal(true)}
@@ -691,26 +758,35 @@ export const SellerRegistration: React.FC = () => {
                             🔄 Thay đổi
                           </button>
                         )}
-                        <button 
+                        <button
                           type="button"
                           className="btn btn-outline-danger btn-sm"
                           onClick={() => {
-                            const filteredAddresses = addresses.filter(addr => addr.id !== defaultAddress.id);
+                            const filteredAddresses = addresses.filter(
+                              (addr) => addr.id !== defaultAddress.id
+                            );
                             setAddresses(filteredAddresses);
-                            
+
                             if (filteredAddresses.length > 0) {
                               // Set first remaining address as default
-                              const newDefault = { ...filteredAddresses[0], is_default: true };
-                              setAddresses(prev => prev.map(addr => 
-                                addr.id === newDefault.id ? newDefault : { ...addr, is_default: false }
-                              ));
-                              setFormData(prev => ({
+                              const newDefault = {
+                                ...filteredAddresses[0],
+                                is_default: true,
+                              };
+                              setAddresses((prev) =>
+                                prev.map((addr) =>
+                                  addr.id === newDefault.id
+                                    ? newDefault
+                                    : { ...addr, is_default: false }
+                                )
+                              );
+                              setFormData((prev) => ({
                                 ...prev,
                                 store_address: newDefault,
                               }));
                             } else {
                               // Reset formData if no addresses left
-                              setFormData(prev => ({
+                              setFormData((prev) => ({
                                 ...prev,
                                 store_address: {
                                   recipient_name: '',
@@ -742,7 +818,7 @@ export const SellerRegistration: React.FC = () => {
         </div>
 
         {/* Email */}
-            <div className="mb-3">
+        <div className="mb-3">
           <label className="form-label">Email</label>
           <input
             type="email"
@@ -803,11 +879,9 @@ export const SellerRegistration: React.FC = () => {
                 handleInputChange('store_information', 'type', e.target.value)
               }
             />
-            <label className="form-check-label">
-              Hộ kinh doanh / Công ty
-            </label>
+            <label className="form-check-label">Hộ kinh doanh / Công ty</label>
           </div>
-            </div>
+        </div>
 
         {/* Tên công ty */}
         <div className="row">
@@ -838,7 +912,11 @@ export const SellerRegistration: React.FC = () => {
             className="form-control"
             value={formData.store_information.addresses || ''}
             onChange={(e) =>
-              handleInputChange('store_information', 'addresses', e.target.value)
+              handleInputChange(
+                'store_information',
+                'addresses',
+                e.target.value
+              )
             }
             placeholder="An Giang / Huyện An Phú / Thị Trấn An Phú"
           />
@@ -852,7 +930,11 @@ export const SellerRegistration: React.FC = () => {
             className="form-control"
             value={formData.store_information_email?.email || ''}
             onChange={(e) =>
-              handleInputChange('store_information_email', 'email', e.target.value)
+              handleInputChange(
+                'store_information_email',
+                'email',
+                e.target.value
+              )
             }
             placeholder="testing111@yopmail.com"
             maxLength={100}
@@ -866,7 +948,7 @@ export const SellerRegistration: React.FC = () => {
               Hóa đơn điện tử sẽ được gửi đến email này
             </p>
           </div>
-            </div>
+        </div>
 
         {/* Mã số thuế */}
         <div className="row">
@@ -878,7 +960,11 @@ export const SellerRegistration: React.FC = () => {
                 className="form-control"
                 value={formData.store_information.tax_code || ''}
                 onChange={(e) =>
-                  handleInputChange('store_information', 'tax_code', e.target.value)
+                  handleInputChange(
+                    'store_information',
+                    'tax_code',
+                    e.target.value
+                  )
                 }
                 placeholder="Nhập vào"
                 maxLength={14}
@@ -900,11 +986,11 @@ export const SellerRegistration: React.FC = () => {
     </div>
   );
   const renderStep3 = () => (
-  <div className="card">
-    <div className="card-header">
-      <h5>🪪 Thông tin định danh</h5>
-    </div>
-    <div className="card-body">
+    <div className="card">
+      <div className="card-header">
+        <h5>🪪 Thông tin định danh</h5>
+      </div>
+      <div className="card-body">
         {/* Định danh */}
         <div className="mb-4">
           <h6>Thông tin định danh</h6>
@@ -914,7 +1000,11 @@ export const SellerRegistration: React.FC = () => {
               className="form-select"
               value={formData.store_identification.type}
               onChange={(e) =>
-                handleInputChange('store_identification', 'type', e.target.value)
+                handleInputChange(
+                  'store_identification',
+                  'type',
+                  e.target.value
+                )
               }
               required
             >
@@ -956,7 +1046,11 @@ export const SellerRegistration: React.FC = () => {
                   className="form-control"
                   value={formData.bank_account.bank_name}
                   onChange={(e) =>
-                    handleInputChange('bank_account', 'bank_name', e.target.value)
+                    handleInputChange(
+                      'bank_account',
+                      'bank_name',
+                      e.target.value
+                    )
                   }
                   placeholder="Vietcombank"
                   required
@@ -1002,10 +1096,9 @@ export const SellerRegistration: React.FC = () => {
             />
           </div>
         </div>
-
+      </div>
     </div>
-  </div>
-);
+  );
 
   const renderStep4 = () => (
     <div className="card">
@@ -1044,10 +1137,10 @@ export const SellerRegistration: React.FC = () => {
             <li>Số tài khoản: {formData.bank_account.account_number}</li>
             <li>Chủ tài khoản: {formData.bank_account.account_holder}</li>
           </ul>
-            </div>
+        </div>
 
-            <div className="d-flex gap-3 justify-content-center mt-4">
-          <button 
+        <div className="d-flex gap-3 justify-content-center mt-4">
+          <button
             className="btn btn-success btn-lg"
             onClick={handleFinalSubmit}
             disabled={loading}
@@ -1122,7 +1215,11 @@ export const SellerRegistration: React.FC = () => {
               <button
                 className="btn btn-outline-danger btn-sm"
                 onClick={() => {
-                  if (window.confirm('Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?')) {
+                  if (
+                    window.confirm(
+                      'Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?'
+                    )
+                  ) {
                     clearSavedData();
                     setFormData(defaultSellerFormData);
                     setAddresses([]);
@@ -1175,15 +1272,20 @@ export const SellerRegistration: React.FC = () => {
 
       {/* Address Modal */}
       {showAddressModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {editingAddress ? '✏️ Chỉnh sửa địa chỉ lấy hàng' : '📍 Thêm địa chỉ lấy hàng'}
+                  {editingAddress
+                    ? '✏️ Chỉnh sửa địa chỉ lấy hàng'
+                    : '📍 Thêm địa chỉ lấy hàng'}
                 </h5>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-close"
                   onClick={() => {
                     setShowAddressModal(false);
@@ -1214,7 +1316,12 @@ export const SellerRegistration: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={addressFormData.recipient_name}
-                          onChange={(e) => handleAddressInputChange('recipient_name', e.target.value)}
+                          onChange={(e) =>
+                            handleAddressInputChange(
+                              'recipient_name',
+                              e.target.value
+                            )
+                          }
                           placeholder="Nguyễn Văn A"
                           required
                         />
@@ -1227,7 +1334,9 @@ export const SellerRegistration: React.FC = () => {
                           type="tel"
                           className="form-control"
                           value={addressFormData.phone}
-                          onChange={(e) => handleAddressInputChange('phone', e.target.value)}
+                          onChange={(e) =>
+                            handleAddressInputChange('phone', e.target.value)
+                          }
                           placeholder="0123456789"
                           required
                         />
@@ -1241,7 +1350,9 @@ export const SellerRegistration: React.FC = () => {
                       type="text"
                       className="form-control"
                       value={addressFormData.street}
-                      onChange={(e) => handleAddressInputChange('street', e.target.value)}
+                      onChange={(e) =>
+                        handleAddressInputChange('street', e.target.value)
+                      }
                       placeholder="123 Nguyễn Văn Linh"
                       required
                     />
@@ -1255,7 +1366,9 @@ export const SellerRegistration: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={addressFormData.province}
-                          onChange={(e) => handleAddressInputChange('province', e.target.value)}
+                          onChange={(e) =>
+                            handleAddressInputChange('province', e.target.value)
+                          }
                           placeholder="TP. Hồ Chí Minh"
                           required
                         />
@@ -1268,7 +1381,9 @@ export const SellerRegistration: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={addressFormData.city}
-                          onChange={(e) => handleAddressInputChange('city', e.target.value)}
+                          onChange={(e) =>
+                            handleAddressInputChange('city', e.target.value)
+                          }
                           placeholder="Quận 1"
                           required
                         />
@@ -1281,7 +1396,12 @@ export const SellerRegistration: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={addressFormData.postal_code}
-                          onChange={(e) => handleAddressInputChange('postal_code', e.target.value)}
+                          onChange={(e) =>
+                            handleAddressInputChange(
+                              'postal_code',
+                              e.target.value
+                            )
+                          }
                           placeholder="700000"
                           required
                         />
@@ -1295,22 +1415,24 @@ export const SellerRegistration: React.FC = () => {
                       className="form-control"
                       rows={2}
                       value={addressFormData.detail}
-                      onChange={(e) => handleAddressInputChange('detail', e.target.value)}
+                      onChange={(e) =>
+                        handleAddressInputChange('detail', e.target.value)
+                      }
                       placeholder="Ghi chú thêm về địa chỉ..."
                     ></textarea>
                   </div>
                 </form>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowAddressModal(false)}
                 >
                   Hủy
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-primary"
                   onClick={handleAddAddress}
                 >
@@ -1324,24 +1446,31 @@ export const SellerRegistration: React.FC = () => {
 
       {/* Select Address Modal */}
       {showSelectAddressModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">🏠 Chọn địa chỉ mặc định</h5>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-close"
                   onClick={() => setShowSelectAddressModal(false)}
                 ></button>
               </div>
               <div className="modal-body">
-                <p className="text-muted mb-3">Chọn địa chỉ bạn muốn đặt làm mặc định:</p>
+                <p className="text-muted mb-3">
+                  Chọn địa chỉ bạn muốn đặt làm mặc định:
+                </p>
                 <div className="d-grid gap-2">
                   {addresses.map((address) => (
-                    <div 
+                    <div
                       key={address.id}
-                      className={`card ${address.is_default ? 'border-success' : 'border-light'}`}
+                      className={`card ${
+                        address.is_default ? 'border-success' : 'border-light'
+                      }`}
                       style={{ cursor: 'pointer' }}
                       onClick={() => {
                         handleSetDefaultAddress(address.id);
@@ -1352,21 +1481,33 @@ export const SellerRegistration: React.FC = () => {
                       <div className="card-body p-3">
                         <div className="d-flex justify-content-between align-items-start">
                           <div className="flex-grow-1">
-                            <div className="fw-bold text-primary">📍 {address.recipient_name}</div>
-                            <div className="text-muted small">📞 {address.phone}</div>
+                            <div className="fw-bold text-primary">
+                              📍 {address.recipient_name}
+                            </div>
+                            <div className="text-muted small">
+                              📞 {address.phone}
+                            </div>
                             <div className="mt-1">
-                              {address.street}, {address.city}, {address.province}
-                              {address.postal_code && ` - ${address.postal_code}`}
+                              {address.street}, {address.city},{' '}
+                              {address.province}
+                              {address.postal_code &&
+                                ` - ${address.postal_code}`}
                             </div>
                             {address.detail && (
-                              <div className="text-muted small mt-1">💬 {address.detail}</div>
+                              <div className="text-muted small mt-1">
+                                💬 {address.detail}
+                              </div>
                             )}
                           </div>
                           <div>
                             {address.is_default ? (
-                              <span className="badge bg-success">Đang sử dụng</span>
+                              <span className="badge bg-success">
+                                Đang sử dụng
+                              </span>
                             ) : (
-                              <span className="badge bg-outline-secondary">Chọn làm mặc định</span>
+                              <span className="badge bg-outline-secondary">
+                                Chọn làm mặc định
+                              </span>
                             )}
                           </div>
                         </div>
@@ -1376,8 +1517,8 @@ export const SellerRegistration: React.FC = () => {
                 </div>
               </div>
               <div className="modal-footer">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowSelectAddressModal(false)}
                 >

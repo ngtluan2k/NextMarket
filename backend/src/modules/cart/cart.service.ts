@@ -22,7 +22,7 @@ export class CartService {
   async getOrCreateCart(userId: number): Promise<ShoppingCart> {
     let cart = await this.cartRepository.findOne({
       where: { user_id: userId },
-      relations: ['items', 'items.product'],
+      relations: ['items', 'items.product', 'items.product.media'],
     });
     if (!cart) {
       cart = this.cartRepository.create({

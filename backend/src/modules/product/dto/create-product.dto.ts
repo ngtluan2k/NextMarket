@@ -6,9 +6,6 @@
     name!: string;
 
     @IsString()
-    slug!: string;
-
-    @IsString()
     @IsOptional()
     short_description?: string;
 

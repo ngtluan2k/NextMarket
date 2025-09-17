@@ -3,19 +3,32 @@ import { RoleManager } from './RoleManager';
 import { PermissionManager } from './PermissionManager';
 import { UserRoleManager } from './UserRoleManager';
 import { StoreManager } from '../register_seller/StoreManager';
-
+import   CategoryManager  from './CategoryManager';
+import  BrandManager  from './BrandManager';
 export const AdminDashboard: React.FC = () => {
-  const [tab, setTab] = useState<'roles' | 'permissions' | 'userRoles' | 'stores'>('stores');
+  const [tab, setTab] = useState<
+    'roles' | 'permissions' | 'userRoles' | 'stores' | 'categories' | 'brands'
+  >('stores');
 
   return (
     <div className="container mt-4">
       <h2>Super Admin Dashboard</h2>
       <ul className="nav nav-tabs">
         <li className="nav-item">
-          <button className={`nav-link ${tab === 'stores' ? 'active' : ''}`} onClick={() => setTab('stores')}>Stores</button>
+          <button
+            className={`nav-link ${tab === 'stores' ? 'active' : ''}`}
+            onClick={() => setTab('stores')}
+          >
+            Stores
+          </button>
         </li>
         <li className="nav-item">
-          <button className={`nav-link ${tab === 'roles' ? 'active' : ''}`} onClick={() => setTab('roles')}>Roles</button>
+          <button
+            className={`nav-link ${tab === 'roles' ? 'active' : ''}`}
+            onClick={() => setTab('roles')}
+          >
+            Roles
+          </button>
         </li>
         <li className="nav-item">
           <button

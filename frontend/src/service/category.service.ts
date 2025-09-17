@@ -8,9 +8,7 @@ export interface Category {
 }
 
 export const fetchCategoriesAPI = async (): Promise<Category[]> => {
-  const token = localStorage.getItem("token");
   const res = await fetch("http://localhost:3000/categories", {
-    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json(); // trả về mảng category
@@ -18,9 +16,7 @@ export const fetchCategoriesAPI = async (): Promise<Category[]> => {
 
 // API lấy category theo slug
 export const getCategoryBySlug = async (slug: string): Promise<Category> => {
-  const token = localStorage.getItem("token");
   const res = await fetch(`http://localhost:3000/categories/by-slug/${slug}`, {
-    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Category not found");
   return res.json(); // trả về 1 category object
@@ -28,9 +24,7 @@ export const getCategoryBySlug = async (slug: string): Promise<Category> => {
 
 // src/service/categorySidebar.service.ts
 export const fetchRootCategoriesAPI = async () => {
-  const token = localStorage.getItem("token");
   const res = await fetch("http://localhost:3000/categories", {
-    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();
@@ -45,10 +39,8 @@ export const fetchRootCategoriesAPI = async () => {
 };
 
 export const fetchChildCategoriesAPI = async (parentId: string | number) => {
-  const token = localStorage.getItem("token");
   const res = await fetch(
     `http://localhost:3000/categories/${parentId}/children`,
-    { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();
