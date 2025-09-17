@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ShoppingCart, CartItem } from './cart.entity';
 import { Product } from '../product/product.entity';
 import { User } from '../user/user.entity';
 import { v4 as uuidv4 } from 'uuid';
-
+import { ShoppingCart } from './shopping_cart.entity';
+import { CartItem } from './cart_item.entity';
 @Injectable()
 export class CartService {
   constructor(
@@ -16,30 +16,37 @@ export class CartService {
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
     @InjectRepository(User)
-    private userRepository: Repository<User>
+    private userRepository: Repository<User>,
   ) {}
 
-  async getOrCreateCart(userId: number): Promise<ShoppingCart> {
-    let cart = await this.cartRepository.findOne({
-      where: { user_id: userId },
-      relations: ['items', 'items.product', 'items.product.media'],
+async getOrCreateCart(userId: number): Promise<ShoppingCart> {
+  const user = await this.userRepository.findOne({ where: { id: userId } });
+  if (!user) throw new NotFoundException('User not found');
+
+  let cart = await this.cartRepository.findOne({
+    where: { user: { id: userId } },
+    relations: ['items', 'items.product', 'items.product.media'],
+  });
+
+  if (!cart) {
+    cart = this.cartRepository.create({
+      uuid: uuidv4(),
+      user,  // ✅ gán full entity User
+      items: [],
     });
-    if (!cart) {
-      cart = this.cartRepository.create({
-        uuid: uuidv4(),
-        user_id: userId,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-      await this.cartRepository.save(cart);
-    }
-    return cart;
+    await this.cartRepository.save(cart);
   }
+
+  return cart;
+}
+
+
+
 
   async addToCart(
     userId: number,
     productId: number,
-    quantity = 1
+    quantity = 1,
   ): Promise<CartItem> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -51,7 +58,8 @@ export class CartService {
     const cart = await this.getOrCreateCart(userId);
 
     let cartItem = await this.cartItemRepository.findOne({
-      where: { cart_id: cart.id, product_id: productId },
+      where: { cart: { id: cart.id }, product: { id: productId } },
+      relations: ['cart', 'product'],
     });
 
     if (cartItem) {
@@ -59,8 +67,8 @@ export class CartService {
     } else {
       cartItem = this.cartItemRepository.create({
         uuid: uuidv4(),
-        cart_id: cart.id,
-        product_id: productId,
+        cart,
+        product,
         quantity,
         price: product.base_price,
         added_at: new Date(),
@@ -77,7 +85,12 @@ export class CartService {
 
   async removeFromCart(userId: number, productId: number): Promise<void> {
     const cart = await this.getOrCreateCart(userId);
-    const result = await this.cartItemRepository.delete({ cart_id: cart.id, product_id: productId });
+
+    const result = await this.cartItemRepository.delete({
+      cart: { id: cart.id },
+      product: { id: productId },
+    });
+
     if (result.affected === 0) {
       throw new NotFoundException('Mục giỏ hàng không tìm thấy');
     }
@@ -86,15 +99,19 @@ export class CartService {
   async updateQuantity(
     userId: number,
     productId: number,
-    quantity: number
+    quantity: number,
   ): Promise<CartItem> {
     const cart = await this.getOrCreateCart(userId);
+
     const cartItem = await this.cartItemRepository.findOne({
-      where: { cart_id: cart.id, product_id: productId },
+      where: { cart: { id: cart.id }, product: { id: productId } },
+      relations: ['cart', 'product'],
     });
+
     if (!cartItem) {
       throw new NotFoundException('Mục giỏ hàng không tìm thấy');
     }
+
     cartItem.quantity = quantity;
     return this.cartItemRepository.save(cartItem);
   }

@@ -53,8 +53,12 @@ export default function ProductDetailPage() {
               <Shipping />
               <ComboStrip items={combos} />
               <SimilarProducts />
-              <ProductSpecs />
-              <ProductDescription />
+              <ProductSpecs product={product} loading={loading} />
+
+              <ProductDescription
+                html={product?.short_description} // optional chaining để tránh lỗi null
+                loading={!product}
+              />
             </section>
 
             {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}

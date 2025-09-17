@@ -151,7 +151,8 @@ async findAllProduct() {
 }
 // product.service.ts
 async findBySlug(slug: string) {
-  const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories'] });
+  const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
+ });
   if (!product) throw new NotFoundException('Product not found');
   return product;
 }

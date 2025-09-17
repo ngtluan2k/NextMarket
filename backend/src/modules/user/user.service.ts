@@ -20,7 +20,7 @@ export class UserService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly jwtService: JwtService, // 👈 inject JwtService
+    private readonly jwtService: JwtService, 
   ) {}
 
    findAllUsers() {
@@ -28,42 +28,46 @@ export class UserService {
   }
   
   async register(dto: CreateUserDto) {
-    const exist = await this.userRepository.findOne({ where: { email: dto.email } });
-    if (exist) throw new BadRequestException('Email already exists');
+  // Kiểm tra email đã tồn tại
+  const exist = await this.userRepository.findOne({ where: { email: dto.email } });
+  if (exist) throw new BadRequestException('Email already exists');
 
-    const hashed = await bcrypt.hash(dto.password, 10);
-    // Tạo user
-    const user = this.userRepository.create({
+  const hashed = await bcrypt.hash(dto.password, 10);
+
+  // Tạo user
+  const user = this.userRepository.create({
+    uuid: uuidv4(),
+    username: dto.username,
+    email: dto.email,
+    password: hashed,
+    status: 'active',
+    created_at: new Date(),
+    profile: {
       uuid: uuidv4(),
-      username: dto.username,
-      email: dto.email,
-      password: hashed,
-      status: 'active',
+      full_name: dto.full_name,
+      dob: dto.dob,
+      phone: dto.phone,
+      gender: dto.gender,
       created_at: new Date(),
-      profile: {
-        uuid: uuidv4(),
-        full_name: dto.full_name,
-        dob: dto.dob,
-        phone: dto.phone,
-        gender: dto.gender,
-        created_at: new Date(),
-      },
-    });
+    },
+  });
 
-    const savedUser = await this.userRepository.save(user);
+  const savedUser = await this.userRepository.save(user);
 
-    // Gán role mặc định "user"
-    const role = await this.roleRepository.findOne({ where: { name: 'user' } });
-    if (!role) throw new BadRequestException('Default role not found');
+  // Gán role mặc định "user"
+  const role = await this.roleRepository.findOne({ where: { name: 'user' } });
+  if (!role) throw new BadRequestException('Default role not found');
 
-    const userRole = this.userRoleRepository.create({
-      user: savedUser,
-      role: role,
-    });
-    await this.userRoleRepository.save(userRole);
+  const userRole = this.userRoleRepository.create({
+    user: savedUser,
+    role: role,
+  });
+  await this.userRoleRepository.save(userRole);
 
-    return savedUser;
-  }
+
+  return savedUser;
+}
+
 
   async login(dto: LoginDto) {
     const user = await this.userRepository.findOne({

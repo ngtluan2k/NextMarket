@@ -31,7 +31,6 @@ export function useProductDetail(slug: string) {
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
-
     fetch(`http://localhost:3000/products/slug/${slug}`)
       .then(res => res.json())
       .then(json => {
