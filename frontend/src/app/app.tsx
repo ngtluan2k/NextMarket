@@ -5,14 +5,10 @@ import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { CartProvider } from "./context/CartContext";
 import { Cart } from "./components/Cart";
 import { message } from "antd";
-import EveryMartHeader from "./components/Navbar";
 import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
-// import ProductForm from "./components/AddProduct";
 import AccountLayout from "./page/account/AccountLayout";
-import { AuthForm } from './components/AuthForm';
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
-// import { SellerDashboard } from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
 import NotificationsPage from "./page/account/NotificationsPage";
 import ReturnsPage from "./page/account/ReturnsPage";
@@ -48,7 +44,7 @@ const App: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<Home showMessage={showMessage} />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/product/:slug" element={<ProductDetailPage />} />
+        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<Cart showMessage={showMessage} />} />
         <Route path="/test/home" element={<ProductList />} />
         
