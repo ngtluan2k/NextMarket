@@ -1,4 +1,3 @@
-
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -26,6 +25,10 @@ export class Store {
   @Column()
   user_id!: number;
 
+  @OneToOne(() => User, (user) => user.id)
+  @JoinColumn({ name: 'user_id' })
+  owner!: User;
+
   @Column({ length: 255 })
   name!: string;
 
@@ -51,7 +54,6 @@ export class Store {
   @Column({ type: 'boolean', default: false })
   is_draft!: boolean;
 
-
   @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;
 
@@ -60,6 +62,4 @@ export class Store {
 
   @OneToMany(() => Product, (product) => product.store)
   products!: Product[]; // <-- thêm dòng này
-  
-
 }
