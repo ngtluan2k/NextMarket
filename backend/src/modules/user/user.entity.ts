@@ -5,6 +5,7 @@ import { UserRole } from '../user-role/user-role.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 
 
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -45,5 +46,8 @@ profile!: UserProfile;
   
   @OneToMany(() => VoucherUsage, (usage) => usage.user)
   voucherUsages!: VoucherUsage[];
+  
+   @OneToMany(() => UserProfile, (profile) => profile.user)
+  profiles!: UserProfile[];
 
 }

@@ -1,10 +1,7 @@
 export type Product = {
     id?: string;
     name?: string;
-<<<<<<< HEAD
-=======
     slug?: string;
->>>>>>> 45287316b3ee477283821a21b168cc772f49f523
     author?: string;
     images?: string[];
     price?: number;
@@ -12,6 +9,7 @@ export type Product = {
     rating?: number;
     reviewsCount?: number;
     sellerName?: string;
+    media?: { url: string; is_primary?: boolean }[]; // hoặc kiểu phù hợp với dữ liệu media của bạn
   };
   
   export type CardItem = {

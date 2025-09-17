@@ -1,5 +1,8 @@
 import React from "react";
-import { Phone, Mail, Lock, KeySquare, Trash2, Facebook, Shield } from "lucide-react";
+import { Phone, Mail, Lock, KeySquare, Trash2, Facebook, Shield} from "lucide-react";
+import { getUserProfile, getCurrentUserId } from "../../../service/user-profile.service";
+import { useEffect, useState } from "react";
+
 
 type Props = {
   loading?: boolean;
@@ -18,7 +21,8 @@ type Props = {
   onLinkGoogle?: () => void;
   onUnlinkGoogle?: () => void;
   framed?: boolean;           // <= cho phép bọc card hay không
-  className?: string;         // <= chèn class bổ sung
+  className?: string;     // <= chèn class bổ sung
+  autoLoadProfile?: boolean;    
 };
 
 const Row = ({
@@ -71,7 +75,45 @@ export default function AccountSecurityPanel({
   onUnlinkGoogle,
   framed = true,
   className = "",
+  autoLoadProfile= true,
 }: Props) {
+  const [localPhone, setLocalPhone] = useState<string | null | undefined>(undefined);
+  const [localEmail, setLocalEmail] = useState<string | null | undefined>(undefined);
+  const [internalLoading, setInternalLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Tự động tải phone/email từ API nếu không truyền qua props
+  useEffect(() => {
+    const load = async () => {
+      if (!autoLoadProfile) return;
+      // Nếu props đã có phone/email thì không cần gọi
+      if (phone != null && email != null) return;
+
+      const userId = getCurrentUserId();
+      if (!userId) {
+        setError("Không tìm thấy thông tin đăng nhập");
+        return;
+      }
+
+      setInternalLoading(true);
+      setError(null);
+      try {
+        const profile = await getUserProfile(userId);
+        if (phone == null) setLocalPhone(profile.phone ?? null);
+        if (email == null) setLocalEmail(profile.user?.email ?? null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Không thể tải thông tin bảo mật");
+      } finally {
+        setInternalLoading(false);
+      }
+    };
+
+    load();
+  }, [autoLoadProfile, phone, email]);
+
+  const displayPhone = phone ?? localPhone ?? "—";
+  const displayEmail = email ?? localEmail ?? "—";
+  const isLoading = loading || internalLoading;
   const body = (
     <div className={className}>
       <h2 className="text-lg font-semibold text-slate-900 mb-4">Số điện thoại và Email</h2>
@@ -80,14 +122,14 @@ export default function AccountSecurityPanel({
         <Row
           icon={<Phone className="h-4 w-4" />}
           title={phone ? "Số điện thoại" : "Số điện thoại"}
-          subtitle={phone ?? "—"}
+          subtitle={displayPhone ?? "—"}
           actionText="Cập nhật"
           onClick={onChangePhone}
         />
         <Row
           icon={<Mail className="h-4 w-4" />}
           title="Địa chỉ email"
-          subtitle={email ?? "—"}
+          subtitle={displayEmail ?? "—"}
           actionText="Cập nhật"
           onClick={onChangeEmail}
         />

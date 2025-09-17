@@ -25,3 +25,5 @@ export class UpdateStoreDocumentDto extends PartialType(CreateStoreDocumentDto) 
 
 
 
+
+

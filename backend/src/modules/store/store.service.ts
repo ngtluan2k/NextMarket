@@ -64,7 +64,6 @@ export class StoreService {
     const store = this.storeRepo.create({
       ...dto,
       user_id: userId,
-      created_at: new Date(),
     });
     return this.storeRepo.save(store);
   }

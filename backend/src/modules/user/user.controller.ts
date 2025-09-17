@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get , Param , ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -31,7 +31,7 @@ export class UserController {
     };
   }
 
-  @Post('login')
+@Post('login')
 @ApiOperation({ summary: 'User login' })
 @ApiBody({ type: LoginDto })
 async login(@Body() dto: LoginDto) {
@@ -48,5 +48,17 @@ async login(@Body() dto: LoginDto) {
     access_token: token,
   };
 }
+
+@Get(':id/profile')
+  @ApiOperation({ summary: 'Get user profile by user ID' })
+  @ApiBearerAuth()
+  async getUserProfile(@Param('id', ParseIntPipe) id: number) {
+    const profile = await this.userService.getProfile(id);
+    return {
+      status: 200,
+      message: 'Get profile successful',
+      data: profile,
+    };
+  }
 
 }

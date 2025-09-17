@@ -18,6 +18,7 @@ import ReturnsPage from "./page/account/ReturnsPage";
 import OrdersPage from "./page/account/OrdersPage";
 import ProfilePage from "./page/account/ProfilePage";
 import ProductList from './components/ProductList';
+import {ProductForm} from "./components/AddProduct";
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -43,7 +44,7 @@ const App: React.FC = () => {
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
         <Route path='/catepage' element={<CategoryPage/>}/>
-        {/* <Route path="/add_product" element={<ProductForm />} /> */}
+        <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/category/:slug/explore" element={<CategoryPage />} />
         {/* <Route path="/home" element={<Home />} /> */}

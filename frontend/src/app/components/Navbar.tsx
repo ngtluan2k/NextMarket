@@ -242,16 +242,9 @@ export default function EveryMartHeader({
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || "Login thất bại");
 
-<<<<<<< HEAD
-            // lưu token + user
-            localStorage.setItem("token", json.access_token);
-            localStorage.setItem("user", JSON.stringify(json.data));
-            setMe(json.data); // update header
-=======
             localStorage.setItem("token", json.access_token);
             localStorage.setItem("user", JSON.stringify(json.data));
             setMe(json.data);
->>>>>>> 45287316b3ee477283821a21b168cc772f49f523
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

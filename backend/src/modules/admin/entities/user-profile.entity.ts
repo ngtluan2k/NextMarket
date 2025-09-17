@@ -29,7 +29,7 @@ export class UserProfile {
   avatar_url!: string;
 
   @Column({ type: 'text', nullable: true })
-  bio!: string;
+  country!: string;
 
   @Column({ type: 'datetime', nullable: true })
   created_at!: Date;
