@@ -4,12 +4,12 @@ import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { CartProvider } from "./context/CartContext";
 import { Cart } from "./components/Cart";
 import { message } from "antd";
-import EveryMartHeader from "./components/Navbar";
+// import EveryMartHeader from "./components/Navbar";
 import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
-import ProductForm from "./components/AddProduct";
+// import ProductForm from "./components/AddProduct";
 import AccountLayout from "./page/account/AccountLayout";
-import { AuthForm } from './components/AuthForm';
+// import { AuthForm } from './components/AuthForm';
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
 import { SellerDashboard } from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
@@ -36,17 +36,17 @@ const App: React.FC = () => {
     <CartProvider>
       {contextHolder}
       <Routes>
-        <Route path="/login" element={<AuthForm />} />
+        {/* <Route path="/login" element={<AuthForm />} /> */}
+        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/" element={<Home />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
-        <Route path="*" element={<Navigate to="/" />} />
         <Route path='/catepage' element={<CategoryPage/>}/>
-        <Route path="/add_product" element={<ProductForm />} />
+        {/* <Route path="/add_product" element={<ProductForm />} /> */}
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/category/:slug/explore" element={<CategoryPage />} />
-        <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
+        {/* <Route path="/home" element={<Home />} /> */}
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<Cart showMessage={showMessage} />} />
         <Route path="/product/:slug" element={<ProductDetailPage />} />

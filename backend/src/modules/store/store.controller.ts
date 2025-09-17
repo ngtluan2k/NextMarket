@@ -8,6 +8,7 @@ import { RequirePermissions as Permissions } from '../../common/auth/permission.
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
+
 @ApiTags('stores')
 @ApiBearerAuth('access-token')
 @Controller('stores')

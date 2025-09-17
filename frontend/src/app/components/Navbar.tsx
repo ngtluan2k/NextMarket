@@ -9,6 +9,7 @@ import { useCart } from "../context/CartContext";
 import LoginModal, { LoginPayload } from "./LoginModal";
 import AccountMenu, { Me } from "./AccountMenu";
 
+
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;

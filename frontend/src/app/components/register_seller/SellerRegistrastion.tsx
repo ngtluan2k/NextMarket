@@ -129,14 +129,11 @@ export const SellerRegistration: React.FC = () => {
 
       // Fetch draft data từ endpoint mới
       console.log(`🔍 Fetching draft data for store ${storeId}...`);
-      const response = await fetch(
-        `http://localhost:3000/stores/${storeId}/draft-data`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`http://localhost:3000/stores/${storeId}/draft-data`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }); 
 
       console.log('📡 Response status:', response.status);
 

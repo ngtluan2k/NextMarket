@@ -13,7 +13,14 @@ import YouMayAlsoLike from '../components/YouMayAlsoLike';
 import { fetchBrandsAPI } from '../../service/brand.service';
 import { fetchCategoriesAPI, Category } from '../../service/category.service';
 
+
 type Slide = { imageUrl: string; alt?: string; href?: string };
+interface ToastMessage {
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
+}
 
 function BootstrapTwoUpCarousel({
   id = 'hero2up',

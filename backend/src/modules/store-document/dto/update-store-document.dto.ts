@@ -23,3 +23,5 @@ export class UpdateStoreDocumentDto extends PartialType(CreateStoreDocumentDto) 
   verified_at?: string;
 }
 
+
+

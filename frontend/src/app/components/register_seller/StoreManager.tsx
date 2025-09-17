@@ -29,69 +29,6 @@ export const StoreManager: React.FC = () => {
     }
   };
 
-  const handleApprove = async (storeId: number) => {
-    console.log('🔍 Approving store ID:', storeId);
-    try {
-      const res = await fetch(
-        `http://localhost:3000/stores/${storeId}/approve`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      console.log('📡 Approve response status:', res.status);
-      const data = await res.json();
-      console.log('📡 Approve response data:', data);
-
-      if (res.ok) {
-        alert('✅ Duyệt cửa hàng thành công!');
-        fetchStores(); // Refresh list
-      } else {
-        alert(`❌ Lỗi: ${data.message || 'Không thể duyệt cửa hàng'}`);
-      }
-    } catch (error) {
-      console.error('Error approving store:', error);
-      alert('❌ Lỗi kết nối. Vui lòng thử lại.');
-    }
-  };
-
-  const handleReject = async (storeId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn từ chối cửa hàng này?')) {
-      return;
-    }
-
-    console.log('🔍 Rejecting store ID:', storeId);
-    try {
-      const res = await fetch(
-        `http://localhost:3000/stores/${storeId}/reject`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      console.log('📡 Reject response status:', res.status);
-      const data = await res.json();
-      console.log('📡 Reject response data:', data);
-
-      if (res.ok) {
-        alert('✅ Từ chối cửa hàng thành công!');
-        fetchStores(); // Refresh list
-      } else {
-        alert(`❌ Lỗi: ${data.message || 'Không thể từ chối cửa hàng'}`);
-      }
-    } catch (error) {
-      console.error('Error rejecting store:', error);
-      alert('❌ Lỗi kết nối. Vui lòng thử lại.');
-    }
-  };
 
   const handleDelete = async (storeId: number, storeName: string) => {
     // Xác nhận trực tiếp mà không cần preview (giống seller)
@@ -191,25 +128,7 @@ export const StoreManager: React.FC = () => {
                 </td>
                 <td>
                   <div className="d-flex gap-2">
-                    {store.status === 'inactive' && (
-                      <>
-                        <button
-                          className="btn btn-sm btn-success"
-                          onClick={() => handleApprove(store.id)}
-                          title="Duyệt cửa hàng"
-                        >
-                          Duyệt
-                        </button>
-                        <button
-                          className="btn btn-sm btn-warning"
-                          onClick={() => handleReject(store.id)}
-                          title="Từ chối cửa hàng"
-                        >
-                          Từ chối
-                        </button>
-                      </>
-                    )}
-                    <button
+                    <button 
                       className="btn btn-sm btn-danger"
                       onClick={() => handleDelete(store.id, store.name)}
                       title="Xóa vĩnh viễn cửa hàng và toàn bộ dữ liệu"
