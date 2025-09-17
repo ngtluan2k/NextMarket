@@ -48,5 +48,5 @@ export class Store {
   updated_at!: Date;
 
  @OneToMany(() => Product, product => product.store)
-  products!: Product[];   // <-- thêm dòng này
+  products!: Product[];   
 }

@@ -4,7 +4,19 @@ import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { Store } from '../store/store.entity';
 import { Brand } from '../brands/brand.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, Generated, JoinColumn } from 'typeorm';
+import { Inventory } from '../inventory/inventory.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Generated,
+  JoinColumn,
+} from 'typeorm';
+
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
@@ -17,14 +29,14 @@ export class Product {
   @Column()
   store_id!: number;
 
-  @ManyToOne(() => Store, store => store.products)
+  @ManyToOne(() => Store, (store) => store.products)
   @JoinColumn({ name: 'store_id' })
   store!: Store;
 
   @Column()
   brand_id!: number;
 
-  @ManyToOne(() => Brand, brand => brand.products)
+  @ManyToOne(() => Brand, (brand) => brand.products)
   @JoinColumn({ name: 'brand_id' })
   brand!: Brand;
 
@@ -52,17 +64,19 @@ export class Product {
   @UpdateDateColumn()
   updated_at!: Date;
 
-  // === Relations thêm vào ===
-@OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
-categories!: ProductCategory[];
+  // === Relations ===
+  @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
+  categories!: ProductCategory[];
 
-
-  @OneToMany(() => ProductMedia, media => media.product)
+  @OneToMany(() => ProductMedia, (media) => media.product)
   media!: ProductMedia[];
 
-  @OneToMany(() => Variant, variant => variant.product)
+  @OneToMany(() => Variant, (variant) => variant.product)
   variants!: Variant[];
 
-  @OneToMany(() => PricingRules, pr => pr.product)
+  @OneToMany(() => PricingRules, (pr) => pr.product)
   pricing_rules!: PricingRules[];
+
+  @OneToMany(() => Inventory, (inventory) => inventory.product)
+  inventories!: Inventory[];
 }

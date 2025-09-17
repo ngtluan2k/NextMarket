@@ -22,8 +22,6 @@ import { UpdateInventoryDto } from './dto/update-inventory.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
-import { Role } from '../role/role.entity';
-import {auth} from '../../types/base'
 
 @ApiTags('inventory')
 @ApiBearerAuth()
@@ -37,20 +35,12 @@ export class InventoryController {
   @ApiOperation({ summary: 'Add new inventory' })
   @ApiResponse({ status: 201, description: 'Inventory created successfully' })
   async add(@Body() dto: CreateInventoryDto, @Req() req: any) {
-    // Debug logging
-    console.log('=== ADD INVENTORY DEBUG ===');
-    console.log('Full req.user:', JSON.stringify(req.user, null, 2));
-    console.log('req.user type:', typeof req.user);
-    console.log('req.user keys:', req.user ? Object.keys(req.user) : 'no keys');
-    console.log('Headers:', req.headers.authorization);
     
     const userId = req.user?.userId;
     const role = req.user?.role
     if (!userId) {
-      console.log('❌ User ID not found');
-      auth();
+      throw new Error('User not authenticated');
     }
-    console.log('✅ User ID found:', userId);
     return this.inventoryService.addInventory(dto, userId, role);
   }
 
@@ -59,19 +49,12 @@ export class InventoryController {
   @ApiOperation({ summary: 'Get all inventories' })
   @ApiResponse({ status: 200, description: 'List of inventories' })
   async findAll(@Req() req: any) {
-    // Debug logging
-    console.log('=== FIND ALL INVENTORY DEBUG ===');
-    console.log('Full req.user:', JSON.stringify(req.user, null, 2));
-    console.log('req.user type:', typeof req.user);
-    console.log('req.user keys:', req.user ? Object.keys(req.user) : 'no keys');
-    console.log('Headers:', req.headers.authorization);
+
     
     const userId = req.user?.userId;
     if (!userId) {
-      console.log('❌ User ID not found');
-      // auth()
+      throw new Error('User not authenticated');
     }
-    console.log('✅ User ID found:', userId);
     return this.inventoryService.findAll(userId);
   }
 
@@ -84,11 +67,12 @@ export class InventoryController {
     @Body() dto: UpdateInventoryDto,
     @Req() req: any,
   ) {
+   
+    
     const userId = req.user?.userId;
     const role = req.user?.role
     if (!userId) {
-      console.log('❌ User ID not found');
-      // auth()
+      throw new Error('User not authenticated');
     }
     return this.inventoryService.updateInventory(id, dto, userId, role);
   }
@@ -103,7 +87,7 @@ export class InventoryController {
     const userId = req.user?.userId;
     const role = req.user?.role
     if (!userId) {
-      auth()
+      throw new Error('User not authenticated');
     }
     return this.inventoryService.deleteInventory(id, userId, role);
   }

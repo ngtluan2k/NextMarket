@@ -1,4 +1,3 @@
-// src/components/admin/InventoryManager.tsx
 import React, { useEffect, useState } from 'react';
 import {
   Table,
@@ -15,6 +14,7 @@ import {
   Row,
   Col,
   message,
+  AutoComplete,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,6 +22,8 @@ import {
   DeleteOutlined,
   WarningOutlined,
   CheckCircleOutlined,
+  SearchOutlined,
+  FilterOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
 
@@ -57,7 +59,7 @@ interface Inventory {
   id: number;
   uuid: string;
   product: Product;
-  variant?: Variant;
+  variant?: Variant | null;
   location: string;
   quantity: number;
   used_quantity: number;
@@ -67,7 +69,7 @@ interface Inventory {
 
 interface CreateInventoryDto {
   productId: number;
-  variantId: number;
+  variantId?: number | null;
   location: string;
   quantity: number;
   used_quantity?: number;
@@ -75,38 +77,41 @@ interface CreateInventoryDto {
 
 const InventoryManager: React.FC = () => {
   const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [filteredInventories, setFilteredInventories] = useState<Inventory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editingInventory, setEditingInventory] = useState<Inventory | null>(
-    null
-  );
+  const [editingInventory, setEditingInventory] = useState<Inventory | null>(null);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
   const token = localStorage.getItem('token');
 
+  // ==== Filter/Search states ====
+  const [searchText, setSearchText] = useState('');
+  const [brandFilter, setBrandFilter] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
   // ==== Statistics ====
   const totalItems = inventories.reduce((sum, inv) => sum + inv.quantity, 0);
-  const totalUsed = inventories.reduce(
-    (sum, inv) => sum + inv.used_quantity,
-    0
-  );
-  const totalAvailable = inventories.reduce(
-    (sum, inv) => sum + inv.available_quantity,
-    0
-  );
-  const lowStockItems = inventories.filter(
-    (inv) => inv.available_quantity < 10
-  ).length;
+  const totalUsed = inventories.reduce((sum, inv) => sum + (inv.used_quantity || 0), 0);
+  const totalAvailable = inventories.reduce((sum, inv) => sum + (inv.available_quantity || 0), 0);
+  const lowStockItems = inventories.filter((inv) => (inv.available_quantity || 0) < 10).length;
 
   useEffect(() => {
     const loadData = async () => {
-      await fetchInventories();
-      await fetchProducts();
+      try {
+        await Promise.all([fetchInventories(), fetchProducts()]);
+      } catch (err) {
+        console.error('Error loading initial data:', err);
+      }
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [searchText, brandFilter, statusFilter, inventories]);
 
   // ==== API Configuration ====
   const apiClient = axios.create({
@@ -117,12 +122,10 @@ const InventoryManager: React.FC = () => {
     },
   });
 
-  // Add response interceptor for error handling
   apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-      const errorMessage =
-        error.response?.data?.message || error.message || 'An error occurred';
+      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
       message.error(errorMessage);
       return Promise.reject(error);
     }
@@ -133,57 +136,36 @@ const InventoryManager: React.FC = () => {
     try {
       setLoading(true);
       const res = await apiClient.get('/inventory');
-      console.log('Inventory API response:', res.data);
-
-      // BE returns array of inventories with relations
       const inventoryData = Array.isArray(res.data) ? res.data : [];
-
-      const mapped: Inventory[] = inventoryData.map((inv: any) => {
-        console.log('Raw inventory item:', inv);
-
-        return {
-          id: inv.id,
-          uuid: inv.uuid,
-          product: {
-            id: inv.product?.id,
-            name: inv.product?.name,
-            store: inv.product?.store
-              ? {
-                  id: inv.product.store.id,
-                  name: inv.product.store.name,
-                  user_id: inv.product.store.user_id,
-                }
-              : undefined,
-            brand: inv.product?.brand
-              ? {
-                  id: inv.product.brand.id,
-                  name: inv.product.brand.name,
-                }
-              : undefined,
-          },
-          variant: inv.variant
-            ? {
-                id: inv.variant.id,
-                name: inv.variant.name,
-                product_id: inv.variant.product_id,
-                price: inv.variant.price,
-                stock: inv.variant.stock,
-              }
-            : undefined,
-          location: inv.location,
-          quantity: inv.quantity,
-          used_quantity: inv.used_quantity || 0,
-          updated_at: inv.updated_at,
-          available_quantity:
-            inv.available_quantity || inv.quantity - (inv.used_quantity || 0),
-        };
-      });
-
-      console.log('Mapped inventories:', mapped);
+      const mapped: Inventory[] = inventoryData.map((inv: any) => ({
+        id: inv.id,
+        uuid: inv.uuid,
+        product: {
+          id: inv.product?.id,
+          name: inv.product?.name,
+          store: inv.product?.store,
+          brand: inv.product?.brand,
+        },
+        variant: inv.variant
+          ? {
+              id: inv.variant.id,
+              name: inv.variant.variant_name || inv.variant.name,
+              product_id: inv.variant.product_id,
+              price: inv.variant.price,
+              stock: inv.variant.stock,
+            }
+          : null,
+        location: inv.location,
+        quantity: inv.quantity,
+        used_quantity: inv.used_quantity || 0,
+        updated_at: inv.updated_at,
+        available_quantity: inv.available_quantity || inv.quantity - (inv.used_quantity || 0),
+      }));
       setInventories(mapped);
-    } catch (err: any) {
-      console.error('Fetch inventories failed:', err);
+      setFilteredInventories(mapped);
+    } catch (err) {
       setInventories([]);
+      setFilteredInventories([]);
     } finally {
       setLoading(false);
     }
@@ -192,35 +174,15 @@ const InventoryManager: React.FC = () => {
   const fetchProducts = async () => {
     try {
       const res = await apiClient.get('/products');
-      console.log('Products API response:', res.data);
-
-      // Assuming products endpoint returns array of products
-      const productData = Array.isArray(res.data)
-        ? res.data
-        : res.data?.data || [];
-
+      const productData = Array.isArray(res.data) ? res.data : res.data?.data || [];
       const mapped: Product[] = productData.map((p: any) => ({
         id: p.id,
         name: p.name,
-        store: p.store
-          ? {
-              id: p.store.id,
-              name: p.store.name,
-              user_id: p.store.user_id,
-            }
-          : undefined,
-        brand: p.brand
-          ? {
-              id: p.brand.id,
-              name: p.brand.name,
-            }
-          : undefined,
+        store: p.store,
+        brand: p.brand,
       }));
-
-      console.log('Mapped products:', mapped);
       setProducts(mapped);
-    } catch (err: any) {
-      console.error('Fetch products failed:', err);
+    } catch (err) {
       setProducts([]);
     }
   };
@@ -228,25 +190,16 @@ const InventoryManager: React.FC = () => {
   const fetchVariantsByProduct = async (productId: number) => {
     try {
       const res = await apiClient.get(`/variants/product/${productId}`);
-      console.log('Variants API response:', res.data);
-
-      // Assuming variants endpoint returns array of variants
-      const variantData = Array.isArray(res.data)
-        ? res.data
-        : res.data?.data || [];
-
+      const variantData = Array.isArray(res.data) ? res.data : res.data?.data || [];
       const mapped: Variant[] = variantData.map((v: any) => ({
         id: v.id,
-        name: v.name,
+        name: v.variant_name || v.name,
         product_id: v.product_id,
         price: v.price,
         stock: v.stock,
       }));
-
-      console.log('Mapped variants:', mapped);
       setVariants(mapped);
-    } catch (err: any) {
-      console.error('Fetch variants failed:', err);
+    } catch (err) {
       setVariants([]);
     }
   };
@@ -263,30 +216,22 @@ const InventoryManager: React.FC = () => {
         used_quantity: values.used_quantity || 0,
       };
 
-      console.log('Save payload:', payload);
-
       let res;
       if (editingInventory) {
-        res = await apiClient.patch(
-          `/inventory/${editingInventory.id}`,
-          payload
-        );
+        res = await apiClient.patch(`/inventory/${editingInventory.id}`, payload);
         message.success('Cập nhật tồn kho thành công');
       } else {
         res = await apiClient.post('/inventory', payload);
         message.success('Thêm tồn kho thành công');
       }
 
-      console.log('Save response:', res.data);
-
       setShowModal(false);
       setEditingInventory(null);
       form.resetFields();
       setVariants([]);
       await fetchInventories();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Save inventory failed:', err);
-      // Error message handled by interceptor
     } finally {
       setLoading(false);
     }
@@ -296,16 +241,14 @@ const InventoryManager: React.FC = () => {
     setEditingInventory(inventory);
     form.setFieldsValue({
       productId: inventory.product.id,
-      variantId: inventory.variant?.id,
+      variantId: inventory.variant?.id || null,
       location: inventory.location,
       quantity: inventory.quantity,
-      used_quantity: inventory.used_quantity,
+      used_quantity: inventory.used_quantity || 0,
     });
-
     if (inventory.product.id) {
       await fetchVariantsByProduct(inventory.product.id);
     }
-
     setShowModal(true);
   };
 
@@ -320,18 +263,16 @@ const InventoryManager: React.FC = () => {
         try {
           await apiClient.delete(`/inventory/${id}`);
           message.success('Xóa tồn kho thành công');
-          console.log('Deleted inventory ID:', id);
           await fetchInventories();
-        } catch (err: any) {
+        } catch (err) {
           console.error('Delete inventory failed:', err);
-          // Error message handled by interceptor
         }
       },
     });
   };
 
   const handleProductChange = async (productId: number) => {
-    form.setFieldValue('variantId', undefined);
+    form.setFieldValue('variantId', null);
     setVariants([]);
     if (productId) {
       await fetchVariantsByProduct(productId);
@@ -353,21 +294,47 @@ const InventoryManager: React.FC = () => {
     return <Tag color="green">Còn nhiều</Tag>;
   };
 
+  const applyFilters = () => {
+    let data = [...inventories];
+
+    if (searchText) {
+      data = data.filter((inv) =>
+        inv.product.name.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    if (brandFilter) {
+      data = data.filter((inv) => inv.product.brand?.id === brandFilter);
+    }
+
+    if (statusFilter) {
+      data = data.filter((inv) => {
+        const available = inv.available_quantity || 0;
+        if (statusFilter === 'out') return available <= 0;
+        if (statusFilter === 'low') return available > 0 && available < 10;
+        if (statusFilter === 'medium') return available >= 10 && available < 50;
+        if (statusFilter === 'high') return available >= 50;
+        return true;
+      });
+    }
+
+    setFilteredInventories(data);
+  };
+
   // ==== Table Columns ====
   const columns = [
     {
       title: 'Sản phẩm',
       dataIndex: ['product', 'name'],
       key: 'product',
-      width: 180,
+      width: 150,
       ellipsis: true,
-      render: (name: string) => name || 'N/A',
     },
     {
       title: 'Thương hiệu',
       dataIndex: ['product', 'brand', 'name'],
       key: 'brand',
-      width: 120,
+      width: 100,
       ellipsis: true,
       render: (name: string) => name || 'N/A',
     },
@@ -470,6 +437,50 @@ const InventoryManager: React.FC = () => {
         </Button>
       </div>
 
+      {/* Filters */}
+      <Row gutter={12} className="mb-4">
+        <Col xs={24} sm={8}>
+          <Input
+            prefix={<SearchOutlined />}
+            placeholder="Tìm kiếm sản phẩm..."
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <Select
+            allowClear
+            style={{ width: '100%' }}
+            placeholder="Lọc theo thương hiệu"
+            value={brandFilter || undefined}
+            onChange={(val) => setBrandFilter(val || null)}
+          >
+            {[...new Map(products.map((p) => [p.brand?.id, p.brand])).values()]
+              .filter((b) => b)
+              .map((brand: any) => (
+                <Option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </Option>
+              ))}
+          </Select>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Select
+            allowClear
+            style={{ width: '100%' }}
+            placeholder="Lọc theo trạng thái"
+            value={statusFilter || undefined}
+            onChange={(val) => setStatusFilter(val || null)}
+          >
+            <Option value="out">Hết hàng</Option>
+            <Option value="low">Sắp hết (&lt; 10)</Option>
+            <Option value="medium">Còn ít (10 - 49)</Option>
+            <Option value="high">Còn nhiều (≥ 50)</Option>
+          </Select>
+        </Col>
+      </Row>
+
       {/* Statistics */}
       <Row gutter={12} className="mb-4">
         <Col xs={24} sm={12} md={6}>
@@ -538,22 +549,19 @@ const InventoryManager: React.FC = () => {
         className="flex-1 overflow-hidden"
       >
         <Table
-          dataSource={inventories}
+          dataSource={filteredInventories}
           columns={columns}
           rowKey="id"
           loading={loading}
           size="small"
           pagination={{
-            total: inventories.length,
+            total: filteredInventories.length,
             pageSize: 20,
             showSizeChanger: true,
-            showQuickJumper: false,
-            showTotal: (total) => `Tổng ${total} mục`,
-            size: 'small',
             pageSizeOptions: ['10', '20', '50'],
           }}
           className="compact-table"
-          style={{ width: '100%' }} // 👈 Thêm
+          style={{ width: '100%' }}
         />
       </Card>
 
@@ -589,39 +597,20 @@ const InventoryManager: React.FC = () => {
               showSearch
               optionFilterProp="children"
               onChange={handleProductChange}
-              loading={products.length === 0}
             >
-              {products.map((product) => (
-                <Option key={product.id} value={product.id}>
-                  {product.name} {product.brand && `- ${product.brand.name}`}
+              {products.map((p) => (
+                <Option key={p.id} value={p.id}>
+                  {p.name}
                 </Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="variantId"
-            label="Biến thể"
-            rules={
-              variants.length > 0
-                ? [{ required: true, message: 'Vui lòng chọn biến thể' }]
-                : []
-            }
-          >
-            <Select
-              placeholder={
-                variants.length === 0
-                  ? 'Sản phẩm này không có biến thể'
-                  : 'Chọn biến thể'
-              }
-              showSearch
-              optionFilterProp="children"
-              disabled={variants.length === 0}
-            >
-              {variants.map((variant) => (
-                <Option key={variant.id} value={variant.id}>
-                  {variant.name}{' '}
-                  {variant.price && `- ${variant.price.toLocaleString()} VND`}
+          <Form.Item name="variantId" label="Biến thể (nếu có)">
+            <Select placeholder="Chọn biến thể (tuỳ chọn)">
+              {variants.map((v) => (
+                <Option key={v.id} value={v.id}>
+                  {v.name}
                 </Option>
               ))}
             </Select>
@@ -629,72 +618,33 @@ const InventoryManager: React.FC = () => {
 
           <Form.Item
             name="location"
-            label="Vị trí kho"
+            label="Vị trí"
             rules={[{ required: true, message: 'Vui lòng nhập vị trí kho' }]}
           >
-            <Input placeholder="Ví dụ: Kho A-1, Kệ B-2, ..." />
+            <Input placeholder="Nhập vị trí kho" />
           </Form.Item>
 
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item
-                name="quantity"
-                label="Tổng số lượng"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập số lượng' },
-                  {
-                    type: 'number',
-                    min: 1,
-                    message: 'Số lượng phải lớn hơn 0',
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={1}
-                  style={{ width: '100%' }}
-                  placeholder="Nhập số lượng"
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                  }
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="used_quantity"
-                label="Đã sử dụng"
-                rules={[
-                  { type: 'number', min: 0, message: 'Số lượng không được âm' },
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  style={{ width: '100%' }}
-                  placeholder="Nhập số lượng đã dùng"
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                  }
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            name="quantity"
+            label="Số lượng"
+            rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
+          >
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="Nhập số lượng"
+            />
+          </Form.Item>
+
+          <Form.Item name="used_quantity" label="Đã sử dụng">
+            <InputNumber
+              min={0}
+              style={{ width: '100%' }}
+              placeholder="Nhập số lượng đã dùng"
+            />
+          </Form.Item>
         </Form>
       </Modal>
-
-      <style>{`
-        .compact-table .ant-table-thead > tr > th {
-          padding: 8px 12px !important;
-          font-size: 12px;
-          font-weight: 600;
-        }
-        .compact-table .ant-table-tbody > tr > td {
-          padding: 6px 12px !important;
-          font-size: 12px;
-        }
-        .compact-table .ant-table-pagination {
-          margin: 12px 0 0 0 !important;
-        }
-      `}</style>
     </div>
   );
 };

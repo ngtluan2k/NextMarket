@@ -1,5 +1,6 @@
 // src/components/admin/AdminDashboard.tsx
 import React, { useState } from 'react';
+import { Empty } from 'antd';
 import { RoleManager } from './RoleManager';
 import { PermissionManager } from './PermissionManager';
 import { UserRoleManager } from './UserRoleManager';
@@ -8,6 +9,7 @@ import InventoryManager from './InventoryManager';
 import BrandManager from './BrandManager';
 import AdminHeader from './AdminHeader';
 import AdminSidebar from './AdminSidebar';
+import VoucherManager from './VoucherManager';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -29,101 +31,96 @@ export const AdminDashboard: React.FC = () => {
         return <RoleManager />;
       case '2-1': // Danh sách sản phẩm
         return (
-          <div>
-            <h3>Danh sách sản phẩm</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '2-2': // Danh mục sản phẩm
         return <CategoryManager />;
       case '2-3': // Khuyến mãi sản phẩm
-        return (
-          <div>
-            <h3>Khuyến mãi sản phẩm</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+         return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '3-1': // Tồn kho
         return <InventoryManager />;
       case '3-2': // Nhập/Xuất kho
         return (
-          <div>
-            <h3>Nhập/Xuất kho</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '4-1': // Danh sách đơn hàng
-        return (
-          <div>
-            <h3>Danh sách đơn hàng</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+         return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '4-2': // Trả hàng/Hoàn tiền
         return (
-          <div>
-            <h3>Trả hàng/Hoàn tiền</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '5-1': // Danh sách khách hàng
-        return (
-          <div>
-            <h3>Danh sách khách hàng</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+         return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '5-2': // Nhóm khách hàng
-        return (
-          <div>
-            <h3>Nhóm khách hàng</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+         return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '6-1': // Danh sách nhà bán
         return <BrandManager />;
       case '6-2': // Đối soát công nợ
         return (
-          <div>
-            <h3>Đối soát công nợ</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '7-1': // Doanh thu
         return (
-          <div>
-            <h3>Doanh thu</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '7-2': // Thanh toán
         return (
-          <div>
-            <h3>Thanh toán</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '8-1': // Mã giảm giá
-        return (
-          <div>
-            <h3>Mã giảm giá</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        return <VoucherManager/>
       case '8-2': // Chiến dịch quảng cáo
         return (
-          <div>
-            <h3>Chiến dịch quảng cáo</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case '9': // Báo cáo & thống kê
         return (
-          <div>
-            <h3>Báo cáo & thống kê</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={<span>Chức năng đang phát triển...</span>}
+        />
+      );
       case 'permissions': // Quản lý quyền (thêm cho phần permissions riêng)
         return <PermissionManager />;
       case 'userRoles': // Phân quyền người dùng (thêm cho phần user roles riêng)
@@ -153,63 +150,6 @@ export const AdminDashboard: React.FC = () => {
             <div className="p-6">{renderContent()}</div>
           </div>
         </div>
-import { StoreManager } from '../register_seller/StoreManager';
-
-export const AdminDashboard: React.FC = () => {
-  const [tab, setTab] = useState<'roles' | 'permissions' | 'userRoles' | 'stores'>('stores');
-
-  return (
-    <div className="container mt-4">
-      <h2>Super Admin Dashboard</h2>
-      <ul className="nav nav-tabs">
-        <li className="nav-item">
-          <button className={`nav-link ${tab === 'stores' ? 'active' : ''}`} onClick={() => setTab('stores')}>Stores</button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${tab === 'roles' ? 'active' : ''}`} onClick={() => setTab('roles')}>Roles</button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${tab === 'permissions' ? 'active' : ''}`}
-            onClick={() => setTab('permissions')}
-          >
-            Permissions
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${tab === 'userRoles' ? 'active' : ''}`}
-            onClick={() => setTab('userRoles')}
-          >
-            User-Roles
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${tab === 'categories' ? 'active' : ''}`}
-            onClick={() => setTab('categories')}
-          >
-            Categories
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${tab === 'brands' ? 'active' : ''}`}
-            onClick={() => setTab('brands')}
-          >
-            Brands
-          </button>
-        </li>
-      </ul>
-
-      <div className="mt-3">
-        {tab === 'stores' && <StoreManager />}
-        {tab === 'roles' && <RoleManager />}
-        {tab === 'permissions' && <PermissionManager />}
-        {tab === 'userRoles' && <UserRoleManager />}
-        {tab === 'categories' && <CategoryManager />}
-        {tab === 'brands' && <BrandManager />}
->>>>>>> origin/main
       </div>
     </div>
   );

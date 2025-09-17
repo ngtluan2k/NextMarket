@@ -4,8 +4,9 @@ export class CreateInventoryDto {
   @IsNumber()
   productId!: number;
 
+  @IsOptional()
   @IsNumber()
-  variantId!: number;
+  variantId?: number| null;;
 
   @IsString()
   location!: string;
