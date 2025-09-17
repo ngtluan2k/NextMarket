@@ -31,8 +31,3 @@ export const multerConfig: MulterOptions = {
     }
   },
 };
-
-
-
-
-

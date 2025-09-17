@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 export const ProductForm: React.FC = () => {
@@ -56,6 +57,7 @@ export const ProductForm: React.FC = () => {
     inventory: [],
     pricing_rules: [],
   });
+
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -684,3 +686,4 @@ const payload = {
     </form>
   );
 };
+

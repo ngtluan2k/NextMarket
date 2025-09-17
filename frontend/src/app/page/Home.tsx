@@ -9,12 +9,18 @@ import ProductGridToday from '../components/ProductGridToday';
 import FeaturedBrands from '../components/FeaturedBrands';
 import Footer from '../components/Footer';
 import YouMayAlsoLike from '../components/YouMayAlsoLike';
-
 import { fetchBrandsAPI } from '../../service/brand.service';
 import { fetchCategoriesAPI, Category } from '../../service/category.service';
 
 
 type Slide = { imageUrl: string; alt?: string; href?: string };
+interface ToastMessage {
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
+}
+
 interface ToastMessage {
   showMessage?: (
     type: 'success' | 'error' | 'warning',
@@ -167,22 +173,23 @@ function BootstrapTwoUpCarousel({
   );
 }
 
-const Home: React.FC = () => {
+const Home: React.FC<ToastMessage> = ({ showMessage }) => {
   const [slidesState, setSlidesState] = useState<Slide[] | undefined>(
     undefined
   );
-const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-useEffect(() => {
-  (async () => {
-    try {
-      const data = await fetchCategoriesAPI();
-      setCategories(data);
-    } catch (err) {
-      console.error(err);
-    }
-  })();
-}, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchCategoriesAPI();
+        setCategories(data);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -208,6 +215,7 @@ useEffect(() => {
             <ProductGridToday
               containerClassName="my-6"
               cardClassName="hover:bg-gray-50"
+              showMessage={showMessage}
             />
           </section>
         </div>

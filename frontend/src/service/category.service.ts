@@ -52,4 +52,3 @@ export const fetchChildCategoriesAPI = async (parentId: string | number) => {
     hasChildren: c.children?.length > 0,
   }));
 };
-

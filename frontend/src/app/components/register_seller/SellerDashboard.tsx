@@ -10,7 +10,8 @@ interface Store {
   created_at: string;
 }
 
-export const SellerDashboard: React.FC = () => {
+export const Settings: React.FC = () => {
+
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
 

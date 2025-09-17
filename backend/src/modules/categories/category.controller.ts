@@ -14,6 +14,7 @@ export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
+  // @Permissions('view_category')
   async findAll(@Query('search') search?: string) {
     const data = await this.categoryService.findAll(search);
     return {
@@ -24,6 +25,7 @@ export class CategoryController {
   }
 
 @Get(':id')
+  // @Permissions('view_category')
   async findOne(@Param('id') id: number) {
     const data = await this.categoryService.findOne(id);
     return {
@@ -34,7 +36,6 @@ export class CategoryController {
 
 @Post()
 @UseGuards(JwtAuthGuard, PermissionGuard)
-
 @Permissions('create_category')
 async create(@Body() dto: CreateCategoryDto) {
   const data = await this.categoryService.create(dto);
@@ -46,7 +47,6 @@ async create(@Body() dto: CreateCategoryDto) {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, PermissionGuard)
-
   @Permissions('update_category')
   async update(@Param('id') id: number, @Body() dto: UpdateCategoryDto) {
     const data = await this.categoryService.update(id, dto);
@@ -58,7 +58,6 @@ async create(@Body() dto: CreateCategoryDto) {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionGuard)
-
   @Permissions('delete_category')
   async remove(@Param('id') id: number) {
     await this.categoryService.remove(id);

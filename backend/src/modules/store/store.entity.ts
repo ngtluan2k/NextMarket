@@ -1,5 +1,14 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  JoinColumn,
+  Generated,
+  OneToOne,
+  UpdateDateColumn,
+  CreateDateColumn,
+} from 'typeorm';
 
-import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, Generated, OneToOne, UpdateDateColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../user/user.entity';
 import { OneToMany } from 'typeorm';
 import { Product } from '../product/product.entity';
@@ -15,6 +24,10 @@ export class Store {
 
   @Column()
   user_id!: number;
+
+  @OneToOne(() => User, (user) => user.id)
+  @JoinColumn({ name: 'user_id' })
+  owner!: User;
 
   @Column({ length: 255 })
   name!: string;
@@ -47,6 +60,6 @@ export class Store {
   @UpdateDateColumn({ type: 'datetime',  default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
- @OneToMany(() => Product, product => product.store)
-  products!: Product[];   
+  @OneToMany(() => Product, (product) => product.store)
+  products!: Product[]; // <-- thêm dòng này
 }

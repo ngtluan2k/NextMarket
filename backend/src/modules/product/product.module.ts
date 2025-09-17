@@ -15,6 +15,7 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { PricingRuleModule } from '../pricing-rule/pricing-rule.module';
 import { ProductCategory } from '../product_category/product_category.entity';
 import { ProductCategoryModule } from '../product_category/product_category.module';
+import { StoreModule } from '../store/store.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProductCategoryModule } from '../product_category/product_category.modu
     forwardRef(() => InventoryModule),
     forwardRef(() => PricingRuleModule),
     forwardRef(() => ProductCategoryModule),
+    forwardRef(() => StoreModule),
   ],
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],
