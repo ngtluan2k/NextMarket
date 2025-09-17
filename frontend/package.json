@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "antd": "^5.27.3"
+    "antd": "^5.27.3",
+    "lucide-react": "^0.544.0"
   }
 }
