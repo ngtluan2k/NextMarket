@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated } from 'typeorm';
-import { Store } from './../store/store.entity';
+import { StoreInformation } from './../store-information/store-information.entity';
 
 @Entity('store_documents')
 export class StoreDocument {
@@ -11,11 +11,11 @@ export class StoreDocument {
   uuid!: string;
 
   @Column()
-  store_id!: number;
+  store_information_id!: number;
 
-  @ManyToOne(() => Store)
-  @JoinColumn({ name: 'store_id' })
-  store!: Store;
+  @ManyToOne(() => StoreInformation)
+  @JoinColumn({ name: 'store_information_id' })
+  storeInformation!: StoreInformation;
 
   @Column({ length: 100 })
   doc_type!: string;
@@ -27,5 +27,5 @@ export class StoreDocument {
   verified!: boolean;
 
   @Column({ type: 'datetime', nullable: true })
-  verified_at!: Date;
+  verified_at!: Date | null;
 }

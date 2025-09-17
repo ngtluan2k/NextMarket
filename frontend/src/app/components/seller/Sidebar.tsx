@@ -2,7 +2,9 @@
 import { Layout, Menu, type MenuProps } from 'antd';
 import {
   AppstoreAddOutlined,
+  HomeOutlined,
   MenuUnfoldOutlined,
+  SettingOutlined,
   ShoppingCartOutlined,
 } from '@ant-design/icons';
 import {
@@ -10,11 +12,9 @@ import {
   BarChartOutlined,
   UserOutlined,
   FileTextOutlined,
-  TeamOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
-
+import { useNavigate } from 'react-router-dom';
 const { Sider } = Layout;
 
 type MenuItem = Required<MenuProps>['items'][number];
@@ -29,14 +29,14 @@ function getItem(
 }
 
 const items: MenuItem[] = [
-  getItem('dashboard', 'Dashboard', <DashboardOutlined />),
-  getItem('sales', 'Sales', <BarChartOutlined />),
-  getItem('inventory', 'StoreInventory', <AppstoreAddOutlined />),
-  getItem('customers', 'Customers', <UserOutlined />),
-  getItem('invoices', 'Invoices', <FileTextOutlined />),
-  getItem('team', 'Team', <TeamOutlined />),
-  getItem('settings', 'Settings', <SettingOutlined />),
+  getItem('Trang chủ', 'Dashboard', <DashboardOutlined />),
+  getItem('Quản lý bán hàng', 'SalesManagement', <BarChartOutlined />),
+  getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
+  getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
+  getItem('Invoices', 'Invoices', <FileTextOutlined />),
+  getItem('Back to home', 'HomePage', <HomeOutlined/>)
 ];
+
 
 interface SideBarProps {
   onSelect: (key: string) => void;
@@ -44,9 +44,18 @@ interface SideBarProps {
 
 const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const handleDoubleClick = () => {
     setCollapsed(!collapsed);
+  };
+
+  const handleMenuClick = (e: { key: string }) => {
+    if (e.key === 'HomePage') {
+      navigate('/'); 
+    } else {
+      onSelect(e.key); 
+    }
   };
 
   return (
@@ -90,9 +99,9 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
       <Menu
         theme="light"
         mode="inline"
-        defaultSelectedKeys={['dashboard']}
+        defaultSelectedKeys={['Dashboard']}
         items={items}
-        onClick={(e) => onSelect(e.key)}
+        onClick={(e) => handleMenuClick(e)}
         onDoubleClick={handleDoubleClick}
       />
     </Sider>

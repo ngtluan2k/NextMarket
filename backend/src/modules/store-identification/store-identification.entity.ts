@@ -20,7 +20,13 @@ export class StoreIdentification {
   full_name!: string;
 
   @Column({ length: 255, nullable: true })
-  img!: string;
+  img_front!: string;
+
+  @Column({ length: 255, nullable: true })
+  img_back!: string;
+
+  @Column({ type: 'boolean', default: false })
+  is_draft!: boolean;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

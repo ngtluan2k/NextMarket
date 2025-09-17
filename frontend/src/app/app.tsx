@@ -1,14 +1,14 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-// import { AuthForm } from './components/AuthForm';
-import { ProductList } from './components/ProductList';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
 import { Cart } from './components/Cart';
-import { message } from 'antd';
-// import EveryMartHeader from './components/Navbar';
 import Home from './page/Home';
 import CategoryPage from './page/CategoryPage';
+import ProductForm from './components/AddProduct';
+import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
+
+import { message } from 'antd';
 import SellerMainLayout from './page/Seller/MainLayout';
 
 const App: React.FC = () => {
@@ -25,24 +25,24 @@ const App: React.FC = () => {
   };
 
   return (
-    <>
-      <CartProvider>
-        {contextHolder}
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/catepage" element={<CategoryPage />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/category/:slug/explore" element={<CategoryPage />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/home" element={<ProductList />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="*" element={<Navigate to="/" />} />
-          <Route path="/cart" element={<Cart showMessage={showMessage}/>} />
-           <Route path="/test" element={<SellerMainLayout />} />
-        </Routes>
-      </CartProvider>
-      ?
-    </>
+    <CartProvider>
+      {contextHolder}
+      <Routes>
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/seller-registration" element={<SellerRegistration />} />
+        {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
+        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/" element={<Home showMessage={showMessage} />} />
+        <Route path="/catepage" element={<CategoryPage />} />
+        <Route path="/cart" element={<Cart showMessage={showMessage} />} />
+        <Route path="/home" element={<Home />} />
+        {/* Trang danh mục dùng slug */}
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/add_product" element={<ProductForm />} />
+        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/myStores" element={<SellerMainLayout />} />
+      </Routes>
+    </CartProvider>
   );
 };
 

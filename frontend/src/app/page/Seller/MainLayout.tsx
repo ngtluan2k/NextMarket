@@ -4,25 +4,25 @@ import Sidebar from '../../components/seller/Sidebar';
 import SellerDashboard from './tab/SellerDashboard';
 import Sale from './tab/Sale';
 import Customer from './tab/Customer';
-import Setting from './tab/Setting';
 import Invoice from './tab/Invoice';
-import Teams from './tab/Teams';
 import StoreInventory from './tab/StoreInventory';
+import Home from '../Home';
+import { Settings } from '../../components/register_seller/Settings';
+
 const { Content, Footer } = Layout;
 
 const pages: Record<string, React.ReactNode> = {
   Dashboard: <SellerDashboard />,
-  Sales: <Sale />,
+  SalesManagement: <Sale />,
   StoreInventory: <StoreInventory />,
   Customers: <Customer />,
   Invoices: <Invoice />,
-  Team: <Teams />,
-  Settings: <Setting />,
+  Settings: <Settings />,
+  Home: <Home />,
 };
 
 const SellerMainLayout: React.FC = () => {
-  const [activePage, setActivePage] = useState('dashboard');
-  console.log('current active page: ', activePage);
+  const [activePage, setActivePage] = useState('Dashboard');
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sidebar onSelect={(key) => setActivePage(key)} />

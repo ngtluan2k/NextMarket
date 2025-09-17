@@ -8,10 +8,16 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
+import { Role } from '../role/role.entity';
+import { UserRole } from '../user-role/user-role.entity';
 
 @Injectable()
 export class UserService {
   constructor(
+     @InjectRepository(UserRole)
+    private readonly userRoleRepository: Repository<UserRole>,
+    @InjectRepository(Role) 
+    private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService, // 👈 inject JwtService
@@ -26,7 +32,7 @@ export class UserService {
     if (exist) throw new BadRequestException('Email already exists');
 
     const hashed = await bcrypt.hash(dto.password, 10);
-
+    // Tạo user
     const user = this.userRepository.create({
       uuid: uuidv4(),
       username: dto.username,
@@ -44,7 +50,19 @@ export class UserService {
       },
     });
 
-    return await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // Gán role mặc định "user"
+    const role = await this.roleRepository.findOne({ where: { name: 'user' } });
+    if (!role) throw new BadRequestException('Default role not found');
+
+    const userRole = this.userRoleRepository.create({
+      user: savedUser,
+      role: role,
+    });
+    await this.userRoleRepository.save(userRole);
+
+    return savedUser;
   }
 
   async login(dto: LoginDto) {
@@ -78,6 +96,7 @@ export class UserService {
 
     return {
       id: user.id,
+      username: user.username,
       email: user.email,
       roles: user.roles.map(ur => ur.role.name),
       permissions,

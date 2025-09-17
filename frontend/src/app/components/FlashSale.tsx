@@ -1,85 +1,91 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-export type FlashSaleItem = {
-  id: string | number;
-  name?: string;
-  imageUrl: string;
-  price: number;              // giá đã giảm
-  originalPrice?: number;     // giá gốc (optional)
-  discountPercent?: number;   // % giảm (optional, tự tính nếu không truyền)
-  href?: string;
+type ProductRaw = {
+  id: number;
+  name: string;
+  media?: { url: string; is_primary?: boolean }[];
+  base_price?: string;
+  variants?: { price: string }[];
+  brand?: { name: string };
+  originalPrice?: string; // nếu API có
 };
 
-export type FlashSaleProps = {
+export type ProductFlashSaleItem = {
+  id: number;
+  name: string;
+  image: string;
+  price: number;
+  originalPrice?: number;
+  brandName?: string;
+};
+
+type ProductFlashSaleProps = {
   title?: string;
-  items?: FlashSaleItem[];                         // có thể bỏ trống -> placeholder
-  fetchItems?: () => Promise<FlashSaleItem[]>;     // truyền vào khi có API
   seeAllHref?: string;
   className?: string;
+  skeletonCount?: number;
 };
 
 function formatVND(n: number) {
-  try {
-    return new Intl.NumberFormat("vi-VN").format(n) + "đ";
-  } catch {
-    return n.toLocaleString("vi-VN") + "đ";
-  }
+  return new Intl.NumberFormat("vi-VN").format(n) + "đ";
 }
 
-const PLACEHOLDERS: FlashSaleItem[] = Array.from({ length: 8 }).map((_, i) => ({
-  id: `ph-${i}`,
-  imageUrl:
-    "data:image/svg+xml;utf8," +
-    encodeURIComponent(
-      `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'>
-        <rect width='100%' height='100%' rx='16' fill='#F1F5F9'/>
-        <text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'
-          font-family='system-ui,Segoe UI,Roboto' font-size='12' fill='#94A3B8'>Image</text>
-      </svg>`
-    ),
-  price: 3579000,
-  discountPercent: 28,
-}));
-
-export default function FlashSale({
+export default function ProductFlashSale({
   title = "Flash Sale",
-  items,
-  fetchItems,
   seeAllHref = "#",
   className = "",
-}: FlashSaleProps) {
-  const [data, setData] = React.useState<FlashSaleItem[]>(items ?? PLACEHOLDERS);
-  const [loading, setLoading] = React.useState<boolean>(!!fetchItems);
+  skeletonCount = 8,
+}: ProductFlashSaleProps) {
+  const [data, setData] = useState<ProductFlashSaleItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const trackRef = React.useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
-  // Tự fetch khi có API
-  React.useEffect(() => {
+  // fetch API
+  useEffect(() => {
     let cancel = false;
-    (async () => {
-      if (!fetchItems) return;
+
+    const fetchProducts = async () => {
       try {
         setLoading(true);
-        const res = await fetchItems();
-        if (!cancel && Array.isArray(res) && res.length) setData(res);
+        const token = localStorage.getItem("token");
+        const res = await fetch("http://localhost:3000/products", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const json: ProductRaw[] = await res.json();
+
+        const mapped: ProductFlashSaleItem[] = json.map((p) => {
+          const primaryMedia = p.media?.find((m) => m.is_primary) || p.media?.[0];
+          const mainVariant = p.variants?.[0];
+          return {
+            id: p.id,
+            name: p.name,
+            image: primaryMedia?.url || "https://via.placeholder.com/110?text=No+Image",
+            price: Number(mainVariant?.price || p.base_price || 0),
+            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            brandName: p.brand?.name,
+          };
+        });
+
+        if (!cancel) setData(mapped);
+      } catch (e) {
+        console.error(e);
       } finally {
         if (!cancel) setLoading(false);
       }
-    })();
+    };
+
+    fetchProducts();
     return () => {
       cancel = true;
     };
-  }, [fetchItems]);
-
-  // Nếu props items thay đổi (ví dụ API ở cha), đồng bộ lại
-  React.useEffect(() => {
-    if (items) setData(items);
-  }, [items]);
+  }, []);
 
   const scrollByCards = (dir: number) => {
     const el = trackRef.current;
     if (!el) return;
-    const CARD = 176; // ~width 160 + gap
+    const CARD = 176;
     el.scrollBy({ left: dir * CARD * 3, behavior: "smooth" });
   };
 
@@ -93,85 +99,78 @@ export default function FlashSale({
         </a>
       </div>
 
-      {/* Content */}
+      {/* Track */}
       <div className="relative px-2 pb-3">
-        {/* Track */}
         <div
           ref={trackRef}
-          className="flex gap-4 overflow-x-auto scroll-smooth px-2 pb-2 snap-x snap-mandatory
-                     [scrollbar-width:none] [-ms-overflow-style:none]"
+          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar px-2 pb-2"
           style={{ scrollbarWidth: "none" }}
         >
-          {/* hide scrollbar for webkit */}
-          <style>{`
-            .no-scrollbar::-webkit-scrollbar { display: none; }
-          `}</style>
+          <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
 
-          {data.map((p) => {
-            // tính % giảm nếu thiếu
-            const discount =
-              typeof p.discountPercent === "number"
-                ? p.discountPercent
-                : p.originalPrice
-                ? Math.round((1 - p.price / p.originalPrice) * 100)
-                : undefined;
+          {loading &&
+            Array.from({ length: skeletonCount }).map((_, i) => (
+              <div
+                key={i}
+                className="snap-start w-[160px] shrink-0 animate-pulse rounded-xl bg-slate-100 h-[180px]"
+              />
+            ))}
 
-            return (
-              <a
-                key={p.id}
-                href={p.href || "#"}
-                className="snap-start w-[160px] shrink-0 rounded-xl bg-white ring-1 ring-slate-200/70
-                           hover:ring-slate-300 shadow-sm px-3 pt-3 pb-2 transition"
-              >
-                <div className="relative">
-                  {typeof discount === "number" && (
-                    <span className="absolute left-0 top-0 translate-y-[-6px] rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-500 ring-1 ring-rose-100">
-                      -{discount}%
-                    </span>
-                  )}
-                  <img
-                    src={p.imageUrl}
-                    alt={p.name || "Sản phẩm"}
-                    className="mx-auto block h-[110px] w-[110px] rounded-lg object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src =
-                        "https://via.placeholder.com/110?text=%20";
-                    }}
-                  />
-                </div>
+          {!loading &&
+            data.map((p) => {
+              const discount =
+                p.originalPrice !== undefined
+                  ? Math.round((1 - p.price / p.originalPrice) * 100)
+                  : undefined;
 
-                {/* Giá */}
-                <div className="mt-2 text-center">
-                  <div className="text-[13px] font-semibold text-rose-600">
-                    {formatVND(p.price)}
-                  </div>
-                  {p.originalPrice && (
-                    <div className="text-[11px] text-slate-400 line-through">
-                      {formatVND(p.originalPrice)}
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA */}
-                <button
-                  className="mt-2 w-full rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white
-                             hover:bg-black/90"
+              return (
+                <a
+                  key={p.id}
+                  href="#"
+                  className="snap-start w-[160px] shrink-0 rounded-xl bg-white ring-1 ring-slate-200/70 hover:ring-slate-300 shadow-sm px-3 pt-3 pb-2 transition"
                 >
-                  Mua Ngay
-                </button>
-              </a>
-            );
-          })}
+                  <div className="relative">
+                    {typeof discount === "number" && (
+                      <span className="absolute left-0 top-0 -translate-y-1.5 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-500 ring-1 ring-rose-100">
+                        -{discount}%
+                      </span>
+                    )}
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="mx-auto block h-[110px] w-[110px] rounded-lg object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          "https://via.placeholder.com/110?text=%20";
+                      }}
+                    />
+                  </div>
+                              <h3 className="font-medium">{p.name}</h3>
+
+                  {/* Giá */}
+                  <div className="mt-2 text-center">
+                    <div className="text-[13px] font-semibold text-rose-600">{formatVND(p.price)}</div>
+                    {p.originalPrice && (
+                      <div className="text-[11px] text-slate-400 line-through">{formatVND(p.originalPrice)}</div>
+                    )}
+                    {p.brandName && <div className="text-[11px] text-slate-400">{p.brandName}</div>}
+                  </div>
+
+                  <button className="mt-2 w-full rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/90">
+                    Mua Ngay
+                  </button>
+                </a>
+              );
+            })}
         </div>
 
-        {/* Arrows (ẩn nếu ít item) */}
+        {/* Arrows */}
         {data.length > 6 && (
           <>
             <button
               aria-label="Prev"
               onClick={() => scrollByCards(-1)}
-              className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center
-                         rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
+              className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
@@ -180,19 +179,13 @@ export default function FlashSale({
             <button
               aria-label="Next"
               onClick={() => scrollByCards(1)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center
-                         rounded-full bg-white/90 shadow  ring-1 ring-slate-200 hover:bg-white text-sky-600"
+              className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
               </svg>
             </button>
           </>
-        )}
-
-        {/* Loading bar nhỏ */}
-        {loading && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
         )}
       </div>
     </section>

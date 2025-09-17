@@ -38,7 +38,7 @@ async login(@Body() dto: LoginDto) {
   const userData = await this.userService.login(dto);
 
   // Tạo JWT
-  const payload = { sub: userData.id, email: userData.email, roles: userData.roles, permissions: userData.permissions };
+  const payload = { sub: userData.id, username: userData.username, email: userData.email, roles: userData.roles, permissions: userData.permissions };
   const token = await this.jwtService.signAsync(payload);
 
   return {

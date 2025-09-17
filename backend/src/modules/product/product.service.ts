@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Product } from './product.entity';
@@ -9,6 +13,7 @@ import { ProductMedia } from '../product_media/product_media.entity';
 import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { generateUniqueSlug } from '../../common/utils/slug.util';
 @Injectable()
 export class ProductService {
   constructor(
@@ -16,26 +21,32 @@ export class ProductService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(Store)
     private readonly storeRepo: Repository<Store>,
-    private readonly dataSource: DataSource,
+    private readonly dataSource: DataSource
   ) {}
 
-  async saveProduct(dto: CreateProductDto, userId: number, status: 'draft' | 'active') {
-    return this.dataSource.transaction(async manager => {
-    const store = await manager.findOne(Store, { where: { user_id: userId } });
-    if (!store) throw new NotFoundException('Store not found');
+  async saveProduct(
+    dto: CreateProductDto,
+    userId: number,
+    status: 'draft' | 'active'
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      const store = await manager.findOne(Store, {
+        where: { user_id: userId },
+      });
+      if (!store) throw new NotFoundException('Store not found');
+      const slug = await generateUniqueSlug(this.productRepo, dto.name);
 
       const product = manager.create(Product, {
-  name: dto.name,
-  slug: dto.slug,
-  short_description: dto.short_description,
-  description: dto.description,
-  base_price: dto.base_price,
-  status,
-  store_id: store.id,      // dùng store_id chứ không dùng store: { id: ... }
-  brand_id: dto.brandId,   // dùng brand_id
-});
-await manager.save(product);
-
+        name: dto.name,
+        slug,
+        short_description: dto.short_description,
+        description: dto.description,
+        base_price: dto.base_price,
+        status,
+        store_id: store.id, // dùng store_id chứ không dùng store: { id: ... }
+        brand_id: dto.brandId, // dùng brand_id
+      });
+      await manager.save(product);
 
       // Product categories
       if (dto.categories?.length) {
@@ -65,11 +76,16 @@ await manager.save(product);
       if (dto.inventory?.length) {
         for (const inv of dto.inventory) {
           const variant = variantMap[inv.variant_sku];
-          if (!variant) throw new NotFoundException(`Variant SKU ${inv.variant_sku} not found`);
+          if (!variant)
+            throw new NotFoundException(
+              `Variant SKU ${inv.variant_sku} not found`
+            );
 
           const usedQty = inv.used_quantity || 0;
           if (inv.quantity + usedQty > variant.stock)
-            throw new ForbiddenException(`Inventory exceeds stock for SKU ${inv.variant_sku}`);
+            throw new ForbiddenException(
+              `Inventory exceeds stock for SKU ${inv.variant_sku}`
+            );
 
           await manager.save('inventory', {
             uuid: require('uuid').v4(),
@@ -84,20 +100,19 @@ await manager.save(product);
       }
 
       if (dto.pricing_rules?.length) {
-  for (const pr of dto.pricing_rules) {
-    await manager.save(PricingRules, {
-  product,
-  type: pr.type,
-  min_quantity: pr.min_quantity,
-  price: pr.price,
-  cycle: pr.cycle,
-  starts_at: pr.starts_at ? new Date(pr.starts_at) : undefined,
-  ends_at: pr.ends_at ? new Date(pr.ends_at) : undefined,
-  uuid: require('uuid').v4(),
-});
-
-  }
-}
+        for (const pr of dto.pricing_rules) {
+          await manager.save(PricingRules, {
+            product,
+            type: pr.type,
+            min_quantity: pr.min_quantity,
+            price: pr.price,
+            cycle: pr.cycle,
+            starts_at: pr.starts_at ? new Date(pr.starts_at) : undefined,
+            ends_at: pr.ends_at ? new Date(pr.ends_at) : undefined,
+            uuid: require('uuid').v4(),
+          });
+        }
+      }
 
       return product;
     });
@@ -111,45 +126,78 @@ await manager.save(product);
     return this.saveProduct(dto, userId, 'active');
   }
   // ProductService.ts
-async findAll(userId: number) {
-  return this.productRepo.find({
-    where: { store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-}
+  async findAll(userId: number) {
+    return this.productRepo.find({
+      where: { store: { user_id: userId } },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+  }
 
-async findOne(id: number, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id, store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
+  async findOne(id: number, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id, store: { user_id: userId } },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
 
-async updateProduct(id: number, dto: CreateProductDto, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id },
-    relations: ['store'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('Not allowed');
+  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Not allowed');
 
-  // Cập nhật tất cả các thông tin như createProduct
-  return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
-}
+    // Cập nhật tất cả các thông tin như createProduct
+    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
+  }
 
-async remove(id: number, userId: number) {
-  const product = await this.findOne(id, userId);
-  return this.productRepo.remove(product);
-}
+  async remove(id: number, userId: number) {
+    const product = await this.findOne(id, userId);
+    return this.productRepo.remove(product);
+  }
 
-async findAllProduct() {
-  return this.productRepo.find({
-    where: { status: 'active' },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'], // nếu muốn show thêm info store
-  });
-}
-
-
+  async findAllProduct() {
+    return this.productRepo.find({
+      where: { status: 'active' },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ], 
+    });
+  }
+   async findAllByStoreId(storeId: number) {
+    return this.productRepo.find({
+      where: { store_id: storeId },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+  }
 }

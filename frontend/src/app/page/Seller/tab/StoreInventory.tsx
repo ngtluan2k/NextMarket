@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type React from 'react';
 
 import {
@@ -16,6 +16,7 @@ import {
   Form,
   InputNumber,
   Statistic,
+  message,
 } from 'antd';
 import {
   SearchOutlined,
@@ -33,6 +34,17 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  productService,
+  Product as ApiProduct,
+  CreateProductDto,
+  UpdateProductDto,
+} from '../../../../service/product.service';
+import { storeService, Store } from '../../../../service/store.service';
+import StockBadge from '../../../components/seller/StockBadge';
+import type { StatisticProps } from 'antd';
+import CountUp from 'react-countup';
+import ExportCascader from '../../../components/seller/ExportCascader';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -52,93 +64,14 @@ interface Product {
   description: string;
   tags: string[];
   createdAt: string;
+  apiId?: number; // To link with backend
 }
 
-const sampleProducts: Product[] = [
-  {
-    key: '1',
-    id: 'PRD001',
-    name: 'Nike T-shirt Basic',
-    category: 'T-Shirts',
-    price: 15.45,
-    stock: 245,
-    sold: 68,
-    revenue: 1050.6,
-    status: 'In Stock',
-    image: '/athletic-tshirt.png',
-    sku: 'NK-TSH-001',
-    description: 'Comfortable cotton t-shirt perfect for everyday wear',
-    tags: ['Cotton', 'Casual', 'Unisex'],
-    createdAt: '2024-01-15',
-  },
-  {
-    key: '2',
-    id: 'PRD002',
-    name: 'Mom Jeans Slim Fit',
-    category: 'Jeans',
-    price: 22.96,
-    stock: 8,
-    sold: 56,
-    revenue: 1286.6,
-    status: 'Low Stock',
-    image: '/placeholder-d8hyd.png',
-    sku: 'MJ-SLM-002',
-    description: 'High-waisted mom jeans with a comfortable slim fit',
-    tags: ['Denim', 'High-waist', 'Women'],
-    createdAt: '2024-01-10',
-  },
-  {
-    key: '3',
-    id: 'PRD003',
-    name: 'New Balance 327',
-    category: 'Shoes',
-    price: 51.9,
-    stock: 0,
-    sold: 43,
-    revenue: 2235.0,
-    status: 'Out of Stock',
-    image: '/placeholder-lherd.png',
-    sku: 'NB-327-003',
-    description: 'Retro-inspired sneakers with modern comfort technology',
-    tags: ['Sneakers', 'Retro', 'Unisex'],
-    createdAt: '2024-01-05',
-  },
-  {
-    key: '4',
-    id: 'PRD004',
-    name: 'Oversized Hoodie',
-    category: 'Hoodies',
-    price: 35.99,
-    stock: 156,
-    sold: 89,
-    revenue: 3203.11,
-    status: 'In Stock',
-    image: '/placeholder-d8hyd.png',
-    sku: 'OH-OVR-004',
-    description: 'Cozy oversized hoodie perfect for layering',
-    tags: ['Cotton', 'Oversized', 'Unisex'],
-    createdAt: '2024-01-20',
-  },
-  {
-    key: '5',
-    id: 'PRD005',
-    name: 'Summer Dress',
-    category: 'Dresses',
-    price: 28.5,
-    stock: 3,
-    sold: 34,
-    revenue: 969.0,
-    status: 'Low Stock',
-    image: '/placeholder-lherd.png',
-    sku: 'SD-SUM-005',
-    description: 'Light and airy summer dress in floral print',
-    tags: ['Floral', 'Summer', 'Women'],
-    createdAt: '2024-01-12',
-  },
-];
-
 export default function StoreInventory() {
-  const [products, setProducts] = useState<Product[]>(sampleProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -146,8 +79,117 @@ export default function StoreInventory() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [form] = Form.useForm();
+  
 
-  // Filter products based on search and filters
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  useEffect(() => {
+    if (selectedStoreId) {
+      // console.log(selectedStoreId);
+      fetchProducts();
+    } else {
+      setProducts([]);
+    }
+  }, [selectedStoreId]);
+
+  const fetchStores = async () => {
+    try {
+      const userStores = await storeService.getMyStores();
+      setStores(userStores);
+      if (userStores.length > 0) {
+        setSelectedStoreId(userStores[0].id);
+      }
+    } catch (error) {
+      message.error('Failed to fetch stores');
+      console.error('Error fetching stores:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    if (!selectedStoreId) return;
+
+    setLoading(true);
+    try {
+      const apiProducts = await productService.getStoreProducts(
+        selectedStoreId
+      );
+      console.log('API Products:', apiProducts);
+      if (!Array.isArray(apiProducts)) {
+        console.error('API did not return an array:', apiProducts);
+        message.error('Invalid product data received');
+        setProducts([]);
+        return;
+      }
+      const mappedProducts: Product[] = apiProducts.map(
+        (apiProduct: ApiProduct, index: number) => {
+          // Get primary image URL or fallback to placeholder
+          const primaryImage =
+            apiProduct.media?.find(
+              (m) => m.is_primary && m.media_type === 'image'
+            )?.url || '/placeholder.svg';
+
+          // Get first valid category name or fallback to 'General'
+          const categoryName =
+            apiProduct.categories?.find((c) => c.category?.name)?.category
+              ?.name || 'General';
+
+          // Get stock from first variant or fallback to 0
+          const stock = apiProduct.variants?.[0]?.stock || 0;
+
+          // Convert price to number, handling string or number input
+          const rawPrice =
+            apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
+          const price =
+            typeof rawPrice === 'string'
+              ? parseFloat(rawPrice)
+              : Number(rawPrice);
+          // Ensure price is a valid number, fallback to 0 if NaN
+          const finalPrice = isNaN(price) ? 0 : price;
+
+          // Calculate sold and revenue (replace with real data if available)
+          const sold = Math.floor(Math.random() * 50); // TODO: Replace with real data
+          const revenue = finalPrice * sold;
+
+          // Determine stock status
+          const status = getStockStatus(stock);
+
+          const mappedProduct = {
+            key: apiProduct.id.toString(),
+            id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
+            name: apiProduct.name || 'Unknown Product',
+            category: categoryName,
+            price: finalPrice,
+            stock,
+            sold,
+            revenue,
+            status,
+            image: primaryImage,
+            sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
+            description: apiProduct.description || '',
+            tags: [], // TODO: Fetch from product_tag table
+            createdAt:
+              apiProduct.created_at?.split('T')[0] ||
+              new Date().toISOString().split('T')[0],
+            apiId: apiProduct.id,
+          };
+          console.log('Mapped Product:', mappedProduct);
+          return mappedProduct;
+        }
+      );
+      console.log('Mapped Products:', mappedProducts);
+      setProducts(mappedProducts);
+    } catch (error) {
+      message.error('Failed to fetch products');
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  console.log(products);
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -160,7 +202,6 @@ export default function StoreInventory() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Calculate inventory stats
   const totalProducts = products.length;
   const inStock = products.filter((p) => p.status === 'In Stock').length;
   const lowStock = products.filter((p) => p.status === 'Low Stock').length;
@@ -179,22 +220,50 @@ export default function StoreInventory() {
     setIsModalVisible(true);
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string, apiId?: number) => {
+    if (!apiId) {
+      message.error('Cannot delete product without API ID');
+      return;
+    }
+
     Modal.confirm({
       title: 'Delete Product',
       content: 'Are you sure you want to delete this product?',
       okText: 'Delete',
       okType: 'danger',
-      onOk: () => {
-        setProducts(products.filter((p) => p.id !== productId));
+      onOk: async () => {
+        try {
+          await productService.deleteProduct(apiId);
+          setProducts(products.filter((p) => p.id !== productId));
+          message.success('Product deleted successfully');
+        } catch (error) {
+          message.error('Failed to delete product');
+          console.error('Error deleting product:', error);
+        }
       },
     });
   };
 
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
+
       if (editingProduct) {
         // Update existing product
+        if (!editingProduct.apiId) {
+          message.error('Cannot update product without API ID');
+          return;
+        }
+
+        const updateDto: UpdateProductDto = {
+          name: values.name,
+          slug: values.name.toLowerCase().replace(/\s+/g, '-'),
+          description: values.description,
+          base_price: values.price,
+        };
+
+        await productService.updateProduct(editingProduct.apiId, updateDto);
+
         setProducts(
           products.map((p) =>
             p.id === editingProduct.id
@@ -202,23 +271,39 @@ export default function StoreInventory() {
               : p
           )
         );
+        message.success('Product updated successfully');
       } else {
         // Add new product
+        const createDto: CreateProductDto = {
+          name: values.name,
+          slug: values.name.toLowerCase().replace(/\s+/g, '-'),
+          description: values.description,
+          base_price: values.price,
+          brand_id: 1, // You may need to get this from somewhere
+        };
+
+        const newApiProduct = await productService.createProduct(createDto);
+
         const newProduct: Product = {
           ...values,
-          key: Date.now().toString(),
-          id: `PRD${String(products.length + 1).padStart(3, '0')}`,
+          key: newApiProduct.id.toString(),
+          id: `PRD${String(newApiProduct.id).padStart(3, '0')}`,
           sold: 0,
           revenue: 0,
           status: getStockStatus(values.stock),
           createdAt: new Date().toISOString().split('T')[0],
           tags: values.tags || [],
+          apiId: newApiProduct.id,
         };
         setProducts([...products, newProduct]);
+        message.success('Product created successfully');
       }
       setIsModalVisible(false);
       form.resetFields();
-    });
+    } catch (error) {
+      message.error('Failed to save product');
+      console.error('Error saving product:', error);
+    }
   };
 
   const getStockStatus = (
@@ -267,11 +352,8 @@ export default function StoreInventory() {
       dataIndex: 'category',
       key: 'category',
       filters: [
-        { text: 'T-Shirts', value: 'T-Shirts' },
-        { text: 'Jeans', value: 'Jeans' },
-        { text: 'Shoes', value: 'Shoes' },
-        { text: 'Hoodies', value: 'Hoodies' },
-        { text: 'Dresses', value: 'Dresses' },
+        { text: 'General', value: 'General' },
+        // Add more categories as needed
       ],
       onFilter: (value, record) => record.category === value,
     },
@@ -279,7 +361,7 @@ export default function StoreInventory() {
       title: 'Price',
       dataIndex: 'price',
       key: 'price',
-      render: (price: number) => `€${price.toFixed(2)}`,
+      render: (price: number) => `€${price}`,
       sorter: (a, b) => a.price - b.price,
     },
     {
@@ -366,7 +448,7 @@ export default function StoreInventory() {
                 icon: <DeleteOutlined />,
                 label: 'Delete',
                 danger: true,
-                onClick: () => handleDeleteProduct(record.id),
+                onClick: () => handleDeleteProduct(record.id, record.apiId),
               },
             ],
           }}
@@ -385,6 +467,10 @@ export default function StoreInventory() {
     },
   };
 
+  const formatter: StatisticProps['formatter'] = (value) => (
+  <CountUp end={value as number} separator="," />
+);
+
   return (
     <Layout>
       <Content className="p-6">
@@ -398,13 +484,25 @@ export default function StoreInventory() {
             </Text>
           </div>
           <Space>
-            <Button icon={<ImportOutlined />}>Import</Button>
-            <Button icon={<ExportOutlined />}>Export</Button>
+            <Select
+              placeholder="Select Store"
+              value={selectedStoreId}
+              onChange={setSelectedStoreId}
+              style={{ width: 200 }}
+            >
+              {stores.map((store) => (
+                <Select.Option key={store.id} value={store.id}>
+                  {store.name}
+                </Select.Option>
+              ))}
+            </Select>
+            <ExportCascader/>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               className="bg-cyan-500 border-cyan-500"
               onClick={handleAddProduct}
+              disabled={!selectedStoreId}
             >
               Add Product
             </Button>
@@ -418,26 +516,14 @@ export default function StoreInventory() {
               value={totalProducts}
               prefix={<ShoppingOutlined className="text-cyan-500" />}
             />
+            <Statistic title="Total product values: " value={totalValue} precision={2} formatter={formatter} />
           </Card>
-          <Card className="border-l-4 border-l-green-500">
-            <Statistic
-              title="In Stock"
-              value={inStock}
-              prefix={<CheckCircleOutlined className="text-green-500" />}
-            />
-          </Card>
-          <Card className="border-l-4 border-l-orange-500">
-            <Statistic
-              title="Low Stock"
-              value={lowStock}
-              prefix={<ExclamationCircleOutlined className="text-orange-500" />}
-            />
-          </Card>
-          <Card className="border-l-4 border-l-red-500">
-            <Statistic
-              title="Out of Stock"
-              value={outOfStock}
-              prefix={<AlertOutlined className="text-red-500" />}
+          <Card>
+            <StockBadge
+              inStock={inStock}
+              lowStock={lowStock}
+              outOfStock={outOfStock}
+              showToggle={true}
             />
           </Card>
         </div>
@@ -452,11 +538,8 @@ export default function StoreInventory() {
                 onChange={setCategoryFilter}
               >
                 <Select.Option value="all">All Categories</Select.Option>
-                <Select.Option value="T-Shirts">T-Shirts</Select.Option>
-                <Select.Option value="Jeans">Jeans</Select.Option>
-                <Select.Option value="Shoes">Shoes</Select.Option>
-                <Select.Option value="Hoodies">Hoodies</Select.Option>
-                <Select.Option value="Dresses">Dresses</Select.Option>
+                <Select.Option value="General">General</Select.Option>
+                {/* Add more categories */}
               </Select>
               <Select
                 placeholder="Status"
@@ -498,6 +581,7 @@ export default function StoreInventory() {
             columns={columns}
             dataSource={filteredProducts}
             rowSelection={rowSelection}
+            loading={loading}
             pagination={{
               total: filteredProducts.length,
               pageSize: 10,
@@ -547,11 +631,8 @@ export default function StoreInventory() {
                 rules={[{ required: true, message: 'Please select category' }]}
               >
                 <Select placeholder="Select category">
-                  <Select.Option value="T-Shirts">T-Shirts</Select.Option>
-                  <Select.Option value="Jeans">Jeans</Select.Option>
-                  <Select.Option value="Shoes">Shoes</Select.Option>
-                  <Select.Option value="Hoodies">Hoodies</Select.Option>
-                  <Select.Option value="Dresses">Dresses</Select.Option>
+                  <Select.Option value="General">General</Select.Option>
+                  {/* Add more categories */}
                 </Select>
               </Form.Item>
 

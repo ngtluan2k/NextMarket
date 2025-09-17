@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, Generated, OneToOne, UpdateDateColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  JoinColumn,
+  Generated,
+  OneToOne,
+  UpdateDateColumn,
+  CreateDateColumn,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { OneToMany } from 'typeorm';
 import { Product } from '../product/product.entity';
@@ -41,12 +50,15 @@ export class Store {
   })
   status!: 'active' | 'inactive' | 'suspended' | 'closed';
 
-  @CreateDateColumn({ type: 'datetime'})
+  @Column({ type: 'boolean', default: false })
+  is_draft!: boolean;
+
+  @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
 
- @OneToMany(() => Product, product => product.store)
-  products!: Product[];   // <-- thêm dòng này
+  @OneToMany(() => Product, (product) => product.store)
+  products!: Product[]; // <-- thêm dòng này
 }

@@ -1,95 +1,93 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/components/CategoryNav.tsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export type Category = { id: string | number; name: string; iconUrl: string };
+export type Category = {
+  id: string | number;
+  name: string;
+  slug?: string;
+  iconUrl: string;
+};
 
 type Props = {
   title?: string;
-  /** Truyền data có sẵn (tuỳ chọn) */
-  items?: Category[];
-  /** Hoặc truyền API endpoint (tuỳ chọn) */
-  apiUrl?: string;
-  /** Nếu mảng nằm sâu trong json: "data.items" hoặc "result.list" ... */
-  dataPath?: string;
-  /** Map key từ API về shape {id,name,iconUrl} */
-  idKey?: string;     // mặc định "id"
-  nameKey?: string;   // mặc định "name"
-  iconKey?: string;   // mặc định "iconUrl"
-  onSelect?: (c: Category) => void;
   className?: string;
   skeletonCount?: number;
 };
 
-function getByPath(obj: any, path?: string) {
-  if (!path) return obj;
-  return path.split(".").reduce((acc, k) => acc?.[k], obj);
-}
-
 export default function CategoryNav({
-  title = "Danh mục",
-  items: itemsProp,
-  apiUrl,
-  dataPath,
-  idKey = "id",
-  nameKey = "name",
-  iconKey = "iconUrl",
-  onSelect,
-  className = "",
+  title = 'Danh mục',
+  className = '',
   skeletonCount = 12,
 }: Props) {
-  const [items, setItems] = useState<Category[] | undefined>(itemsProp);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [activeId, setActiveId] = useState<string | number | null>(null);
-  const [loading, setLoading] = useState<boolean>(!!apiUrl);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // ưu tiên items từ prop
-  useEffect(() => setItems(itemsProp), [itemsProp]);
+ useEffect(() => {
+  let cancelled = false;
 
-  // tự fetch khi có apiUrl
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!apiUrl) return;
-      try {
-        setLoading(true);
-        setError(null);
-        const r = await fetch(apiUrl);
-        const json = await r.json();
-        const raw = getByPath(json, dataPath);
-        const arr: any[] = Array.isArray(raw)
-          ? raw
-          : Array.isArray(json)
-          ? json
-          : raw?.items || raw?.data || raw?.results || json?.items || json?.data || json?.results || [];
-        const mapped: Category[] = (arr || []).map((it: any) => ({
-          id: it?.[idKey] ?? it?.id,
-          name: it?.[nameKey] ?? it?.name,
-          iconUrl: it?.[iconKey] ?? it?.iconUrl ?? it?.icon ?? it?.image,
-        }));
-        if (!cancelled) setItems(mapped);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Không tải được danh mục");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [apiUrl, dataPath, idKey, nameKey, iconKey]);
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3000/categories', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-  const hasData = !!items && items.length > 0;
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+      const json = await res.json();
+      const data = json?.data || [];
+
+      // Lọc chỉ lấy category cha
+      const parents = data.filter((it: any) => !it.parent_id);
+
+      const mapped: Category[] = parents.map((it: any) => ({
+        id: it.id,
+        name: it.name,
+        slug: it.slug || String(it.id), // ưu tiên slug, fallback id
+        iconUrl: it.image || 'https://via.placeholder.com/43x43?text=%3F',
+      }));
+
+      if (!cancelled) setCategories(mapped);
+    } catch (e: any) {
+      if (!cancelled) setError(e.message || 'Không tải được danh mục');
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  fetchCategories();
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
+
+  const hasData = categories.length > 0;
 
   return (
-    <nav className={`w-full rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`} aria-label="Danh mục">
-      <div className="px-4 pt-3 pb-2 text-xs font-bold text-slate-900">{title}</div>
+    <nav
+      className={`w-full rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}
+      aria-label="Danh mục"
+    >
+      <div className="px-4 pt-3 pb-2 text-base font-bold text-slate-900">
+        {title}
+      </div>
 
       <div className="px-2 pb-2 max-h-[715px] overflow-y-auto no-scrollbar">
         {error && (
-          <div className="m-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>
+          <div className="m-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            {error}
+          </div>
         )}
 
         <ul className="flex flex-col gap-2">
-          {(!hasData || loading) &&
+          {loading &&
             Array.from({ length: skeletonCount }).map((_, i) => (
               <li key={`sk-${i}`} className="animate-pulse">
                 <div className="grid grid-cols-[44px_1fr] items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 bg-white">
@@ -100,33 +98,38 @@ export default function CategoryNav({
             ))}
 
           {hasData &&
-            items!.map((c) => (
+            categories.map((c) => (
               <li key={c.id}>
                 <button
                   onClick={() => {
                     setActiveId(c.id);
-                    onSelect?.(c);
+                    navigate(`/category/${c.slug}`, {
+                      state: { title: c.name },
+                    });
                   }}
                   className={`group grid w-full grid-cols-[44px_1fr] items-center gap-2 rounded-lg border shadow-sm px-2 py-1.5 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white ${
-                    activeId === c.id ? "border-slate-500" : "border-slate-300 hover:border-slate-400 hover:bg-stone-100"
+                    activeId === c.id
+                      ? 'border-slate-500'
+                      : 'border-slate-300 hover:border-slate-400 hover:bg-stone-100'
                   }`}
-                  aria-current={activeId === c.id ? "true" : undefined}
+                  aria-current={activeId === c.id ? 'true' : undefined}
                 >
                   <img
                     src={c.iconUrl}
                     alt={c.name}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = "https://via.placeholder.com/43x43?text=%3F";
-                    }}
-                    className="h-[43px] w-[43px] rounded-md object-cover"
+                    className="h-[35px] w-[35px] rounded-md object-cover"
                   />
-                  <span className="text-xs leading-snug text-slate-900">{c.name}</span>
+                  <span className="text-base leading-snug text-slate-900">
+                    {c.name}
+                  </span>
                 </button>
               </li>
             ))}
 
-          {items && items.length === 0 && !loading && !error && (
-            <li className="px-2 py-3 text-xs text-slate-500">Chưa có danh mục.</li>
+          {!loading && !hasData && !error && (
+            <li className="px-2 py-3 text-xs text-slate-500">
+              Chưa có danh mục.
+            </li>
           )}
         </ul>
       </div>
