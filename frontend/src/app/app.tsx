@@ -10,6 +10,7 @@ import { SellerRegistration } from './components/register_seller/SellerRegistras
 
 import { message } from 'antd';
 import SellerMainLayout from './page/Seller/MainLayout';
+import { Settings } from './components/register_seller/SellerDashboard';
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -30,7 +31,7 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
-        {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
+        <Route path="/seller-dashboard" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" />} />
         <Route path="/" element={<Home showMessage={showMessage} />} />
         <Route path="/catepage" element={<CategoryPage />} />

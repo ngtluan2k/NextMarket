@@ -7,7 +7,9 @@ import Customer from './tab/Customer';
 import Invoice from './tab/Invoice';
 import StoreInventory from './tab/StoreInventory';
 import Home from '../Home';
-import { Settings } from '../../components/register_seller/Settings';
+import { Settings } from '../../components/register_seller/SellerDashboard';
+import SellerHeader from '../../components/seller/SellerHeader';
+
 
 const { Content, Footer } = Layout;
 
@@ -27,6 +29,7 @@ const SellerMainLayout: React.FC = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Sidebar onSelect={(key) => setActivePage(key)} />
       <Layout>
+        <SellerHeader />
         <Content
           style={{
             margin: '0 16px',

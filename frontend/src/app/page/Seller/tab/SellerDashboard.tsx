@@ -1,7 +1,6 @@
 'use client';
 import { Layout, Typography, Select, Button } from 'antd';
 import { ExportOutlined } from '@ant-design/icons';
-import DashboardHeader from '../../../components/seller/DashboardHeader';
 import SalesOverview from '../../../components/seller/SaleOverview';
 import StatsCards from '../../../components/seller/StartCard';
 import TopSellingProducts from '../../../components/seller/TopSellingProducts';
@@ -13,7 +12,6 @@ const { Title, Text } = Typography;
 export default function SellerDashboard() {
   return (
     <Layout className="min-h-screen bg-gray-50">
-    <DashboardHeader />
         <Content className="p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
