@@ -171,8 +171,8 @@ export class StoreService {
     });
 
     if (sellerRole) {
-      const hasSellerRole = user.roles?.some(ur => ur.role.name === 'seller'); //owner
-
+      const hasSellerRole = user.roles?.some(ur => ur.role.name === 'Store_Owner'); 
+      console.log("has seller role : " + hasSellerRole)
 
       if (!hasSellerRole) {
         const userRole = this.userRoleRepo.create({
