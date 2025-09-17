@@ -9,7 +9,7 @@ import { Content } from 'antd/es/layout/layout';
 
 const { Title, Text } = Typography;
 
-export default function SellerDashboard() {
+export default function StoreOwnerDashboard() {
   return (
     <Layout className="min-h-screen bg-gray-50">
       <Content className="p-6">

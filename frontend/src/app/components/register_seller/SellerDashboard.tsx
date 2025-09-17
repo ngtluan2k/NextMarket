@@ -11,6 +11,7 @@ interface Store {
 }
 
 export const Settings: React.FC = () => {
+
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,27 +19,29 @@ export const Settings: React.FC = () => {
     if (!store) return;
 
     // Xác nhận trực tiếp mà không cần preview
-//     if (
-//       !confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN cửa hàng "${store.name}"?
+    if (
+      !window.confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN cửa hàng "${store.name}"?
 
-// 🗑️ Hành động này sẽ xóa:
-// • Toàn bộ thông tin cửa hàng
-// • Tài khoản ngân hàng 
-// • Địa chỉ kho/lấy hàng
-// • Giấy tờ định danh
-// • Tài liệu đính kèm
-// • Tất cả dữ liệu liên quan
+🗑️ Hành động này sẽ xóa:
+• Toàn bộ thông tin cửa hàng
+• Tài khoản ngân hàng 
+• Địa chỉ kho/lấy hàng
+• Giấy tờ định danh
+• Tài liệu đính kèm
+• Tất cả dữ liệu liên quan
 
-// ⚠️ KHÔNG THỂ HOÀN TÁC!
-// Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa hàng mới.`)
-//     ) {
-//       return;
-//     }
+⚠️ KHÔNG THỂ HOÀN TÁC!
+Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa hàng mới.`)
+    ) {
+      return;
+    }
 
-//     // Double confirmation cho hành động quan trọng
-//     if (!confirm(`🔴 XÁC NHẬN LẦN CUỐI: XÓA cửa hàng "${store.name}"?`)) {
-//       return;
-//     }
+    // Double confirmation cho hành động quan trọng
+    if (
+      !window.confirm(`🔴 XÁC NHẬN LẦN CUỐI: XÓA cửa hàng "${store.name}"?`)
+    ) {
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -71,27 +74,32 @@ export const Settings: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchMyStore = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:3000/stores/my-store`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+ useEffect(() => {
+  const fetchMyStore = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3000/stores/my-store', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        const data = await res.json();
-        setStore(data.data);
-      } catch (error) {
-        console.error('Error fetching store:', error);
-      } finally {
-        setLoading(false);
+      const data = await res.json();
+      if (data.data) {
+        setStore(data.data); // Có store → lưu vào state
+      } else {
+        // Chưa có store → redirect sang form đăng ký
+        window.location.href = '/seller-registration';
       }
-    };
+    } catch (error) {
+      console.error('Error fetching store:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchMyStore();
-  }, []);
+  fetchMyStore();
+}, []);
 
   if (loading) return <div className="text-center mt-5">Đang tải...</div>;
 

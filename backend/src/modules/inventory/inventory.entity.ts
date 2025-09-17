@@ -1,4 +1,12 @@
-import { Entity, JoinColumn, PrimaryGeneratedColumn, Column, ManyToOne, UpdateDateColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  UpdateDateColumn,
+  Generated,
+} from 'typeorm';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
 
@@ -11,16 +19,13 @@ export class Inventory {
   @Generated('uuid')
   uuid!: string;
 
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, (product) => product.inventories, { nullable: false })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
-
-
-
-  @ManyToOne(() => Variant)
-    @JoinColumn({ name: 'variant_id' })
-  variant!: Variant;
+  @ManyToOne(() => Variant, (variant) => variant.inventories, { nullable: true })
+  @JoinColumn({ name: 'variant_id' })
+  variant?: Variant | null;  
 
   @Column()
   location!: string;

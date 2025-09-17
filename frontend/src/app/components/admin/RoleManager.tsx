@@ -1,3 +1,4 @@
+// src/components/admin/RoleManager.tsx
 import React, { useEffect, useState } from 'react';
 
 interface Permission {

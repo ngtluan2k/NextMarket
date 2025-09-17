@@ -9,7 +9,8 @@ interface CartItem {
     id: number;
     name: string;
     base_price: number;
-    image: string;
+    url: string;
+    media: { url: string; is_primary?: boolean }
   };
 }
 
@@ -45,7 +46,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         const data = await response.json();
-        setCart(data.map((item: any) => ({ ...item, product: { ...item.product, price: item.product.base_price } })));
+        setCart(
+          data.map((item: any) => ({
+            ...item,
+            product: { ...item.product, price: item.product.base_price },
+          }))
+        );
       }
     } catch (error) {
       console.error('Không thể lấy giỏ hàng:', error);
@@ -72,12 +78,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const removeFromCart = async (productId: number) => {
     try {
-      const response = await fetch(`http://localhost:3000/cart/remove/${productId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:3000/cart/remove/${productId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
       if (response.ok) {
         await refreshCart();
       }

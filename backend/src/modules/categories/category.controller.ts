@@ -10,7 +10,6 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiBearerAuth('access-token')
 @ApiTags('categories')
 @Controller('categories')
-@UseGuards(JwtAuthGuard, PermissionGuard)
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
@@ -36,7 +35,8 @@ export class CategoryController {
   }
 
 @Post()
-// @Permissions('create_category')
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@Permissions('create_category')
 async create(@Body() dto: CreateCategoryDto) {
   const data = await this.categoryService.create(dto);
   return {
@@ -46,7 +46,8 @@ async create(@Body() dto: CreateCategoryDto) {
 }
 
   @Put(':id')
-  // @Permissions('update_category')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('update_category')
   async update(@Param('id') id: number, @Body() dto: UpdateCategoryDto) {
     const data = await this.categoryService.update(id, dto);
     return {
@@ -56,7 +57,8 @@ async create(@Body() dto: CreateCategoryDto) {
   }
 
   @Delete(':id')
-  // @Permissions('delete_category')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('delete_category')
   async remove(@Param('id') id: number) {
     await this.categoryService.remove(id);
     return {
@@ -65,7 +67,6 @@ async create(@Body() dto: CreateCategoryDto) {
   }
 
   @Get(':slug/products')
-  // @Permissions('view_category')
   async findProductsBySlug(@Param('slug') slug: string) {
     const data = await this.categoryService.findProductsBySlug(slug);
     return {
@@ -77,7 +78,6 @@ async create(@Body() dto: CreateCategoryDto) {
     };
   }
 @Get(':id/children')
-// @Permissions('view_category')
 async findChildren(@Param('id') id: number) {
   const children = await this.categoryService.findChildren(id);
   return {

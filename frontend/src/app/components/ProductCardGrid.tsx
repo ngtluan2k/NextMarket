@@ -1,7 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 type ProductRaw = {
   id: number;
+  slug: string;
   name: string;
   media?: { url: string; is_primary?: boolean }[];
   base_price?: string;
@@ -12,6 +14,7 @@ type ProductRaw = {
 
 type ProductCardData = {
   id: number;
+  slug: string;
   name: string;
   image: string;
   price: string;
@@ -24,6 +27,8 @@ type Props = {
 };
 
 export default function ProductCardGrid({ products }: Props) {
+  const navigate = useNavigate();
+
   // map raw API => dữ liệu hiển thị
   const mapped: ProductCardData[] = products.map((p) => {
     const primaryMedia = p.media?.find((m) => m.is_primary) || p.media?.[0];
@@ -32,6 +37,7 @@ export default function ProductCardGrid({ products }: Props) {
 
     return {
       id: p.id,
+      slug: p.slug,
       name: p.name,
       image: primaryMedia?.url || "https://via.placeholder.com/220x220?text=No+Image",
       price: mainVariant?.price || p.base_price || "0",
@@ -45,7 +51,8 @@ export default function ProductCardGrid({ products }: Props) {
       {mapped.map((p) => (
         <div
           key={p.id}
-          className="rounded-xl border border-slate-200 bg-white p-2 hover:shadow-md transition-shadow"
+          className="rounded-xl border border-slate-200 bg-white p-2 hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => navigate(`/product/${p.slug}`)}
         >
           <img
             src={p.image}

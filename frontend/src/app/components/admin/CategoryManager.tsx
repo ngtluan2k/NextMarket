@@ -1,3 +1,4 @@
+// src/components/admin/CategoryManager.tsx
 import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, ListGroup } from "react-bootstrap";
 import axios from "axios";

@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type ProductRaw = {
   id: number;
+  slug?: string;
   name: string;
   media?: { url: string; is_primary?: boolean }[];
   base_price?: string;
@@ -13,6 +15,7 @@ type ProductRaw = {
 export type ProductFlashSaleItem = {
   id: number;
   name: string;
+  slug?: string;
   image: string;
   price: number;
   originalPrice?: number;
@@ -38,10 +41,9 @@ export default function ProductFlashSale({
 }: ProductFlashSaleProps) {
   const [data, setData] = useState<ProductFlashSaleItem[]>([]);
   const [loading, setLoading] = useState(true);
-
   const trackRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  // fetch API
   useEffect(() => {
     let cancel = false;
 
@@ -60,6 +62,7 @@ export default function ProductFlashSale({
           const mainVariant = p.variants?.[0];
           return {
             id: p.id,
+            slug: p.slug,
             name: p.name,
             image: primaryMedia?.url || "https://via.placeholder.com/110?text=No+Image",
             price: Number(mainVariant?.price || p.base_price || 0),
@@ -87,6 +90,11 @@ export default function ProductFlashSale({
     if (!el) return;
     const CARD = 176;
     el.scrollBy({ left: dir * CARD * 3, behavior: "smooth" });
+  };
+
+  const handleClick = (slug?: string) => {
+    if (!slug) return;
+    navigate(`/products/slug/${slug}`);
   };
 
   return (
@@ -124,10 +132,10 @@ export default function ProductFlashSale({
                   : undefined;
 
               return (
-                <a
+                <div
                   key={p.id}
-                  href="#"
-                  className="snap-start w-[160px] shrink-0 rounded-xl bg-white ring-1 ring-slate-200/70 hover:ring-slate-300 shadow-sm px-3 pt-3 pb-2 transition"
+                  className="snap-start w-[160px] shrink-0 rounded-xl bg-white ring-1 ring-slate-200/70 hover:ring-slate-300 shadow-sm px-3 pt-3 pb-2 transition cursor-pointer"
+                  onClick={() => handleClick(p.slug)}
                 >
                   <div className="relative">
                     {typeof discount === "number" && (
@@ -145,9 +153,7 @@ export default function ProductFlashSale({
                       }}
                     />
                   </div>
-                              <h3 className="font-medium">{p.name}</h3>
-
-                  {/* Giá */}
+                  <h3 className="font-medium">{p.name}</h3>
                   <div className="mt-2 text-center">
                     <div className="text-[13px] font-semibold text-rose-600">{formatVND(p.price)}</div>
                     {p.originalPrice && (
@@ -159,7 +165,7 @@ export default function ProductFlashSale({
                   <button className="mt-2 w-full rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/90">
                     Mua Ngay
                   </button>
-                </a>
+                </div>
               );
             })}
         </div>

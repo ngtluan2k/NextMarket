@@ -36,6 +36,7 @@ export default function CategoryNav({
       const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:3000/categories', {
         headers: { Authorization: `Bearer ${token}` },
+
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);

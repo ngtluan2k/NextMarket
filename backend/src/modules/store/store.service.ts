@@ -24,6 +24,7 @@ import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-request.entity';
 import { v4 as uuidv4 } from 'uuid';
 
+
 @Injectable()
 export class StoreService {
   constructor(
@@ -31,38 +32,27 @@ export class StoreService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Role) private roleRepo: Repository<Role>,
     @InjectRepository(UserRole) private userRoleRepo: Repository<UserRole>,
-    @InjectRepository(StoreLevel)
-    private storeLevelRepo: Repository<StoreLevel>,
-    @InjectRepository(StoreBankAccount)
-    private bankAccountRepo: Repository<StoreBankAccount>,
-    @InjectRepository(StoreAddress)
-    private storeAddressRepo: Repository<StoreAddress>,
-    @InjectRepository(StoreIdentification)
-    private storeIdentificationRepo: Repository<StoreIdentification>,
-    @InjectRepository(StoreInformation)
-    private storeInformationRepo: Repository<StoreInformation>,
-    @InjectRepository(StoreInformationEmail)
-    private storeEmailRepo: Repository<StoreInformationEmail>,
-    @InjectRepository(StoreDocument)
-    private storeDocumentRepo: Repository<StoreDocument>,
-    @InjectRepository(StoreRating)
-    private storeRatingRepo: Repository<StoreRating>,
-    @InjectRepository(StoreFollower)
-    private storeFollowerRepo: Repository<StoreFollower>,
-    @InjectRepository(StoreUpgradeRequest)
-    private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>
-  ) {}
+    @InjectRepository(StoreLevel) private storeLevelRepo: Repository<StoreLevel>,
+    @InjectRepository(StoreBankAccount) private bankAccountRepo: Repository<StoreBankAccount>,
+    @InjectRepository(StoreAddress) private storeAddressRepo: Repository<StoreAddress>,
+    @InjectRepository(StoreIdentification) private storeIdentificationRepo: Repository<StoreIdentification>,
+    @InjectRepository(StoreInformation) private storeInformationRepo: Repository<StoreInformation>,
+    @InjectRepository(StoreInformationEmail) private storeEmailRepo: Repository<StoreInformationEmail>,
+    @InjectRepository(StoreDocument) private storeDocumentRepo: Repository<StoreDocument>,
+    @InjectRepository(StoreRating) private storeRatingRepo: Repository<StoreRating>,
+    @InjectRepository(StoreFollower) private storeFollowerRepo: Repository<StoreFollower>,
+    @InjectRepository(StoreUpgradeRequest) private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>,
+  ) { }
 
   async findAll() {
     return this.storeRepo.find({
-      order: { created_at: 'DESC' },
+      order: { created_at: 'DESC' }
     });
   }
 
   async findOne(id: number) {
     const store = await this.storeRepo.findOne({
-      where: { id },
-      relations: ['owner'],
+      where: { id }
     });
     if (!store) throw new NotFoundException('Store not found');
     return store;
@@ -126,8 +116,9 @@ export class StoreService {
     // Nếu đã có store và không phải draft, không cho tạo mới
     if (existingStore && !existingStore.is_draft && !dto.is_draft) {
       throw new BadRequestException('User already has a complete store');
-    }
 
+    }
+    
     // Nếu đây là update của store draft existing
     if (existingStore && existingStore.is_draft) {
       return await this.updateDraftStore(existingStore.id, dto, userId);
@@ -136,17 +127,15 @@ export class StoreService {
     // Validate required fields khi không phải draft
     if (!dto.is_draft) {
       if (!dto.name) {
-        throw new BadRequestException(
-          'Tên cửa hàng là bắt buộc khi hoàn tất đăng ký'
-        );
+        throw new BadRequestException('Tên cửa hàng là bắt buộc khi hoàn tất đăng ký');
       }
     }
 
     // 3. Tạo slug tự động nếu không được cung cấp và có name
     let slug = dto.slug;
     if (!slug && dto.name) {
-      slug = dto.name
-        .toLowerCase()
+
+      slug = dto.name.toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
@@ -182,7 +171,8 @@ export class StoreService {
     });
 
     if (sellerRole) {
-      const hasSellerRole = user.roles?.some((ur) => ur.role.name === 'owner');
+      const hasSellerRole = user.roles?.some(ur => ur.role.name === 'seller'); //owner
+
 
       if (!hasSellerRole) {
         const userRole = this.userRoleRepo.create({
@@ -197,43 +187,30 @@ export class StoreService {
     }
 
     // 13. Xử lý thông tin comprehensive (nếu có)
-    if (
-      dto.store_information ||
-      dto.store_identification ||
-      dto.bank_account ||
-      dto.store_address
-    ) {
+    if (dto.store_information || dto.store_identification || dto.bank_account || dto.store_address) {
       await this.handleComprehensiveData(savedStore.id, dto);
     }
 
     return {
       store: savedStore,
-      message: dto.is_draft
+      message: dto.is_draft 
         ? 'Đã lưu nháp thành công! Bạn có thể hoàn tất đăng ký sau.'
-        : dto.store_information
-        ? 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt với đầy đủ thông tin.'
-        : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.',
+        : (dto.store_information 
+          ? 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt với đầy đủ thông tin.'
+          : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.')
     };
   }
 
   // Update draft store với data từ các steps
-  async updateDraftStore(
-    storeId: number,
-    dto: RegisterSellerDto,
-    userId: number
-  ) {
+
+  async updateDraftStore(storeId: number, dto: RegisterSellerDto, userId: number) {
     const store = await this.storeRepo.findOne({ where: { id: storeId } });
     if (!store) {
       throw new NotFoundException('Store not found');
     }
 
     // Debug log
-    console.log(
-      '🔍 UpdateDraftStore - dto.is_draft:',
-      dto.is_draft,
-      'type:',
-      typeof dto.is_draft
-    );
+    console.log('🔍 UpdateDraftStore - dto.is_draft:', dto.is_draft, 'type:', typeof dto.is_draft);
     console.log('🔍 UpdateDraftStore - dto.email:', dto.email);
     console.log('🔍 UpdateDraftStore - dto:', JSON.stringify(dto, null, 2));
 
@@ -256,24 +233,17 @@ export class StoreService {
     await this.storeRepo.update(storeId, updateData);
 
     // Update comprehensive data nếu có (Step 2, 3)
-    if (
-      dto.store_information ||
-      dto.store_identification ||
-      dto.bank_account ||
-      dto.store_address
-    ) {
+    if (dto.store_information || dto.store_identification || dto.bank_account || dto.store_address) {
       await this.handleComprehensiveData(storeId, dto);
     }
 
-    const updatedStore = await this.storeRepo.findOne({
-      where: { id: storeId },
-    });
+    const updatedStore = await this.storeRepo.findOne({ where: { id: storeId } });
 
     return {
       store: updatedStore,
-      message: dto.is_draft
+      message: dto.is_draft 
         ? 'Đã cập nhật nháp thành công! Bạn có thể tiếp tục chỉnh sửa sau.'
-        : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.',
+        : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.'
     };
   }
 
@@ -307,23 +277,20 @@ export class StoreService {
     if (!store) {
       throw new NotFoundException('Bạn chưa có cửa hàng để xóa');
     }
-
+    
     const result = await this.remove(store.id);
     return {
       ...result,
-      message:
-        'Đã xóa cửa hàng của bạn và toàn bộ dữ liệu liên quan thành công',
+      message: 'Đã xóa cửa hàng của bạn và toàn bộ dữ liệu liên quan thành công'
     };
   }
 
   async remove(id: number) {
     const store = await this.findOne(id);
 
+    
     // Trước tiên, tìm tất cả store_information để xóa emails và documents
-    const storeInformations = await this.storeInformationRepo.find({
-      where: { store_id: id },
-    });
-
+    const storeInformations = await this.storeInformationRepo.find({ where: { store_id: id } });
     // Xóa emails và documents theo store_information_id
     for (const storeInfo of storeInformations) {
       await Promise.all([
@@ -331,7 +298,6 @@ export class StoreService {
         this.storeDocumentRepo.delete({ store_information_id: storeInfo.id }),
       ]);
     }
-
     // Xóa tất cả dữ liệu liên quan còn lại
     const deletedResults = await Promise.all([
       this.storeInformationRepo.delete({ store_id: id }),
@@ -343,34 +309,29 @@ export class StoreService {
       this.storeFollowerRepo.delete({ store_id: id }),
       this.storeUpgradeRequestRepo.delete({ store_id: id }),
     ]);
-
+    
     // Cuối cùng xóa store
     await this.storeRepo.remove(store);
-
-    const totalDeletedRecords = deletedResults.reduce(
-      (sum, result) => sum + (result.affected || 0),
-      0
-    );
-
+    
+    const totalDeletedRecords = deletedResults.reduce((sum, result) => sum + (result.affected || 0), 0);
+    
     return {
       message: 'Xóa cửa hàng và toàn bộ dữ liệu liên quan thành công',
       deletedStoreId: id,
-      deletedRecords: totalDeletedRecords + 1, // +1 for the store itself
+      deletedRecords: totalDeletedRecords + 1 // +1 for the store itself
     };
   }
 
+
   // Helper method để xử lý comprehensive data
-  private async handleComprehensiveData(
-    storeId: number,
-    dto: RegisterSellerDto
-  ) {
+  private async handleComprehensiveData(storeId: number, dto: RegisterSellerDto) {
     // 1. Tạo hoặc update store information
     let storeInformation = null;
     if (dto.store_information) {
       // Kiểm tra xem đã có store_information chưa
       const existingStoreInfo = await this.storeInformationRepo.findOne({
-        where: { store_id: storeId },
-      });
+        where: { store_id: storeId }
+    });
 
       if (existingStoreInfo) {
         // Update existing
@@ -402,7 +363,7 @@ export class StoreService {
     // 2. Tạo hoặc update store information email
     if (dto.store_information_email && storeInformation) {
       const existingEmail = await this.storeEmailRepo.findOne({
-        where: { store_information_id: storeInformation.id },
+        where: { store_information_id: storeInformation.id }
       });
 
       if (existingEmail) {
@@ -422,11 +383,9 @@ export class StoreService {
 
     // 3. Tạo hoặc update store identification
     if (dto.store_identification) {
-      const existingIdentification = await this.storeIdentificationRepo.findOne(
-        {
-          where: { store_id: storeId },
-        }
-      );
+      const existingIdentification = await this.storeIdentificationRepo.findOne({
+        where: { store_id: storeId }
+      });
 
       if (existingIdentification) {
         // Update existing
@@ -454,7 +413,7 @@ export class StoreService {
     // 4. Tạo hoặc update bank account
     if (dto.bank_account) {
       const existingBankAccount = await this.bankAccountRepo.findOne({
-        where: { store_id: storeId },
+        where: { store_id: storeId }
       });
 
       if (existingBankAccount) {
@@ -481,7 +440,7 @@ export class StoreService {
     // 5. Tạo hoặc update store address
     if (dto.store_address) {
       const existingAddress = await this.storeAddressRepo.findOne({
-        where: { stores_id: storeId },
+        where: { stores_id: storeId }
       });
 
       if (existingAddress) {
@@ -537,49 +496,48 @@ export class StoreService {
   async getFullDraftData(storeId: number, userId: number) {
     // Verify ownership
     const store = await this.storeRepo.findOne({
-      where: { id: storeId, user_id: userId },
+      where: { id: storeId, user_id: userId }
     });
-
+    
     if (!store) {
       throw new NotFoundException('Store not found or access denied');
     }
 
     // Fetch tất cả related data
-    const [storeInformation, storeIdentification, bankAccount, storeAddress] =
-      await Promise.all([
-        // Store Information
-        this.storeInformationRepo.findOne({
-          where: { store_id: storeId },
-        }),
+    const [storeInformation, storeIdentification, bankAccount, storeAddress] = await Promise.all([
+      // Store Information
+      this.storeInformationRepo.findOne({
+        where: { store_id: storeId }
+      }),
 
-        // Store Identification
-        this.storeIdentificationRepo.findOne({
-          where: { store_id: storeId },
-        }),
+      // Store Identification  
+      this.storeIdentificationRepo.findOne({
+        where: { store_id: storeId }
+      }),
 
-        // Bank Account
-        this.bankAccountRepo.findOne({
-          where: { store_id: storeId },
-        }),
+      // Bank Account
+      this.bankAccountRepo.findOne({
+        where: { store_id: storeId }
+      }),
 
-        // Store Address
-        this.storeAddressRepo.findOne({
-          where: { stores_id: storeId }, // Chú ý: entity này dùng stores_id
-        }),
-      ]);
+      // Store Address
+      this.storeAddressRepo.findOne({
+        where: { stores_id: storeId } // Chú ý: entity này dùng stores_id
+      }),
+    ]);
 
     // Fetch data phụ thuộc vào store_information
     let storeEmail: StoreInformationEmail | null = null;
     let documents: StoreDocument[] = [];
-
+    
     if (storeInformation) {
       [storeEmail, documents] = await Promise.all([
         this.storeEmailRepo.findOne({
-          where: { store_information_id: storeInformation.id },
+          where: { store_information_id: storeInformation.id }
         }),
         this.storeDocumentRepo.find({
-          where: { store_information_id: storeInformation.id },
-        }),
+          where: { store_information_id: storeInformation.id }
+        })
       ]);
     }
 
@@ -594,54 +552,44 @@ export class StoreService {
         status: store.status,
         is_draft: store.is_draft,
       },
-      storeInformation: storeInformation
-        ? {
-            id: storeInformation.id,
-            type: storeInformation.type,
-            name: storeInformation.name,
-            addresses: storeInformation.addresses,
-            tax_code: storeInformation.tax_code,
-          }
-        : null,
-      storeIdentification: storeIdentification
-        ? {
-            id: storeIdentification.id,
-            type: storeIdentification.type,
-            full_name: storeIdentification.full_name,
-            img_front: storeIdentification.img_front,
-            img_back: storeIdentification.img_back,
-          }
-        : null,
-      bankAccount: bankAccount
-        ? {
-            id: bankAccount.id,
-            bank_name: bankAccount.bank_name,
-            account_number: bankAccount.account_number,
-            account_holder: bankAccount.account_holder,
-            is_default: bankAccount.is_default,
-          }
-        : null,
-      storeAddress: storeAddress
-        ? {
-            id: storeAddress.id,
-            recipient_name: storeAddress.recipient_name,
-            phone: storeAddress.phone,
-            street: storeAddress.street,
-            city: storeAddress.city,
-            province: storeAddress.province,
-            country: storeAddress.country,
-            postal_code: storeAddress.postal_code,
-            type: storeAddress.type,
-            detail: storeAddress.detail,
-            is_default: storeAddress.is_default,
-          }
-        : null,
-      storeEmail: storeEmail
-        ? {
-            id: storeEmail.id,
-            email: storeEmail.email,
-          }
-        : null,
+      storeInformation: storeInformation ? {
+        id: storeInformation.id,
+        type: storeInformation.type,
+        name: storeInformation.name,
+        addresses: storeInformation.addresses,
+        tax_code: storeInformation.tax_code,
+      } : null,
+      storeIdentification: storeIdentification ? {
+        id: storeIdentification.id,
+        type: storeIdentification.type,
+        full_name: storeIdentification.full_name,
+        img_front: storeIdentification.img_front,
+        img_back: storeIdentification.img_back,
+      } : null,
+      bankAccount: bankAccount ? {
+        id: bankAccount.id,
+        bank_name: bankAccount.bank_name,
+        account_number: bankAccount.account_number,
+        account_holder: bankAccount.account_holder,
+        is_default: bankAccount.is_default,
+      } : null,
+      storeAddress: storeAddress ? {
+        id: storeAddress.id,
+        recipient_name: storeAddress.recipient_name,
+        phone: storeAddress.phone,
+        street: storeAddress.street,
+        city: storeAddress.city,
+        province: storeAddress.province,
+        country: storeAddress.country,
+        postal_code: storeAddress.postal_code,
+        type: storeAddress.type,
+        detail: storeAddress.detail,
+        is_default: storeAddress.is_default,
+      } : null,
+      storeEmail: storeEmail ? {
+        id: storeEmail.id,
+        email: storeEmail.email,
+      } : null,
       documents: documents || [],
     };
   }

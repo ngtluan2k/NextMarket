@@ -13,9 +13,6 @@ const CategoryList: React.FC = () => {
   useEffect(() => {
   const token = localStorage.getItem("token"); // hoặc từ context/useAuth
   fetch("http://localhost:3000/categories", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
   })
     .then(res => {
       if (!res.ok) throw new Error("HTTP error " + res.status);

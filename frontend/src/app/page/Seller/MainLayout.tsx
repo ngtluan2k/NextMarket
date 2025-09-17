@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Layout } from 'antd';
 import Sidebar from '../../components/seller/Sidebar';
-import SellerDashboard from './tab/SellerDashboard';
+import StoreOwnerDashboard from './tab/StoreOwnerDashboard';
 import Sale from './tab/Sale';
 import Customer from './tab/Customer';
 import Invoice from './tab/Invoice';
@@ -14,7 +14,7 @@ import SellerHeader from '../../components/seller/SellerHeader';
 const { Content, Footer } = Layout;
 
 const pages: Record<string, React.ReactNode> = {
-  Dashboard: <SellerDashboard />,
+  Dashboard: <StoreOwnerDashboard />,
   SalesManagement: <Sale />,
   StoreInventory: <StoreInventory />,
   Customers: <Customer />,

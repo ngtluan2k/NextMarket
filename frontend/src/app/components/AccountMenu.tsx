@@ -51,6 +51,7 @@ export default function AccountMenu({
         <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
           <Smile className="h-5 w-5" />
         </span>
+
         <span className="hidden md:inline truncate max-w-[180px]">
           Xin chào, {me.username}
         </span>
@@ -93,9 +94,10 @@ export default function AccountMenu({
           href="/myStores"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
-          <ShopOutlined  className="h-4 w-4 text-slate-500" />
+          <ShopOutlined className="h-4 w-4 text-slate-500" />
           Cửa hàng của tôi
         </a>
+
         <button
           onClick={() => {
             setOpen(false);

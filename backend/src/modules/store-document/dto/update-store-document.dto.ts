@@ -22,4 +22,3 @@ export class UpdateStoreDocumentDto extends PartialType(CreateStoreDocumentDto) 
   @IsDateString()
   verified_at?: string;
 }
-

@@ -94,6 +94,7 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                 onClick={() => window.history.back()}
               >
                 Tiếp tục mua sắm
+
               </Button>
             </Empty>
           </Card>
@@ -103,81 +104,91 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
               >
-                {cart.map((item) => (
-                  <Card key={item.id} style={{ borderRadius: 12 }}>
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: 80, height: 80, flexShrink: 0 }}>
-                        <Image
-                          src={
-                            item.product.image ||
-                            '/placeholder.svg?height=80&width=80&query=product thumbnail'
-                          }
-                          alt={item.product.name}
-                          width={80}
-                          height={80}
-                          style={{ borderRadius: 8, objectFit: 'cover' }}
-                          preview={false}
-                        />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Title
-                          level={4}
-                          style={{ margin: '0 0 8px 0' }}
-                          ellipsis
-                        >
-                          {item.product.name}
-                        </Title>
-                        <Text
-                          strong
-                          style={{ fontSize: '18px', color: '#1890ff' }}
-                        >
-                          ${item.price}
-                        </Text>
+                {cart.map((item) => {
+                  console.log(item); // Xem dữ liệu từng item trên console
+                  return (
+                    <Card key={item.id} style={{ borderRadius: 12 }}>
+                      <div></div>
+                      <div style={{ display: 'flex', gap: 16 }}>
+                        <div style={{ width: 80, height: 80, flexShrink: 0 }}>
+                          <Image
+                            src={
+                              Array.isArray(item.product.media)
+                                ? item.product.media.find(
+                                    (m: { is_primary?: boolean }) =>
+                                      m.is_primary
+                                  )?.url ||
+                                  item.product.media[0]?.url ||
+                                  ''
+                                : item.product.media?.url || ''
+                            }
+                            alt={item.product.name}
+                            width={80}
+                            height={80}
+                            style={{ borderRadius: 8, objectFit: 'cover' }}
+                            preview={false}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Title
+                            level={4}
+                            style={{ margin: '0 0 8px 0' }}
+                            ellipsis
+                          >
+                            {item.product.name}
+                          </Title>
+                          <Text
+                            strong
+                            style={{ fontSize: '18px', color: '#1890ff' }}
+                          >
+                            ${item.price}
+                          </Text>
 
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginTop: 16,
-                          }}
-                        >
                           <div
                             style={{
                               display: 'flex',
+                              justifyContent: 'space-between',
                               alignItems: 'center',
-                              gap: 8,
+                              marginTop: 16,
                             }}
                           >
-                            <Text>Quantity:</Text>
-                            <InputNumber
-                              min={1}
-                              value={item.quantity}
-                              onChange={(value) =>
-                                updateQuantity(item.product_id, value || 1)
-                              }
-                              style={{ width: 80 }}
-                            />
-                          </div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                              }}
+                            >
+                              <Text>Quantity:</Text>
+                              <InputNumber
+                                min={1}
+                                value={item.quantity}
+                                onChange={(value) =>
+                                  updateQuantity(item.product_id, value || 1)
+                                }
+                                style={{ width: 80 }}
+                              />
+                            </div>
 
-                          <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() =>
-                              handleRemoveFromCart(
-                                item.product_id,
-                                item.product.name
-                              )
-                            }
-                          >
-                            Xóa
-                          </Button>
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() =>
+                                handleRemoveFromCart(
+                                  item.product_id,
+                                  item.product.name
+                                )
+                              }
+                            >
+                              Remove
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </Col>
 

@@ -9,12 +9,17 @@ import ProductGridToday from '../components/ProductGridToday';
 import FeaturedBrands from '../components/FeaturedBrands';
 import Footer from '../components/Footer';
 import YouMayAlsoLike from '../components/YouMayAlsoLike';
-import CategoryList from '../components/CategoryList';
-import ProductList from '../components/ProductList';
 import { fetchBrandsAPI } from '../../service/brand.service';
 import { fetchCategoriesAPI, Category } from '../../service/category.service';
 
+
 type Slide = { imageUrl: string; alt?: string; href?: string };
+interface ToastMessage {
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
+}
 
 interface ToastMessage {
   showMessage?: (
@@ -185,6 +190,7 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
     })();
   }, []);
 
+
   return (
     <div className="min-h-screen bg-slate-100">
       <EveryMartHeader />
@@ -203,7 +209,7 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
             </div>
             <PromoShortcuts className="mt-4" />
 
-            <FeaturedBrands fetchBrands={fetchBrandsAPI} className="mt-4" />
+           <FeaturedBrands fetchBrands={fetchBrandsAPI} className="mt-4"   />
             <YouMayAlsoLike className="mt-6" />
             <FlashSale className="mt-4" />
             <ProductGridToday
