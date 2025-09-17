@@ -58,11 +58,11 @@ export default function EveryMartHeader({
   useEffect(() => {
     const raw = localStorage.getItem("everymart.me");
     if (raw) {
-try {
-  setMe(JSON.parse(raw));
-} catch (err) {
-  console.error("Failed to parse user from localStorage:", err);
-}
+      try {
+        setMe(JSON.parse(raw));
+      } catch (err) {
+        console.error("Failed to parse user from localStorage:", err);
+      }
     }
   }, []);
 
@@ -219,28 +219,28 @@ try {
 
       {/* Modal Đăng nhập */}
       <LoginModal
-  open={openLogin}
-  onClose={() => setOpenLogin(false)}
-  onLogin={async (data) => {
-    try {
-      const res = await fetch("http://localhost:3000/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Login thất bại");
+        open={openLogin}
+        onClose={() => setOpenLogin(false)}
+        onLogin={async (data) => {
+          try {
+            const res = await fetch("http://localhost:3000/users/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || "Login thất bại");
 
-      // lưu token + user
-      localStorage.setItem("token", json.access_token);
-      localStorage.setItem("user", JSON.stringify(json.data));
-      setMe(json.data); // update header
-      setOpenLogin(false);
-    } catch (err: any) {
-      alert(err.message);
-    }
-  }}
-/>
+            // lưu token + user
+            localStorage.setItem("token", json.access_token);
+            localStorage.setItem("user", JSON.stringify(json.data));
+            setMe(json.data); // update header
+            setOpenLogin(false);
+          } catch (err: any) {
+            alert(err.message);
+          }
+        }}
+      />
     </header>
   );
 }

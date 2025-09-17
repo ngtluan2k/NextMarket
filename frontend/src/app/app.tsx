@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-// src/App.tsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
@@ -10,22 +8,16 @@ import EveryMartHeader from "./components/Navbar";
 import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
 import ProductForm from "./components/AddProduct";
-=======
-// src/app.tsx
-import React from 'react';
-import { Routes, Route, Navigate, } from 'react-router-dom';
+import AccountLayout from "./page/account/AccountLayout";
 import { AuthForm } from './components/AuthForm';
-import { ProductList } from './components/ProductList';
-import { AdminDashboard } from './components/admin/AdminDashboard';
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
 import { SellerDashboard } from './components/register_seller/SellerDashboard';
-import { CartProvider } from './context/CartContext';
-import { Cart } from './components/Cart';
-import { message } from 'antd';
-import EveryMartHeader from './components/Navbar';
-import Home from './page/Home';
-import CategoryPage from './page/CategoryPage';
->>>>>>> origin/main
+import ProductDetailPage from "./page/ProductDetailPage";
+import NotificationsPage from "./page/account/NotificationsPage";
+import ReturnsPage from "./page/account/ReturnsPage";
+import OrdersPage from "./page/account/OrdersPage";
+import ProfilePage from "./page/account/ProfilePage";
+import ProductList from './components/ProductList';
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -41,36 +33,31 @@ const App: React.FC = () => {
   };
 
   return (
-<<<<<<< HEAD
     <CartProvider>
       {contextHolder}
-=======
-    <Routes>
-      <Route path="/" element={<AuthForm />} />
-      <Route path="/home" element={<ProductList />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/seller-registration" element={<SellerRegistration />} />
-      <Route path="/seller-dashboard" element={<SellerDashboard />} />
-      <Route path="*" element={<Navigate to="/" />} />
-        {/* <Route path="/" element={<AuthForm />} /> */}
+      <Routes>
+        <Route path="/login" element={<AuthForm />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/seller-registration" element={<SellerRegistration />} />
+        <Route path="/seller-dashboard" element={<SellerDashboard />} />
+        <Route path="*" element={<Navigate to="/" />} />
         <Route path="/" element={<Home />} />
         <Route path='/catepage' element={<CategoryPage/>}/>
->>>>>>> origin/main
-
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
-
-        {/* Trang danh mục dùng slug */}
-        <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/add_product" element={<ProductForm />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/category/:slug/explore" element={<CategoryPage />} />
         <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/product/:slug" element={<ProductDetailPage />} />
+        <Route path="/account" element={<AccountLayout />}>
+          <Route index element={<Navigate to="profile" replace />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="returns" element={<ReturnsPage />} /> 
+        </Route>
+        <Route path="/test/home" element={<ProductList />} />
       </Routes>
-<<<<<<< HEAD
     </CartProvider>
-=======
->>>>>>> origin/main
   );
 };
 
