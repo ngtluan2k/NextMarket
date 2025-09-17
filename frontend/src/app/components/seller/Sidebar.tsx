@@ -33,8 +33,8 @@ const items: MenuItem[] = [
   getItem('Quản lý bán hàng', 'SalesManagement', <BarChartOutlined />),
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
-  getItem('Invoices', 'Invoices', <FileTextOutlined />),
-  getItem('Back to home', 'HomePage', <HomeOutlined/>)
+  getItem('Hóa Đơn ', 'Invoices', <FileTextOutlined />),
+  getItem('Trở về trang chủ', 'HomePage', <HomeOutlined/>)
 ];
 
 
@@ -78,7 +78,7 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
             style={{ display: collapsed ? 'none' : 'block' }}
           >
             <span className="text-xl font-bold text-gray-900">
-              clothing<span className="font-normal">Store</span>
+              Everymart
             </span>
           </div>
         </div>

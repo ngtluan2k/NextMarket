@@ -58,7 +58,7 @@ interface Product {
   stock: number;
   sold: number;
   revenue: number;
-  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  status: 'Còn Hàng' | 'Sắp Hết Hàng' | 'Hết Hàng';
   image: string;
   sku: string;
   description: string;
@@ -79,7 +79,6 @@ export default function StoreInventory() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [form] = Form.useForm();
-  
 
   useEffect(() => {
     fetchStores();
@@ -87,7 +86,6 @@ export default function StoreInventory() {
 
   useEffect(() => {
     if (selectedStoreId) {
-      // console.log(selectedStoreId);
       fetchProducts();
     } else {
       setProducts([]);
@@ -102,8 +100,8 @@ export default function StoreInventory() {
         setSelectedStoreId(userStores[0].id);
       }
     } catch (error) {
-      message.error('Failed to fetch stores');
-      console.error('Error fetching stores:', error);
+      message.error('Không thể tải danh sách cửa hàng');
+      console.error('Lỗi khi tải cửa hàng:', error);
     }
   };
 
@@ -115,50 +113,43 @@ export default function StoreInventory() {
       const apiProducts = await productService.getStoreProducts(
         selectedStoreId
       );
-      console.log('API Products:', apiProducts);
+      // console.log('API Products:', apiProducts);
       if (!Array.isArray(apiProducts)) {
-        console.error('API did not return an array:', apiProducts);
-        message.error('Invalid product data received');
+        console.error('API không trả về mảng:', apiProducts);
+        message.error('Dữ liệu sản phẩm không hợp lệ');
         setProducts([]);
         return;
       }
       const mappedProducts: Product[] = apiProducts.map(
         (apiProduct: ApiProduct, index: number) => {
-          // Get primary image URL or fallback to placeholder
           const primaryImage =
             apiProduct.media?.find(
               (m) => m.is_primary && m.media_type === 'image'
             )?.url || '/placeholder.svg';
 
-          // Get first valid category name or fallback to 'General'
           const categoryName =
             apiProduct.categories?.find((c) => c.category?.name)?.category
-              ?.name || 'General';
+              ?.name || 'Chung';
 
-          // Get stock from first variant or fallback to 0
           const stock = apiProduct.variants?.[0]?.stock || 0;
 
-          // Convert price to number, handling string or number input
           const rawPrice =
             apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
           const price =
             typeof rawPrice === 'string'
               ? parseFloat(rawPrice)
               : Number(rawPrice);
-          // Ensure price is a valid number, fallback to 0 if NaN
           const finalPrice = isNaN(price) ? 0 : price;
 
-          // Calculate sold and revenue (replace with real data if available)
-          const sold = Math.floor(Math.random() * 50); // TODO: Replace with real data
+          const sold = Math.floor(Math.random() * 50); // TODO: Thay bằng dữ liệu thực tế
           const revenue = finalPrice * sold;
 
-          // Determine stock status
           const status = getStockStatus(stock);
 
           const mappedProduct = {
             key: apiProduct.id.toString(),
             id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
-            name: apiProduct.name || 'Unknown Product',
+            name: apiProduct.name || 'Sản Phẩm Không Xác Định',
             category: categoryName,
             price: finalPrice,
             stock,
@@ -168,27 +159,27 @@ export default function StoreInventory() {
             image: primaryImage,
             sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
             description: apiProduct.description || '',
-            tags: [], // TODO: Fetch from product_tag table
+            tags: [], // TODO: Lấy từ bảng product_tag
             createdAt:
               apiProduct.created_at?.split('T')[0] ||
               new Date().toISOString().split('T')[0],
             apiId: apiProduct.id,
           };
-          console.log('Mapped Product:', mappedProduct);
+          // console.log('Sản Phẩm Đã Ánh Xạ:', mappedProduct);
           return mappedProduct;
         }
       );
-      console.log('Mapped Products:', mappedProducts);
+      console.log('Danh Sách Sản Phẩm Đã Ánh Xạ:', mappedProducts);
       setProducts(mappedProducts);
     } catch (error) {
-      message.error('Failed to fetch products');
-      console.error('Error fetching products:', error);
+      message.error('Không thể tải danh sách sản phẩm');
+      console.error('Lỗi khi tải sản phẩm:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  console.log(products);
+  // console.log(products);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -203,9 +194,9 @@ export default function StoreInventory() {
   });
 
   const totalProducts = products.length;
-  const inStock = products.filter((p) => p.status === 'In Stock').length;
-  const lowStock = products.filter((p) => p.status === 'Low Stock').length;
-  const outOfStock = products.filter((p) => p.status === 'Out of Stock').length;
+  const inStock = products.filter((p) => p.status === 'Còn Hàng').length;
+  const lowStock = products.filter((p) => p.status === 'Sắp Hết Hàng').length;
+  const outOfStock = products.filter((p) => p.status === 'Hết Hàng').length;
   const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
 
   const handleAddProduct = () => {
@@ -222,23 +213,23 @@ export default function StoreInventory() {
 
   const handleDeleteProduct = async (productId: string, apiId?: number) => {
     if (!apiId) {
-      message.error('Cannot delete product without API ID');
+      message.error('Không thể xóa sản phẩm không có API ID');
       return;
     }
 
     Modal.confirm({
-      title: 'Delete Product',
-      content: 'Are you sure you want to delete this product?',
-      okText: 'Delete',
+      title: 'Xóa Sản Phẩm',
+      content: 'Bạn có chắc chắn muốn xóa sản phẩm này?',
+      okText: 'Xóa',
       okType: 'danger',
       onOk: async () => {
         try {
           await productService.deleteProduct(apiId);
           setProducts(products.filter((p) => p.id !== productId));
-          message.success('Product deleted successfully');
+          message.success('Xóa sản phẩm thành công');
         } catch (error) {
-          message.error('Failed to delete product');
-          console.error('Error deleting product:', error);
+          message.error('Không thể xóa sản phẩm');
+          console.error('Lỗi khi xóa sản phẩm:', error);
         }
       },
     });
@@ -249,9 +240,8 @@ export default function StoreInventory() {
       const values = await form.validateFields();
 
       if (editingProduct) {
-        // Update existing product
         if (!editingProduct.apiId) {
-          message.error('Cannot update product without API ID');
+          message.error('Không thể cập nhật sản phẩm không có API ID');
           return;
         }
 
@@ -271,15 +261,14 @@ export default function StoreInventory() {
               : p
           )
         );
-        message.success('Product updated successfully');
+        message.success('Cập nhật sản phẩm thành công');
       } else {
-        // Add new product
         const createDto: CreateProductDto = {
           name: values.name,
           slug: values.name.toLowerCase().replace(/\s+/g, '-'),
           description: values.description,
           base_price: values.price,
-          brand_id: 1, // You may need to get this from somewhere
+          brand_id: 1, // Có thể cần lấy từ nguồn khác
         };
 
         const newApiProduct = await productService.createProduct(createDto);
@@ -296,31 +285,31 @@ export default function StoreInventory() {
           apiId: newApiProduct.id,
         };
         setProducts([...products, newProduct]);
-        message.success('Product created successfully');
+        message.success('Tạo sản phẩm thành công');
       }
       setIsModalVisible(false);
       form.resetFields();
     } catch (error) {
-      message.error('Failed to save product');
-      console.error('Error saving product:', error);
+      message.error('Không thể lưu sản phẩm');
+      console.error('Lỗi khi lưu sản phẩm:', error);
     }
   };
 
   const getStockStatus = (
     stock: number
-  ): 'In Stock' | 'Low Stock' | 'Out of Stock' => {
-    if (stock === 0) return 'Out of Stock';
-    if (stock <= 10) return 'Low Stock';
-    return 'In Stock';
+  ): 'Còn Hàng' | 'Sắp Hết Hàng' | 'Hết Hàng' => {
+    if (stock === 0) return 'Hết Hàng';
+    if (stock <= 10) return 'Sắp Hết Hàng';
+    return 'Còn Hàng';
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Stock':
+      case 'Còn Hàng':
         return 'green';
-      case 'Low Stock':
+      case 'Sắp Hết Hàng':
         return 'orange';
-      case 'Out of Stock':
+      case 'Hết Hàng':
         return 'red';
       default:
         return 'default';
@@ -329,7 +318,7 @@ export default function StoreInventory() {
 
   const columns: ColumnsType<Product> = [
     {
-      title: 'Product',
+      title: 'Sản Phẩm',
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: Product) => (
@@ -348,24 +337,24 @@ export default function StoreInventory() {
       sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
-      title: 'Category',
+      title: 'Danh Mục',
       dataIndex: 'category',
       key: 'category',
       filters: [
-        { text: 'General', value: 'General' },
-        // Add more categories as needed
+        { text: 'Chung', value: 'Chung' },
+        // Thêm các danh mục khác nếu cần
       ],
       onFilter: (value, record) => record.category === value,
     },
     {
-      title: 'Price',
+      title: 'Giá',
       dataIndex: 'price',
       key: 'price',
-      render: (price: number) => `€${price}`,
+      render: (price: number) => `₫${price.toLocaleString('vi-VN')}`,
       sorter: (a, b) => a.price - b.price,
     },
     {
-      title: 'Stock',
+      title: 'Tồn Kho',
       dataIndex: 'stock',
       key: 'stock',
       render: (stock: number, record: Product) => (
@@ -389,20 +378,20 @@ export default function StoreInventory() {
       sorter: (a, b) => a.stock - b.stock,
     },
     {
-      title: 'Sold',
+      title: 'Đã Bán',
       dataIndex: 'sold',
       key: 'sold',
       sorter: (a, b) => a.sold - b.sold,
     },
     {
-      title: 'Revenue',
+      title: 'Doanh Thu',
       dataIndex: 'revenue',
       key: 'revenue',
-      render: (revenue: number) => `€${revenue.toFixed(2)}`,
+      render: (revenue: number) => `₫${revenue.toLocaleString('vi-VN')}`,
       sorter: (a, b) => a.revenue - b.revenue,
     },
     {
-      title: 'Status',
+      title: 'Trạng Thái',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
@@ -411,14 +400,14 @@ export default function StoreInventory() {
         </Tag>
       ),
       filters: [
-        { text: 'In Stock', value: 'In Stock' },
-        { text: 'Low Stock', value: 'Low Stock' },
-        { text: 'Out of Stock', value: 'Out of Stock' },
+        { text: 'Còn Hàng', value: 'Còn Hàng' },
+        { text: 'Sắp Hết Hàng', value: 'Sắp Hết Hàng' },
+        { text: 'Hết Hàng', value: 'Hết Hàng' },
       ],
       onFilter: (value, record) => record.status === value,
     },
     {
-      title: 'Actions',
+      title: 'Hành Động',
       key: 'actions',
       render: (_, record: Product) => (
         <Dropdown
@@ -427,18 +416,18 @@ export default function StoreInventory() {
               {
                 key: 'view',
                 icon: <EyeOutlined />,
-                label: 'View Details',
+                label: 'Xem Chi Tiết',
               },
               {
                 key: 'edit',
                 icon: <EditOutlined />,
-                label: 'Edit Product',
+                label: 'Chỉnh Sửa Sản Phẩm',
                 onClick: () => handleEditProduct(record),
               },
               {
                 key: 'duplicate',
                 icon: <CopyOutlined />,
-                label: 'Duplicate',
+                label: 'Sao Chép',
               },
               {
                 type: 'divider',
@@ -446,7 +435,7 @@ export default function StoreInventory() {
               {
                 key: 'delete',
                 icon: <DeleteOutlined />,
-                label: 'Delete',
+                label: 'Xóa',
                 danger: true,
                 onClick: () => handleDeleteProduct(record.id, record.apiId),
               },
@@ -468,8 +457,8 @@ export default function StoreInventory() {
   };
 
   const formatter: StatisticProps['formatter'] = (value) => (
-  <CountUp end={value as number} separator="," />
-);
+    <CountUp end={value as number} separator="," />
+  );
 
   return (
     <Layout>
@@ -477,15 +466,15 @@ export default function StoreInventory() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <Title level={2} className="!mb-1 !text-gray-900">
-              Inventory Management
+              Quản Lý Kho Hàng
             </Title>
             <Text className="text-gray-500">
-              Manage your products and stock levels
+              Quản lý sản phẩm và mức tồn kho của bạn
             </Text>
           </div>
           <Space>
             <Select
-              placeholder="Select Store"
+              placeholder="Chọn Cửa Hàng"
               value={selectedStoreId}
               onChange={setSelectedStoreId}
               style={{ width: 200 }}
@@ -496,7 +485,7 @@ export default function StoreInventory() {
                 </Select.Option>
               ))}
             </Select>
-            <ExportCascader/>
+            <ExportCascader />
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -504,7 +493,7 @@ export default function StoreInventory() {
               onClick={handleAddProduct}
               disabled={!selectedStoreId}
             >
-              Add Product
+              Thêm Sản Phẩm
             </Button>
           </Space>
         </div>
@@ -512,11 +501,16 @@ export default function StoreInventory() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card className="border-l-4 border-l-cyan-500">
             <Statistic
-              title="Total Products"
+              title="Tổng Sản Phẩm"
               value={totalProducts}
               prefix={<ShoppingOutlined className="text-cyan-500" />}
             />
-            <Statistic title="Total product values: " value={totalValue} precision={2} formatter={formatter} />
+            <Statistic
+              title="Tổng giá trị sản phẩm:"
+              value={totalValue}
+              precision={2}
+              formatter={formatter}
+            />
           </Card>
           <Card>
             <StockBadge
@@ -532,29 +526,29 @@ export default function StoreInventory() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Space wrap>
               <Select
-                placeholder="Category"
+                placeholder="Danh Mục"
                 style={{ width: 120 }}
                 value={categoryFilter}
                 onChange={setCategoryFilter}
               >
-                <Select.Option value="all">All Categories</Select.Option>
-                <Select.Option value="General">General</Select.Option>
-                {/* Add more categories */}
+                <Select.Option value="all">Tất Cả Danh Mục</Select.Option>
+                <Select.Option value="Chung">Chung</Select.Option>
+                {/* Thêm các danh mục khác */}
               </Select>
               <Select
-                placeholder="Status"
+                placeholder="Trạng Thái"
                 style={{ width: 120 }}
                 value={statusFilter}
                 onChange={setStatusFilter}
               >
-                <Select.Option value="all">All Status</Select.Option>
-                <Select.Option value="In Stock">In Stock</Select.Option>
-                <Select.Option value="Low Stock">Low Stock</Select.Option>
-                <Select.Option value="Out of Stock">Out of Stock</Select.Option>
+                <Select.Option value="all">Tất Cả Trạng Thái</Select.Option>
+                <Select.Option value="Còn Hàng">Còn Hàng</Select.Option>
+                <Select.Option value="Sắp Hết Hàng">Sắp Hết Hàng</Select.Option>
+                <Select.Option value="Hết Hàng">Hết Hàng</Select.Option>
               </Select>
             </Space>
             <Input
-              placeholder="Search products, SKU..."
+              placeholder="Tìm kiếm sản phẩm, SKU..."
               prefix={<SearchOutlined className="text-gray-400" />}
               className="max-w-md"
               size="large"
@@ -564,18 +558,17 @@ export default function StoreInventory() {
             {selectedRowKeys.length > 0 && (
               <Space>
                 <Text className="text-gray-600">
-                  {selectedRowKeys.length} selected
+                  Đã chọn {selectedRowKeys.length}
                 </Text>
-                <Button size="small">Bulk Edit</Button>
+                <Button size="small">Chỉnh Sửa Hàng Loạt</Button>
                 <Button size="small" danger>
-                  Bulk Delete
+                  Xóa Hàng Loạt
                 </Button>
               </Space>
             )}
           </div>
         </Card>
 
-        {/* Products Table */}
         <Card>
           <Table
             columns={columns}
@@ -588,91 +581,87 @@ export default function StoreInventory() {
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} products`,
+                `${range[0]}-${range[1]} trên tổng số ${total} sản phẩm`,
             }}
             scroll={{ x: 1200 }}
             className="custom-table"
           />
         </Card>
 
-        {/* Add/Edit Product Modal */}
         <Modal
-          title={editingProduct ? 'Edit Product' : 'Add New Product'}
+          title={editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
           open={isModalVisible}
           onOk={handleModalOk}
           onCancel={() => setIsModalVisible(false)}
           width={800}
-          okText={editingProduct ? 'Update Product' : 'Add Product'}
+          okText={editingProduct ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm'}
           okButtonProps={{ className: 'bg-cyan-500 border-cyan-500' }}
         >
           <Form form={form} layout="vertical" className="mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Form.Item
                 name="name"
-                label="Product Name"
+                label="Tên Sản Phẩm"
                 rules={[
-                  { required: true, message: 'Please enter product name' },
+                  { required: true, message: 'Vui lòng nhập tên sản phẩm' },
                 ]}
               >
-                <Input placeholder="Enter product name" />
+                <Input placeholder="Nhập tên sản phẩm" />
               </Form.Item>
 
               <Form.Item
                 name="sku"
                 label="SKU"
-                rules={[{ required: true, message: 'Please enter SKU' }]}
+                rules={[{ required: true, message: 'Vui lòng nhập SKU' }]}
               >
-                <Input placeholder="Enter SKU" />
+                <Input placeholder="Nhập SKU" />
               </Form.Item>
 
               <Form.Item
                 name="category"
-                label="Category"
-                rules={[{ required: true, message: 'Please select category' }]}
+                label="Danh Mục"
+                rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
               >
-                <Select placeholder="Select category">
-                  <Select.Option value="General">General</Select.Option>
-                  {/* Add more categories */}
+                <Select placeholder="Chọn danh mục">
+                  <Select.Option value="Chung">Chung</Select.Option>
+                  {/* Thêm các danh mục khác */}
                 </Select>
               </Form.Item>
 
               <Form.Item
                 name="price"
-                label="Price (€)"
-                rules={[{ required: true, message: 'Please enter price' }]}
+                label="Giá (₫)"
+                rules={[{ required: true, message: 'Vui lòng nhập giá' }]}
               >
                 <InputNumber
                   min={0}
-                  step={0.01}
-                  placeholder="0.00"
+                  step={1000}
+                  placeholder="0"
                   className="w-full"
                 />
               </Form.Item>
 
               <Form.Item
                 name="stock"
-                label="Stock Quantity"
+                label="Số Lượng Tồn Kho"
                 rules={[
-                  { required: true, message: 'Please enter stock quantity' },
+                  { required: true, message: 'Vui lòng nhập số lượng tồn kho' },
                 ]}
               >
                 <InputNumber min={0} placeholder="0" className="w-full" />
               </Form.Item>
 
-              <Form.Item name="image" label="Product Image">
-                <Input placeholder="Image URL" />
+              <Form.Item name="image" label="Hình Ảnh Sản Phẩm">
+                <Input placeholder="URL hình ảnh" />
               </Form.Item>
             </div>
 
-            <Form.Item name="description" label="Description">
-              <Input.TextArea
-                rows={3}
-                placeholder="Enter product description"
-              />
+            <Form.Item name="description" label="Mô Tả">
+              <Input.TextArea rows={3} placeholder="Nhập mô tả sản phẩm" />
             </Form.Item>
 
-            <Form.Item name="tags" label="Tags">
-              <Select mode="tags" placeholder="Add tags" className="w-full" />
+            <Form.Item name="tags" label="Thẻ">
+              <Select mode="tags" placeholder="Thêm thẻ" className="w-full" />
             </Form.Item>
           </Form>
         </Modal>

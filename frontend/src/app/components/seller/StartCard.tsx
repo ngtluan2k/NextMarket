@@ -9,9 +9,9 @@ export default function StatsCards() {
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <Text className="text-gray-500 text-sm">Sales Revenue</Text>
+            <Text className="text-gray-500 text-sm">Doanh Thu Bán Hàng</Text>
             <Title level={3} className="!mb-0 !text-gray-900">
-              95.345 €
+              2192945000 ₫
             </Title>
             <Text className="text-green-500 text-sm">↗ 12.3%</Text>
           </div>
@@ -20,7 +20,7 @@ export default function StatsCards() {
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <Text className="text-gray-500 text-sm">Items Sold</Text>
+            <Text className="text-gray-500 text-sm">Số Lượng Bán</Text>
             <Title level={3} className="!mb-0 !text-gray-900">
               1584
             </Title>
@@ -31,13 +31,13 @@ export default function StatsCards() {
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <Text className="text-gray-500 text-sm">Avg order value</Text>
+            <Text className="text-gray-500 text-sm">Giá trị đơn hàng trung bình</Text>
             <Title level={4} className="!mb-0 !text-gray-900">
-              32 €
+              736000 ₫
             </Title>
           </div>
           <div>
-            <Text className="text-gray-500 text-sm">Avg order units</Text>
+            <Text className="text-gray-500 text-sm">Số lượng đơn hàng trung bình</Text>
             <Title level={4} className="!mb-0 !text-gray-900">
               2.60
             </Title>
@@ -59,10 +59,10 @@ export default function StatsCards() {
           </div>
           <div>
             <Title level={4} className="!mb-0 !text-gray-900">
-              95.345 €
+              2192945000 ₫
             </Title>
-            <Text className="text-gray-500 text-sm">/ 120k € Target</Text>
-            <div className="text-gray-500 text-sm">Sales Revenue in period</div>
+            <Text className="text-gray-500 text-sm">/ 2760000000 ₫ Mục tiêu</Text>
+            <div className="text-gray-500 text-sm">Doanh thu bán hàng trong kỳ</div>
           </div>
         </div>
       </Card>

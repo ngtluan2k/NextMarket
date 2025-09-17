@@ -6,13 +6,13 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
 const { Title, Text } = Typography
 
 const salesData = [
-  { name: "Mon", sales: 8000, target: 6000 },
-  { name: "Tue", sales: 12000, target: 10000 },
-  { name: "Wed", sales: 9000, target: 8000 },
-  { name: "Thu", sales: 7000, target: 9000 },
-  { name: "Fri", sales: 11000, target: 10000 },
-  { name: "Sat", sales: 13000, target: 12000 },
-  { name: "Sun", sales: 12000, target: 11000 },
+  { name: "T2", sales: 184000000, target: 138000000 },
+  { name: "T3", sales: 276000000, target: 230000000 },
+  { name: "T4", sales: 207000000, target: 184000000 },
+  { name: "T5", sales: 161000000, target: 207000000 },
+  { name: "T6", sales: 253000000, target: 230000000 },
+  { name: "T7", sales: 299000000, target: 276000000 },
+  { name: "CN", sales: 276000000, target: 253000000 },
 ]
 
 export default function SalesOverview() {
@@ -21,9 +21,9 @@ export default function SalesOverview() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <Title level={4} className="!mb-1">
-            Sales Overview
+            Tổng Quan Doanh Thu
           </Title>
-          <Text className="text-cyan-500 cursor-pointer">View detailed analytics</Text>
+          <Text className="text-cyan-500 cursor-pointer">Xem phân tích chi tiết</Text>
         </div>
         <MoreOutlined className="text-gray-400 cursor-pointer" />
       </div>
@@ -40,11 +40,11 @@ export default function SalesOverview() {
       <div className="flex items-center gap-6 mt-4">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
-          <Text className="text-sm text-gray-600">Sales</Text>
+          <Text className="text-sm text-gray-600">Doanh Thu</Text>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-          <Text className="text-sm text-gray-600">Target</Text>
+          <Text className="text-sm text-gray-600">Mục Tiêu</Text>
         </div>
       </div>
     </Card>

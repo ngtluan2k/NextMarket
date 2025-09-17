@@ -11,18 +11,17 @@ interface ExportOption {
 const exportOptions: ExportOption[] = [
   {
     value: 'pdf',
-    label: 'Export as PDF',
+    label: 'Xuất dưới dạng PDF',
   },
   {
     value: 'excel',
-    label: 'Export as Excel',
+    label: 'Xuất dưới dạng Excel',
   },
 ];
 
 const onChange: CascaderProps<ExportOption>['onChange'] = (value) => {
   console.log('Selected export type:', value[0]); 
 };
-
 
 const displayRender = (labels: string[]) => labels[0];
 
@@ -34,7 +33,7 @@ const ExportCascader: React.FC = () => (
       displayRender={displayRender}
       onChange={onChange}
       defaultValue={['excel']} 
-      placeholder="Select export type"
+      placeholder="Chọn loại xuất dữ liệu"
       className="w-32 sm:w-36 h-9 bg-white rounded-md shadow-sm text-sm" 
       suffixIcon={<ExportOutlined className="text-gray-600" />}
     />

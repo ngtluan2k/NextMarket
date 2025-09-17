@@ -27,12 +27,12 @@ const StockBadge: React.FC<StockBadgeProps> = ({
     <Space direction="vertical" size={12} className="w-full">
       {showToggle && (
         <Space className="w-full flex-row align-middle justify-between">
-          <Text className="font-bold text-lg">Stock detail: </Text>
+          <Text className="font-bold text-lg">Chi tiết tồn kho: </Text>
           <Switch
             checked={show}
             onChange={() => setShow(!show)}
-            checkedChildren="View"
-            unCheckedChildren="Hide"
+            checkedChildren="Hiển thị"
+            unCheckedChildren="Ẩn"
             className="mb-2"
           />
         </Space>
@@ -46,13 +46,13 @@ const StockBadge: React.FC<StockBadgeProps> = ({
           count={show ? inStock : 0}
           showZero
           color="#52c41a"
-          title="High Stock"
+          title="Tồn kho cao"
           overflowCount={999}
           style={{ fontSize: '14px', padding: '0 8px' }}
         >
           <CheckCircleOutlined className="text-green-500 text-lg" />
         </Badge>
-        <Text className="text-gray-800 font-medium">High Stock</Text>
+        <Text className="text-gray-800 font-medium">Tồn kho cao</Text>
       </Space>
       <Space
         align="center"
@@ -63,13 +63,13 @@ const StockBadge: React.FC<StockBadgeProps> = ({
           count={show ? lowStock : 0}
           showZero
           color="#faad14"
-          title="Low Stock"
+          title="Tồn kho thấp"
           overflowCount={999}
           style={{ fontSize: '14px', padding: '0 8px' }}
         >
           <ExclamationCircleOutlined className="text-orange-500 text-lg" />
         </Badge>
-        <Text className="text-gray-800 font-medium">Low Stock</Text>
+        <Text className="text-gray-800 font-medium">Tồn kho thấp</Text>
       </Space>
       <Space
         align="center"
@@ -80,13 +80,13 @@ const StockBadge: React.FC<StockBadgeProps> = ({
           count={show ? outOfStock : 0}
           showZero
           color="#f5222d"
-          title="Out of Stock"
+          title="Hết hàng"
           overflowCount={999}
           style={{ fontSize: '14px', padding: '0 8px' }}
         >
           <AlertOutlined className="text-red-500 text-lg" />
         </Badge>
-        <Text className="text-gray-800 font-medium">Out of Stock</Text>
+        <Text className="text-gray-800 font-medium">Hết hàng</Text>
       </Space>
     </Space>
   );

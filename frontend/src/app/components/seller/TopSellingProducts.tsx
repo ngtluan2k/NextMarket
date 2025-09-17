@@ -7,32 +7,32 @@ const { Title, Text } = Typography;
 const productData = [
   {
     key: '1',
-    product: 'Nike T-shirt basic',
+    product: 'Áo thun Nike cơ bản',
     id: 'ID #12345',
-    price: '15.45 €',
+    price: '355000 ₫',
     itemsSold: 68,
-    revenue: '1050.6 €',
-    status: 'In stock',
+    revenue: '24150600 ₫',
+    status: 'Còn hàng',
     image: '/athletic-tshirt.png',
   },
   {
     key: '2',
-    product: 'Mom Jeans slim fit',
+    product: 'Quần Jeans slim fit',
     id: 'ID #45325',
-    price: '22.96 €',
+    price: '527800 ₫',
     itemsSold: 56,
-    revenue: '1286.6 €',
-    status: 'Last 8 items',
+    revenue: '29556800 ₫',
+    status: 'Còn 8 sản phẩm',
     image: '/placeholder-d8hyd.png',
   },
   {
     key: '3',
-    product: 'New Balance 327',
+    product: 'Giày New Balance 327',
     id: 'ID #12345',
-    price: '51.90 €',
+    price: '1193700 ₫',
     itemsSold: 43,
-    revenue: '2235.0 €',
-    status: 'In stock',
+    revenue: '51329100 ₫',
+    status: 'Còn hàng',
     image: '/placeholder-lherd.png',
   },
 ];
@@ -40,7 +40,7 @@ const productData = [
 export default function TopSellingProducts() {
   const columns = [
     {
-      title: 'Product',
+      title: 'Sản Phẩm',
       dataIndex: 'product',
       key: 'product',
       render: (text: string, record: any) => (
@@ -58,31 +58,31 @@ export default function TopSellingProducts() {
       ),
     },
     {
-      title: 'Price',
+      title: 'Giá',
       dataIndex: 'price',
       key: 'price',
       className: 'text-gray-600',
     },
     {
-      title: 'Item Sold',
+      title: 'Số Lượng Bán',
       dataIndex: 'itemsSold',
       key: 'itemsSold',
       className: 'text-gray-600',
     },
     {
-      title: 'Revenue',
+      title: 'Doanh Thu',
       dataIndex: 'revenue',
       key: 'revenue',
       className: 'text-gray-600',
     },
     {
-      title: 'Status',
+      title: 'Trạng Thái',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
-            status === 'In stock'
+            status === 'Còn hàng'
               ? 'bg-green-100 text-green-800'
               : 'bg-yellow-100 text-yellow-800'
           }`}
@@ -103,11 +103,11 @@ export default function TopSellingProducts() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <Title level={4} className="!mb-1">
-            Top Selling Products
+            Sản Phẩm Bán Chạy Nhất
           </Title>
-          <Text className="text-cyan-500 cursor-pointer">View full list</Text>
+          <Text className="text-cyan-500 cursor-pointer">Xem danh sách đầy đủ</Text>
         </div>
-        <Text className="text-gray-400 text-sm">By item sold</Text>
+        <Text className="text-gray-400 text-sm">Theo số lượng bán</Text>
       </div>
       <Table
         columns={columns}
