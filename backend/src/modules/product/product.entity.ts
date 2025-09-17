@@ -56,7 +56,6 @@ export class Product {
 @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
 categories!: ProductCategory[];
 
-
   @OneToMany(() => ProductMedia, media => media.product)
   media!: ProductMedia[];
 

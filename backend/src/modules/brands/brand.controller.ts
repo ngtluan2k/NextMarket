@@ -11,19 +11,16 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 @ApiBearerAuth('access-token')
 @ApiTags('brands')
 @Controller('brands')
-@UseGuards(JwtAuthGuard, PermissionGuard)
 export class BrandController {
   constructor(private readonly service: BrandService) {}
    
 
   @Get()
-  @Permissions('view_brand')
   async list(@Query('q') q?:string){
    return this.service.list(q)
   }
 
   @Get(':id')
-  @Permissions('view_brand')
    async detail( @Param('id') id:number){
     const data= await this.service.detail(id)
     return{ data}
@@ -31,6 +28,8 @@ export class BrandController {
     }
 
     @Post()
+    @UseGuards(JwtAuthGuard, PermissionGuard)
+
     @Permissions('create_brand')
     async create ( @Body() dto : CreateBrandDto){
         const data = await this.service.create(dto)
@@ -38,6 +37,8 @@ export class BrandController {
     }
 
     @Put(':id')
+    @UseGuards(JwtAuthGuard, PermissionGuard)
+
     @Permissions('update_brand')
     async update (@Param('id') id:number, @Body() dto : UpdateBrandDto){
         const data = await this.service.update(id,dto)
@@ -46,6 +47,8 @@ export class BrandController {
 
 
     @Delete(':id')
+    @UseGuards(JwtAuthGuard, PermissionGuard)
+
     @Permissions('delete_brand')
     async remove ( @Param('id') id:number){
         await this.service.remove(id)

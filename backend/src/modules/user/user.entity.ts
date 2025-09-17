@@ -1,5 +1,5 @@
 // user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, Generated } from 'typeorm';
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
@@ -11,6 +11,7 @@ export class User {
   id!: number;
 
   @Column({ type: 'char', length: 36, unique: true })
+  @Generated('uuid')
   uuid!: string;
 
   @Column({ nullable: true })

@@ -23,11 +23,11 @@ export class ProductController {
   }
 
   // Lấy 1 sản phẩm theo id
-  @Get(':id')
-  async findOne(@Param('id') id: number, @Req() req: any) {
-    const userId = req.user.id;
-    return this.productService.findOne(id, userId);
-  }
+@Get('store/:id')
+async findOne(@Param('id') id: number, @Req() req: any) {
+  const userId = req.user.id;
+  return this.productService.findOne(id, userId);
+}
 
   // Tạo sản phẩm (draft)
  @UseGuards(JwtAuthGuard)
@@ -71,5 +71,14 @@ export class ProductController {
 async publish(@Body() dto: CreateProductDto, @Req() req: any) {
   const userId = req.user.id;
   return this.productService.publishProduct(dto, userId);
+}
+
+@Get('slug/:slug')
+async getProductBySlug(@Param('slug') slug: string) {
+  const data = await this.productService.findBySlug(slug);
+  return {
+    message: 'Lấy chi tiết sản phẩm thành công',
+    data,
+  };
 }
 }

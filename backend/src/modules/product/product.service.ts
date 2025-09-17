@@ -10,6 +10,7 @@ import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { generateUniqueSlug } from '../../common/utils/slug.util';
+import { Inventory } from '../inventory/inventory.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -63,27 +64,23 @@ await manager.save(product);
         }
       }
 
-      // Inventory
-      if (dto.inventory?.length) {
-        for (const inv of dto.inventory) {
-          const variant = variantMap[inv.variant_sku];
-          if (!variant) throw new NotFoundException(`Variant SKU ${inv.variant_sku} not found`);
+     // Inventory
+if (dto.inventory?.length) {
+  for (const inv of dto.inventory) {
+    const variant = variantMap[inv.variant_sku];
+    if (!variant) throw new NotFoundException(`Variant SKU ${inv.variant_sku} not found`);
 
-          const usedQty = inv.used_quantity || 0;
-          if (inv.quantity + usedQty > variant.stock)
-            throw new ForbiddenException(`Inventory exceeds stock for SKU ${inv.variant_sku}`);
+    await manager.save(Inventory, {
+      uuid: require('uuid').v4(),
+      product,
+      variant,
+      location: inv.location,
+      quantity: inv.quantity,
+      used_quantity: inv.used_quantity || 0,
+    });
+  }
+}
 
-          await manager.save('inventory', {
-            uuid: require('uuid').v4(),
-            product_id: product.id,
-            variant_id: variant.id,
-            location: inv.location,
-            quantity: inv.quantity,
-            used_quantity: usedQty,
-            updated_at: new Date(),
-          });
-        }
-      }
 
       if (dto.pricing_rules?.length) {
   for (const pr of dto.pricing_rules) {
@@ -152,6 +149,13 @@ async findAllProduct() {
     relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'], // nếu muốn show thêm info store
   });
 }
+// product.service.ts
+async findBySlug(slug: string) {
+  const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories'] });
+  if (!product) throw new NotFoundException('Product not found');
+  return product;
+}
+
 
 
 }

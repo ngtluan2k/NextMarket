@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 /* ==== Types ==== */
 export type LikeItem = {
@@ -6,6 +7,7 @@ export type LikeItem = {
   name: string;
   imageUrl: string;
   href?: string;
+  slug?: string;
   price?: number | string;
   oldPrice?: number | string;
   percentOff?: number | string;
@@ -49,6 +51,7 @@ export default function YouMayAlsoLikeProducts({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch products API
   useEffect(() => {
@@ -62,16 +65,14 @@ export default function YouMayAlsoLikeProducts({
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const data: any[] = await res.json(); // giả sử API trả mảng products
+        const data: any[] = await res.json();
 
-        // Map về LikeItem
         const mapped: LikeItem[] = data.map((p) => {
           const primaryMedia = p.media?.find((m: any) => m.is_primary) || p.media?.[0];
           const mainVariant = p.variants?.[0];
           const price = Number(mainVariant?.price || p.base_price || 0);
           const oldPrice = p.base_price && price < Number(p.base_price) ? Number(p.base_price) : undefined;
-          const percentOff =
-            oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : undefined;
+          const percentOff = oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : undefined;
 
           return {
             id: p.id,
@@ -80,7 +81,7 @@ export default function YouMayAlsoLikeProducts({
             price,
             oldPrice,
             percentOff,
-            href: `#/product/${p.id}`,
+            slug: p.slug,
           };
         });
 
@@ -93,9 +94,7 @@ export default function YouMayAlsoLikeProducts({
     };
 
     fetchProducts();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   // Scroll arrow state
@@ -126,6 +125,11 @@ export default function YouMayAlsoLikeProducts({
     if (!el) return;
     const CARD = 176;
     el.scrollBy({ left: dir === "next" ? CARD * 3 : -CARD * 3, behavior: "smooth" });
+  };
+
+  const handleClick = (slug?: string) => {
+    if (!slug) return;
+    navigate(`/products/slug/${slug}`);
   };
 
   return (
@@ -164,41 +168,44 @@ export default function YouMayAlsoLikeProducts({
           className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 no-scrollbar"
           style={{ scrollbarWidth: "none" }}
         >
-          {loading && Array.from({ length: skeletonCount }).map((_, i) => (
-            <div key={i} className="snap-start shrink-0 w-[160px] animate-pulse rounded-xl bg-slate-100 h-[200px]" />
-          ))}
+          {loading &&
+            Array.from({ length: skeletonCount }).map((_, i) => (
+              <div key={i} className="snap-start shrink-0 w-[160px] animate-pulse rounded-xl bg-slate-100 h-[200px]" />
+            ))}
 
           {data.map((p) => (
-            <div key={p.id} className="snap-start shrink-0 w-[160px] rounded-xl border border-slate-200 bg-white p-3 hover:shadow-md transition-shadow">
-              <a href={p.href || "#"} className="block">
-                <div className="rounded-lg bg-slate-50">
-                  <img
-                    src={p.imageUrl || ph()}
-                    alt={p.name}
-                    className="aspect-[3/4] w-full rounded-lg object-contain"
-                  />
+            <div
+              key={p.id}
+              className="snap-start shrink-0 w-[160px] rounded-xl border border-slate-200 bg-white p-3 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleClick(p.slug)}
+            >
+              <div className="rounded-lg bg-slate-50">
+                <img
+                  src={p.imageUrl || ph()}
+                  alt={p.name}
+                  className="aspect-[3/4] w-full rounded-lg object-contain"
+                />
+              </div>
+              <div className="mt-2 line-clamp-2 min-h-[34px] text-xs text-slate-900">{p.name}</div>
+              {p.price != null && (
+                <div className="mt-1 text-sm font-semibold text-slate-900">
+                  {typeof p.price === "number" ? p.price.toLocaleString("vi-VN") + "đ" : p.price}
                 </div>
-                <div className="mt-2 line-clamp-2 min-h-[34px] text-xs text-slate-900">{p.name}</div>
-                {p.price != null && (
-                  <div className="mt-1 text-sm font-semibold text-slate-900">
-                    {typeof p.price === "number" ? p.price.toLocaleString("vi-VN") + "đ" : p.price}
-                  </div>
-                )}
-                {(p.percentOff != null || p.oldPrice != null) && (
-                  <div className="mt-0.5 flex items-center gap-2">
-                    {p.percentOff != null && (
-                      <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-600">
-                        -{p.percentOff}%
-                      </span>
-                    )}
-                    {p.oldPrice != null && (
-                      <span className="text-[11px] text-slate-400 line-through">
-                        {typeof p.oldPrice === "number" ? p.oldPrice.toLocaleString("vi-VN") + "đ" : p.oldPrice}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </a>
+              )}
+              {(p.percentOff != null || p.oldPrice != null) && (
+                <div className="mt-0.5 flex items-center gap-2">
+                  {p.percentOff != null && (
+                    <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-600">
+                      -{p.percentOff}%
+                    </span>
+                  )}
+                  {p.oldPrice != null && (
+                    <span className="text-[11px] text-slate-400 line-through">
+                      {typeof p.oldPrice === "number" ? p.oldPrice.toLocaleString("vi-VN") + "đ" : p.oldPrice}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

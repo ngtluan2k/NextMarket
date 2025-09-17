@@ -16,9 +16,10 @@ export const SellerDashboard: React.FC = () => {
 
   const handleDeleteStore = async () => {
     if (!store) return;
-    
+
     // Xác nhận trực tiếp mà không cần preview
-    if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN cửa hàng "${store.name}"?
+    if (
+      !window.confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN cửa hàng "${store.name}"?
 
 🗑️ Hành động này sẽ xóa:
 • Toàn bộ thông tin cửa hàng
@@ -29,32 +30,39 @@ export const SellerDashboard: React.FC = () => {
 • Tất cả dữ liệu liên quan
 
 ⚠️ KHÔNG THỂ HOÀN TÁC!
-Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa hàng mới.`)) {
+Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa hàng mới.`)
+    ) {
       return;
     }
-    
+
     // Double confirmation cho hành động quan trọng
-    if (!confirm(`🔴 XÁC NHẬN LẦN CUỐI: XÓA cửa hàng "${store.name}"?`)) {
+    if (
+      !window.confirm(`🔴 XÁC NHẬN LẦN CUỐI: XÓA cửa hàng "${store.name}"?`)
+    ) {
       return;
     }
-    
+
     try {
-      const token = localStorage.getItem("token");
-      
+      const token = localStorage.getItem('token');
+
       console.log('🗑️ Deleting my store');
       const res = await fetch('http://localhost:3000/stores/my-store', {
         method: 'DELETE',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
-      
+
       const data = await res.json();
-      
+
       if (res.ok) {
-        alert(`✅ Xóa cửa hàng thành công!\n\n📊 Đã xóa ${data.deletedRecords || 'toàn bộ'} bản ghi dữ liệu\n\nBạn sẽ được chuyển về trang chủ.`);
-        
+        alert(
+          `✅ Xóa cửa hàng thành công!\n\n📊 Đã xóa ${
+            data.deletedRecords || 'toàn bộ'
+          } bản ghi dữ liệu\n\nBạn sẽ được chuyển về trang chủ.`
+        );
+
         // Redirect về trang chủ hoặc trang đăng ký seller
         window.location.href = '/';
       } else {
@@ -65,27 +73,32 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
     }
   };
 
-  useEffect(() => {
-    const fetchMyStore = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch('http://localhost:3000/stores/my-store', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        const data = await res.json();
-        setStore(data.data);
-      } catch (error) {
-        console.error('Error fetching store:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+ useEffect(() => {
+  const fetchMyStore = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:3000/stores/my-store', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    fetchMyStore();
-  }, []);
+      const data = await res.json();
+      if (data.data) {
+        setStore(data.data); // Có store → lưu vào state
+      } else {
+        // Chưa có store → redirect sang form đăng ký
+        window.location.href = '/seller-registration';
+      }
+    } catch (error) {
+      console.error('Error fetching store:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchMyStore();
+}, []);
 
   if (loading) return <div className="text-center mt-5">Đang tải...</div>;
 
@@ -123,7 +136,8 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
               <p className="text-muted">Slug: {store.slug}</p>
               {store.description && <p>{store.description}</p>}
               <small className="text-muted">
-                Đăng ký ngày: {new Date(store.created_at).toLocaleDateString('vi-VN')}
+                Đăng ký ngày:{' '}
+                {new Date(store.created_at).toLocaleDateString('vi-VN')}
               </small>
             </div>
           </div>
@@ -136,7 +150,8 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
                   <i className="bi bi-pencil-square"></i>
                   <strong> Bạn chưa hoàn thành đủ thông tin để đăng ký</strong>
                   <p className="mb-0">
-                    Hãy tiếp tục hoàn tất các bước còn lại để kích hoạt cửa hàng.
+                    Hãy tiếp tục hoàn tất các bước còn lại để kích hoạt cửa
+                    hàng.
                   </p>
                 </div>
                 <div className="ms-3">
@@ -150,7 +165,9 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
             <div className="alert alert-success mt-3">
               <i className="bi bi-check-circle"></i>
               <strong> Cửa hàng đã được kích hoạt</strong>
-              <p className="mb-0">Chúc mừng! Cửa hàng của bạn đã sẵn sàng hoạt động và bán hàng.</p>
+              <p className="mb-0">
+                Chúc mừng! Cửa hàng của bạn đã sẵn sàng hoạt động và bán hàng.
+              </p>
             </div>
           )}
         </div>
@@ -185,19 +202,26 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
                 {store.is_draft ? (
                   // Trạng thái DRAFT: Chỉ có nút hoàn tất đăng ký
                   <>
-                    <a href="/seller-registration" className="btn btn-primary btn-sm">
+                    <a
+                      href="/seller-registration"
+                      className="btn btn-primary btn-sm"
+                    >
                       ✏️ Hoàn tất đăng ký
                     </a>
                     <div className="alert alert-info p-2 mt-2">
                       <small>
-                        <strong>💡 Gợi ý:</strong> Hoàn tất thông tin để bắt đầu bán hàng.
+                        <strong>💡 Gợi ý:</strong> Hoàn tất thông tin để bắt đầu
+                        bán hàng.
                       </small>
                     </div>
                   </>
                 ) : (
                   // Trạng thái ACTIVE: Đầy đủ chức năng quản lý
                   <>
-                    <a href="/seller-registration" className="btn btn-outline-primary btn-sm">
+                    <a
+                      href="/seller-registration"
+                      className="btn btn-outline-primary btn-sm"
+                    >
                       ✏️ Chỉnh sửa thông tin
                     </a>
                     <button className="btn btn-outline-success btn-sm">
@@ -213,7 +237,7 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
                 )}
 
                 <hr />
-                <button 
+                <button
                   className="btn btn-danger btn-sm"
                   onClick={handleDeleteStore}
                   title="Xóa vĩnh viễn cửa hàng và toàn bộ dữ liệu"

@@ -9,9 +9,7 @@ import ProductGridToday from '../components/ProductGridToday';
 import FeaturedBrands from '../components/FeaturedBrands';
 import Footer from '../components/Footer';
 import YouMayAlsoLike from '../components/YouMayAlsoLike';
-import { useAuth } from '../hooks/useAuth';
-import CategoryList from '../components/CategoryList';
-import ProductList from '../components/ProductList';
+
 import { fetchBrandsAPI } from '../../service/brand.service';
 import { fetchCategoriesAPI, Category } from '../../service/category.service';
 
