@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
@@ -20,22 +19,6 @@ import OrdersPage from "./page/account/OrdersPage";
 import ProfilePage from "./page/account/ProfilePage";
 import ProductList from './components/ProductList';
 
-=======
-// src/App.tsx
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { AdminDashboard } from './components/admin/AdminDashboard';
-import { CartProvider } from './context/CartContext';
-import { Cart } from './components/Cart';
-import { message } from 'antd';
-import EveryMartHeader from './components/Navbar';
-import Home from './page/Home';
-import { ProductForm } from './components/AddProduct';
-import CategoryPage from './page/CategoryPage';
-import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
-import { SellerDashboard } from './components/register_seller/SellerDashboard';
-import ProductDetailPage from './page/ProductDetailPage';
->>>>>>> 45287316b3ee477283821a21b168cc772f49f523
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -52,7 +35,6 @@ const App: React.FC = () => {
   return (
     <CartProvider>
       {contextHolder}
-<<<<<<< HEAD
       <Routes>
         <Route path="/login" element={<AuthForm />} />
         <Route path="/admin" element={<AdminDashboard />} />
@@ -64,21 +46,10 @@ const App: React.FC = () => {
         <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/category/:slug/explore" element={<CategoryPage />} />
-=======
-
-      <Routes>
-        
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/seller-registration" element={<SellerRegistration />} />
-        <Route path="/seller-dashboard" element={<SellerDashboard />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/add_product" element={<ProductForm />} />
-        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<Cart showMessage={showMessage} />} />
->>>>>>> 45287316b3ee477283821a21b168cc772f49f523
-        <Route path="*" element={<Navigate to="/" />} />
         <Route path="/product/:slug" element={<ProductDetailPage />} />
         <Route path="/account" element={<AccountLayout />}>
           <Route index element={<Navigate to="profile" replace />} />
