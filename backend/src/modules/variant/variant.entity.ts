@@ -1,5 +1,16 @@
-import { Entity, JoinColumn , PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Generated,
+} from 'typeorm';
 import { Product } from '../product/product.entity';
+import { Inventory } from '../inventory/inventory.entity';
 
 @Entity('variants')
 export class Variant {
@@ -13,7 +24,7 @@ export class Variant {
   @Column()
   product_id!: number;
 
-   @ManyToOne(() => Product)
+  @ManyToOne(() => Product, (product) => product.variants, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
@@ -37,4 +48,8 @@ export class Variant {
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  // === Relations ===
+  @OneToMany(() => Inventory, (inventory) => inventory.variant)
+  inventories!: Inventory[];
 }
