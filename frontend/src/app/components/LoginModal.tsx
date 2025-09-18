@@ -105,45 +105,31 @@ export default function LoginModal({
     if (open) setTimeout(() => emailRef.current?.focus(), 80);
   }, [open, mode]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    // ---------- default APIs ----------
+const callDefaultLogin = async (payload: LoginPayload) => {
+  const res = await fetch(`${apiBase}/users/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
 
-  if (!open) return null;
+  if (data?.access_token) {
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.data));
 
-  // ---------- validate ----------
-  const validateLogin = () => {
-    if (!/^\S+@\S+\.\S+$/.test(email)) return "Email không hợp lệ";
-    if (password.length < 6) return "Mật khẩu tối thiểu 6 ký tự";
-    return null;
-  };
-  const validateRegister = () => {
-    if (!reg.username) return "Vui lòng nhập Username";
-    if (!reg.full_name) return "Vui lòng nhập Họ tên";
-    if (!reg.dob) return "Vui lòng chọn ngày sinh";
-    if (!reg.phone) return "Vui lòng nhập SĐT";
-    if (!reg.gender) return "Vui lòng chọn giới tính";
-    if (!/^\S+@\S+\.\S+$/.test(reg.email)) return "Email không hợp lệ";
-    if ((reg.password || "").length < 6) return "Mật khẩu tối thiểu 6 ký tự";
-    return null;
-  };
-
-  // ---------- default APIs ----------
-  const callDefaultLogin = async (payload: LoginPayload) => {
-    const res = await fetch(`${apiBase}/users/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }), // only these two
+    // fetch giỏ hàng riêng theo user
+    const cartRes = await fetch(`${apiBase}/cart/me`, {
+      headers: { Authorization: `Bearer ${data.access_token}` },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
-    if (data?.access_token) localStorage.setItem("token", data.access_token);
-    if (data?.data) localStorage.setItem("user", JSON.stringify(data.data));
-    return data;
-  };
+    const cartJson = await cartRes.json();
+    localStorage.setItem("cart", JSON.stringify(cartJson));
+  }
+
+  return data;
+};
+
 
   const callDefaultRegister = async (payload: RegisterPayload) => {
     const res = await fetch(`${apiBase}/users/register`, {

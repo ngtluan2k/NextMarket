@@ -241,7 +241,8 @@ export class StoreDocumentService {
   }
 
   // Admin methods
-  async findAllDocuments(page: number = 1, limit: number = 20): Promise<{
+  async findAllDocuments(page = 1, limit = 20)
+: Promise<{
     documents: StoreDocument[],
     total: number,
     page: number,

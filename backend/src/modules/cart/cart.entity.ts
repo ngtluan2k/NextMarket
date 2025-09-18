@@ -1,70 +1,68 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  OneToMany,
-} from 'typeorm';
-import { User } from '../user/user.entity';
-import { Product } from '../product/product.entity';
+// import {
+//   Entity,
+//   PrimaryGeneratedColumn,
+//   Column,
+//   ManyToOne,
+//   JoinColumn,
+//   OneToMany,
+// } from 'typeorm';
+// import { User } from '../user/user.entity';
+// import { Product } from '../product/product.entity';
 
-@Entity('shopping_carts')
-export class ShoppingCart {
-  @PrimaryGeneratedColumn()
-  id!: number;
+// @Entity('shopping_carts')
+// export class ShoppingCart {
+//   @PrimaryGeneratedColumn()
+//   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
-  uuid!: string;
+//   @Column({ type: 'char', length: 36, unique: true })
+//   uuid!: string;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user!: User;
+//   @ManyToOne(() => User, user => user.carts)
+//   @JoinColumn({ name: 'user_id' })
+//   user!: User;
 
-  @Column()
-  user_id!: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date;
+//   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+//   created_at!: Date;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
-  updated_at!: Date;
+//   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+//   updated_at!: Date;
 
-  @OneToMany(() => CartItem, cartItem => cartItem.cart)
-  items!: CartItem[];
-}
+//   @OneToMany(() => CartItem, cartItem => cartItem.cart)
+//   items!: CartItem[];
+// }
 
-@Entity('cart_items')
-export class CartItem {
-  @PrimaryGeneratedColumn()
-  id!: number;
+// @Entity('cart_items')
+// export class CartItem {
+//   @PrimaryGeneratedColumn()
+//   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
-  uuid!: string;
+//   @Column({ type: 'char', length: 36, unique: true })
+//   uuid!: string;
 
-  @ManyToOne(() => ShoppingCart)
-  @JoinColumn({ name: 'cart_id' })
-  cart!: ShoppingCart;
+//   @ManyToOne(() => ShoppingCart)
+//   @JoinColumn({ name: 'cart_id' })
+//   cart!: ShoppingCart;
 
-  @Column()
-  cart_id!: number;
+//   @Column()
+//   cart_id!: number;
 
-  @ManyToOne(() => Product)
-  @JoinColumn({ name: 'product_id' })
-  product!: Product;
+//   @ManyToOne(() => Product)
+//   @JoinColumn({ name: 'product_id' })
+//   product!: Product;
 
-  @Column()
-  product_id!: number;
+//   @Column()
+//   product_id!: number;
 
-  @Column({ nullable: true })
-  variant_id!: number;
+//   @Column({ nullable: true })
+//   variant_id!: number;
 
-  @Column({ default: 1 })
-  quantity!: number;
+//   @Column({ default: 1 })
+//   quantity!: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price!: number;
+//   @Column({ type: 'decimal', precision: 10, scale: 2 })
+//   price!: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
-  added_at!: Date;
-}
+//   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+//   added_at!: Date;
+// }

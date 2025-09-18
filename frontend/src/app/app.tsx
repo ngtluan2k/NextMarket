@@ -19,6 +19,7 @@ import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from "./components/AddProduct";
 
+// import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -78,6 +79,13 @@ const App: React.FC = () => {
         {/* <Route path="/auth" element={<AuthForm />} /> */}
 
         {/* Catch-all Route */}
+                <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/seller-registration" element={<SellerRegistration />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<Cart showMessage={showMessage} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </CartProvider>

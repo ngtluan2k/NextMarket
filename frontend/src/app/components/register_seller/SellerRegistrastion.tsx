@@ -880,7 +880,7 @@ export const SellerRegistration: React.FC = () => {
 
         // Clear saved data sau khi thành công
         clearSavedData();
-        setTimeout(() => navigate('/seller-dashboard'), 2000);
+        setTimeout(() => navigate('/myStores'), 2000);
       } else {
         setMessage(data.message || 'Đăng ký thất bại');
         setMessageType('error');

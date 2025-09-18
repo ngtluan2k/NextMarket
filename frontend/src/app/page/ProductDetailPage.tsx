@@ -9,14 +9,13 @@ import {
   Info,
   Shipping,
   ComboStrip,
-  BuyBox,
 } from '../components/productDetail';
 import SimilarProducts from '../components/productDetail/SimilarProducts';
 import ProductDescription from '../components/productDetail/ProductDescription';
 import ProductReviews from '../components/productDetail/ProductReviews';
 import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
-import type { Product } from '../components/productDetail/product';
+import BuyBox from '../components/productDetail/BuyBox';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -38,10 +37,10 @@ export default function ProductDetailPage() {
             <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
               <Gallery
                 images={
-                  product && Array.isArray(product.media)
+                  Array.isArray(product?.media)
                     ? product.media.map((m: { url: string }) => m.url)
                     : []
-                } // chuyển media -> array URL
+                }
                 width={L.leftWidth}
                 galleryHeight={L.galleryHeight}
                 thumbHeight={L.thumbHeight}
@@ -55,8 +54,11 @@ export default function ProductDetailPage() {
               <Shipping />
               <ComboStrip items={combos} />
               <SimilarProducts />
-              <ProductSpecs />
-              <ProductDescription />
+              <ProductSpecs product={product} loading={loading} />
+              <ProductDescription
+                html={product?.short_description}
+                loading={!product}
+              />
             </section>
 
             {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}
