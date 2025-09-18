@@ -23,14 +23,15 @@ class StoreService {
     };
   }
 
-  async getMyStores(): Promise<Store[]> {
-    const userId = getCurrentUserId();
-    console.log('userid: ' + userId);
-    const response = await axios.get(`${API_BASE_URL}/stores/owner/${userId}`, {
-      headers: this.getAuthHeaders(),
-    });
-    return response.data.data;
-  }
+  async getMyStore(): Promise<Store | null> {
+  const response = await axios.get(`${API_BASE_URL}/stores/my-store`, {
+    headers: this.getAuthHeaders(),
+  });
+  return response.data.data; // object
+}
+
+
+
 }
 
 export const storeService = new StoreService();

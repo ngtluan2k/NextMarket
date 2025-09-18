@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { Product, CardItem } from '../components/productDetail/product';
+import { useEffect, useState } from "react";
+import type { Product, CardItem } from "../components/productDetail/product";
 const adaptProduct = (raw: any): Product => ({
   id: raw?.id,
   name: raw?.title ?? raw?.name,
@@ -21,17 +21,18 @@ const adaptCombo = (raw: any): CardItem => ({
   rating: raw?.rating,
 });
 
+
 export function useProductDetail(slug: string) {
   const [loading, setLoading] = useState(true);
-  const [product, setProduct] = useState<Product>();
+  const [product, setProduct] = useState<any>(null);
   const [combos, setCombos] = useState<any[]>([]);
 
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
     fetch(`http://localhost:3000/products/slug/${slug}`)
-      .then((res) => res.json())
-      .then((json) => {
+      .then(res => res.json())
+      .then(json => {
         setProduct(json.data);
         // nếu có combos, giả sử api trả về luôn hoặc lọc trong json.data
         setCombos(json.data.combos ?? []);

@@ -257,7 +257,7 @@ export default function EveryMartHeader({
             </span>
           </a>
 
-          <a href="seller-dashboard" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a href="myStores" className="group flex items-center gap-2 px-3 py-2 self-stretch">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500 text-white">
               <Store className="h-3.5 w-3.5" />
             </span>
