@@ -9,6 +9,7 @@ import { Breadcrumb } from "antd";
 import AccountSecurityPanel from "../components/account/AccountSecurityPanel";
 import AccountProfileForm, { ProfileFormValues } from "../components/account/AccountProfileForm";
 import AccountNotifications from "../components/account/AccountNotifications";
+import AddressBook from "../components/account/AddressBook";
 
 const Account: React.FC = () => {
     const [profile, setProfile] = useState<ProfileFormValues | undefined>(undefined);
@@ -86,6 +87,9 @@ const Account: React.FC = () => {
                 
               </div>
             </div>
+            <div className="mt-6 rounded-2xl bg-white ring-1 ring-slate-200 shadow p-5">
+            <AddressBook />
+          </div>
           </section>
         </div>
       </main>

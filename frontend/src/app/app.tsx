@@ -14,6 +14,9 @@ import NotificationsPage from './page/account/NotificationsPage';
 import OrdersPage from './page/account/OrdersPage';
 import ReturnsPage from './page/account/ReturnsPage';
 import ProductDetailPage from './page/ProductDetailPage';
+import AddressBook from './components/account/AddressBook';
+import AddressCreatePage from './page/account/AddressCreatePage';
+import StoreLayout from './page/StoreLayout';
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -48,9 +51,17 @@ const App: React.FC = () => {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="returns" element={<ReturnsPage />} /> 
-         
+          <Route path="addresses" element={<AddressBook />} />       {/* danh sách + nút Thêm */}
+          <Route path="addresses/create" element={<AddressCreatePage />} /> {/* form riêng */}  
+         </Route>
+
+         <Route path="/store/:slug" element={<StoreLayout />}>
+       
         </Route>
       </Routes>
+
+      
+
       </>
   );
 };
