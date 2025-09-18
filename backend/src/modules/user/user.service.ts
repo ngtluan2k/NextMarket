@@ -50,6 +50,7 @@ export class UserService {
         dob: dto.dob,
         phone: dto.phone,
         gender: dto.gender,
+        country: dto.country,
         created_at: new Date(),
       },
     });

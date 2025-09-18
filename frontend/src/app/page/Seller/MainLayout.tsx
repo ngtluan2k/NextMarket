@@ -7,7 +7,7 @@ import Customer from './tab/Customer';
 import Invoice from './tab/Invoice';
 import StoreInventory from './tab/StoreInventory';
 import Home from '../Home';
-import { Settings } from '../../components/register_seller/SellerDashboard';
+import { SellerDashboard } from '../../components/register_seller/SellerDashboard';
 import SellerHeader from '../../components/seller/SellerHeader';
 
 
@@ -19,7 +19,7 @@ const pages: Record<string, React.ReactNode> = {
   StoreInventory: <StoreInventory />,
   Customers: <Customer />,
   Invoices: <Invoice />,
-  Settings: <Settings />,
+  Settings: <SellerDashboard />,
   Home: <Home />,
 };
 

@@ -39,11 +39,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refreshCart = async () => {
     try {
+      const token = localStorage.getItem('token');
+      console.log("Token đang gửi:", token);
       const response = await fetch('http://localhost:3000/cart', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
+      console.log("Status:", response.status);
       if (response.ok) {
         const data = await response.json();
         setCart(

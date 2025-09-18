@@ -19,7 +19,7 @@ export class StoreDocumentService {
     private storeInformationRepo: Repository<StoreInformation>,
     @InjectRepository(Store)
     private storeRepo: Repository<Store>,
-  ) {}
+  ) { }
 
   // Upload và tạo document record
   async uploadDocument(
@@ -186,20 +186,20 @@ export class StoreDocumentService {
     filename: string
   }> {
     const document = await this.findOne(id, userId);
-    
+
     // Lấy từ file system
     const fullPath = path.join(process.cwd(), document.file_url);
     if (!fs.existsSync(fullPath)) {
       throw new NotFoundException('File not found on disk');
     }
-    
+
     const fileData = fs.readFileSync(fullPath);
     const filename = path.basename(document.file_url);
-    
+
     // Detect MIME type từ file extension
     const ext = path.extname(filename).toLowerCase();
     let mimetype = 'application/octet-stream';
-    
+
     switch (ext) {
       case '.pdf':
         mimetype = 'application/pdf';
@@ -212,7 +212,7 @@ export class StoreDocumentService {
         mimetype = 'image/png';
         break;
     }
-    
+
     return {
       data: fileData,
       mimetype,
@@ -264,7 +264,7 @@ export class StoreDocumentService {
 
   async verifyDocument(id: number): Promise<StoreDocument> {
     const document = await this.storeDocumentRepo.findOne({ where: { id } });
-    
+
     if (!document) {
       throw new NotFoundException('Document not found');
     }
@@ -277,13 +277,29 @@ export class StoreDocumentService {
 
   async rejectDocument(id: number): Promise<StoreDocument> {
     const document = await this.storeDocumentRepo.findOne({ where: { id } });
-    
+
     if (!document) {
       throw new NotFoundException('Document not found');
     }
 
     document.verified = false;
     document.verified_at = null;
+
+    return await this.storeDocumentRepo.save(document);
+  }
+  async storeFileAndGetPath(file: Express.Multer.File, docType: DocumentType): Promise<string> {
+    this.validateFile(file, docType);
+    return this.saveFileToDisk(file, docType);
+  }
+
+  async createFromUrl(dto: CreateStoreDocumentDto, userId: number) {
+    await this.verifyStoreOwnership(dto.store_information_id, userId);
+    if (!dto.file_url) throw new BadRequestException('file_url is required');
+
+    const document = this.storeDocumentRepo.create({
+      ...dto,
+      verified: false,
+    });
 
     return await this.storeDocumentRepo.save(document);
   }

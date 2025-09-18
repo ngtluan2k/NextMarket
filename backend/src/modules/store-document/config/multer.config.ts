@@ -1,9 +1,10 @@
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { BadRequestException } from '@nestjs/common';
+import multer from 'multer';
 
 export const multerConfig: MulterOptions = {
   // Store in memory for processing
-  storage: undefined, // Use memory storage (default)
+  storage: multer.memoryStorage(), // Use memory storage (default)
   
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB

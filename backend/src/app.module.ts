@@ -12,7 +12,7 @@ import { RolePermissionModule } from './modules/role-permission/role-permission.
 import { UserRoleModule } from './modules/user-role/user-role.module';
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
-import { StoreRating } from './modules/store-rating/store-rating.entity';
+import { StoreRatingModule } from './modules/store-rating/store-rating.module';
 import { StoreDocumentModule } from './modules/store-document/store-document.module';
 import { ProductCategoryModule } from './modules/product_category/product_category.module';
 import { ProductMediaModule } from './modules/product_media/product_media.module';
@@ -35,6 +35,10 @@ import { ServeStaticModule } from '@nestjs/serve-static';
       rootPath: join(__dirname, '..', 'src', 'assets'),
       serveRoot: '/assets',
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
 
     // Cấu hình DB dùng ConfigService
     TypeOrmModule.forRootAsync({
@@ -53,7 +57,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: false,
+          synchronize: true,
           logging: true,
         };
       },
@@ -62,7 +66,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     ProductModule,
     UserModule,
     CategoryModule,
-    StoreRating,
+    StoreRatingModule,
     StoreModule,
     BrandModule,
     RoleModule,
@@ -80,4 +84,4 @@ import { ServeStaticModule } from '@nestjs/serve-static';
     VoucherUsageModule,
   ]
 })
-export class AppModule {}
+export class AppModule { }

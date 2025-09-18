@@ -11,10 +11,18 @@ export const SellerRegistration: React.FC = () => {
   );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'info' | 'error' | 'warning'>('info');
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showSelectAddressModal, setShowSelectAddressModal] = useState(false);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [editingAddress, setEditingAddress] = useState<any>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showSelectEmailModal, setShowSelectEmailModal] = useState(false);
+  const [editingEmail, setEditingEmail] = useState<any>(null);
+  const [storeInformationId, setStoreInformationId] = useState<number | null>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   // Keys cho localStorage
   const FORM_DATA_KEY = 'seller_registration_form_data';
@@ -41,6 +49,7 @@ export const SellerRegistration: React.FC = () => {
           const parsedData = JSON.parse(savedFormData);
           setFormData({ ...defaultSellerFormData, ...parsedData });
           setMessage('📝 Đã tải thông tin đã lưu từ phiên trước');
+          setMessageType('info');
         }
 
         if (savedStep) {
@@ -64,13 +73,9 @@ export const SellerRegistration: React.FC = () => {
             const data = await res.json();
             const store = data.data;
 
-            // Nếu có store và là draft, load đầy đủ thông tin từ server
-            if (store && store.is_draft) {
-              setMessage(
-                '📝 Đã tải thông tin bản nháp từ server. Hãy tiếp tục hoàn tất!'
-              );
-              // Fetch đầy đủ draft data từ backend
-              await loadFullDraftData(store.id, savedFormData);
+            if (store) {
+              // Nếu không muốn đè thông báo đang hiển thị, có thể truyền true để ẩn message info
+              await loadFullDraftData(store.id, savedFormData, true);
             }
           }
         }
@@ -115,7 +120,8 @@ export const SellerRegistration: React.FC = () => {
 
   const loadFullDraftData = async (
     storeId: number,
-    savedFormData: string | null
+    savedFormData: string | null,
+    suppressMessage: boolean = false
   ) => {
     try {
       const token = localStorage.getItem('token');
@@ -131,7 +137,7 @@ export const SellerRegistration: React.FC = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }); 
+      });
 
       console.log('📡 Response status:', response.status);
 
@@ -199,6 +205,13 @@ export const SellerRegistration: React.FC = () => {
         };
 
         console.log('🔄 Mapped form data:', mappedFormData);
+        const storeInfoId = draftData.storeInformation?.id ?? null;
+        setStoreInformationId(storeInfoId);
+
+        if (storeInfoId) {
+          console.log(`📄 Fetching documents for storeInformationId ${storeInfoId}...`);
+          await fetchDocuments(storeInfoId);
+        }
 
         // Set addresses nếu có
         if (draftData.storeAddress) {
@@ -255,7 +268,10 @@ export const SellerRegistration: React.FC = () => {
         }
 
         // Success message
-        setMessage('📝 Đã tải đầy đủ thông tin bản nháp từ server!');
+        if (!suppressMessage) {
+          setMessage('📝 Đã tải đầy đủ thông tin bản nháp từ server!');
+          setMessageType('info');
+        }
 
         // Determine current step based on data completeness
         let step = 1;
@@ -263,20 +279,25 @@ export const SellerRegistration: React.FC = () => {
         if (mappedFormData.store_information.name) step = 3;
 
         if (mappedFormData.store_identification.full_name && mappedFormData.bank_account.bank_name) step = 4;
-        
+
         if (!savedFormData) {
           setCurrentStep(step);
         }
 
-        setMessage('📝 Đã tải đầy đủ thông tin bản nháp từ server!');
+        if (!suppressMessage) {
+          setMessage('📝 Đã tải đầy đủ thông tin bản nháp từ server!');
+          setMessageType('info');
+        }
       } else {
         const errorData = await response.text();
         console.error('❌ API Error:', response.status, errorData);
         setMessage(`⚠️ Lỗi API: ${response.status}`);
+        setMessageType('error');
       }
     } catch (error) {
       console.error('❌ Network/Parse error:', error);
       setMessage('⚠️ Không thể tải được bản nháp từ server');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -330,6 +351,161 @@ export const SellerRegistration: React.FC = () => {
       [field]: value,
     }));
   };
+  // Email handlers
+  const [emails, setEmails] = useState<Array<{
+    id: number;
+    email: string;
+    is_default: boolean;
+    description?: string;
+  }>>(
+    formData.store_information_email?.email
+      ? [{
+        id: Date.now(),
+        email: formData.store_information_email.email,
+        is_default: true,
+        description: ''
+      }]
+      : []
+  );
+
+  // Email form data cho modal
+  const [emailFormData, setEmailFormData] = useState({
+    email: '',
+    description: '',
+    is_default: true,
+  });
+
+  // Handle email input change trong modal
+  const handleEmailInputChange = (field: string, value: any) => {
+    setEmailFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Handle thêm/sửa email
+  const handleAddEmail = () => {
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailFormData.email || !emailRegex.test(emailFormData.email)) {
+      setMessage('❌ Vui lòng nhập email hợp lệ');
+      setMessageType('error');
+      return;
+    }
+
+    // Check duplicate
+    const isDuplicate = emails.some(
+      (email) => email.email === emailFormData.email &&
+        (!editingEmail || email.id !== editingEmail.id)
+    );
+    if (isDuplicate) {
+      setMessage('❌ Email này đã tồn tại');
+      setMessageType('error');
+      return;
+    }
+
+    if (emails.length >= 5 && !editingEmail) {
+      setMessage('❌ Chỉ được thêm tối đa 5 email');
+      setMessageType('error');
+      return;
+    }
+
+    if (editingEmail) {
+      // Update existing email
+      setEmails((prev) =>
+        prev.map((email) =>
+          email.id === editingEmail.id
+            ? {
+              ...emailFormData,
+              id: editingEmail.id,
+              is_default: editingEmail.is_default,
+            }
+            : email
+        )
+      );
+
+      // Update formData if editing default email
+      if (editingEmail.is_default) {
+        setFormData((prev) => ({
+          ...prev,
+          store_information_email: {
+            email: emailFormData.email,
+          },
+        }));
+      }
+
+      setMessage('✅ Email đã được cập nhật thành công');
+      setMessageType('success');
+    } else {
+      // Add new email
+      const isFirstEmail = emails.length === 0;
+
+      const newEmail = {
+        ...emailFormData,
+        id: Date.now(),
+        is_default: isFirstEmail,
+      };
+      setEmails((prev) => [...prev, newEmail]);
+
+      // Update formData for backend submission (always use default email)
+      if (isFirstEmail) {
+        setFormData((prev) => ({
+          ...prev,
+          store_information_email: {
+            email: emailFormData.email,
+          },
+        }));
+      }
+
+      setMessage('✅ Email đã được thêm thành công');
+      setMessageType('success');
+    }
+
+    // Reset form and close modal
+    setEmailFormData({
+      email: '',
+      description: '',
+      is_default: true,
+    });
+    setEditingEmail(null);
+    setShowEmailModal(false);
+  };
+
+  // Handle set default email
+  const handleSetDefaultEmail = (emailId: number) => {
+    // Update emails array - set new default and unset others
+    setEmails((prev) =>
+      prev.map((email) => ({
+        ...email,
+        is_default: email.id === emailId,
+      }))
+    );
+
+    // Update formData with new default email
+    const newDefaultEmail = emails.find((email) => email.id === emailId);
+    if (newDefaultEmail) {
+      setFormData((prev) => ({
+        ...prev,
+        store_information_email: {
+          email: newDefaultEmail.email,
+        },
+      }));
+    }
+  };
+
+  // Handle edit email
+  const handleEditEmail = (email: any) => {
+    setEditingEmail(email);
+    setEmailFormData({
+      email: email.email,
+      description: email.description || '',
+      is_default: email.is_default,
+    });
+    setShowEmailModal(true);
+  };
+
+
+
 
   // Handle address modal
   const [addressFormData, setAddressFormData] = useState({
@@ -363,6 +539,7 @@ export const SellerRegistration: React.FC = () => {
       !addressFormData.postal_code
     ) {
       setMessage('❌ Vui lòng điền đầy đủ thông tin địa chỉ');
+      setMessageType('error');
       return;
     }
 
@@ -372,11 +549,11 @@ export const SellerRegistration: React.FC = () => {
         prev.map((addr) =>
           addr.id === editingAddress.id
             ? {
-                ...addressFormData,
-                id: editingAddress.id,
-                is_default: editingAddress.is_default,
-                // Removed is_draft reference
-              }
+              ...addressFormData,
+              id: editingAddress.id,
+              is_default: editingAddress.is_default,
+              // Removed is_draft reference
+            }
             : addr
         )
       );
@@ -393,6 +570,7 @@ export const SellerRegistration: React.FC = () => {
       }
 
       setMessage('✅ Địa chỉ đã được cập nhật thành công');
+      setMessageType('success');
     } else {
       // Add new address
       const isFirstAddress = addresses.length === 0;
@@ -416,6 +594,7 @@ export const SellerRegistration: React.FC = () => {
       }
 
       setMessage('✅ Địa chỉ đã được thêm thành công');
+      setMessageType('success');
     }
 
     // Reset form and close modal
@@ -519,6 +698,31 @@ export const SellerRegistration: React.FC = () => {
         }
 
         case 2: {
+          setLoading(true);
+          const token = localStorage.getItem('token');
+          // 1) Nếu có file đã chọn ở UI -> upload trước để lấy URL
+          let docs: Array<{ doc_type: string; file_url: string }> = [];
+          if (selectedDocFile) {
+            const form = new FormData();
+            form.append('file', selectedDocFile);
+            form.append('doc_type', 'BUSINESS_LICENSE');
+
+            const upRes = await fetch('http://localhost:3000/store-documents/upload-file', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body: form,
+            });
+            const upData = await upRes.json();
+            if (upRes.ok && upData.file_url) {
+              docs.push({ doc_type: 'BUSINESS_LICENSE', file_url: upData.file_url });
+            } else {
+              setMessage(`❌ Upload giấy phép thất bại: ${upData.message || 'Lỗi'}`);
+              setMessageType('error');
+              setLoading(false);
+              return;
+            }
+          }
+
           // Step 2: Thông tin doanh nghiệp (bao gồm thông tin từ Step 1)
           stepData = {
             name: formData.name, // Required từ Step 1
@@ -526,8 +730,11 @@ export const SellerRegistration: React.FC = () => {
             email: formData.email, // ✅ Thêm email
             phone: formData.phone,
             store_information: formData.store_information,
-            store_information_email: formData.store_information_email,
-
+            // ✅ Chỉ gửi store_information_email nếu có email
+            ...(formData.store_information_email?.email && {
+              store_information_email: formData.store_information_email
+            }),
+            ...(docs.length > 0 && { documents: docs }),
             is_draft: true
           };
 
@@ -547,6 +754,13 @@ export const SellerRegistration: React.FC = () => {
         }
 
         case 3: {
+          const sanitizedDocs =
+            (formData.documents || [])
+              .filter(d => d?.file_url && d?.doc_type)
+              .map(d => ({
+                doc_type: d.doc_type,
+                file_url: d.file_url,
+              }));
           // Step 3: Thông tin định danh + ngân hàng + địa chỉ (bao gồm tất cả steps trước)
           stepData = {
             name: formData.name, // Required từ Step 1
@@ -554,8 +768,10 @@ export const SellerRegistration: React.FC = () => {
             email: formData.email, // ✅ Thêm email
             phone: formData.phone,
             store_information: formData.store_information, // Từ Step 2
-            store_information_email: formData.store_information_email,
-            documents: formData.documents,
+            ...(formData.store_information_email?.email && {
+              store_information_email: formData.store_information_email
+            }),
+            ...(sanitizedDocs.length > 0 && { documents: sanitizedDocs }),
             is_draft: true,
           };
 
@@ -600,15 +816,29 @@ export const SellerRegistration: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         setMessage(`✅ Đã lưu Step ${currentStep} thành công!`);
+        setMessageType('success');
+        if (data?.data?.id) {
+          // Refresh draft quietly to reflect latest data without overriding success message
+          await loadFullDraftData(
+            data.data.id,
+            localStorage.getItem(FORM_DATA_KEY),
+            true
+          );
+        }
+        setSelectedDocFile(null);
+
       } else {
         setMessage(
           `❌ Lỗi lưu Step ${currentStep}: ${data.message || 'Thất bại'}`
         );
+        setMessageType('error');
       }
     } catch (error) {
       setMessage('❌ Lỗi kết nối');
+      setMessageType('error');
     } finally {
       setLoading(false);
+
     }
   };
 
@@ -619,9 +849,18 @@ export const SellerRegistration: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
+
+      const sanitizedDocsFinal =
+        (formData.documents || [])
+          .filter(d => d?.file_url && d?.doc_type)
+          .map(d => ({ doc_type: d.doc_type, file_url: d.file_url }));
       // Gửi toàn bộ form data
       const submitData = {
         ...formData,
+        ...(formData.store_information_email?.email && {
+          store_information_email: formData.store_information_email
+        }),
+        ...(sanitizedDocsFinal.length > 0 && { documents: sanitizedDocsFinal }),
         is_draft: false, // Hoàn tất, không phải draft
       };
 
@@ -637,17 +876,126 @@ export const SellerRegistration: React.FC = () => {
       const data = await res.json();
       if (res.ok) {
         setMessage('✅ Đăng ký thành công! Cửa hàng đã được kích hoạt.');
+        setMessageType('success');
 
         // Clear saved data sau khi thành công
         clearSavedData();
         setTimeout(() => navigate('/seller-dashboard'), 2000);
       } else {
         setMessage(data.message || 'Đăng ký thất bại');
+        setMessageType('error');
       }
     } catch (error) {
       setMessage('❌ Lỗi kết nối');
+      setMessageType('error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- Lấy danh sách document theo store_information_id ---
+  const fetchDocuments = async (infoId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:3000/store-documents/store/${infoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // --- Upload giấy phép ---
+  // const handleUploadBusinessLicense = async () => {
+  //   if (!storeInformationId) {
+  //     setMessage('❌ Vui lòng lưu Step 2 để tạo "Thông tin kinh doanh" trước khi upload.');
+  //     return;
+  //   }
+  //   if (!selectedDocFile) {
+  //     setMessage('❌ Vui lòng chọn file.');
+  //     return;
+  //   }
+  //   const token = localStorage.getItem('token');
+
+  //   try {
+  //     setUploadingDoc(true);
+  //     setMessage('');
+
+  //     // Bước 1: upload file để lấy URL
+  //     const form = new FormData();
+  //     form.append('file', selectedDocFile);
+  //     form.append('doc_type', 'BUSINESS_LICENSE');
+
+  //     const upRes = await fetch('http://localhost:3000/store-documents/upload-file', {
+  //       method: 'POST',
+  //       headers: { Authorization: `Bearer ${token}` },
+  //       body: form,
+  //     });
+  //     const upData = await upRes.json();
+  //     if (!upRes.ok) {
+  //       setMessage(`❌ Upload file thất bại: ${upData.message || 'Lỗi'}`);
+  //       setMessageType('error');
+  //       return;
+  //     }
+  //     const fileUrl = upData.file_url;
+
+  //     // Bước 2: tạo record giống product media (JSON)
+  //     const createRes = await fetch('http://localhost:3000/store-documents', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //       body: JSON.stringify({
+  //         store_information_id: storeInformationId,
+  //         doc_type: 'BUSINESS_LICENSE',
+  //         file_url: fileUrl,
+  //       }),
+  //     });
+  //     const createData = await createRes.json();
+  //     if (!createRes.ok) {
+  //       setMessage(`❌ Lưu tài liệu thất bại: ${createData.message || 'Lỗi'}`);
+  //       setMessageType('error');
+  //       return;
+  //     }
+
+  //     setMessage('✅ Tải lên và lưu giấy phép thành công');
+  //     setMessageType('success');
+  //     setSelectedDocFile(null);
+  //     await fetchDocuments(storeInformationId);
+  //   } catch (e) {
+  //     setMessage('❌ Lỗi kết nối khi upload/lưu tài liệu');
+  //     setMessageType('error');
+  //   } finally {
+  //     setUploadingDoc(false);
+  //   }
+  // };
+
+  // --- Xóa document ---
+  const handleDeleteDocument = async (docId: number) => {
+    if (!window.confirm('Bạn có chắc muốn xóa tài liệu này?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:3000/store-documents/${docId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setMessage('✅ Đã xóa tài liệu');
+        setMessageType('success');
+        if (storeInformationId) await fetchDocuments(storeInformationId);
+      } else {
+        const data = await res.json();
+        setMessage(`❌ Xóa thất bại: ${data.message || 'Lỗi'}`);
+        setMessageType('error');
+      }
+    } catch (e) {
+      setMessage('❌ Lỗi kết nối khi xóa');
+      setMessageType('error');
     }
   };
   const renderStep1 = () => (
@@ -672,7 +1020,7 @@ export const SellerRegistration: React.FC = () => {
               />
               <small className="text-muted">{formData.name.length}/30</small>
             </div>
-            </div>
+          </div>
 
         </div>
 
@@ -809,7 +1157,7 @@ export const SellerRegistration: React.FC = () => {
         </div>
 
         {/* Email */}
-            <div className="mb-3">
+        <div className="mb-3">
 
           <label className="form-label">Email</label>
           <input
@@ -919,27 +1267,116 @@ export const SellerRegistration: React.FC = () => {
         {/* Email hóa đơn */}
         <div className="mb-3">
           <label className="form-label">Email nhận hóa đơn điện tử</label>
-          <input
-            type="email"
-            className="form-control"
-            value={formData.store_information_email?.email || ''}
-            onChange={(e) =>
-              handleInputChange('store_information_email', 'email', e.target.value)
-
-            }
-            placeholder="testing111@yopmail.com"
-            maxLength={100}
-          />
-          <small className="text-muted">22/100</small>
-          <div className="mt-2">
-            <button type="button" className="btn btn-link p-0">
-              + Thêm Email (1/5)
+          <div className="d-flex align-items-center gap-2 mb-2">
+            <span className="text-muted">
+              {emails.length > 0
+                ? `${emails.length} email đã thêm`
+                : 'Chưa có email'}
+            </span>
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm"
+              onClick={() => setShowEmailModal(true)}
+            >
+              + Thêm
             </button>
-            <p className="small text-muted mt-1">
-              Hóa đơn điện tử sẽ được gửi đến email này
-            </p>
           </div>
+          {/* Hiển thị email mặc định */}
+          {emails.length > 0 && (
+            <div className="border rounded p-3 bg-light">
+              {(() => {
+                const defaultEmail = emails.find((email) => email.is_default);
+                if (!defaultEmail) return null;
+                return (
+                  <div className="bg-white rounded p-3 border">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div className="flex-grow-1">
+                        <div className="fw-bold text-primary mb-1">
+                          📧 {defaultEmail.email}
+                        </div>
+                        {defaultEmail.description && (
+                          <div className="text-muted small mb-2">
+                            💬 {defaultEmail.description}
+                          </div>
+                        )}
+                        <span className="badge bg-success">
+                          Email mặc định
+                        </span>
+                      </div>
+                      <div className="d-flex gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-outline-success btn-sm"
+                          onClick={() => handleEditEmail(defaultEmail)}
+                          title="Chỉnh sửa email"
+                        >
+                          ✏️ Cập nhật
+                        </button>
+                        {emails.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={() => setShowSelectEmailModal(true)}
+                            title="Thay đổi email mặc định"
+                          >
+                            🔄 Thay đổi
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => {
+                            const filteredEmails = emails.filter(
+                              (email) => email.id !== defaultEmail.id
+                            );
+                            setEmails(filteredEmails);
+
+                            if (filteredEmails.length > 0) {
+                              // Set first remaining email as default
+                              const newDefault = {
+                                ...filteredEmails[0],
+                                is_default: true,
+                              };
+                              setEmails((prev) =>
+                                prev.map((email) =>
+                                  email.id === newDefault.id
+                                    ? newDefault
+                                    : { ...email, is_default: false }
+                                )
+                              );
+                              setFormData((prev) => ({
+                                ...prev,
+                                store_information_email: {
+                                  email: newDefault.email,
+                                },
+                              }));
+                            } else {
+                              // Reset formData if no emails left
+                              setFormData((prev) => ({
+                                ...prev,
+                                store_information_email: {
+                                  email: '',
+                                },
+                              }));
+                            }
+                          }}
+                          title="Xóa email"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          <p className="small text-muted mt-2">
+            Hóa đơn điện tử sẽ được gửi đến email mặc định (tối đa 5 email)
+          </p>
         </div>
+
 
         {/* Mã số thuế */}
         <div className="row">
@@ -968,13 +1405,67 @@ export const SellerRegistration: React.FC = () => {
         {/* Giấy phép */}
         <div className="mb-3">
           <label className="form-label">Giấy phép đăng ký kinh doanh</label>
-          <div className="border rounded p-3 text-center">
-            <i className="bi bi-cloud-upload fs-1 text-muted"></i>
-            <p className="text-muted">Upload</p>
+
+          {/* Chọn file */}
+          <div className="d-flex gap-2 align-items-center mb-2">
+            <input
+              type="file"
+              className="form-control"
+              accept="image/png, image/jpeg, application/pdf"
+              onChange={(e) => setSelectedDocFile(e.target.files?.[0] || null)}
+            />
           </div>
+
+          <p className="text-muted small mb-2">
+            Hỗ trợ PDF/JPG/PNG, tối đa 10MB. File sẽ lưu với loại: BUSINESS_LICENSE.
+          </p>
+
+          {/* Danh sách tài liệu đã upload */}
+          {storeInformationId ? (
+            <ul className="list-group">
+              {documents.length === 0 && (
+                <li className="list-group-item text-muted">Chưa có tài liệu</li>
+              )}
+              {documents.map((doc: any) => (
+                <li key={doc.id} className="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <div className="fw-bold">{doc.doc_type}</div>
+                    <div className="small text-muted">ID: {doc.id}</div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <a
+                      className="btn btn-outline-secondary btn-sm"
+                      href={`http://localhost:3000${doc.file_url}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Xem file
+                    </a>
+                    <a
+                      className="btn btn-outline-primary btn-sm"
+                      href={`http://localhost:3000/store-documents/${doc.id}/download`}
+                    >
+                      Tải xuống
+                    </a>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={() => handleDeleteDocument(doc.id)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div >
+
+            </div>
+          )}
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
   const renderStep3 = () => (
     <div className="card">
@@ -1154,11 +1645,10 @@ export const SellerRegistration: React.FC = () => {
               <React.Fragment key={step.id}>
                 <div className="text-center">
                   <div
-                    className={`rounded-circle d-flex align-items-center justify-content-center ${
-                      currentStep >= step.id
-                        ? 'bg-danger text-white'
-                        : 'bg-light text-muted'
-                    }`}
+                    className={`rounded-circle d-flex align-items-center justify-content-center ${currentStep >= step.id
+                      ? 'bg-danger text-white'
+                      : 'bg-light text-muted'
+                      }`}
                     style={{ width: '40px', height: '40px' }}
                   >
                     {step.id}
@@ -1172,9 +1662,8 @@ export const SellerRegistration: React.FC = () => {
 
                 {index < steps.length - 1 && (
                   <div
-                    className={`mx-4 ${
-                      currentStep > step.id ? 'bg-danger' : 'bg-light'
-                    }`}
+                    className={`mx-4 ${currentStep > step.id ? 'bg-danger' : 'bg-light'
+                      }`}
                     style={{ height: '2px', width: '100px' }}
                   ></div>
                 )}
@@ -1217,6 +1706,7 @@ export const SellerRegistration: React.FC = () => {
                     setAddresses([]);
                     setCurrentStep(1);
                     setMessage('✅ Đã xóa dữ liệu form');
+                    setMessageType('success');
                   }
                 }}
                 title="Xóa tất cả dữ liệu đã nhập"
@@ -1250,11 +1740,10 @@ export const SellerRegistration: React.FC = () => {
           {/* Message */}
           {message && (
             <div
-              className={`alert mt-3 ${
-                message.includes('thành công')
-                  ? 'alert-success'
-                  : 'alert-danger'
-              }`}
+              className={`alert mt-3 ${messageType === 'success' ? 'alert-success' :
+                messageType === 'error' ? 'alert-danger' :
+                  messageType === 'warning' ? 'alert-warning' : 'alert-info'
+                }`}
             >
               {message}
             </div>
@@ -1464,14 +1953,14 @@ export const SellerRegistration: React.FC = () => {
                   {addresses.map((address) => (
                     <div
                       key={address.id}
-                      className={`card ${
-                        address.is_default ? 'border-success' : 'border-light'
-                      }`}
+                      className={`card ${address.is_default ? 'border-success' : 'border-light'
+                        }`}
                       style={{ cursor: 'pointer' }}
                       onClick={() => {
                         handleSetDefaultAddress(address.id);
                         setShowSelectAddressModal(false);
                         setMessage('✅ Đã thay đổi địa chỉ mặc định');
+                        setMessageType('success');
                       }}
                     >
                       <div className="card-body p-3">
@@ -1517,6 +2006,149 @@ export const SellerRegistration: React.FC = () => {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowSelectAddressModal(false)}
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {editingEmail
+                    ? '✏️ Chỉnh sửa email nhận hóa đơn'
+                    : '📧 Thêm email nhận hóa đơn'}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setEditingEmail(null);
+                    setEmailFormData({
+                      email: '',
+                      description: '',
+                      is_default: true,
+                    });
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <form>
+                  <div className="mb-3">
+                    <label className="form-label">Địa chỉ email *</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={emailFormData.email}
+                      onChange={(e) =>
+                        handleEmailInputChange('email', e.target.value)
+                      }
+                      placeholder="example@company.com"
+                      required
+                    />
+                  </div>
+
+                </form>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEmailModal(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleAddEmail}
+                >
+                  {editingEmail ? 'Cập nhật email' : 'Thêm email'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Select Email Modal */}
+      {showSelectEmailModal && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">📧 Chọn email mặc định</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowSelectEmailModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p className="text-muted mb-3">
+                  Chọn email bạn muốn đặt làm mặc định để nhận hóa đơn:
+                </p>
+                <div className="d-grid gap-2">
+                  {emails.map((email) => (
+                    <div
+                      key={email.id}
+                      className={`card ${email.is_default ? 'border-success' : 'border-light'}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        handleSetDefaultEmail(email.id);
+                        setShowSelectEmailModal(false);
+                        setMessage('✅ Đã thay đổi email mặc định');
+                      }}
+                    >
+                      <div className="card-body p-3">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div className="flex-grow-1">
+                            <div className="fw-bold text-primary">
+                              📧 {email.email}
+                            </div>
+                            {email.description && (
+                              <div className="text-muted small mt-1">
+                                💬 {email.description}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            {email.is_default ? (
+                              <span className="badge bg-success">
+                                Đang sử dụng
+                              </span>
+                            ) : (
+                              <span className="badge bg-outline-secondary">
+                                Chọn làm mặc định
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowSelectEmailModal(false)}
                 >
                   Đóng
                 </button>
