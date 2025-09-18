@@ -13,13 +13,17 @@ export class PricingRulesService {
     @InjectRepository(PricingRules)
     private readonly repo: Repository<PricingRules>,
     @InjectRepository(Product)
-    private readonly productRepo: Repository<Product>,
+    private readonly productRepo: Repository<Product>
   ) {}
 
   async addPricingRule(dto: CreatePricingRuleDto, userId: number) {
-    const product = await this.productRepo.findOne({ where: { id: dto.productId }, relations: ['store'] });
+    const product = await this.productRepo.findOne({
+      where: { id: dto.productId },
+      relations: ['store'],
+    });
     if (!product) throw new NotFoundException('Product not found');
-    if (product.store.user_id !== userId) throw new ForbiddenException('You do not own this product');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('You do not own this product');
 
     const rule = this.repo.create({
       ...dto,
@@ -29,4 +33,3 @@ export class PricingRulesService {
     return this.repo.save(rule);
   }
 }
-

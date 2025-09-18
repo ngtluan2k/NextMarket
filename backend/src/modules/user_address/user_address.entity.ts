@@ -1,5 +1,12 @@
 // user-address.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 
 @Entity('user_addresses')

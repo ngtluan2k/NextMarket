@@ -1,4 +1,10 @@
-import { Entity, JoinColumn, PrimaryGeneratedColumn, Column, Generated } from 'typeorm';
+import {
+  Entity,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  Column,
+  Generated,
+} from 'typeorm';
 import { ManyToOne } from 'typeorm';
 import { Product } from '../product/product.entity';
 
@@ -11,10 +17,9 @@ export class PricingRules {
   @Generated('uuid')
   uuid!: string;
 
-   @ManyToOne(() => Product)
+  @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })
   product!: Product;
-
 
   @Column()
   type!: string;

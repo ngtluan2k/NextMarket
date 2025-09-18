@@ -11,7 +11,6 @@ interface Store {
 }
 
 export const SellerDashboard: React.FC = () => {
-
   const [store, setStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +58,8 @@ Sau khi xóa, bạn sẽ cần đăng ký lại từ đầu để tạo cửa h�
 
       if (res.ok) {
         alert(
-          `✅ Xóa cửa hàng thành công!\n\n📊 Đã xóa ${data.deletedRecords || 'toàn bộ'
+          `✅ Xóa cửa hàng thành công!\n\n📊 Đã xóa ${
+            data.deletedRecords || 'toàn bộ'
           } bản ghi dữ liệu\n\nBạn sẽ được chuyển về trang chủ.`
         );
 

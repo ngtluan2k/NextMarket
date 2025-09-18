@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsOptional, IsString, IsEmail, ValidateNested, IsArray, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsEmail,
+  ValidateNested,
+  IsArray,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateStoreInformationDto } from '../../store-information/dto/create-store-information.dto';
@@ -34,7 +42,9 @@ export class RegisterSellerDto {
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Slug của cửa hàng (tự động tạo nếu không cung cấp)' })
+  @ApiPropertyOptional({
+    description: 'Slug của cửa hàng (tự động tạo nếu không cung cấp)',
+  })
   @IsOptional()
   @IsString()
   slug?: string;
@@ -55,37 +65,55 @@ export class RegisterSellerDto {
   phone?: string;
 
   // === COMPREHENSIVE INFORMATION (Optional - using existing DTOs) ===
-  @ApiPropertyOptional({ description: 'Thông tin kinh doanh', type: CreateStoreInformationDto })
+  @ApiPropertyOptional({
+    description: 'Thông tin kinh doanh',
+    type: CreateStoreInformationDto,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateStoreInformationDto)
   store_information?: CreateStoreInformationDto;
 
-  @ApiPropertyOptional({ description: 'Thông tin định danh', type: CreateStoreIdentificationDto })
+  @ApiPropertyOptional({
+    description: 'Thông tin định danh',
+    type: CreateStoreIdentificationDto,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateStoreIdentificationDto)
   store_identification?: CreateStoreIdentificationDto;
 
-  @ApiPropertyOptional({ description: 'Thông tin tài khoản ngân hàng', type: CreateBankAccountDto })
+  @ApiPropertyOptional({
+    description: 'Thông tin tài khoản ngân hàng',
+    type: CreateBankAccountDto,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateBankAccountDto)
   bank_account?: CreateBankAccountDto;
 
-  @ApiPropertyOptional({ description: 'Địa chỉ cửa hàng', type: CreateStoreAddressDto })
+  @ApiPropertyOptional({
+    description: 'Địa chỉ cửa hàng',
+    type: CreateStoreAddressDto,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateStoreAddressDto)
   store_address?: CreateStoreAddressDto;
 
-  @ApiPropertyOptional({ description: 'Email thông tin bổ sung', type: StoreEmailDto })
+  @ApiPropertyOptional({
+    description: 'Email thông tin bổ sung',
+    type: StoreEmailDto,
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => StoreEmailDto)
   store_information_email?: StoreEmailDto;
 
-  @ApiPropertyOptional({ description: 'Tài liệu đính kèm', type: [StoreDocumentDto] })
+  @ApiPropertyOptional({
+    description: 'Tài liệu đính kèm',
+    type: [StoreDocumentDto],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

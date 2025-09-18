@@ -127,11 +127,14 @@ export const SellerRegistration: React.FC = () => {
       setLoading(true);
       // Fetch draft data từ endpoint mới
       console.log(`🔍 Fetching draft data for store ${storeId}...`);
-      const response = await fetch(`http://localhost:3000/stores/${storeId}/draft-data`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }); 
+      const response = await fetch(
+        `http://localhost:3000/stores/${storeId}/draft-data`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       console.log('📡 Response status:', response.status);
 
@@ -262,8 +265,12 @@ export const SellerRegistration: React.FC = () => {
         if (mappedFormData.name && mappedFormData.phone) step = 2;
         if (mappedFormData.store_information.name) step = 3;
 
-        if (mappedFormData.store_identification.full_name && mappedFormData.bank_account.bank_name) step = 4;
-        
+        if (
+          mappedFormData.store_identification.full_name &&
+          mappedFormData.bank_account.bank_name
+        )
+          step = 4;
+
         if (!savedFormData) {
           setCurrentStep(step);
         }
@@ -528,7 +535,7 @@ export const SellerRegistration: React.FC = () => {
             store_information: formData.store_information,
             store_information_email: formData.store_information_email,
 
-            is_draft: true
+            is_draft: true,
           };
 
           // Include address từ Step 1 nếu có
@@ -543,7 +550,6 @@ export const SellerRegistration: React.FC = () => {
             stepData.store_address = formData.store_address;
           }
           break;
-
         }
 
         case 3: {
@@ -564,7 +570,6 @@ export const SellerRegistration: React.FC = () => {
             formData.store_identification.full_name ||
             formData.store_identification.img_front ||
             formData.store_identification.img_back;
-
 
           if (hasIdentificationData) {
             stepData.store_identification = formData.store_identification;
@@ -672,8 +677,7 @@ export const SellerRegistration: React.FC = () => {
               />
               <small className="text-muted">{formData.name.length}/30</small>
             </div>
-            </div>
-
+          </div>
         </div>
 
         {/* Địa chỉ lấy hàng */}
@@ -681,7 +685,6 @@ export const SellerRegistration: React.FC = () => {
           <label className="form-label">Địa chỉ lấy hàng</label>
           <div className="d-flex align-items-center gap-2 mb-2">
             <span className="text-muted">
-
               {addresses.length > 0
                 ? `${addresses.length} địa chỉ đã thêm`
                 : 'Chưa có địa chỉ'}
@@ -699,7 +702,6 @@ export const SellerRegistration: React.FC = () => {
           {addresses.length > 0 && (
             <div className="border rounded p-3 bg-light">
               {(() => {
-
                 const defaultAddress = addresses.find(
                   (addr) => addr.is_default
                 );
@@ -739,7 +741,6 @@ export const SellerRegistration: React.FC = () => {
                           ✏️ Cập nhật
                         </button>
                         {addresses.length > 1 && (
-
                           <button
                             type="button"
                             className="btn btn-outline-primary btn-sm"
@@ -809,8 +810,7 @@ export const SellerRegistration: React.FC = () => {
         </div>
 
         {/* Email */}
-            <div className="mb-3">
-
+        <div className="mb-3">
           <label className="form-label">Email</label>
           <input
             type="email"
@@ -905,7 +905,6 @@ export const SellerRegistration: React.FC = () => {
             className="form-control"
             value={formData.store_information.addresses || ''}
             onChange={(e) =>
-
               handleInputChange(
                 'store_information',
                 'addresses',
@@ -924,8 +923,11 @@ export const SellerRegistration: React.FC = () => {
             className="form-control"
             value={formData.store_information_email?.email || ''}
             onChange={(e) =>
-              handleInputChange('store_information_email', 'email', e.target.value)
-
+              handleInputChange(
+                'store_information_email',
+                'email',
+                e.target.value
+              )
             }
             placeholder="testing111@yopmail.com"
             maxLength={100}
@@ -982,7 +984,6 @@ export const SellerRegistration: React.FC = () => {
         <h5>🪪 Thông tin định danh</h5>
       </div>
       <div className="card-body">
-
         {/* Định danh */}
         <div className="mb-4">
           <h6>Thông tin định danh</h6>
@@ -1268,7 +1269,6 @@ export const SellerRegistration: React.FC = () => {
           className="modal show d-block"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
         >
-
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
@@ -1309,7 +1309,6 @@ export const SellerRegistration: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={addressFormData.recipient_name}
-
                           onChange={(e) =>
                             handleAddressInputChange(
                               'recipient_name',
@@ -1328,7 +1327,6 @@ export const SellerRegistration: React.FC = () => {
                           type="tel"
                           className="form-control"
                           value={addressFormData.phone}
-
                           onChange={(e) =>
                             handleAddressInputChange('phone', e.target.value)
                           }
@@ -1391,7 +1389,6 @@ export const SellerRegistration: React.FC = () => {
                           type="text"
                           className="form-control"
                           value={addressFormData.postal_code}
-
                           onChange={(e) =>
                             handleAddressInputChange(
                               'postal_code',

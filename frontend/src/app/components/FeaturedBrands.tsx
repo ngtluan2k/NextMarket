@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 
 export type BrandCard = {
   id: string | number;
-  coverUrl?: string;   // ảnh hero / sản phẩm
-  logoUrl?: string;    // logo thương hiệu (optional)
-  title?: string;      // tên / nhãn
-  tagline?: string;    // mô tả ngắn (optional)
-  href?: string;       // link (optional)
+  coverUrl?: string; // ảnh hero / sản phẩm
+  logoUrl?: string; // logo thương hiệu (optional)
+  title?: string; // tên / nhãn
+  tagline?: string; // mô tả ngắn (optional)
+  href?: string; // link (optional)
 };
 
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
 };
 
 const ph = (w = 260, h = 160) =>
-  "data:image/svg+xml;utf8," +
+  'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
       <defs><linearGradient id='g' x1='0' x2='1'>
@@ -34,15 +34,15 @@ const ph = (w = 260, h = 160) =>
 const FALLBACK: BrandCard[] = Array.from({ length: 8 }).map((_, i) => ({
   id: `sk-${i}`,
   coverUrl: ph(),
-  title: "Đang cập nhật…",
+  title: 'Đang cập nhật…',
 }));
 
 export default function FeaturedBrands({
-  title = "Thương hiệu nổi bật",
+  title = 'Thương hiệu nổi bật',
   items,
   fetchBrands,
   seeAllHref,
-  className = "",
+  className = '',
 }: Props) {
   const [list, setList] = useState<BrandCard[]>(items ?? FALLBACK);
   const [loading, setLoading] = useState<boolean>(!!fetchBrands);
@@ -80,18 +80,18 @@ export default function FeaturedBrands({
     updateArrows();
     const el = scrollerRef.current;
     if (!el) return;
-    el.addEventListener("scroll", updateArrows);
-    window.addEventListener("resize", updateArrows);
+    el.addEventListener('scroll', updateArrows);
+    window.addEventListener('resize', updateArrows);
     return () => {
-      el.removeEventListener("scroll", updateArrows);
-      window.removeEventListener("resize", updateArrows);
+      el.removeEventListener('scroll', updateArrows);
+      window.removeEventListener('resize', updateArrows);
     };
   }, [list.length]);
 
   const scrollByView = (dir: 1 | -1) => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: "smooth" });
+    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
   };
 
   return (
@@ -101,7 +101,10 @@ export default function FeaturedBrands({
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">{title}</h3>
         {seeAllHref && (
-          <a href={seeAllHref} className="text-xs font-semibold text-sky-600 hover:underline">
+          <a
+            href={seeAllHref}
+            className="text-xs font-semibold text-sky-600 hover:underline"
+          >
             Xem tất cả
           </a>
         )}
@@ -110,25 +113,25 @@ export default function FeaturedBrands({
       <div className="relative">
         {/* arrows */}
         <button
-              aria-label="Prev"
-              onClick={() => scrollByView(-1)}
-              className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center
+          aria-label="Prev"
+          onClick={() => scrollByView(-1)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center
                          rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            </button>
-            <button
-              aria-label="Next"
-              onClick={() => scrollByView(1)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </button>
+        <button
+          aria-label="Next"
+          onClick={() => scrollByView(1)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center
                          rounded-full bg-white/90 shadow  ring-1 ring-slate-200 hover:bg-white text-sky-600"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            </button>
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </button>
 
         {/* scroller */}
         <div
@@ -138,13 +141,13 @@ export default function FeaturedBrands({
           {list.map((b) => (
             <a
               key={b.id}
-              href={b.href || "#"}
+              href={b.href || '#'}
               className="w-[260px] shrink-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200 shadow hover:shadow-md transition-shadow"
             >
               <div className="flex h-40 items-center justify-center overflow-hidden rounded-xl bg-slate-50">
                 <img
                   src={b.coverUrl || ph()}
-                  alt={b.title || ""}
+                  alt={b.title || ''}
                   className="max-h-full w-full object-contain"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = ph();
@@ -156,19 +159,22 @@ export default function FeaturedBrands({
                 {b.logoUrl && (
                   <img
                     src={b.logoUrl}
-                    alt={b.title || "logo"}
+                    alt={b.title || 'logo'}
                     className="h-7 w-7 rounded object-contain"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+                      (e.currentTarget as HTMLImageElement).style.visibility =
+                        'hidden';
                     }}
                   />
                 )}
                 <div className="text-xs font-semibold text-slate-900 line-clamp-1">
-                  {b.title || ""}
+                  {b.title || ''}
                 </div>
               </div>
               {b.tagline && (
-                <div className="mt-1 text-[11px] text-slate-600 line-clamp-2">{b.tagline}</div>
+                <div className="mt-1 text-[11px] text-slate-600 line-clamp-2">
+                  {b.tagline}
+                </div>
               )}
             </a>
           ))}

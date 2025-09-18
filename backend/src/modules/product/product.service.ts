@@ -120,54 +120,85 @@ export class ProductService {
     return this.saveProduct(dto, userId, 'active');
   }
   // ProductService.ts
-async findAll(userId: number) {
-  return this.productRepo.find({
-    where: { store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-}
+  async findAll(userId: number) {
+    return this.productRepo.find({
+      where: { store: { user_id: userId } },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+  }
 
-async findOne(id: number, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id, store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
+  async findOne(id: number, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id, store: { user_id: userId } },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
 
-async updateProduct(id: number, dto: CreateProductDto, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id },
-    relations: ['store'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('Not allowed');
+  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Not allowed');
 
-  // Cập nhật tất cả các thông tin như createProduct
-  return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
-}
+    // Cập nhật tất cả các thông tin như createProduct
+    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
+  }
 
-async remove(id: number, userId: number) {
-  const product = await this.findOne(id, userId);
-  return this.productRepo.remove(product);
-}
+  async remove(id: number, userId: number) {
+    const product = await this.findOne(id, userId);
+    return this.productRepo.remove(product);
+  }
 
-async findAllProduct() {
-  return this.productRepo.find({
-    where: { status: 'active' },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'], // nếu muốn show thêm info store
-  });
-}
-// product.service.ts
-async findBySlug(slug: string) {
-  const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
- });
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
+  async findAllProduct() {
+    return this.productRepo.find({
+      where: { status: 'active' },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ], // nếu muốn show thêm info store
+    });
+  }
+  // product.service.ts
+  async findBySlug(slug: string) {
+    const product = await this.productRepo.findOne({
+      where: { slug },
+      relations: [
+        'media',
+        'variants',
+        'brand',
+        'categories',
+        'pricing_rules',
+        'store',
+      ],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
 
-async findAllByStoreId(storeId: number) {
+  async findAllByStoreId(storeId: number) {
     return this.productRepo.find({
       where: { store_id: storeId },
       relations: [
@@ -180,7 +211,4 @@ async findAllByStoreId(storeId: number) {
       ],
     });
   }
-
-
-
 }

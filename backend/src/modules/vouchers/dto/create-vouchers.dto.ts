@@ -1,7 +1,14 @@
-
-import { IsNotEmpty, IsString, IsOptional, IsNumber, IsDate, Min, IsPositive } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsDate,
+  Min,
+  IsPositive,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer'; 
+import { Type } from 'class-transformer';
 
 export class CreateVoucherDto {
   @ApiProperty()
@@ -22,23 +29,21 @@ export class CreateVoucherDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsNumber()
-
-  @Min(1) 
-  @IsPositive() 
+  @Min(1)
+  @IsPositive()
   discount_value!: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
-
-  @Min(1) 
-  @IsPositive() 
+  @Min(1)
+  @IsPositive()
   min_order_amount?: number;
 
   @ApiProperty()
   @IsNotEmpty()
   @IsDate()
-  @Type(() => Date) 
+  @Type(() => Date)
   start_date!: Date;
 
   @ApiProperty()
@@ -50,8 +55,7 @@ export class CreateVoucherDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
-
-  @Min(1) 
-  @IsPositive() 
+  @Min(1)
+  @IsPositive()
   usage_limit?: number;
 }

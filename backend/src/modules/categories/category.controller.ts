@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -24,7 +34,7 @@ export class CategoryController {
     };
   }
 
-@Get(':id')
+  @Get(':id')
   // @Permissions('view_category')
   async findOne(@Param('id') id: number) {
     const data = await this.categoryService.findOne(id);
@@ -34,16 +44,16 @@ export class CategoryController {
     };
   }
 
-@Post()
-@UseGuards(JwtAuthGuard, PermissionGuard)
-@Permissions('create_category')
-async create(@Body() dto: CreateCategoryDto) {
-  const data = await this.categoryService.create(dto);
-  return {
-    message: 'Tạo category thành công',
-    data,
-  };
-}
+  @Post()
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('create_category')
+  async create(@Body() dto: CreateCategoryDto) {
+    const data = await this.categoryService.create(dto);
+    return {
+      message: 'Tạo category thành công',
+      data,
+    };
+  }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -77,17 +87,15 @@ async create(@Body() dto: CreateCategoryDto) {
       data,
     };
   }
-@Get(':id/children')
-async findChildren(@Param('id') id: number) {
-  const children = await this.categoryService.findChildren(id);
-  return {
-    message: children.length
-      ? `Lấy danh sách category con của category ${id} thành công`
-      : 'Category này không có danh mục con',
-    total: children.length,
-    data: children,
-  };
-}
-
-
+  @Get(':id/children')
+  async findChildren(@Param('id') id: number) {
+    const children = await this.categoryService.findChildren(id);
+    return {
+      message: children.length
+        ? `Lấy danh sách category con của category ${id} thành công`
+        : 'Category này không có danh mục con',
+      total: children.length,
+      data: children,
+    };
+  }
 }

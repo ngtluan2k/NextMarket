@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from "react";
-import Stars from "../productDetail/Stars";
-import { TIKI_RED } from "../productDetail/productDetail";
+import React, { useMemo, useState } from 'react';
+import Stars from '../productDetail/Stars';
+import { TIKI_RED } from '../productDetail/productDetail';
 
 const vnd = (n?: number | string) =>
-  Number(n ?? 0).toLocaleString("vi-VN", {
-    style: "currency",
-    currency: "VND",
+  Number(n ?? 0).toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
     maximumFractionDigits: 0,
   });
 
@@ -24,7 +24,9 @@ export default function Info({ product }: { product?: any }) {
 
     // 2. Giá theo variant
     if (selectedVariantId) {
-      const variant = product.variants?.find((v: any) => v.id === selectedVariantId);
+      const variant = product.variants?.find(
+        (v: any) => v.id === selectedVariantId
+      );
       if (variant) currentPrice = Number(variant.price);
     }
 
@@ -58,7 +60,7 @@ export default function Info({ product }: { product?: any }) {
 
   const rating = product.rating?.average ?? product.rating ?? 0;
   const reviewsCount = product.rating?.count ?? product.reviewsCount ?? 0;
-const brand = product.brand?.name ?? product.author_name ?? product.author;
+  const brand = product.brand?.name ?? product.author_name ?? product.author;
 
   return (
     <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
@@ -72,7 +74,7 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
         </span>
         {brand && (
           <span className="text-slate-500">
-            Thương hiệu:{" "}
+            Thương hiệu:{' '}
             <a href="#" className="text-sky-700 hover:underline">
               {brand}
             </a>
@@ -81,7 +83,7 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
       </div>
 
       <h1 className="text-[22px] font-semibold leading-snug text-slate-900">
-        {product.name || "—"}
+        {product.name || '—'}
       </h1>
 
       {/* Rating */}
@@ -96,7 +98,10 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
 
       {/* Giá */}
       <div className="mt-3 flex items-end gap-3">
-        <div className="text-[28px] font-bold leading-none" style={{ color: TIKI_RED }}>
+        <div
+          className="text-[28px] font-bold leading-none"
+          style={{ color: TIKI_RED }}
+        >
           {vnd(price)}
         </div>
         {listPrice && listPrice !== price && (
@@ -116,7 +121,9 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
             <button
               key={v.id}
               className={`px-3 py-1 border rounded ${
-                v.id === selectedVariantId ? "border-blue-500 text-blue-600" : "border-gray-300"
+                v.id === selectedVariantId
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-gray-300'
               }`}
               onClick={() => setSelectedVariantId(v.id)}
             >
@@ -141,20 +148,21 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
       {/* Bảng giá sỉ */}
       {product.pricing_rules?.length > 0 && (
         <div className="mt-2 text-sm text-slate-500">
-          <span className="font-medium">Giá sỉ:</span>{" "}
+          <span className="font-medium">Giá sỉ:</span>{' '}
           {product.pricing_rules
             .sort((a: any, b: any) => a.min_quantity - b.min_quantity)
             .map((r: any) => {
               const now = new Date();
               const start = new Date(r.starts_at);
               const end = new Date(r.ends_at);
-              const isApplied = quantity >= r.min_quantity && now >= start && now <= end;
+              const isApplied =
+                quantity >= r.min_quantity && now >= start && now <= end;
 
               return (
                 <span
                   key={r.min_quantity}
                   className={`ml-2 px-1 py-[1px] rounded ${
-                    isApplied ? "bg-rose-50 text-rose-600 font-semibold" : ""
+                    isApplied ? 'bg-rose-50 text-rose-600 font-semibold' : ''
                   }`}
                 >
                   {r.min_quantity}+ : {vnd(r.price)}

@@ -12,7 +12,11 @@ export class CreateUserDto {
   @IsString()
   full_name?: string;
 
-  @ApiPropertyOptional({ description: 'Date of birth', type: String, format: 'date' })
+  @ApiPropertyOptional({
+    description: 'Date of birth',
+    type: String,
+    format: 'date',
+  })
   @IsOptional()
   dob?: string;
 

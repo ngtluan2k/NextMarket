@@ -1,7 +1,7 @@
 // src/components/admin/brandManager.tsx
-import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form } from "react-bootstrap";
-import axios from "axios";
+import React, { useEffect, useState } from 'react';
+import { Table, Button, Modal, Form } from 'react-bootstrap';
+import axios from 'axios';
 
 interface Brand {
   id: number;
@@ -14,11 +14,11 @@ const BrandManager: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
 
-  const token = localStorage.getItem("token"); // lấy token từ localStorage
+  const token = localStorage.getItem('token'); // lấy token từ localStorage
 
   useEffect(() => {
     fetchBrands();
@@ -26,13 +26,13 @@ const BrandManager: React.FC = () => {
 
   const fetchBrands = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/brands", {
+      const res = await axios.get('http://localhost:3000/brands', {
         headers: { Authorization: `Bearer ${token}` },
       });
       // nếu backend trả { data: [...] } thì dùng res.data.data
       setBrands(res.data.data || res.data);
     } catch (err) {
-      console.error("Fetch brands failed:", err);
+      console.error('Fetch brands failed:', err);
     }
   };
 
@@ -48,26 +48,26 @@ const BrandManager: React.FC = () => {
         );
       } else {
         // create
-        await axios.post("http://localhost:3000/brands", payload, {
+        await axios.post('http://localhost:3000/brands', payload, {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
       setShowModal(false);
       setEditingBrand(null);
-      setName("");
-      setDescription("");
-      setLogoUrl("");
+      setName('');
+      setDescription('');
+      setLogoUrl('');
       fetchBrands();
     } catch (err) {
-      console.error("Save brand failed:", err);
+      console.error('Save brand failed:', err);
     }
   };
 
   const handleEdit = (brand: Brand) => {
     setEditingBrand(brand);
     setName(brand.name);
-    setDescription(brand.description || "");
-    setLogoUrl(brand.logo_url || "");
+    setDescription(brand.description || '');
+    setLogoUrl(brand.logo_url || '');
     setShowModal(true);
   };
 
@@ -78,7 +78,7 @@ const BrandManager: React.FC = () => {
       });
       fetchBrands();
     } catch (err) {
-      console.error("Delete brand failed:", err);
+      console.error('Delete brand failed:', err);
     }
   };
 
@@ -89,9 +89,9 @@ const BrandManager: React.FC = () => {
         className="mb-3"
         onClick={() => {
           setEditingBrand(null);
-          setName("");
-          setDescription("");
-          setLogoUrl("");
+          setName('');
+          setDescription('');
+          setLogoUrl('');
           setShowModal(true);
         }}
       >
@@ -122,7 +122,7 @@ const BrandManager: React.FC = () => {
                     style={{ width: 60 }}
                   />
                 ) : (
-                  "No logo"
+                  'No logo'
                 )}
               </td>
               <td>
@@ -132,7 +132,7 @@ const BrandManager: React.FC = () => {
                   onClick={() => handleEdit(brand)}
                 >
                   Edit
-                </Button>{" "}
+                </Button>{' '}
                 <Button
                   variant="danger"
                   size="sm"
@@ -148,7 +148,7 @@ const BrandManager: React.FC = () => {
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>{editingBrand ? "Edit Brand" : "Add Brand"}</Modal.Title>
+          <Modal.Title>{editingBrand ? 'Edit Brand' : 'Add Brand'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>

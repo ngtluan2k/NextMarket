@@ -1,10 +1,16 @@
-import { IsEnum, IsOptional, IsString, IsDateString, IsInt } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsDateString,
+  IsInt,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ReviewUpgradeDto {
-  @ApiPropertyOptional({ 
-    description: 'Trạng thái duyệt', 
-    enum: ['pending', 'approved', 'rejected'] 
+  @ApiPropertyOptional({
+    description: 'Trạng thái duyệt',
+    enum: ['pending', 'approved', 'rejected'],
   })
   @IsOptional()
   @IsEnum(['pending', 'approved', 'rejected'])

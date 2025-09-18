@@ -3,11 +3,13 @@ import { CreateStoreDocumentDto } from './create-store-document.dto';
 import { IsBoolean, IsOptional, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class UpdateStoreDocumentDto extends PartialType(CreateStoreDocumentDto) {
+export class UpdateStoreDocumentDto extends PartialType(
+  CreateStoreDocumentDto
+) {
   @ApiProperty({
     description: 'Whether document is verified',
     example: true,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsBoolean()
@@ -16,7 +18,7 @@ export class UpdateStoreDocumentDto extends PartialType(CreateStoreDocumentDto) 
   @ApiProperty({
     description: 'Verification date',
     example: '2023-12-01T10:00:00Z',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsDateString()

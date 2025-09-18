@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { Store } from './../store/store.entity';
 import { StoreDocument } from './../store-document/store-document.entity';
 import { StoreInformationEmail } from './../store-information-email/store-information-email.entity';
@@ -31,10 +38,10 @@ export class StoreInformation {
   is_draft!: boolean;
 
   // New relationships: One StoreInformation can have many emails and documents
-  @OneToMany(() => StoreInformationEmail, email => email.storeInformation)
+  @OneToMany(() => StoreInformationEmail, (email) => email.storeInformation)
   emails!: StoreInformationEmail[];
 
-  @OneToMany(() => StoreDocument, document => document.storeInformation)
+  @OneToMany(() => StoreDocument, (document) => document.storeInformation)
   documents!: StoreDocument[];
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })

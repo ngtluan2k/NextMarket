@@ -10,7 +10,7 @@ interface CartItem {
     name: string;
     base_price: number;
     url: string;
-    media: { url: string; is_primary?: boolean }
+    media: { url: string; is_primary?: boolean };
   };
 }
 
@@ -37,22 +37,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-const refreshCart = async () => {
-  try {
-    const response = await fetch('http://localhost:3000/cart', {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      setCart(data); // giữ nguyên data từ backend
+  const refreshCart = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/cart', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCart(data); // giữ nguyên data từ backend
+      }
+    } catch (error) {
+      console.error('Không thể lấy giỏ hàng:', error);
     }
-  } catch (error) {
-    console.error('Không thể lấy giỏ hàng:', error);
-  }
-};
-
+  };
 
   const addToCart = async (productId: number, quantity = 1) => {
     try {

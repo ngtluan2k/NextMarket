@@ -105,7 +105,9 @@ export default function TopSellingProducts() {
           <Title level={4} className="!mb-1">
             Sản Phẩm Bán Chạy Nhất
           </Title>
-          <Text className="text-cyan-500 cursor-pointer">Xem danh sách đầy đủ</Text>
+          <Text className="text-cyan-500 cursor-pointer">
+            Xem danh sách đầy đủ
+          </Text>
         </div>
         <Text className="text-gray-400 text-sm">Theo số lượng bán</Text>
       </div>

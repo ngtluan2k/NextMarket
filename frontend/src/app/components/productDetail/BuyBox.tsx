@@ -1,10 +1,14 @@
-import React, { useState } from "react";
-import { BadgeCheck } from "lucide-react";
-import { Product } from "../productDetail/product";
-import { TIKI_RED } from "../productDetail/productDetail";
+import React, { useState } from 'react';
+import { BadgeCheck } from 'lucide-react';
+import { Product } from '../productDetail/product';
+import { TIKI_RED } from '../productDetail/productDetail';
 
 const vnd = (n?: number) =>
-  (n ?? 0).toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
+  (n ?? 0).toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  });
 
 export default function BuyBox({
   product,
@@ -30,15 +34,12 @@ export default function BuyBox({
       style={{ width, minHeight, top: stickyTop }}
     >
       <div className="flex items-center gap-2">
-        <img
-          src=""
-          className="h-6 w-6"
-          alt=""
-        />
+        <img src="" className="h-6 w-6" alt="" />
         <div>
-          <div className="text-sm font-semibold">{p.sellerName }</div>
+          <div className="text-sm font-semibold">{p.sellerName}</div>
           <div className="flex items-center gap-1 text-xs text-slate-500">
-            <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL • {(p.rating ?? 0).toFixed(1)}
+            <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
+            {(p.rating ?? 0).toFixed(1)}
           </div>
         </div>
       </div>
@@ -46,9 +47,19 @@ export default function BuyBox({
       <div className="mt-5">
         <div className="text-xs text-slate-500">Số lượng</div>
         <div className="inline-flex items-center rounded-lg border border-slate-200">
-          <button className="px-3 py-2 hover:bg-slate-50" onClick={() => setQty(Math.max(1, qty - 1))}>-</button>
+          <button
+            className="px-3 py-2 hover:bg-slate-50"
+            onClick={() => setQty(Math.max(1, qty - 1))}
+          >
+            -
+          </button>
           <div className="w-10 text-center text-sm">{qty}</div>
-          <button className="px-3 py-2 hover:bg-slate-50" onClick={() => setQty(qty + 1)}>+</button>
+          <button
+            className="px-3 py-2 hover:bg-slate-50"
+            onClick={() => setQty(qty + 1)}
+          >
+            +
+          </button>
         </div>
       </div>
 

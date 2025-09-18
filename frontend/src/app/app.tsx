@@ -1,30 +1,30 @@
-"use client"
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { AdminDashboard } from "./components/admin/AdminDashboard";
-import { CartProvider } from "./context/CartContext";
-import { Cart } from "./components/Cart";
-import { message } from "antd";
-import Home from "./page/Home";
-import CategoryPage from "./page/CategoryPage";
-import AccountLayout from "./page/account/AccountLayout";
+'use client';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { CartProvider } from './context/CartContext';
+import { Cart } from './components/Cart';
+import { message } from 'antd';
+import Home from './page/Home';
+import CategoryPage from './page/CategoryPage';
+import AccountLayout from './page/account/AccountLayout';
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
-import {SellerDashboard} from './components/register_seller/SellerDashboard';
-import ProductDetailPage from "./page/ProductDetailPage";
-import NotificationsPage from "./page/account/NotificationsPage";
-import ReturnsPage from "./page/account/ReturnsPage";
-import OrdersPage from "./page/account/OrdersPage";
-import ProfilePage from "./page/account/ProfilePage";
+import { SellerDashboard } from './components/register_seller/SellerDashboard';
+import ProductDetailPage from './page/ProductDetailPage';
+import NotificationsPage from './page/account/NotificationsPage';
+import ReturnsPage from './page/account/ReturnsPage';
+import OrdersPage from './page/account/OrdersPage';
+import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
-import { ProductForm } from "./components/AddProduct";
+import { ProductForm } from './components/AddProduct';
 
 // import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
 
   const showMessage = (
-    type: "success" | "error" | "warning",
+    type: 'success' | 'error' | 'warning',
     content: string
   ) => {
     // Localize message content based on type
@@ -50,13 +50,13 @@ const App: React.FC = () => {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
-        <Route path='/catepage' element={<CategoryPage/>}/>
+        <Route path="/catepage" element={<CategoryPage />} />
         <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<Cart showMessage={showMessage} />} />
         <Route path="/test/home" element={<ProductList />} />
-        
+
         {/* Account Routes */}
         <Route path="/account" element={<AccountLayout />}>
           <Route index element={<Navigate to="profile" replace />} />
@@ -79,7 +79,7 @@ const App: React.FC = () => {
         {/* <Route path="/auth" element={<AuthForm />} /> */}
 
         {/* Catch-all Route */}
-                <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/category/:slug" element={<CategoryPage />} />

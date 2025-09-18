@@ -34,9 +34,8 @@ const items: MenuItem[] = [
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
   getItem('Invoices', 'Invoices', <FileTextOutlined />),
-  getItem('Back to home', 'HomePage', <HomeOutlined/>)
+  getItem('Back to home', 'HomePage', <HomeOutlined />),
 ];
-
 
 interface SideBarProps {
   onSelect: (key: string) => void;
@@ -52,9 +51,9 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
 
   const handleMenuClick = (e: { key: string }) => {
     if (e.key === 'HomePage') {
-      navigate('/'); 
+      navigate('/');
     } else {
-      onSelect(e.key); 
+      onSelect(e.key);
     }
   };
 

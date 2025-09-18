@@ -1,5 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { VoucherUsage } from  '../voucher-usage/voucher_usage.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 
 @Entity('vouchers')
 export class Voucher {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 
 export type ProductDescriptionProps = {
   /** HTML đã sanitize từ backend (khuyên dùng) */
@@ -17,26 +17,33 @@ export default function ProductDescription({
   text,
   loading,
   collapsedHeight = 260,
-  className = "",
+  className = '',
 }: ProductDescriptionProps) {
   const [expanded, setExpanded] = useState(false);
 
   const safeHtml = useMemo(() => {
     if (html) return html;
-    if (!text) return "";
+    if (!text) return '';
     // chuyển \n -> <br/> cho text thuần
-    return text.replace(/\n/g, "<br/>");
+    return text.replace(/\n/g, '<br/>');
   }, [html, text]);
 
   return (
-    <section className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}>
-      <h3 className="mb-3 text-lg font-semibold text-slate-900">Mô tả sản phẩm</h3>
+    <section
+      className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}
+    >
+      <h3 className="mb-3 text-lg font-semibold text-slate-900">
+        Mô tả sản phẩm
+      </h3>
 
       {/* loading skeleton */}
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-3 w-full rounded bg-slate-100 animate-pulse" />
+            <div
+              key={i}
+              className="h-3 w-full rounded bg-slate-100 animate-pulse"
+            />
           ))}
         </div>
       )}
@@ -49,7 +56,7 @@ export default function ProductDescription({
         <div className="relative">
           <div
             className={`prose prose-slate max-w-none text-[15px] leading-7 ${
-              expanded ? "" : "overflow-hidden"
+              expanded ? '' : 'overflow-hidden'
             }`}
             style={expanded ? undefined : { maxHeight: collapsedHeight }}
             // ⚠️ Nội dung html phải được sanitize ở BE trước khi render
@@ -62,7 +69,7 @@ export default function ProductDescription({
               className="pointer-events-none absolute inset-x-0 bottom-0 h-16"
               style={{
                 background:
-                  "linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))",
+                  'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
               }}
             />
           )}
@@ -72,7 +79,7 @@ export default function ProductDescription({
               onClick={() => setExpanded((v) => !v)}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              {expanded ? "Thu gọn" : "Xem thêm"}
+              {expanded ? 'Thu gọn' : 'Xem thêm'}
             </button>
           </div>
         </div>

@@ -21,7 +21,6 @@
 //   @JoinColumn({ name: 'user_id' })
 //   user!: User;
 
-
 //   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
 //   created_at!: Date;
 

@@ -17,8 +17,8 @@ export class VoucherUsage {
   @ManyToOne(() => User, (user) => user.voucherUsages)
   user!: User;
 
-//   @ManyToOne(() => Order, (order) => order.voucherUsages)
-//   order: Order;
+  //   @ManyToOne(() => Order, (order) => order.voucherUsages)
+  //   order: Order;
 
   @Column({ type: 'datetime' })
   used_at!: Date;

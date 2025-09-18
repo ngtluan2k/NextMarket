@@ -1,5 +1,12 @@
 import { Store } from './../store/store.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+} from 'typeorm';
 import { User } from './../user/user.entity';
 
 @Entity('store_followers')

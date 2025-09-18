@@ -5,5 +5,4 @@ export class CreateVariantDto {
   price!: number;
   stock!: number;
   barcode?: string;
-
 }

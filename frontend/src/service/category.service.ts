@@ -8,24 +8,24 @@ export interface Category {
 }
 
 export const fetchCategoriesAPI = async (): Promise<Category[]> => {
-  const res = await fetch("http://localhost:3000/categories", {
-  });
-  if (!res.ok) throw new Error("Failed to fetch categories");
+  const res = await fetch('http://localhost:3000/categories', {});
+  if (!res.ok) throw new Error('Failed to fetch categories');
   return res.json(); // trả về mảng category
 };
 
 // API lấy category theo slug
 export const getCategoryBySlug = async (slug: string): Promise<Category> => {
-  const res = await fetch(`http://localhost:3000/categories/by-slug/${slug}`, {
-  });
-  if (!res.ok) throw new Error("Category not found");
+  const res = await fetch(
+    `http://localhost:3000/categories/by-slug/${slug}`,
+    {}
+  );
+  if (!res.ok) throw new Error('Category not found');
   return res.json(); // trả về 1 category object
 };
 
 // src/service/categorySidebar.service.ts
 export const fetchRootCategoriesAPI = async () => {
-  const res = await fetch("http://localhost:3000/categories", {
-  });
+  const res = await fetch('http://localhost:3000/categories', {});
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();
 
@@ -40,7 +40,7 @@ export const fetchRootCategoriesAPI = async () => {
 
 export const fetchChildCategoriesAPI = async (parentId: string | number) => {
   const res = await fetch(
-    `http://localhost:3000/categories/${parentId}/children`,
+    `http://localhost:3000/categories/${parentId}/children`
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();

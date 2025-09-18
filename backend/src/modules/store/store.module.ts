@@ -35,8 +35,8 @@ import { UserRole } from '../user-role/user-role.entity';
       StoreIdentification,
       User,
       Role,
-      UserRole
-    ])
+      UserRole,
+    ]),
   ],
   providers: [StoreService],
   controllers: [StoreController],

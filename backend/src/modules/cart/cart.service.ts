@@ -16,37 +16,34 @@ export class CartService {
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
     @InjectRepository(User)
-    private userRepository: Repository<User>,
+    private userRepository: Repository<User>
   ) {}
 
-async getOrCreateCart(userId: number): Promise<ShoppingCart> {
-  const user = await this.userRepository.findOne({ where: { id: userId } });
-  if (!user) throw new NotFoundException('User not found');
+  async getOrCreateCart(userId: number): Promise<ShoppingCart> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
 
-  let cart = await this.cartRepository.findOne({
-    where: { user: { id: userId } },
-    relations: ['items', 'items.product', 'items.product.media'],
-  });
-
-  if (!cart) {
-    cart = this.cartRepository.create({
-      uuid: uuidv4(),
-      user,  // ✅ gán full entity User
-      items: [],
+    let cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['items', 'items.product', 'items.product.media'],
     });
-    await this.cartRepository.save(cart);
+
+    if (!cart) {
+      cart = this.cartRepository.create({
+        uuid: uuidv4(),
+        user, // ✅ gán full entity User
+        items: [],
+      });
+      await this.cartRepository.save(cart);
+    }
+
+    return cart;
   }
-
-  return cart;
-}
-
-
-
 
   async addToCart(
     userId: number,
     productId: number,
-    quantity = 1,
+    quantity = 1
   ): Promise<CartItem> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -99,7 +96,7 @@ async getOrCreateCart(userId: number): Promise<ShoppingCart> {
   async updateQuantity(
     userId: number,
     productId: number,
-    quantity: number,
+    quantity: number
   ): Promise<CartItem> {
     const cart = await this.getOrCreateCart(userId);
 

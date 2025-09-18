@@ -11,7 +11,6 @@ import { UserRole } from '../user-role/user-role.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { ShoppingCart } from '../cart/shopping_cart.entity';
 
-
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -52,8 +51,8 @@ export class User {
 
   @OneToMany(() => VoucherUsage, (usage) => usage.user)
   voucherUsages!: VoucherUsage[];
-  
-   @OneToMany(() => UserProfile, (profile) => profile.user)
+
+  @OneToMany(() => UserProfile, (profile) => profile.user)
   profiles!: UserProfile[];
 
   @OneToOne(() => ShoppingCart, (cart) => cart.user, { cascade: true })

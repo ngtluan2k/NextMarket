@@ -31,96 +31,96 @@ export const AdminDashboard: React.FC = () => {
         return <RoleManager />;
       case '2-1': // Danh sách sản phẩm
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '2-2': // Danh mục sản phẩm
         return <CategoryManager />;
       case '2-3': // Khuyến mãi sản phẩm
-         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '3-1': // Tồn kho
         return <InventoryManager />;
       case '3-2': // Nhập/Xuất kho
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '4-1': // Danh sách đơn hàng
-         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '4-2': // Trả hàng/Hoàn tiền
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '5-1': // Danh sách khách hàng
-         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '5-2': // Nhóm khách hàng
-         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '6-1': // Danh sách nhà bán
         return <BrandManager />;
       case '6-2': // Đối soát công nợ
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '7-1': // Doanh thu
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '7-2': // Thanh toán
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '8-1': // Mã giảm giá
-        return <VoucherManager/>
+        return <VoucherManager />;
       case '8-2': // Chiến dịch quảng cáo
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '9': // Báo cáo & thống kê
         return (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={<span>Chức năng đang phát triển...</span>}
-        />
-      );
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case 'permissions': // Quản lý quyền (thêm cho phần permissions riêng)
         return <PermissionManager />;
       case 'userRoles': // Phân quyền người dùng (thêm cho phần user roles riêng)

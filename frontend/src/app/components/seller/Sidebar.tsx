@@ -34,9 +34,8 @@ const items: MenuItem[] = [
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
   getItem('Hóa Đơn ', 'Invoices', <FileTextOutlined />),
-  getItem('Trở về trang chủ', 'HomePage', <HomeOutlined/>)
+  getItem('Trở về trang chủ', 'HomePage', <HomeOutlined />),
 ];
-
 
 interface SideBarProps {
   onSelect: (key: string) => void;
@@ -52,9 +51,9 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
 
   const handleMenuClick = (e: { key: string }) => {
     if (e.key === 'HomePage') {
-      navigate('/'); 
+      navigate('/');
     } else {
-      onSelect(e.key); 
+      onSelect(e.key);
     }
   };
 
@@ -77,9 +76,7 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
             }`}
             style={{ display: collapsed ? 'none' : 'block' }}
           >
-            <span className="text-xl font-bold text-gray-900">
-              Everymart
-            </span>
+            <span className="text-xl font-bold text-gray-900">Everymart</span>
           </div>
         </div>
         <nav className="space-y-1">

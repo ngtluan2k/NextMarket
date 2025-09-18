@@ -1,7 +1,7 @@
 // src/components/admin/CategoryManager.tsx
-import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, ListGroup } from "react-bootstrap";
-import axios from "axios";
+import React, { useEffect, useState } from 'react';
+import { Table, Button, Modal, Form, ListGroup } from 'react-bootstrap';
+import axios from 'axios';
 
 interface Category {
   id: number;
@@ -16,19 +16,19 @@ const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [name, setName] = useState("");
-  const [image, setImage] = useState("");
+  const [name, setName] = useState('');
+  const [image, setImage] = useState('');
   const [parentId, setParentId] = useState<number | null>(null);
-  const [parentQuery, setParentQuery] = useState("");
+  const [parentQuery, setParentQuery] = useState('');
   const [filteredParents, setFilteredParents] = useState<Category[]>([]);
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
   useEffect(() => {
-    if (parentQuery.trim() === "") {
+    if (parentQuery.trim() === '') {
       setFilteredParents([]);
     } else {
       const filtered = categories
@@ -44,12 +44,12 @@ const CategoryManager: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/categories", {
+      const res = await axios.get('http://localhost:3000/categories', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCategories(res.data.data || res.data);
     } catch (err) {
-      console.error("Fetch categories failed:", err);
+      console.error('Fetch categories failed:', err);
       setCategories([]);
     }
   };
@@ -66,31 +66,29 @@ const CategoryManager: React.FC = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post(
-          "http://localhost:3000/categories",
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await axios.post('http://localhost:3000/categories', payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
       setShowModal(false);
       setEditingCategory(null);
-      setName("");
-      setImage("");
+      setName('');
+      setImage('');
       setParentId(null);
-      setParentQuery("");
+      setParentQuery('');
       setFilteredParents([]);
       fetchCategories();
     } catch (err) {
-      console.error("Save category failed:", err);
+      console.error('Save category failed:', err);
     }
   };
 
   const handleEdit = (cat: Category) => {
     setEditingCategory(cat);
     setName(cat.name);
-    setImage(cat.image || "");
+    setImage(cat.image || '');
     setParentId(cat.parent?.id || null);
-    setParentQuery(cat.parent?.name || "");
+    setParentQuery(cat.parent?.name || '');
     setShowModal(true);
   };
 
@@ -101,7 +99,7 @@ const CategoryManager: React.FC = () => {
       });
       fetchCategories();
     } catch (err) {
-      console.error("Delete category failed:", err);
+      console.error('Delete category failed:', err);
     }
   };
 
@@ -118,10 +116,10 @@ const CategoryManager: React.FC = () => {
         className="mb-3"
         onClick={() => {
           setEditingCategory(null);
-          setName("");
-          setImage("");
+          setName('');
+          setImage('');
           setParentId(null);
-          setParentQuery("");
+          setParentQuery('');
           setShowModal(true);
         }}
       >
@@ -129,60 +127,63 @@ const CategoryManager: React.FC = () => {
       </Button>
 
       <Table striped bordered hover>
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Name</th>
-      <th>Slug</th>
-      <th>Parent</th>
-      <th>Image</th> {/* cột ảnh */}
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {categories.map((cat) => (
-      <tr key={cat.id}>
-        <td>{cat.id}</td>
-        <td>{cat.name}</td>
-        <td>{cat.slug}</td>
-        <td>{cat.parent?.name || "-"}</td>
-        <td>
-          {cat.image ? (
-            <img
-              src={cat.image}
-              alt={cat.name}
-              style={{ width: "50px", height: "50px", objectFit: "cover" }}
-            />
-          ) : (
-            "-"
-          )}
-        </td>
-        <td>
-          <Button
-            variant="warning"
-            size="sm"
-            onClick={() => handleEdit(cat)}
-          >
-            Edit
-          </Button>{" "}
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => handleDelete(cat.id)}
-          >
-            Delete
-          </Button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</Table>
-
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Parent</th>
+            <th>Image</th> {/* cột ảnh */}
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {categories.map((cat) => (
+            <tr key={cat.id}>
+              <td>{cat.id}</td>
+              <td>{cat.name}</td>
+              <td>{cat.slug}</td>
+              <td>{cat.parent?.name || '-'}</td>
+              <td>
+                {cat.image ? (
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    style={{
+                      width: '50px',
+                      height: '50px',
+                      objectFit: 'cover',
+                    }}
+                  />
+                ) : (
+                  '-'
+                )}
+              </td>
+              <td>
+                <Button
+                  variant="warning"
+                  size="sm"
+                  onClick={() => handleEdit(cat)}
+                >
+                  Edit
+                </Button>{' '}
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleDelete(cat.id)}
+                >
+                  Delete
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingCategory ? "Edit Category" : "Add Category"}
+            {editingCategory ? 'Edit Category' : 'Add Category'}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -205,54 +206,53 @@ const CategoryManager: React.FC = () => {
               />
             </Form.Group>
 
-            <Form.Group className="mb-3" style={{ position: "relative" }}>
-  <Form.Label>Parent Category</Form.Label>
-  <div style={{ display: "flex", gap: "8px" }}>
-    <Form.Control
-      value={parentQuery}
-      onChange={(e) => {
-        setParentQuery(e.target.value);
-        setParentId(null); // reset parent khi user nhập mới
-      }}
-      placeholder="Search parent category"
-    />
-    {parentId && (
-      <Button
-        variant="outline-danger"
-        size="sm"
-        onClick={() => {
-          setParentId(null);
-          setParentQuery("");
-        }}
-      >
-        ✕
-      </Button>
-    )}
-  </div>
+            <Form.Group className="mb-3" style={{ position: 'relative' }}>
+              <Form.Label>Parent Category</Form.Label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Form.Control
+                  value={parentQuery}
+                  onChange={(e) => {
+                    setParentQuery(e.target.value);
+                    setParentId(null); // reset parent khi user nhập mới
+                  }}
+                  placeholder="Search parent category"
+                />
+                {parentId && (
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => {
+                      setParentId(null);
+                      setParentQuery('');
+                    }}
+                  >
+                    ✕
+                  </Button>
+                )}
+              </div>
 
-  {filteredParents.length > 0 && (
-    <ListGroup
-      style={{
-        position: "absolute",
-        zIndex: 1000,
-        width: "100%",
-        maxHeight: "150px",
-        overflowY: "auto",
-      }}
-    >
-      {filteredParents.map((cat) => (
-        <ListGroup.Item
-          key={cat.id}
-          action
-          onClick={() => selectParent(cat)}
-        >
-          {cat.name}
-        </ListGroup.Item>
-      ))}
-    </ListGroup>
-  )}
-</Form.Group>
-
+              {filteredParents.length > 0 && (
+                <ListGroup
+                  style={{
+                    position: 'absolute',
+                    zIndex: 1000,
+                    width: '100%',
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {filteredParents.map((cat) => (
+                    <ListGroup.Item
+                      key={cat.id}
+                      action
+                      onClick={() => selectParent(cat)}
+                    >
+                      {cat.name}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
+            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>

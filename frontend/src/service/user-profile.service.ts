@@ -37,7 +37,7 @@ const API_BASE = 'http://localhost:3000';
  */
 export async function getUserProfile(userId: number): Promise<UserProfile> {
   const token = localStorage.getItem('token');
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -46,7 +46,7 @@ export async function getUserProfile(userId: number): Promise<UserProfile> {
     const response = await fetch(`${API_BASE}/users/${userId}/profile`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -56,7 +56,7 @@ export async function getUserProfile(userId: number): Promise<UserProfile> {
     }
 
     const result: UserProfileResponse = await response.json();
-    
+
     if (result.status !== 200) {
       throw new Error(result.message || 'Failed to fetch user profile');
     }
@@ -74,9 +74,12 @@ export async function getUserProfile(userId: number): Promise<UserProfile> {
  * @param profileData - Profile data to update
  * @returns Promise<UserProfile>
  */
-export async function updateUserProfile(userId: number, profileData: Partial<UserProfile>): Promise<UserProfile> {
+export async function updateUserProfile(
+  userId: number,
+  profileData: Partial<UserProfile>
+): Promise<UserProfile> {
   const token = localStorage.getItem('token');
-  
+
   if (!token) {
     throw new Error('No authentication token found');
   }
@@ -85,7 +88,7 @@ export async function updateUserProfile(userId: number, profileData: Partial<Use
     const response = await fetch(`${API_BASE}/users/${userId}/profile`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(profileData),
@@ -96,7 +99,7 @@ export async function updateUserProfile(userId: number, profileData: Partial<Use
     }
 
     const result: UserProfileResponse = await response.json();
-    
+
     if (result.status !== 200) {
       throw new Error(result.message || 'Failed to update user profile');
     }
@@ -114,7 +117,7 @@ export async function updateUserProfile(userId: number, profileData: Partial<Use
  */
 export function getCurrentUserId(): number | null {
   const token = localStorage.getItem('token');
-  
+
   if (!token) {
     return null;
   }

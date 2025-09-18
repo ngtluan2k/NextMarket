@@ -1,8 +1,8 @@
-import { 
-  Injectable, 
-  NotFoundException, 
+import {
+  Injectable,
+  NotFoundException,
   BadRequestException,
-  ConflictException 
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
@@ -15,15 +15,15 @@ import { v4 as uuidv4 } from 'uuid';
 export class VouchersService {
   constructor(
     @InjectRepository(Voucher)
-    private vouchersRepo: Repository<Voucher>,
+    private vouchersRepo: Repository<Voucher>
   ) {}
 
   async create(dto: CreateVoucherDto): Promise<Voucher> {
     // Kiểm tra mã voucher đã tồn tại
     const existingVoucher = await this.vouchersRepo.findOne({
-      where: { code: dto.code }
+      where: { code: dto.code },
     });
-    
+
     if (existingVoucher) {
       throw new ConflictException('Mã voucher đã tồn tại');
     }
@@ -35,7 +35,9 @@ export class VouchersService {
 
     // Kiểm tra giá trị giảm giá hợp lệ
     if (dto.discount_type === 'percentage' && dto.discount_value > 100) {
-      throw new BadRequestException('Giảm giá phần trăm không thể vượt quá 100%');
+      throw new BadRequestException(
+        'Giảm giá phần trăm không thể vượt quá 100%'
+      );
     }
 
     if (dto.discount_value <= 0) {
@@ -46,13 +48,13 @@ export class VouchersService {
       ...dto,
       used_count: 0,
     });
-    
+
     return this.vouchersRepo.save(voucher);
   }
 
   async findAll(): Promise<Voucher[]> {
     return this.vouchersRepo.find({
-      order: { created_at: 'DESC' }
+      order: { created_at: 'DESC' },
     });
   }
 
@@ -67,13 +69,13 @@ export class VouchersService {
   async findByCode(code: string): Promise<Voucher> {
     const voucher = await this.vouchersRepo.findOne({
       where: { code },
-      relations: ['usages']
+      relations: ['usages'],
     });
-    
+
     if (!voucher) {
       throw new NotFoundException(`Voucher với mã ${code} không tồn tại`);
     }
-    
+
     return voucher;
   }
 
@@ -84,13 +86,13 @@ export class VouchersService {
         start_date: LessThanOrEqual(now),
         end_date: MoreThanOrEqual(now),
       },
-      order: { created_at: 'DESC' }
+      order: { created_at: 'DESC' },
     });
   }
 
   async update(id: number, dto: UpdateVoucherDto): Promise<Voucher> {
     const voucher = await this.vouchersRepo.findOneBy({ id });
-    
+
     if (!voucher) {
       throw new NotFoundException(`Voucher với ID ${id} không tồn tại`);
     }
@@ -98,25 +100,29 @@ export class VouchersService {
     // Kiểm tra nếu mã voucher được thay đổi và đã tồn tại
     if (dto.code && dto.code !== voucher.code) {
       const existingVoucher = await this.vouchersRepo.findOne({
-        where: { code: dto.code }
+        where: { code: dto.code },
       });
-      
+
       if (existingVoucher) {
         throw new ConflictException('Mã voucher đã tồn tại');
       }
     }
 
     // Kiểm tra ngày tháng hợp lệ
-    const startDate = dto.start_date ? new Date(dto.start_date) : voucher.start_date;
+    const startDate = dto.start_date
+      ? new Date(dto.start_date)
+      : voucher.start_date;
     const endDate = dto.end_date ? new Date(dto.end_date) : voucher.end_date;
-    
+
     if (startDate >= endDate) {
       throw new BadRequestException('Ngày kết thúc phải sau ngày bắt đầu');
     }
 
     // Kiểm tra giới hạn lượt dùng
     if (dto.usage_limit !== undefined && voucher.used_count > dto.usage_limit) {
-      throw new BadRequestException('Giới hạn lượt dùng không thể nhỏ hơn số lượt đã sử dụng');
+      throw new BadRequestException(
+        'Giới hạn lượt dùng không thể nhỏ hơn số lượt đã sử dụng'
+      );
     }
 
     // Kiểm tra giá trị giảm giá hợp lệ
@@ -124,8 +130,14 @@ export class VouchersService {
       throw new BadRequestException('Giá trị giảm giá phải lớn hơn 0');
     }
 
-    if (dto.discount_type === 'percentage' && dto.discount_value !== undefined && dto.discount_value > 100) {
-      throw new BadRequestException('Giảm giá phần trăm không thể vượt quá 100%');
+    if (
+      dto.discount_type === 'percentage' &&
+      dto.discount_value !== undefined &&
+      dto.discount_value > 100
+    ) {
+      throw new BadRequestException(
+        'Giảm giá phần trăm không thể vượt quá 100%'
+      );
     }
 
     // Cập nhật voucher
@@ -137,7 +149,9 @@ export class VouchersService {
 
     const updatedVoucher = await this.vouchersRepo.findOneBy({ id });
     if (!updatedVoucher) {
-      throw new NotFoundException(`Voucher với ID ${id} không tồn tại sau khi cập nhật`);
+      throw new NotFoundException(
+        `Voucher với ID ${id} không tồn tại sau khi cập nhật`
+      );
     }
 
     return updatedVoucher;
@@ -145,7 +159,7 @@ export class VouchersService {
 
   async incrementUsage(id: number): Promise<void> {
     const voucher = await this.vouchersRepo.findOneBy({ id });
-    
+
     if (!voucher) {
       throw new NotFoundException(`Voucher với ID ${id} không tồn tại`);
     }
@@ -164,14 +178,20 @@ export class VouchersService {
     await this.vouchersRepo.increment({ id }, 'used_count', 1);
   }
 
-  async validateVoucher(code: string, orderAmount: number = 0): Promise<{ isValid: boolean; message?: string; voucher?: Voucher }> {
+  async validateVoucher(
+    code: string,
+    orderAmount: number = 0
+  ): Promise<{ isValid: boolean; message?: string; voucher?: Voucher }> {
     try {
       const voucher = await this.findByCode(code);
       const now = new Date();
 
       // Kiểm tra thời gian hiệu lực
       if (now < voucher.start_date) {
-        return { isValid: false, message: 'Voucher chưa đến thời gian sử dụng' };
+        return {
+          isValid: false,
+          message: 'Voucher chưa đến thời gian sử dụng',
+        };
       }
 
       if (now > voucher.end_date) {
@@ -185,9 +205,9 @@ export class VouchersService {
 
       // Kiểm tra giá trị đơn hàng tối thiểu
       if (voucher.min_order_amount && orderAmount < voucher.min_order_amount) {
-        return { 
-          isValid: false, 
-          message: `Đơn hàng cần tối thiểu ${voucher.min_order_amount.toLocaleString()} VND để sử dụng voucher này` 
+        return {
+          isValid: false,
+          message: `Đơn hàng cần tối thiểu ${voucher.min_order_amount.toLocaleString()} VND để sử dụng voucher này`,
         };
       }
 
@@ -202,7 +222,7 @@ export class VouchersService {
 
   async remove(id: number): Promise<void> {
     const voucher = await this.vouchersRepo.findOneBy({ id });
-    
+
     if (!voucher) {
       throw new NotFoundException(`Voucher với ID ${id} không tồn tại`);
     }
@@ -226,24 +246,24 @@ export class VouchersService {
   }> {
     const now = new Date();
     const allVouchers = await this.findAll();
-    
-    const active = allVouchers.filter(v => 
-      new Date(v.start_date) <= now && new Date(v.end_date) >= now
+
+    const active = allVouchers.filter(
+      (v) => new Date(v.start_date) <= now && new Date(v.end_date) >= now
     ).length;
 
-    const expired = allVouchers.filter(v => 
-      new Date(v.end_date) < now
+    const expired = allVouchers.filter(
+      (v) => new Date(v.end_date) < now
     ).length;
 
-    const fullyUsed = allVouchers.filter(v => 
-      v.usage_limit && v.used_count >= v.usage_limit
+    const fullyUsed = allVouchers.filter(
+      (v) => v.usage_limit && v.used_count >= v.usage_limit
     ).length;
 
     return {
       total: allVouchers.length,
       active,
       expired,
-      fullyUsed
+      fullyUsed,
     };
   }
 }

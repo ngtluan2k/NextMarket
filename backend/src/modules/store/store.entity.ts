@@ -54,10 +54,10 @@ export class Store {
   @Column({ type: 'boolean', default: false })
   is_draft!: boolean;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @UpdateDateColumn({ type: 'datetime',  default: () => 'CURRENT_TIMESTAMP' })
+  @UpdateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
   @OneToMany(() => Product, (product) => product.store)

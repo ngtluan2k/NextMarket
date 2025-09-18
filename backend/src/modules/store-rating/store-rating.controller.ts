@@ -1,9 +1,27 @@
-import { Controller,Get,Post,Put,Delete,Param,Body,UseGuards,Req,Query,ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { StoreRatingService } from './store-rating.service';
 import { RateStoreDto } from './dto/rate-store.dto';
 import { UpdateRatingDto } from './dto/update-rating.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 
 @ApiTags('store-ratings')
 @ApiBearerAuth('access-token')
@@ -20,7 +38,11 @@ export class StoreRatingController {
     @Body() dto: RateStoreDto,
     @Req() req: any
   ) {
-    const rating = await this.ratingService.createRating(req.user.sub, storeId, dto);
+    const rating = await this.ratingService.createRating(
+      req.user.sub,
+      storeId,
+      dto
+    );
     return {
       message: 'Store rated successfully',
       data: rating,
@@ -35,7 +57,11 @@ export class StoreRatingController {
     @Body() dto: UpdateRatingDto,
     @Req() req: any
   ) {
-    const rating = await this.ratingService.updateRating(req.user.sub, storeId, dto);
+    const rating = await this.ratingService.updateRating(
+      req.user.sub,
+      storeId,
+      dto
+    );
     return {
       message: 'Rating updated successfully',
       data: rating,
@@ -58,14 +84,28 @@ export class StoreRatingController {
   @Get('stores/:storeId')
   @ApiOperation({ summary: 'Get all ratings for a store' })
   @ApiParam({ name: 'storeId', description: 'Store ID to get ratings' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page',
+    example: 10,
+  })
   async getStoreRatings(
     @Param('storeId', ParseIntPipe) storeId: number,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10
   ) {
-    const ratings = await this.ratingService.getStoreRatings(storeId, page, limit);
+    const ratings = await this.ratingService.getStoreRatings(
+      storeId,
+      page,
+      limit
+    );
     return {
       message: 'Store ratings retrieved successfully',
       ...ratings,
@@ -90,23 +130,42 @@ export class StoreRatingController {
     @Param('storeId', ParseIntPipe) storeId: number,
     @Req() req: any
   ) {
-    const rating = await this.ratingService.getUserRatingForStore(req.user.sub, storeId);
+    const rating = await this.ratingService.getUserRatingForStore(
+      req.user.sub,
+      storeId
+    );
     return {
-      message: rating ? 'Your rating retrieved successfully' : 'You have not rated this store yet',
+      message: rating
+        ? 'Your rating retrieved successfully'
+        : 'You have not rated this store yet',
       data: rating,
     };
   }
 
   @Get('my-ratings')
   @ApiOperation({ summary: 'Get all my ratings' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', example: 10 })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page',
+    example: 10,
+  })
   async getMyRatings(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: any
   ) {
-    const ratings = await this.ratingService.getUserRatings(req.user.sub, page, limit);
+    const ratings = await this.ratingService.getUserRatings(
+      req.user.sub,
+      page,
+      limit
+    );
     return {
       message: 'Your ratings retrieved successfully',
       ...ratings,
@@ -115,7 +174,12 @@ export class StoreRatingController {
 
   @Get('top-rated-stores')
   @ApiOperation({ summary: 'Get top rated stores' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of stores to return', example: 10 })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of stores to return',
+    example: 10,
+  })
   async getTopRatedStores(@Query('limit') limit: number = 10) {
     const stores = await this.ratingService.getTopRatedStores(limit);
     return {

@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class VoucherUsageService {
   constructor(
     @InjectRepository(VoucherUsage)
-    private usageRepo: Repository<VoucherUsage>,
+    private usageRepo: Repository<VoucherUsage>
   ) {}
 
   async create(dto: CreateVoucherUsageDto): Promise<VoucherUsage> {

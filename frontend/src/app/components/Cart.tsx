@@ -94,7 +94,6 @@ export const Cart: React.FC<CartProps> = ({ showMessage }) => {
                 onClick={() => window.history.back()}
               >
                 Tiếp tục mua sắm
-
               </Button>
             </Empty>
           </Card>

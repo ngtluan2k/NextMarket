@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreRating } from './store-rating.entity';
@@ -13,7 +18,7 @@ export class StoreRatingService {
     @InjectRepository(StoreRating)
     private readonly ratingRepo: Repository<StoreRating>,
     @InjectRepository(Store)
-    private readonly storeRepo: Repository<Store>,
+    private readonly storeRepo: Repository<Store>
   ) {}
 
   // Tạo rating mới
@@ -31,7 +36,7 @@ export class StoreRatingService {
 
     // Kiểm tra user đã rate store này chưa
     const existingRating = await this.ratingRepo.findOne({
-      where: { user_id: userId, store_id: storeId }
+      where: { user_id: userId, store_id: storeId },
     });
 
     if (existingRating) {
@@ -50,7 +55,7 @@ export class StoreRatingService {
   // Cập nhật rating
   async updateRating(userId: number, storeId: number, dto: UpdateRatingDto) {
     const rating = await this.ratingRepo.findOne({
-      where: { user_id: userId, store_id: storeId }
+      where: { user_id: userId, store_id: storeId },
     });
 
     if (!rating) {
@@ -69,7 +74,7 @@ export class StoreRatingService {
   // Xóa rating
   async deleteRating(userId: number, storeId: number) {
     const rating = await this.ratingRepo.findOne({
-      where: { user_id: userId, store_id: storeId }
+      where: { user_id: userId, store_id: storeId },
     });
 
     if (!rating) {
@@ -106,21 +111,21 @@ export class StoreRatingService {
   // Lấy thống kê rating của store
   async getStoreRatingStats(storeId: number) {
     const ratings = await this.ratingRepo.find({
-      where: { store_id: storeId }
+      where: { store_id: storeId },
     });
 
     if (ratings.length === 0) {
       return {
         average: 0,
         total: 0,
-        distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
       };
     }
 
     const total = ratings.length;
     const sum = ratings.reduce((acc, rating) => acc + rating.stars, 0);
     const average = sum / total;
-    
+
     // Tính phân bố rating
     const distribution = ratings.reduce((acc, rating) => {
       acc[rating.stars] = (acc[rating.stars] || 0) + 1;
@@ -143,7 +148,7 @@ export class StoreRatingService {
   async getUserRatingForStore(userId: number, storeId: number) {
     return this.ratingRepo.findOne({
       where: { user_id: userId, store_id: storeId },
-      relations: ['user', 'store']
+      relations: ['user', 'store'],
     });
   }
 
@@ -180,23 +185,22 @@ export class StoreRatingService {
       .limit(limit);
 
     const results = await query.getRawMany();
-    
+
     // Lấy thông tin stores
-    const storeIds = results.map(r => r.store_id);
-    
+    const storeIds = results.map((r) => r.store_id);
+
     if (storeIds.length === 0) {
       return [];
     }
-    
+
     const stores = await this.storeRepo.find({
       where: { id: In(storeIds) },
-      relations: ['owner']
+      relations: ['owner'],
     });
 
-
     // Kết hợp data
-    return results.map(result => {
-      const store = stores.find(s => s.id === result.store_id);
+    return results.map((result) => {
+      const store = stores.find((s) => s.id === result.store_id);
       return {
         store,
         average_rating: parseFloat(result.average_rating),

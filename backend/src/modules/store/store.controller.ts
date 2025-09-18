@@ -1,5 +1,16 @@
-
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 
 import { StoreService } from './store.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -44,7 +55,10 @@ export class StoreController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy đầy đủ draft data của store' })
   async getDraftData(@Param('id') id: string, @Req() req: any) {
-    const draftData = await this.storeService.getFullDraftData(parseInt(id), req.user.userId);
+    const draftData = await this.storeService.getFullDraftData(
+      parseInt(id),
+      req.user.userId
+    );
     return {
       message: 'Draft data của store',
       data: draftData,
@@ -80,13 +94,12 @@ export class StoreController {
       message: 'Thống kê cửa hàng',
       data: stats,
     };
-  } 
- 
- @Post('register-seller')
+  }
+
+  @Post('register-seller')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Đăng ký làm người bán hàng' })
   async registerSeller(@Req() req: any, @Body() dto: RegisterSellerDto) {
-    
     const result = await this.storeService.registerSeller(req.user.userId, dto);
     return {
       message: result.message,
@@ -105,7 +118,6 @@ export class StoreController {
       data: store,
     };
   }
-
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, PermissionGuard)

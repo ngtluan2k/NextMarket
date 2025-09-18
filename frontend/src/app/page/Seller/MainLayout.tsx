@@ -27,24 +27,21 @@ const pages: Record<string, React.ReactNode> = {
 const SellerMainLayout: React.FC = () => {
   const [activePage, setActivePage] = useState('Dashboard');
   const navigate = useNavigate();
-useEffect(() => {
-  const checkStore = async () => {
-    try {
-      const store = await storeService.getMyStore(); // đã là object
-      if (!store) {
+  useEffect(() => {
+    const checkStore = async () => {
+      try {
+        const store = await storeService.getMyStore(); // đã là object
+        if (!store) {
+          navigate('/seller-registration');
+        }
+      } catch (err) {
+        console.error('Error checking store:', err);
         navigate('/seller-registration');
       }
-    } catch (err) {
-      console.error('Error checking store:', err);
-      navigate('/seller-registration');
-    }
-  };
+    };
 
-  checkStore();
-}, [navigate]);
-
-
-
+    checkStore();
+  }, [navigate]);
 
   return (
     <Layout style={{ minHeight: '100vh' }}>

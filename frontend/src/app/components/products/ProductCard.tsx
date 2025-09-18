@@ -1,20 +1,20 @@
-import React from "react";
-import { Star } from "lucide-react";
+import React from 'react';
+import { Star } from 'lucide-react';
 
 export type ProductItem = {
   id: string | number;
   name: string;
   imageUrl?: string;
   url?: string;
-  price: number;            // giá đang bán
-  originalPrice?: number;   // giá gốc
-  rating?: number;          // 0..5
-  ratingCount?: number;     // số lượng đánh giá
-  badges?: string[];        // ví dụ: ["FREESHIP XTRA", "CHÍNH HÃNG"]
+  price: number; // giá đang bán
+  originalPrice?: number; // giá gốc
+  rating?: number; // 0..5
+  ratingCount?: number; // số lượng đánh giá
+  badges?: string[]; // ví dụ: ["FREESHIP XTRA", "CHÍNH HÃNG"]
 };
 
 const ph = (w = 400, h = 300) =>
-  "data:image/svg+xml;utf8," +
+  'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
       <rect width='100%' height='100%' rx='16' fill='#F1F5F9'/>
@@ -24,12 +24,13 @@ const ph = (w = 400, h = 300) =>
   );
 
 function fmt(n?: number) {
-  if (n == null) return "";
-  return n.toLocaleString("vi-VN") + "₫";
+  if (n == null) return '';
+  return n.toLocaleString('vi-VN') + '₫';
 }
 
 function calcDiscount(price?: number, original?: number) {
-  if (!price || !original || original <= 0 || price >= original) return undefined;
+  if (!price || !original || original <= 0 || price >= original)
+    return undefined;
   const pct = Math.round(((original - price) / original) * 100);
   return `-${pct}%`;
 }
@@ -37,7 +38,7 @@ function calcDiscount(price?: number, original?: number) {
 export default function ProductCard({
   item,
   onAddToCart,
-  className = "",
+  className = '',
 }: {
   item: ProductItem;
   onAddToCart?: (p: ProductItem) => void;
@@ -57,15 +58,19 @@ export default function ProductCard({
   const discount = calcDiscount(price, originalPrice);
 
   return (
-    <div className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3 ${className}`}>
+    <div
+      className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3 ${className}`}
+    >
       {/* Ảnh & badge % giảm */}
-      <a href={url || "#"} className="block relative">
+      <a href={url || '#'} className="block relative">
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-slate-50">
           <img
             src={imageUrl || ph(400, 300)}
             alt={name}
             className="h-full w-full object-contain"
-            onError={(e) => ((e.currentTarget as HTMLImageElement).src = ph(400, 300))}
+            onError={(e) =>
+              ((e.currentTarget as HTMLImageElement).src = ph(400, 300))
+            }
             loading="lazy"
           />
         </div>
@@ -79,11 +84,16 @@ export default function ProductCard({
 
       {/* Tên sản phẩm */}
       <a
-        href={url || "#"}
+        href={url || '#'}
         className="mt-2 block text-[13px] font-medium text-slate-900 hover:text-sky-700"
         title={name}
         // Fallback clamp nếu bạn không cài plugin line-clamp
-        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+        style={{
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
       >
         {name}
       </a>
@@ -92,7 +102,9 @@ export default function ProductCard({
       <div className="mt-1 flex items-end gap-2">
         <div className="text-rose-600 font-semibold">{fmt(price)}</div>
         {originalPrice && originalPrice > price && (
-          <div className="text-xs text-slate-400 line-through">{fmt(originalPrice)}</div>
+          <div className="text-xs text-slate-400 line-through">
+            {fmt(originalPrice)}
+          </div>
         )}
       </div>
 
@@ -101,7 +113,9 @@ export default function ProductCard({
         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
         <span>{rating.toFixed(1)}</span>
         <span className="text-slate-400">/ 5</span>
-        {!!ratingCount && <span className="ml-1 text-slate-400">({ratingCount})</span>}
+        {!!ratingCount && (
+          <span className="ml-1 text-slate-400">({ratingCount})</span>
+        )}
       </div>
 
       {/* Badges */}

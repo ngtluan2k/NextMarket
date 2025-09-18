@@ -1,5 +1,9 @@
 // user.service.ts
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -16,62 +20,62 @@ import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception
 @Injectable()
 export class UserService {
   constructor(
-     @InjectRepository(UserRole)
+    @InjectRepository(UserRole)
     private readonly userRoleRepository: Repository<UserRole>,
-    @InjectRepository(Role) 
+    @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserProfile)
     private readonly userProfileRepository: Repository<UserProfile>,
-    private readonly jwtService: JwtService, // 👈 inject JwtService
+    private readonly jwtService: JwtService // 👈 inject JwtService
   ) {}
 
-   findAllUsers() {
+  findAllUsers() {
     return this.userRepository.find();
   }
-  
+
   async register(dto: CreateUserDto) {
-  // Kiểm tra email đã tồn tại
-  const exist = await this.userRepository.findOne({ where: { email: dto.email } });
-  if (exist) throw new BadRequestException('Email already exists');
+    // Kiểm tra email đã tồn tại
+    const exist = await this.userRepository.findOne({
+      where: { email: dto.email },
+    });
+    if (exist) throw new BadRequestException('Email already exists');
 
-  const hashed = await bcrypt.hash(dto.password, 10);
+    const hashed = await bcrypt.hash(dto.password, 10);
 
-  // Tạo user
-  const user = this.userRepository.create({
-    uuid: uuidv4(),
-    username: dto.username,
-    email: dto.email,
-    password: hashed,
-    status: 'active',
-    created_at: new Date(),
-    profile: {
+    // Tạo user
+    const user = this.userRepository.create({
       uuid: uuidv4(),
-      full_name: dto.full_name,
-      dob: dto.dob,
-      phone: dto.phone,
-      gender: dto.gender,
+      username: dto.username,
+      email: dto.email,
+      password: hashed,
+      status: 'active',
       created_at: new Date(),
-    },
-  });
+      profile: {
+        uuid: uuidv4(),
+        full_name: dto.full_name,
+        dob: dto.dob,
+        phone: dto.phone,
+        gender: dto.gender,
+        created_at: new Date(),
+      },
+    });
 
-  const savedUser = await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
 
-  // Gán role mặc định "user"
-  const role = await this.roleRepository.findOne({ where: { name: 'user' } });
-  if (!role) throw new BadRequestException('Default role not found');
+    // Gán role mặc định "user"
+    const role = await this.roleRepository.findOne({ where: { name: 'user' } });
+    if (!role) throw new BadRequestException('Default role not found');
 
-  const userRole = this.userRoleRepository.create({
-    user: savedUser,
-    role: role,
-  });
-  await this.userRoleRepository.save(userRole);
+    const userRole = this.userRoleRepository.create({
+      user: savedUser,
+      role: role,
+    });
+    await this.userRoleRepository.save(userRole);
 
-
-  return savedUser;
-}
-
+    return savedUser;
+  }
 
   async login(dto: LoginDto) {
     const user = await this.userRepository.findOne({
@@ -89,14 +93,14 @@ export class UserService {
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const permissions = user.roles.flatMap(ur =>
-      ur.role.rolePermissions.map(rp => rp.permission.code),
+    const permissions = user.roles.flatMap((ur) =>
+      ur.role.rolePermissions.map((rp) => rp.permission.code)
     );
 
     const payload = {
       sub: user.id,
       email: user.email,
-      roles: user.roles.map(ur => ur.role.name),
+      roles: user.roles.map((ur) => ur.role.name),
       permissions,
     };
 
@@ -106,7 +110,7 @@ export class UserService {
       id: user.id,
       username: user.username,
       email: user.email,
-      roles: user.roles.map(ur => ur.role.name),
+      roles: user.roles.map((ur) => ur.role.name),
       permissions,
       token, // 👈 JWT token
     };

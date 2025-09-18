@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 export const ProductForm: React.FC = () => {
@@ -57,7 +56,6 @@ export const ProductForm: React.FC = () => {
     inventory: [],
     pricing_rules: [],
   });
-
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -225,27 +223,30 @@ export const ProductForm: React.FC = () => {
 
     const token = localStorage.getItem('token');
 
-   // trước khi gửi lên server
-const payload = {
-  name: form.name,
-  short_description: form.short_description || undefined,
-  description: form.description || undefined,
-  base_price: form.base_price,
-  brandId: Number(form.brandId),
-  categories: form.categories.length ? form.categories.map(Number) : undefined,
-  media: form.media.length ? form.media.map(m => ({ ...m, url: m.url.slice(0, 255) })) : undefined, // truncate URL
-  variants: updatedVariants.length ? updatedVariants : undefined,
-  inventory: form.inventory.length
-    ? form.inventory.map(inv => ({
-        variant_sku: inv.variant_sku,
-        location: inv.location,
-        quantity: inv.quantity,
-        used_quantity: inv.used_quantity || 0,
-      }))
-    : undefined,
-  pricing_rules: form.pricing_rules.length ? form.pricing_rules : undefined,
-};
-
+    // trước khi gửi lên server
+    const payload = {
+      name: form.name,
+      short_description: form.short_description || undefined,
+      description: form.description || undefined,
+      base_price: form.base_price,
+      brandId: Number(form.brandId),
+      categories: form.categories.length
+        ? form.categories.map(Number)
+        : undefined,
+      media: form.media.length
+        ? form.media.map((m) => ({ ...m, url: m.url.slice(0, 255) }))
+        : undefined, // truncate URL
+      variants: updatedVariants.length ? updatedVariants : undefined,
+      inventory: form.inventory.length
+        ? form.inventory.map((inv) => ({
+            variant_sku: inv.variant_sku,
+            location: inv.location,
+            quantity: inv.quantity,
+            used_quantity: inv.used_quantity || 0,
+          }))
+        : undefined,
+      pricing_rules: form.pricing_rules.length ? form.pricing_rules : undefined,
+    };
 
     try {
       const res = await fetch('http://localhost:3000/products/publish', {
@@ -686,4 +687,3 @@ const payload = {
     </form>
   );
 };
-

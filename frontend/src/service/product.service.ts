@@ -9,7 +9,7 @@ export interface Product {
   slug: string;
   short_description?: string;
   description?: string;
-  base_price?: number | string; 
+  base_price?: number | string;
   status: string;
   created_at: string;
   updated_at: string;
@@ -137,4 +137,3 @@ class ProductService {
 }
 
 export const productService = new ProductService();
-

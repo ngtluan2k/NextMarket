@@ -29,7 +29,6 @@ export const StoreManager: React.FC = () => {
     }
   };
 
-
   const handleDelete = async (storeId: number, storeName: string) => {
     // Xác nhận trực tiếp mà không cần preview (giống seller)
     if (
@@ -128,7 +127,7 @@ export const StoreManager: React.FC = () => {
                 </td>
                 <td>
                   <div className="d-flex gap-2">
-                    <button 
+                    <button
                       className="btn btn-sm btn-danger"
                       onClick={() => handleDelete(store.id, store.name)}
                       title="Xóa vĩnh viễn cửa hàng và toàn bộ dữ liệu"

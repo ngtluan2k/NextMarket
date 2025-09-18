@@ -1,12 +1,20 @@
-import { useEffect, useState } from "react";
-import { Camera } from "lucide-react";
-import { getUserProfile, getCurrentUserId, UserProfile } from "../../../service/user-profile.service";
+import { useEffect, useState } from 'react';
+import { Camera } from 'lucide-react';
+import {
+  getUserProfile,
+  getCurrentUserId,
+  UserProfile,
+} from '../../../service/user-profile.service';
 
 export type ProfileFormValues = {
   fullName?: string;
   nickname?: string;
-  dob?: { day?: number | undefined; month?: number | undefined; year?: number | undefined };
-  gender?: "male" | "female" | "other";
+  dob?: {
+    day?: number | undefined;
+    month?: number | undefined;
+    year?: number | undefined;
+  };
+  gender?: 'male' | 'female' | 'other';
   country?: string;
   avatarUrl?: string;
 };
@@ -15,21 +23,24 @@ type Props = {
   initial?: ProfileFormValues;
   loading?: boolean;
   onSave: (v: ProfileFormValues) => Promise<void> | void;
-  framed?: boolean;           // <= cho phép bọc card hay không
-  className?: string;         // <= chèn class bổ sung
-  autoLoadProfile?: boolean;  // <= tự động load profile từ API
+  framed?: boolean; // <= cho phép bọc card hay không
+  className?: string; // <= chèn class bổ sung
+  autoLoadProfile?: boolean; // <= tự động load profile từ API
 };
 
 const days = Array.from({ length: 31 }, (_, i) => i + 1);
 const months = Array.from({ length: 12 }, (_, i) => i + 1);
-const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+const years = Array.from(
+  { length: 100 },
+  (_, i) => new Date().getFullYear() - i
+);
 
 export default function AccountProfileForm({
   initial,
   loading,
   onSave,
   framed = true,
-  className = "",
+  className = '',
   autoLoadProfile = false,
 }: Props) {
   const [val, setVal] = useState<ProfileFormValues>({});
@@ -38,10 +49,14 @@ export default function AccountProfileForm({
 
   // Helper function to convert API response to form values
   const convertApiToFormValues = (profile: UserProfile): ProfileFormValues => {
-    let dobParts: { day?: number | undefined; month?: number | undefined; year?: number | undefined } = {
+    let dobParts: {
+      day?: number | undefined;
+      month?: number | undefined;
+      year?: number | undefined;
+    } = {
       day: undefined,
       month: undefined,
-      year: undefined
+      year: undefined,
     };
 
     if (profile.dob) {
@@ -54,26 +69,26 @@ export default function AccountProfileForm({
         };
       }
     }
-    const normalizeGender = (g?: string | null): "male" | "female" | "other" | undefined => {
+    const normalizeGender = (
+      g?: string | null
+    ): 'male' | 'female' | 'other' | undefined => {
       if (!g) return undefined;
       const raw = String(g).trim().toLowerCase();
-      if (["male", "m", "nam", "1"].includes(raw)) return "male";
-      if (["female", "f", "nu", "nữ", "2", "0"].includes(raw)) return "female";
-      if (raw.length > 0) return "other";
+      if (['male', 'm', 'nam', '1'].includes(raw)) return 'male';
+      if (['female', 'f', 'nu', 'nữ', '2', '0'].includes(raw)) return 'female';
+      if (raw.length > 0) return 'other';
       return undefined;
     };
 
     return {
-      fullName: profile.full_name || "",
-      nickname: profile.user?.username || "",
+      fullName: profile.full_name || '',
+      nickname: profile.user?.username || '',
       dob: dobParts,
       gender: normalizeGender(profile.gender),
-      country: profile.country || "",
-      avatarUrl: profile.avatar_url || "",
+      country: profile.country || '',
+      avatarUrl: profile.avatar_url || '',
     };
   };
-
-
 
   // Load profile from API if autoLoadProfile is enabled
   useEffect(() => {
@@ -82,7 +97,7 @@ export default function AccountProfileForm({
 
       const userId = getCurrentUserId();
       if (!userId) {
-        setError("Không tìm thấy thông tin đăng nhập");
+        setError('Không tìm thấy thông tin đăng nhập');
         return;
       }
 
@@ -94,8 +109,10 @@ export default function AccountProfileForm({
         const formValues = convertApiToFormValues(profile);
         setVal(formValues);
       } catch (err) {
-        console.error("Error loading profile:", err);
-        setError(err instanceof Error ? err.message : "Lỗi tải thông tin profile");
+        console.error('Error loading profile:', err);
+        setError(
+          err instanceof Error ? err.message : 'Lỗi tải thông tin profile'
+        );
       } finally {
         setLoadingProfile(false);
       }
@@ -113,7 +130,9 @@ export default function AccountProfileForm({
 
   const body = (
     <div className={className}>
-      <h2 className="text-lg font-semibold text-slate-900 mb-4">Thông tin tài khoản</h2>
+      <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        Thông tin tài khoản
+      </h2>
 
       {/* Error message */}
       {error && (
@@ -135,8 +154,16 @@ export default function AccountProfileForm({
           <div className="relative h-22 w-22">
             <div className="h-22 w-22 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-slate-400">
               <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
-                <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M3 21a9 9 0 1 1 18 0" stroke="currentColor" strokeWidth="1.5" />
+                <path
+                  d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M3 21a9 9 0 1 1 18 0"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
               </svg>
             </div>
             <button
@@ -150,20 +177,28 @@ export default function AccountProfileForm({
 
           <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Họ & Tên</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Họ & Tên
+              </label>
               <input
-                value={val.fullName ?? ""}
-                onChange={(e) => setVal((s) => ({ ...s, fullName: e.target.value }))}
+                value={val.fullName ?? ''}
+                onChange={(e) =>
+                  setVal((s) => ({ ...s, fullName: e.target.value }))
+                }
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
                 placeholder=""
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nickname</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Nickname
+              </label>
               <input
-                value={val.nickname ?? ""}
-                onChange={(e) => setVal((s) => ({ ...s, nickname: e.target.value }))}
+                value={val.nickname ?? ''}
+                onChange={(e) =>
+                  setVal((s) => ({ ...s, nickname: e.target.value }))
+                }
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
                 placeholder="Thêm nickname"
               />
@@ -173,12 +208,20 @@ export default function AccountProfileForm({
 
         {/* Ngày sinh */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Ngày sinh</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Ngày sinh
+          </label>
           <div className="flex gap-3">
             <select
-              value={val.dob?.day ?? ""}
+              value={val.dob?.day ?? ''}
               onChange={(e) =>
-                setVal((s) => ({ ...s, dob: { ...s.dob, day: e.target.value ? Number(e.target.value) : undefined } }))
+                setVal((s) => ({
+                  ...s,
+                  dob: {
+                    ...s.dob,
+                    day: e.target.value ? Number(e.target.value) : undefined,
+                  },
+                }))
               }
               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
             >
@@ -191,11 +234,14 @@ export default function AccountProfileForm({
             </select>
 
             <select
-              value={val.dob?.month ?? ""}
+              value={val.dob?.month ?? ''}
               onChange={(e) =>
                 setVal((s) => ({
                   ...s,
-                  dob: { ...s.dob, month: e.target.value ? Number(e.target.value) : undefined },
+                  dob: {
+                    ...s.dob,
+                    month: e.target.value ? Number(e.target.value) : undefined,
+                  },
                 }))
               }
               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
@@ -209,9 +255,15 @@ export default function AccountProfileForm({
             </select>
 
             <select
-              value={val.dob?.year ?? ""}
+              value={val.dob?.year ?? ''}
               onChange={(e) =>
-                setVal((s) => ({ ...s, dob: { ...s.dob, year: e.target.value ? Number(e.target.value) : undefined } }))
+                setVal((s) => ({
+                  ...s,
+                  dob: {
+                    ...s.dob,
+                    year: e.target.value ? Number(e.target.value) : undefined,
+                  },
+                }))
               }
               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
             >
@@ -227,29 +279,31 @@ export default function AccountProfileForm({
 
         {/* Giới tính */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Giới tính</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Giới tính
+          </label>
           <div className="flex items-center gap-5 text-sm text-slate-700">
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                checked={val.gender === "male"}
-                onChange={() => setVal((s) => ({ ...s, gender: "male" }))}
+                checked={val.gender === 'male'}
+                onChange={() => setVal((s) => ({ ...s, gender: 'male' }))}
               />
               Nam
             </label>
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                checked={val.gender === "female"}
-                onChange={() => setVal((s) => ({ ...s, gender: "female" }))}
+                checked={val.gender === 'female'}
+                onChange={() => setVal((s) => ({ ...s, gender: 'female' }))}
               />
               Nữ
             </label>
             <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                checked={val.gender === "other"}
-                onChange={() => setVal((s) => ({ ...s, gender: "other" }))}
+                checked={val.gender === 'other'}
+                onChange={() => setVal((s) => ({ ...s, gender: 'other' }))}
               />
               Khác
             </label>
@@ -258,10 +312,14 @@ export default function AccountProfileForm({
 
         {/* Quốc tịch */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Quốc tịch</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Quốc tịch
+          </label>
           <input
-            value={val.country ?? ""}
-            onChange={(e) => setVal((s) => ({ ...s, nationality: e.target.value }))}
+            value={val.country ?? ''}
+            onChange={(e) =>
+              setVal((s) => ({ ...s, nationality: e.target.value }))
+            }
             placeholder="Chọn quốc tịch"
             className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
           />
@@ -275,7 +333,7 @@ export default function AccountProfileForm({
             onClick={() => onSave(val)}
             className="rounded-xl bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700 disabled:opacity-60"
           >
-            {(loadingProfile || loading) ? 'Đang xử lý...' : 'Lưu thay đổi'}
+            {loadingProfile || loading ? 'Đang xử lý...' : 'Lưu thay đổi'}
           </button>
         </div>
       </div>
@@ -283,7 +341,9 @@ export default function AccountProfileForm({
   );
 
   return framed ? (
-    <section className="rounded-2xl bg-white ring-1 ring-slate-200 shadow p-5">{body}</section>
+    <section className="rounded-2xl bg-white ring-1 ring-slate-200 shadow p-5">
+      {body}
+    </section>
   ) : (
     body
   );

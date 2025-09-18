@@ -1,11 +1,11 @@
-export const TIKI_RED = "#ff424e";
+export const TIKI_RED = '#ff424e';
 
 export const PRODUCT_DETAIL_LAYOUT = {
-  container: 1440,     // bề rộng tổng
-  leftWidth: 420,      // KHUNG TRÁI
-  rightWidth: 400,     // KHUNG PHẢI
-  galleryHeight: 400,  // chiều cao ảnh chính
-  thumbHeight: 62,     // chiều cao thumbnail
+  container: 1440, // bề rộng tổng
+  leftWidth: 420, // KHUNG TRÁI
+  rightWidth: 400, // KHUNG PHẢI
+  galleryHeight: 400, // chiều cao ảnh chính
+  thumbHeight: 62, // chiều cao thumbnail
   buyBoxMinHeight: 480,
   buyBoxStickyTop: 24, // px
 };

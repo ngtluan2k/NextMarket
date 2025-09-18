@@ -1,5 +1,5 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type ProductRaw = {
   id: number;
@@ -39,8 +39,10 @@ export default function ProductCardGrid({ products }: Props) {
       id: p.id,
       slug: p.slug,
       name: p.name,
-      image: primaryMedia?.url || "https://via.placeholder.com/220x220?text=No+Image",
-      price: mainVariant?.price || p.base_price || "0",
+      image:
+        primaryMedia?.url ||
+        'https://via.placeholder.com/220x220?text=No+Image',
+      price: mainVariant?.price || p.base_price || '0',
       brandName: p.brand?.name,
       categories: categoryIds,
     };
@@ -60,12 +62,16 @@ export default function ProductCardGrid({ products }: Props) {
             className="w-full aspect-square object-cover rounded-lg"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src =
-                "https://via.placeholder.com/220x220?text=No+Image";
+                'https://via.placeholder.com/220x220?text=No+Image';
             }}
           />
           <h3 className="mt-2 text-sm font-bold line-clamp-2">{p.name}</h3>
-          {p.brandName && <p className="text-xs text-slate-500">{p.brandName}</p>}
-          <p className="mt-1 text-sm font-semibold">{Number(p.price).toLocaleString("vi-VN")}đ</p>
+          {p.brandName && (
+            <p className="text-xs text-slate-500">{p.brandName}</p>
+          )}
+          <p className="mt-1 text-sm font-semibold">
+            {Number(p.price).toLocaleString('vi-VN')}đ
+          </p>
         </div>
       ))}
     </div>

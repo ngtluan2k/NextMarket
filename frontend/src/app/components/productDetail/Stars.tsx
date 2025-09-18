@@ -1,5 +1,5 @@
-import React from "react";
-import { Star, StarHalf } from "lucide-react";
+import React from 'react';
+import { Star, StarHalf } from 'lucide-react';
 
 export default function Stars({ value = 0 }: { value?: number }) {
   const safe = Math.max(0, Math.min(5, value ?? 0));

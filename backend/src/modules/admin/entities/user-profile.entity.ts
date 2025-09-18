@@ -1,5 +1,11 @@
 // user-profile.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../user/user.entity';
 
 @Entity('user_profiles')
@@ -34,9 +40,7 @@ export class UserProfile {
   @Column({ type: 'datetime', nullable: true })
   created_at!: Date;
 
-@OneToOne(() => User, (user) => user.profile)
-@JoinColumn({ name: 'user_id' })
-user!: User;
-
-
+  @OneToOne(() => User, (user) => user.profile)
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 }

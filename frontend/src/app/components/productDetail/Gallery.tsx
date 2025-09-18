@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Image as ImageIcon } from "lucide-react";
+import React, { useState } from 'react';
+import { Image as ImageIcon } from 'lucide-react';
 
 export default function Gallery({
   images,
@@ -16,11 +16,13 @@ export default function Gallery({
 }) {
   const list = images ?? [];
   const [idx, setIdx] = useState(0);
-  const current = list.length ? list[Math.min(idx, list.length - 1)] : undefined;
+  const current = list.length
+    ? list[Math.min(idx, list.length - 1)]
+    : undefined;
 
   return (
     <section
-    className="self-start rounded-2xl bg-white p-4 ring-1 ring-slate-200 lg:sticky"
+      className="self-start rounded-2xl bg-white p-4 ring-1 ring-slate-200 lg:sticky"
       style={{ width, top: stickyTop ?? 0 }}
     >
       <div
@@ -40,7 +42,7 @@ export default function Gallery({
             key={i}
             onClick={() => setIdx(i)}
             className={`overflow-hidden rounded-lg ring-1 ${
-              idx === i ? "ring-sky-500" : "ring-slate-200"
+              idx === i ? 'ring-sky-500' : 'ring-slate-200'
             }`}
             style={{ height: thumbHeight }}
             aria-label={`Ảnh ${i + 1}`}
@@ -50,7 +52,11 @@ export default function Gallery({
         ))}
         {list.length === 0 &&
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-lg bg-slate-100" style={{ height: thumbHeight }} />
+            <div
+              key={i}
+              className="rounded-lg bg-slate-100"
+              style={{ height: thumbHeight }}
+            />
           ))}
       </div>
 

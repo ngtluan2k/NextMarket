@@ -1,36 +1,42 @@
-import React from "react";
+import React from 'react';
 
 export type SpecRow = { label?: string; value?: React.ReactNode };
 
 export type ProductSpecsProps = {
-  product?: any;         // sản phẩm từ backend
-  loading?: boolean;     // hiển thị skeleton
+  product?: any; // sản phẩm từ backend
+  loading?: boolean; // hiển thị skeleton
   className?: string;
 };
 
 export default function ProductSpecs({
   product,
   loading,
-  className = "",
+  className = '',
 }: ProductSpecsProps) {
   const rows: SpecRow[] = React.useMemo(() => {
     if (!product) return [];
 
     return [
-      { label: "Mô tả ngắn", value: product.short_description ?? "—" },
-      { label: "Mô tả chi tiết", value: product.description ?? "—" },
-      { label: "Thương hiệu", value: product.brand?.name ?? "—" },
+      { label: 'Mô tả ngắn', value: product.short_description ?? '—' },
+      { label: 'Mô tả chi tiết', value: product.description ?? '—' },
+      { label: 'Thương hiệu', value: product.brand?.name ?? '—' },
       {
-        label: "Danh mục",
-        value: product.categories?.map((c: any) => c.category?.name).join(", ") ?? "—",
+        label: 'Danh mục',
+        value:
+          product.categories?.map((c: any) => c.category?.name).join(', ') ??
+          '—',
       },
       // thêm specs khác nếu muốn
     ];
   }, [product]);
 
   return (
-    <section className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}>
-      <h3 className="mb-3 text-lg font-semibold text-slate-900">Thông tin chi tiết</h3>
+    <section
+      className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}
+    >
+      <h3 className="mb-3 text-lg font-semibold text-slate-900">
+        Thông tin chi tiết
+      </h3>
 
       {/* loading skeleton */}
       {loading && (
@@ -54,8 +60,12 @@ export default function ProductSpecs({
         <dl className="divide-y divide-slate-100">
           {rows.map((r, i) => (
             <div key={i} className="grid grid-cols-1 gap-2 py-3 sm:grid-cols-3">
-              <dt className="text-[13px] font-medium text-slate-500">{r.label || "—"}</dt>
-              <dd className="sm:col-span-2 text-[15px] text-slate-800">{r.value ?? "—"}</dd>
+              <dt className="text-[13px] font-medium text-slate-500">
+                {r.label || '—'}
+              </dt>
+              <dd className="sm:col-span-2 text-[15px] text-slate-800">
+                {r.value ?? '—'}
+              </dd>
             </div>
           ))}
         </dl>

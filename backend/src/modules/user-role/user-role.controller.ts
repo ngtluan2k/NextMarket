@@ -1,5 +1,12 @@
 // user-role.controller.ts
-import { Controller, Get, Post, Delete, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRoleService } from './user-role.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
