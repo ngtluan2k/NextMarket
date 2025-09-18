@@ -113,18 +113,30 @@
     };
 
     // ---------- default APIs ----------
-  const callDefaultLogin = async (payload: LoginPayload) => {
-    const res = await fetch(`${apiBase}/users/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }), // only these two
-     });
+const callDefaultLogin = async (payload: LoginPayload) => {
+  const res = await fetch(`${apiBase}/users/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
-  if (data?.access_token) localStorage.setItem("token", data.access_token);
-  if (data?.data) localStorage.setItem("user", JSON.stringify(data.data));
+
+  if (data?.access_token) {
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.data));
+
+    // fetch giỏ hàng riêng theo user
+    const cartRes = await fetch(`${apiBase}/cart/me`, {
+      headers: { Authorization: `Bearer ${data.access_token}` },
+    });
+    const cartJson = await cartRes.json();
+    localStorage.setItem("cart", JSON.stringify(cartJson));
+  }
+
   return data;
-  };
+};
+
 
     const callDefaultRegister = async (payload: RegisterPayload) => {
     const res = await fetch(`${apiBase}/users/register`, {

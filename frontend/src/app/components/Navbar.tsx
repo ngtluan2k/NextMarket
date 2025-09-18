@@ -9,7 +9,6 @@ import { useCart } from "../context/CartContext";
 
 import LoginModal, { LoginPayload } from "./LoginModal";
 import AccountMenu, { Me } from "./AccountMenu";
-
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -100,11 +99,14 @@ export default function EveryMartHeader({
   }, [me]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("everymart.me");
-    setMe(null);
-  };
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("everymart.me");
+  localStorage.removeItem("cart"); // xoá giỏ hàng cache
+  setMe(null);
+
+
+};
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
