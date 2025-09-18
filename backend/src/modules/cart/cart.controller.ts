@@ -12,6 +12,10 @@ interface AuthRequest extends ExpressRequest {
 @UseGuards(JwtAuthGuard)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
+  @Get('me')
+async getMyCart(@Request() req: AuthRequest) {
+  return this.cartService.getCart(req.user.id);
+}
 
   @Post('add')
   async addToCart(@Request() req:AuthRequest, @Body() body: { productId: number; quantity?: number }) {

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/seller/Sidebar';
 import StoreOwnerDashboard from './tab/StoreOwnerDashboard';
 import Sale from './tab/Sale';
@@ -9,7 +10,7 @@ import StoreInventory from './tab/StoreInventory';
 import Home from '../Home';
 import { Settings } from '../../components/register_seller/SellerDashboard';
 import SellerHeader from '../../components/seller/SellerHeader';
-
+import { storeService } from '../../../service/store.service';
 
 const { Content, Footer } = Layout;
 
@@ -25,6 +26,26 @@ const pages: Record<string, React.ReactNode> = {
 
 const SellerMainLayout: React.FC = () => {
   const [activePage, setActivePage] = useState('Dashboard');
+  const navigate = useNavigate();
+useEffect(() => {
+  const checkStore = async () => {
+    try {
+      const store = await storeService.getMyStore(); // đã là object
+      if (!store) {
+        navigate('/seller-registration');
+      }
+    } catch (err) {
+      console.error('Error checking store:', err);
+      navigate('/seller-registration');
+    }
+  };
+
+  checkStore();
+}, [navigate]);
+
+
+
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sidebar onSelect={(key) => setActivePage(key)} />

@@ -92,18 +92,21 @@ export default function StoreInventory() {
     }
   }, [selectedStoreId]);
 
-  const fetchStores = async () => {
-    try {
-      const userStores = await storeService.getMyStores();
-      setStores(userStores);
-      if (userStores.length > 0) {
-        setSelectedStoreId(userStores[0].id);
-      }
-    } catch (error) {
-      message.error('Không thể tải danh sách cửa hàng');
-      console.error('Lỗi khi tải cửa hàng:', error);
+const fetchStores = async () => {
+  try {
+    const store = await storeService.getMyStore();
+    if (store) {
+      setStores([store]); // 👈 bọc object thành array
+      setSelectedStoreId(store.id);
+    } else {
+      setStores([]);
     }
-  };
+  } catch (error) {
+    message.error('Không thể tải danh sách cửa hàng');
+    console.error('Lỗi khi tải cửa hàng:', error);
+  }
+};
+
 
   const fetchProducts = async () => {
     if (!selectedStoreId) return;
