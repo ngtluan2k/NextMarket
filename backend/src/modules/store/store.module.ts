@@ -17,6 +17,7 @@ import { StoreController } from './store.controller';
 import { User } from '../user/user.entity';
 import { Role } from '../role/role.entity';
 import { UserRole } from '../user-role/user-role.entity';
+import { Product } from '../product/product.entity';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { UserRole } from '../user-role/user-role.entity';
       StoreIdentification,
       User,
       Role,
-      UserRole
+      UserRole,
+      Product,
     ])
   ],
   providers: [StoreService],

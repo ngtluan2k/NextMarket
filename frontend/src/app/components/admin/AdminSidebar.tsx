@@ -24,8 +24,8 @@ interface AdminSidebarProps {
   onMenuClick?: (key: string) => void;
 }
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ 
-  collapsed = false, 
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  collapsed = false,
   activeKey = '1-2',
   onMenuClick
 }) => {
@@ -110,6 +110,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: <BarChartOutlined />,
       label: "Báo cáo & thống kê",
     },
+    {
+      key: "10",
+      icon: <ShopOutlined />, // có thể chọn icon khác nếu muốn
+      label: "Quản lý cửa hàng",
+      children: [
+        { key: "10-1", icon: dotIcon, label: "Danh sách cửa hàng" },
+        { key: "10-2", icon: dotIcon, label: "Thông tin cửa hàng" },
+      ],
+    },
+
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -137,7 +147,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       breakpoint="lg"
       collapsedWidth={80}
     >
-      
+
       <Menu
         mode="inline"
         selectedKeys={[activeKey]}
@@ -151,7 +161,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         }}
         className="admin-sidebar-menu"
       />
-      
+
       {/* Custom CSS cho menu */}
       <style>{`
         .admin-sidebar-menu .ant-menu-item,

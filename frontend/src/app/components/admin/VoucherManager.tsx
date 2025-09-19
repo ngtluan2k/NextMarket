@@ -251,7 +251,7 @@ const VoucherManager: React.FC = () => {
             allowClear
             style={{ width: 160 }}
             value={statusFilter || undefined}
-            onChange={(val) => setStatusFilter(val || null)}
+            onChange={(val:string) => setStatusFilter(val || null)}
           >
             <Option value="active">Đang hoạt động</Option>
             <Option value="upcoming">Chưa bắt đầu</Option>
@@ -265,7 +265,7 @@ const VoucherManager: React.FC = () => {
             allowClear
             style={{ width: 140 }}
             value={typeFilter || undefined}
-            onChange={(val) => setTypeFilter(val || null)}
+            onChange={(val: string) => setTypeFilter(val || null)}
           >
             <Option value="percentage">Phần trăm</Option>
             <Option value="fixed">Cố định</Option>

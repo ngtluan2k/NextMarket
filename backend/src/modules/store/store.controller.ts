@@ -127,14 +127,14 @@ export class StoreController {
     return result;
   }
 
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard, PermissionGuard)
-  @Permissions('delete_store')
-  @ApiOperation({ summary: 'Admin xóa store và toàn bộ dữ liệu liên quan' })
-  async remove(@Param('id') id: number) {
-    const result = await this.storeService.remove(id);
-    return result;
-  }
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, PermissionGuard)
+    @Permissions('delete_store')
+    @ApiOperation({ summary: 'Admin xóa store và toàn bộ dữ liệu liên quan' })
+    async remove(@Param('id') id: number) {
+      const result = await this.storeService.remove(id);
+      return result;
+    }
 
   @Get('owner/:userId')
   @UseGuards(JwtAuthGuard, PermissionGuard)
