@@ -40,7 +40,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const loadCart = async () => {
     const token = localStorage.getItem('token');
-    console.log('token to load cart: ', token);
     if (!token) {
       setCart([]);
       return;

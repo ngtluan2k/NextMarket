@@ -1,9 +1,15 @@
 // user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  OneToMany,
+  Generated,
+} from 'typeorm';
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
-
 
 @Entity('users')
 export class User {
@@ -35,15 +41,14 @@ export class User {
   @Column({ type: 'datetime', nullable: true })
   updated_at!: Date;
 
-@OneToOne(() => UserProfile, (profile) => profile.user, {
-  cascade: true,
-})
-profile!: UserProfile;
+  @OneToOne(() => UserProfile, (profile) => profile.user, {
+    cascade: true,
+  })
+  profile!: UserProfile;
 
-  @OneToMany(() => UserRole, userRole => userRole.user, { cascade: true })
+  @OneToMany(() => UserRole, (userRole) => userRole.user, { cascade: true })
   roles!: UserRole[];
-  
+
   @OneToMany(() => VoucherUsage, (usage) => usage.user)
   voucherUsages!: VoucherUsage[];
-
 }

@@ -15,7 +15,6 @@ import { useCart } from '../context/CartContext';
 
 import LoginModal, { LoginPayload } from './LoginModal';
 import AccountMenu, { Me } from './AccountMenu';
-
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -115,6 +114,7 @@ export default function EveryMartHeader({
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('everymart.me');
+    localStorage.removeItem('cart'); // xoá giỏ hàng cache
     setMe(null);
     clearCart();
   };
@@ -282,7 +282,7 @@ export default function EveryMartHeader({
           </a>
 
           <a
-            href="seller-dashboard"
+            href="myStores"
             className="group flex items-center gap-2 px-3 py-2 self-stretch"
           >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500 text-white">
