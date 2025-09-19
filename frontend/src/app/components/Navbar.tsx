@@ -75,7 +75,6 @@ export default function EveryMartHeader({
     const raw = localStorage.getItem('everymart.me');
     if (raw) {
       try {
-        console.log('hhhhh');
         loadCart();
         setMe(JSON.parse(raw));
       } catch (err) {
