@@ -23,6 +23,7 @@ import { StoreRating } from '../store-rating/store-rating.entity';
 import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-request.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { Product } from '../product/product.entity';
 
 
 @Injectable()
@@ -42,6 +43,7 @@ export class StoreService {
     @InjectRepository(StoreRating) private storeRatingRepo: Repository<StoreRating>,
     @InjectRepository(StoreFollower) private storeFollowerRepo: Repository<StoreFollower>,
     @InjectRepository(StoreUpgradeRequest) private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>,
+    @InjectRepository(Product) private productRepo: Repository<Product>,
   ) { }
 
   async findAll() {
@@ -91,7 +93,6 @@ export class StoreService {
     const store = this.storeRepo.create({
       ...dto,
       user_id: userId,
-      created_at: new Date(),
     });
     return this.storeRepo.save(store);
   }
@@ -287,6 +288,10 @@ export class StoreService {
 
   async remove(id: number) {
     const store = await this.findOne(id);
+
+      // 0. Xóa tất cả sản phẩm liên quan store
+     await this.productRepo.delete({ store: { id } });
+
 
     
     // Trước tiên, tìm tất cả store_information để xóa emails và documents

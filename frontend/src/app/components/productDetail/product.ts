@@ -9,6 +9,7 @@ export type Product = {
     rating?: number;
     reviewsCount?: number;
     sellerName?: string;
+    media?: { url: string; is_primary?: boolean }[]; // hoặc kiểu phù hợp với dữ liệu media của bạn
   };
   
   export type CardItem = {

@@ -35,4 +35,9 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
   password!: string;
+
+  @ApiPropertyOptional({ description: 'Country of the user', example: 'Vietnam' })
+  @IsOptional()
+  @IsString()
+  country?: string = 'Vietnam';
 }

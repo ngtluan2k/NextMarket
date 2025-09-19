@@ -308,10 +308,10 @@ export default function EveryMartHeader({
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-
+           
             // lưu token + user
-            localStorage.setItem('token', json.access_token);
-            localStorage.setItem('everymart.me', JSON.stringify(json.data));
+            localStorage.setItem("token", json.access_token);
+            localStorage.setItem("everymart.me", JSON.stringify(json.data));
             setMe(json.data);
             loadCart();
             setOpenLogin(false);

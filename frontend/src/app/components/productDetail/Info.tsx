@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from "react";
 import Stars from "../productDetail/Stars";
 import { TIKI_RED } from "../productDetail/productDetail";
@@ -80,7 +79,6 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
           </span>
         )}
       </div>
-
 
       <h1 className="text-[22px] font-semibold leading-snug text-slate-900">
         {product.name || "—"}

@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
+import { getUserProfile, getCurrentUserId, UserProfile } from "../../../service/user-profile.service";
 
 export type ProfileFormValues = {
   fullName?: string;
   nickname?: string;
-  dob?: { day?: number; month?: number; year?: number };
+  dob?: { day?: number | undefined; month?: number | undefined; year?: number | undefined };
   gender?: "male" | "female" | "other";
-  nationality?: string;
+  country?: string;
   avatarUrl?: string;
 };
 
@@ -16,6 +17,7 @@ type Props = {
   onSave: (v: ProfileFormValues) => Promise<void> | void;
   framed?: boolean;           // <= cho phép bọc card hay không
   className?: string;         // <= chèn class bổ sung
+  autoLoadProfile?: boolean;  // <= tự động load profile từ API
 };
 
 const days = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -28,14 +30,104 @@ export default function AccountProfileForm({
   onSave,
   framed = true,
   className = "",
+  autoLoadProfile = false,
 }: Props) {
   const [val, setVal] = useState<ProfileFormValues>({});
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setVal(initial ?? {}), [initial]);
+  // Helper function to convert API response to form values
+  const convertApiToFormValues = (profile: UserProfile): ProfileFormValues => {
+    let dobParts: { day?: number | undefined; month?: number | undefined; year?: number | undefined } = {
+      day: undefined,
+      month: undefined,
+      year: undefined
+    };
+
+    if (profile.dob) {
+      const date = new Date(profile.dob);
+      if (!isNaN(date.getTime())) {
+        dobParts = {
+          day: date.getDate(),
+          month: date.getMonth() + 1, // JavaScript months are 0-indexed
+          year: date.getFullYear(),
+        };
+      }
+    }
+    const normalizeGender = (g?: string | null): "male" | "female" | "other" | undefined => {
+      if (!g) return undefined;
+      const raw = String(g).trim().toLowerCase();
+      if (["male", "m", "nam", "1"].includes(raw)) return "male";
+      if (["female", "f", "nu", "nữ", "2", "0"].includes(raw)) return "female";
+      if (raw.length > 0) return "other";
+      return undefined;
+    };
+
+    return {
+      fullName: profile.full_name || "",
+      nickname: profile.user?.username || "",
+      dob: dobParts,
+      gender: normalizeGender(profile.gender),
+      country: profile.country || "",
+      avatarUrl: profile.avatar_url || "",
+    };
+  };
+
+
+
+  // Load profile from API if autoLoadProfile is enabled
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!autoLoadProfile) return;
+
+      const userId = getCurrentUserId();
+      if (!userId) {
+        setError("Không tìm thấy thông tin đăng nhập");
+        return;
+      }
+
+      setLoadingProfile(true);
+      setError(null);
+
+      try {
+        const profile = await getUserProfile(userId);
+        const formValues = convertApiToFormValues(profile);
+        setVal(formValues);
+      } catch (err) {
+        console.error("Error loading profile:", err);
+        setError(err instanceof Error ? err.message : "Lỗi tải thông tin profile");
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, [autoLoadProfile]);
+
+  // Set initial values from props
+  useEffect(() => {
+    if (initial && !autoLoadProfile) {
+      setVal(initial);
+    }
+  }, [initial, autoLoadProfile]);
 
   const body = (
     <div className={className}>
       <h2 className="text-lg font-semibold text-slate-900 mb-4">Thông tin tài khoản</h2>
+
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Loading indicator */}
+      {(loadingProfile || loading) && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+          Đang tải thông tin...
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6">
         {/* Avatar + Họ & Tên + Nickname */}
@@ -168,7 +260,7 @@ export default function AccountProfileForm({
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Quốc tịch</label>
           <input
-            value={val.nationality ?? ""}
+            value={val.country ?? ""}
             onChange={(e) => setVal((s) => ({ ...s, nationality: e.target.value }))}
             placeholder="Chọn quốc tịch"
             className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
@@ -179,11 +271,11 @@ export default function AccountProfileForm({
         <div>
           <button
             type="button"
-            disabled={loading}
+            disabled={loadingProfile || loading}
             onClick={() => onSave(val)}
             className="rounded-xl bg-sky-600 text-white px-4 py-2 text-sm font-semibold hover:bg-sky-700 disabled:opacity-60"
           >
-            Lưu thay đổi
+            {(loadingProfile || loading) ? 'Đang xử lý...' : 'Lưu thay đổi'}
           </button>
         </div>
       </div>

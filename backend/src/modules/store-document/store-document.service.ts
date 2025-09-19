@@ -26,8 +26,8 @@ export class StoreDocumentService {
     @InjectRepository(StoreInformation)
     private storeInformationRepo: Repository<StoreInformation>,
     @InjectRepository(Store)
-    private storeRepo: Repository<Store>
-  ) {}
+    private storeRepo: Repository<Store>,
+  ) { }
 
   // Upload và tạo document record
   async uploadDocument(
@@ -319,6 +319,22 @@ export class StoreDocumentService {
 
     document.verified = false;
     document.verified_at = null;
+
+    return await this.storeDocumentRepo.save(document);
+  }
+  async storeFileAndGetPath(file: Express.Multer.File, docType: DocumentType): Promise<string> {
+    this.validateFile(file, docType);
+    return this.saveFileToDisk(file, docType);
+  }
+
+  async createFromUrl(dto: CreateStoreDocumentDto, userId: number) {
+    await this.verifyStoreOwnership(dto.store_information_id, userId);
+    if (!dto.file_url) throw new BadRequestException('file_url is required');
+
+    const document = this.storeDocumentRepo.create({
+      ...dto,
+      verified: false,
+    });
 
     return await this.storeDocumentRepo.save(document);
   }

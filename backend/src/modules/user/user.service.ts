@@ -10,6 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '../role/role.entity';
 import { UserRole } from '../user-role/user-role.entity';
+import { UserProfile } from '../admin/entities/user-profile.entity';
+import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
 
 @Injectable()
 export class UserService {
@@ -20,7 +22,9 @@ export class UserService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly jwtService: JwtService, 
+    @InjectRepository(UserProfile)
+    private readonly userProfileRepository: Repository<UserProfile>,
+    private readonly jwtService: JwtService, // 👈 inject JwtService
   ) {}
 
    findAllUsers() {
@@ -49,8 +53,16 @@ export class UserService {
       phone: dto.phone,
       gender: dto.gender,
       created_at: new Date(),
-    },
-  });
+      profile: {
+        uuid: uuidv4(),
+        full_name: dto.full_name,
+        dob: dto.dob,
+        phone: dto.phone,
+        gender: dto.gender,
+        country: dto.country,
+        created_at: new Date(),
+      },
+    });
 
   const savedUser = await this.userRepository.save(user);
 
@@ -106,5 +118,17 @@ export class UserService {
       permissions,
       token, // 👈 JWT token
     };
+  }
+  async getProfile(userId: number) {
+    const profile = await this.userProfileRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    return profile;
   }
 }

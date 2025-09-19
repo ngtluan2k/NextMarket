@@ -9,6 +9,7 @@ import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
 import AccountLayout from "./page/account/AccountLayout";
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
+import {SellerDashboard} from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
 import NotificationsPage from "./page/account/NotificationsPage";
 import ReturnsPage from "./page/account/ReturnsPage";
@@ -16,6 +17,7 @@ import OrdersPage from "./page/account/OrdersPage";
 import ProfilePage from "./page/account/ProfilePage";
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
+import { ProductForm } from "./components/AddProduct";
 
 // import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
@@ -42,8 +44,14 @@ const App: React.FC = () => {
     <CartProvider>
       {contextHolder}
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home showMessage={showMessage} />} />
+        {/* <Route path="/login" element={<AuthForm />} /> */}
+        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/seller-registration" element={<SellerRegistration />} />
+        <Route path="/seller-dashboard" element={<SellerDashboard />} />
+        <Route path='/catepage' element={<CategoryPage/>}/>
+        <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<Cart showMessage={showMessage} />} />

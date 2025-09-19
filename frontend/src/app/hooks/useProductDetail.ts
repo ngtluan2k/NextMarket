@@ -10,6 +10,7 @@ const adaptProduct = (raw: any): Product => ({
   rating: raw?.rating?.average ?? raw?.rating,
   reviewsCount: raw?.rating?.count ?? raw?.reviewsCount,
   sellerName: raw?.seller?.name ?? raw?.sellerName,
+  media: raw?.media ?? [],
 });
 
 const adaptCombo = (raw: any): CardItem => ({

@@ -40,31 +40,18 @@ import { multerConfig } from './config/multer.config';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class StoreDocumentController {
-  constructor(private readonly storeDocumentService: StoreDocumentService) {}
-
-  @Post('upload')
-  @ApiOperation({ summary: 'Upload document for store' })
+  constructor(private readonly storeDocumentService: StoreDocumentService) { }
+  //Upload file cho cửa hàng.
+  @Post('upload-file')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Document file (max 10MB, PDF/JPG/PNG)',
-        },
-        store_information_id: {
-          type: 'number',
-          description: 'Store information ID',
-        },
-        doc_type: {
-          type: 'string',
-          enum: Object.values(DocumentType),
-          description: 'Type of document',
-        },
+        file: { type: 'string', format: 'binary' },
+        doc_type: { type: 'string', enum: Object.values(DocumentType) },
       },
-      required: ['file', 'store_information_id', 'doc_type'],
+      required: ['file', 'doc_type'],
     },
   })
   @ApiResponse({
@@ -76,28 +63,20 @@ export class StoreDocumentController {
     description: 'Invalid file or parameters',
   })
   @UseInterceptors(FileInterceptor('file', multerConfig))
-  async uploadDocument(
+  async uploadFileOnly(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: any,
-    @Req() req: any,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file provided');
-    }
-
-    const createDto: CreateStoreDocumentDto = {
-      store_information_id: parseInt(body.store_information_id),
-      doc_type: body.doc_type as DocumentType,
-      file_url: file?.path || file?.filename, 
-    };
-
-    return await this.storeDocumentService.uploadDocument(
-      file,
-      createDto,
-      req.user.id,
-    );
+    if (!file) throw new BadRequestException('No file provided');
+    const path = await this.storeDocumentService.storeFileAndGetPath(file, body.doc_type as DocumentType);
+    return { file_url: path };
   }
 
+  @Post()
+  async createFromUrl(@Body() dto: CreateStoreDocumentDto, @Req() req: any) {
+    return this.storeDocumentService.createFromUrl(dto, req.user.id);
+  }
+  // /Lấy danh sách tất cả tài liệu của 1 cửa hàng.
   @Get('store/:storeInformationId')
   @ApiOperation({ summary: 'Get all documents for a store' })
   @ApiResponse({
@@ -113,7 +92,7 @@ export class StoreDocumentController {
       req.user.id,
     );
   }
-
+  //Lấy chi tiết 1 document theo id.
   @Get(':id')
   @ApiOperation({ summary: 'Get document by ID' })
   @ApiResponse({
@@ -127,7 +106,7 @@ export class StoreDocumentController {
   async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return await this.storeDocumentService.findOne(id, req.user.id);
   }
-
+  //Download file document.
   @Get(':id/download')
   @ApiOperation({ summary: 'Download document file' })
   @ApiResponse({
@@ -140,7 +119,7 @@ export class StoreDocumentController {
     @Res() res: Response,
   ) {
     const fileData = await this.storeDocumentService.getFileData(id, req.user.id);
-    
+
     res.set({
       'Content-Type': fileData.mimetype,
       'Content-Disposition': `attachment; filename="${fileData.filename}"`,
@@ -149,7 +128,7 @@ export class StoreDocumentController {
 
     res.end(fileData.data);
   }
-
+  //Xem file document trực tiếp trên trình duyệt.
   @Get(':id/view')
   @ApiOperation({ summary: 'View document file in browser' })
   @ApiResponse({
@@ -162,7 +141,7 @@ export class StoreDocumentController {
     @Res() res: Response,
   ) {
     const fileData = await this.storeDocumentService.getFileData(id, req.user.id);
-    
+
     res.set({
       'Content-Type': fileData.mimetype,
       'Content-Disposition': `inline; filename="${fileData.filename}"`,
@@ -171,7 +150,7 @@ export class StoreDocumentController {
 
     res.end(fileData.data);
   }
-
+  //Cập nhật thông tin document (không đổi file).
   @Patch(':id')
   @ApiOperation({ summary: 'Update document details' })
   @ApiResponse({
@@ -185,7 +164,7 @@ export class StoreDocumentController {
   ) {
     return await this.storeDocumentService.update(id, updateDto, req.user.id);
   }
-
+  //Thay thế file cũ bằng file mới.
   @Post(':id/replace')
   @ApiOperation({ summary: 'Replace document file' })
   @ApiConsumes('multipart/form-data')
@@ -218,7 +197,7 @@ export class StoreDocumentController {
       req.user.id,
     );
   }
-
+  //Xóa document.
   @Delete(':id')
   @ApiOperation({ summary: 'Delete document' })
   @ApiResponse({
@@ -230,7 +209,7 @@ export class StoreDocumentController {
     return { message: 'Document deleted successfully' };
   }
 
-  // Admin endpoints
+  // Admin xem tất cả document với phân trang.
   @Get('admin/all')
   @ApiOperation({ summary: 'Admin: Get all documents with pagination' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number' })
@@ -243,10 +222,10 @@ export class StoreDocumentController {
   ) {
     const pageNum = page ? parseInt(page) : 1;
     const limitNum = limit ? parseInt(limit) : 20;
-    
+
     return await this.storeDocumentService.findAllDocuments(pageNum, limitNum);
   }
-
+  //Admin xác nhận document hợp lệ.
   @Post('admin/:id/verify')
   @ApiOperation({ summary: 'Admin: Verify document' })
   @UseGuards(PermissionGuard)
@@ -254,7 +233,7 @@ export class StoreDocumentController {
   async verifyDocument(@Param('id', ParseIntPipe) id: number) {
     return await this.storeDocumentService.verifyDocument(id);
   }
-
+  //Admin từ chối document.
   @Post('admin/:id/reject')
   @ApiOperation({ summary: 'Admin: Reject document verification' })
   @UseGuards(PermissionGuard)

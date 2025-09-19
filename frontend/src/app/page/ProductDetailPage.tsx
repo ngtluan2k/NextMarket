@@ -21,7 +21,6 @@ export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug ?? ''; // lấy slug từ URL
   const { loading, product, combos } = useProductDetail(slug);
-
   return (
     <>
       <EveryMartHeader />
