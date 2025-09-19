@@ -18,6 +18,12 @@ import ProfilePage from "./page/account/ProfilePage";
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from "./components/AddProduct";
+import AddressBook from "./components/account/AddressBook";
+import AddressCreatePage from "./page/account/AddressCreatePage";
+import StoreLayout from "./page/StoreLayout";
+import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
+import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
+import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
 
 // import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
@@ -29,7 +35,7 @@ const App: React.FC = () => {
   ) => {
     // Localize message content based on type
     const localizedContent = {
-      success: content, // Assuming content is already localized in components
+      success: content,
       error: `Lỗi: ${content}`,
       warning: `Cảnh báo: ${content}`,
     }[type];
@@ -64,8 +70,18 @@ const App: React.FC = () => {
           <Route path="orders" element={<OrdersPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="returns" element={<ReturnsPage />} />
+          <Route path="addresses" element={<AddressBook />} />      
+          <Route path="addresses/create" element={<AddressCreatePage />} /> 
         </Route>
+        <Route path="/store/:slug" element={<StoreLayout />}>
+            {/* index = /store/:slug  → Cửa Hàng */}
+            <Route index element={<StoreHomeTab />} />
 
+            {/* /store/:slug/all → Tất Cả Sản Phẩm */}
+            <Route path="all" element={<StoreAllProductsTab />} />
+            <Route path="profile" element={<StoreProfileTab />} /> 
+
+       </Route>
         {/* Seller Routes */}
         <Route path="/seller-registration" element={<SellerRegistration />} />
         {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
@@ -79,7 +95,7 @@ const App: React.FC = () => {
         {/* <Route path="/auth" element={<AuthForm />} /> */}
 
         {/* Catch-all Route */}
-                <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/category/:slug" element={<CategoryPage />} />

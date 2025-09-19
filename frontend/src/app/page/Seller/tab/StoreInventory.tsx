@@ -45,6 +45,7 @@ import StockBadge from '../../../components/seller/StockBadge';
 import type { StatisticProps } from 'antd';
 import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
+import { ProductFormWizard } from '../../../components/seller/ProductFormWizard';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -80,6 +81,9 @@ export default function StoreInventory() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [form] = Form.useForm();
 
+  const [isAddWizardVisible, setAddWizardVisible] = useState(false);
+
+
   useEffect(() => {
     fetchStores();
   }, []);
@@ -106,6 +110,8 @@ const fetchStores = async () => {
     console.error('Lỗi khi tải cửa hàng:', error);
   }
 };
+
+
 
 
   const fetchProducts = async () => {
@@ -205,7 +211,7 @@ const fetchStores = async () => {
   const handleAddProduct = () => {
     setEditingProduct(null);
     form.resetFields();
-    setIsModalVisible(true);
+    setAddWizardVisible(true); 
   };
 
   const handleEditProduct = (product: Product) => {
@@ -592,82 +598,22 @@ const fetchStores = async () => {
         </Card>
 
         <Modal
-          title={editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
-          open={isModalVisible}
-          onOk={handleModalOk}
-          onCancel={() => setIsModalVisible(false)}
-          width={800}
-          okText={editingProduct ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm'}
-          okButtonProps={{ className: 'bg-cyan-500 border-cyan-500' }}
+          title="Thêm Sản Phẩm Mới"
+          open={isAddWizardVisible}
+          onCancel={() => setAddWizardVisible(false)}
+          footer={null}
+          width={1000}
+          destroyOnClose
         >
-          <Form form={form} layout="vertical" className="mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="name"
-                label="Tên Sản Phẩm"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập tên sản phẩm' },
-                ]}
-              >
-                <Input placeholder="Nhập tên sản phẩm" />
-              </Form.Item>
-
-              <Form.Item
-                name="sku"
-                label="SKU"
-                rules={[{ required: true, message: 'Vui lòng nhập SKU' }]}
-              >
-                <Input placeholder="Nhập SKU" />
-              </Form.Item>
-
-              <Form.Item
-                name="category"
-                label="Danh Mục"
-                rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  <Select.Option value="Chung">Chung</Select.Option>
-                  {/* Thêm các danh mục khác */}
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="price"
-                label="Giá (₫)"
-                rules={[{ required: true, message: 'Vui lòng nhập giá' }]}
-              >
-                <InputNumber
-                  min={0}
-                  step={1000}
-                  placeholder="0"
-                  className="w-full"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="stock"
-                label="Số Lượng Tồn Kho"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập số lượng tồn kho' },
-                ]}
-              >
-                <InputNumber min={0} placeholder="0" className="w-full" />
-              </Form.Item>
-
-              <Form.Item name="image" label="Hình Ảnh Sản Phẩm">
-                <Input placeholder="URL hình ảnh" />
-              </Form.Item>
-            </div>
-
-            <Form.Item name="description" label="Mô Tả">
-              <Input.TextArea rows={3} placeholder="Nhập mô tả sản phẩm" />
-            </Form.Item>
-
-            <Form.Item name="tags" label="Thẻ">
-              <Select mode="tags" placeholder="Thêm thẻ" className="w-full" />
-            </Form.Item>
-          </Form>
+          <ProductFormWizard
+            onCreated={() => {
+              // reload bảng sau khi tạo
+              fetchProducts();
+            }}
+            onClose={() => setAddWizardVisible(false)}
+          />
         </Modal>
+
       </Content>
     </Layout>
   );
