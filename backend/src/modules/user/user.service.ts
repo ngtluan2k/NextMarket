@@ -53,7 +53,7 @@ export class UserService {
     const savedUser = await this.userRepository.save(user);
 
     // Gán role mặc định "user"
-    const role = await this.roleRepository.findOne({ where: { name: 'user' } });
+    const role = await this.roleRepository.findOne({ where: { name: 'Customer' } }); /// check database & change "Customer" to the role of regular of user in your local machine
     if (!role) throw new BadRequestException('Default role not found');
 
     const userRole = this.userRoleRepository.create({

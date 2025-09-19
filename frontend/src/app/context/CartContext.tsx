@@ -10,7 +10,7 @@ interface CartItem {
     name: string;
     base_price: number;
     url: string;
-    media: { url: string; is_primary?: boolean }
+    media: { url: string; is_primary?: boolean };
   };
 }
 
@@ -19,7 +19,8 @@ interface CartContextType {
   addToCart: (productId: number, quantity?: number) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   updateQuantity: (productId: number, quantity: number) => Promise<void>;
-  refreshCart: () => Promise<void>;
+  clearCart: () => void;
+  loadCart: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -37,24 +38,28 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  const refreshCart = async () => {
+  const loadCart = async () => {
+    const token = localStorage.getItem('token');
+    console.log('token to load cart: ', token);
+    if (!token) {
+      setCart([]);
+      return;
+    }
     try {
       const response = await fetch('http://localhost:3000/cart', {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       if (response.ok) {
         const data = await response.json();
-        setCart(
-          data.map((item: any) => ({
-            ...item,
-            product: { ...item.product, price: item.product.base_price },
-          }))
-        );
+        setCart(data);
+      } else {
+        setCart([]);
       }
     } catch (error) {
-      console.error('Không thể lấy giỏ hàng:', error);
+      console.error('Failed to load cart', error);
+      setCart([]);
     }
   };
 
@@ -69,9 +74,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         body: JSON.stringify({ productId, quantity }),
       });
       if (response.ok) {
-        await refreshCart();
+        await loadCart();
       }
     } catch (error) {
+      alert('Không thể thêm vào giỏ hàng');
       console.error('Không thể thêm vào giỏ hàng:', error);
     }
   };
@@ -88,9 +94,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
       if (response.ok) {
-        await refreshCart();
+        await loadCart();
       }
     } catch (error) {
+      alert('Không thể xóa khỏi giỏ hàng');
       console.error('Không thể xóa khỏi giỏ hàng:', error);
     }
   };
@@ -106,20 +113,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         body: JSON.stringify({ productId, quantity }),
       });
       if (response.ok) {
-        await refreshCart();
+        await loadCart();
       }
     } catch (error) {
       console.error('Không thể cập nhật số lượng:', error);
     }
   };
 
+  const clearCart = () => {
+    setCart([]);
+  };
+
   useEffect(() => {
-    refreshCart();
+    const token = localStorage.getItem('token');
+    if (token) {
+      loadCart();
+    } else {
+      setCart([]);
+    }
   }, []);
 
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, updateQuantity, refreshCart }}
+      value={{
+        cart,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        loadCart,
+      }}
     >
       {children}
     </CartContext.Provider>
