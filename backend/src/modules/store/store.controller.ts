@@ -1,0 +1,168 @@
+
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException, ForbiddenException } from '@nestjs/common';
+
+import { StoreService } from './store.service';
+import { CreateStoreDto } from './dto/create-store.dto';
+import { UpdateStoreDto } from './dto/update-store.dto';
+import { RegisterSellerDto } from './dto/register-seller.dto';
+import { PermissionGuard } from '../../common/auth/permission.guard';
+import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+
+@ApiTags('stores')
+@ApiBearerAuth('access-token')
+@Controller('stores')
+export class StoreController {
+  constructor(private readonly storeService: StoreService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('view_store')
+  @ApiOperation({ summary: 'Lấy danh sách tất cả stores' })
+  async findAll() {
+    const stores = await this.storeService.findAll();
+    return {
+      message: 'Danh sách cửa hàng',
+      total: stores.length,
+      data: stores,
+    };
+  }
+
+  @Get('my-store')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Lấy store của tôi' })
+  async getMyStore(@Req() req: any) {
+    const store = await this.storeService.findByUserId(req.user.userId);
+    return {
+      message: store ? 'Thông tin store của bạn' : 'Bạn chưa có store',
+      data: store,
+    };
+  }
+
+  @Get(':id/draft-data')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Lấy đầy đủ draft data của store' })
+  async getDraftData(@Param('id') id: string, @Req() req: any) {
+    const draftData = await this.storeService.getFullDraftData(parseInt(id), req.user.userId);
+    return {
+      message: 'Draft data của store',
+      data: draftData,
+    };
+  }
+
+  @Get('check-seller')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Kiểm tra có phải seller không' })
+  async checkSeller(@Req() req: any) {
+    const isSeller = await this.storeService.isUserSeller(req.user.userId);
+    return {
+      message: 'Trạng thái seller',
+      data: { is_seller: isSeller },
+    };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Lấy thông tin store theo ID' })
+  async findOne(@Param('id') id: number) {
+    const store = await this.storeService.findOne(id);
+    return {
+      message: 'Chi tiết cửa hàng',
+      data: store,
+    };
+  }
+
+  @Get(':id/stats')
+  @ApiOperation({ summary: 'Lấy thống kê store' })
+  async getStoreStats(@Param('id') id: number) {
+    const stats = await this.storeService.getStoreStats(id);
+    return {
+      message: 'Thống kê cửa hàng',
+      data: stats,
+    };
+  } 
+ 
+ @Post('register-seller')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Đăng ký làm người bán hàng' })
+  async registerSeller(@Req() req: any, @Body() dto: RegisterSellerDto) {
+    
+    const result = await this.storeService.registerSeller(req.user.userId, dto);
+    return {
+      message: result.message,
+      data: result.store,
+    };
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('create_store')
+  @ApiOperation({ summary: 'Tạo store mới' })
+  async create(@Req() req: any, @Body() dto: CreateStoreDto) {
+    const store = await this.storeService.create(req.user.userId, dto);
+    return {
+      message: 'Tạo cửa hàng thành công',
+      data: store,
+    };
+  }
+
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('update_store')
+  @ApiOperation({ summary: 'Cập nhật store' })
+  async update(@Param('id') id: number, @Body() dto: UpdateStoreDto) {
+    const store = await this.storeService.update(id, dto);
+    return {
+      message: 'Cập nhật cửa hàng thành công',
+      data: store,
+    };
+  }
+
+  @Delete('my-store')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Seller xóa cửa hàng của chính mình' })
+  async deleteMyStore(@Req() req: any) {
+    const result = await this.storeService.deleteMyStore(req.user.userId);
+    return result;
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('delete_store')
+  @ApiOperation({ summary: 'Admin xóa store và toàn bộ dữ liệu liên quan' })
+  async remove(@Param('id') id: number) {
+    const result = await this.storeService.remove(id);
+    return result;
+  }
+
+  @Get('owner/:userId')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('view_own_store') // for all store have owned
+  async getStoresByUserId(@Param('userId') userId: string, @Req() req: any) {
+    console.log('Request URL:', req.url);
+    console.log('userId:', userId);
+    console.log('req.user:', req.user);
+    const targetUserId = parseInt(userId, 10);
+    console.log('targetUserId:', targetUserId);
+    if (isNaN(targetUserId)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+    const currentUserId = req.user?.userId;
+    console.log('currentUserId:', currentUserId);
+    if (!currentUserId || isNaN(currentUserId)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+    if (currentUserId !== targetUserId) {
+      throw new ForbiddenException(
+        'Bạn không có quyền xem cửa hàng của user khác'
+      );
+    }
+    const stores = await this.storeService.findStoresByUserId(targetUserId);
+    return {
+      message: 'Danh sách cửa hàng của user',
+      total: stores.length,
+      data: stores,
+    };
+  }
+}
