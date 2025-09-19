@@ -1,7 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+// voucher-usage.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Generated,
+  CreateDateColumn,
+} from 'typeorm';
 import { Voucher } from '../vouchers/vouchers.entity';
 import { User } from '../user/user.entity';
-// import { Order } from '../order/order.entity';
+import { Order } from '../orders/order.entity';
 
 @Entity('voucher_usage')
 export class VoucherUsage {
@@ -9,17 +17,18 @@ export class VoucherUsage {
   id!: number;
 
   @Column({ type: 'char', length: 36, unique: true })
+  @Generated('uuid')
   uuid!: string;
 
-  @ManyToOne(() => Voucher, (voucher) => voucher.usages)
+  @ManyToOne(() => Voucher, (voucher) => voucher.usages, { nullable: false })
   voucher!: Voucher;
 
-  @ManyToOne(() => User, (user) => user.voucherUsages)
+  @ManyToOne(() => User, (user) => user.voucherUsages, { nullable: false })
   user!: User;
 
-//   @ManyToOne(() => Order, (order) => order.voucherUsages)
-//   order: Order;
+  @ManyToOne(() => Order, (order) => order.voucherUsages, { nullable: false })
+  order!: Order;
 
-  @Column({ type: 'datetime' })
-  used_at!: Date;
+  @CreateDateColumn({ name: 'used_at', type: 'timestamp' })
+  usedAt!: Date;
 }

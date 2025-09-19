@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Product } from '../product/product.entity';
 import { Inventory } from '../inventory/inventory.entity';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Entity('variants')
 export class Variant {
@@ -52,4 +53,6 @@ export class Variant {
   // === Relations ===
   @OneToMany(() => Inventory, (inventory) => inventory.variant)
   inventories!: Inventory[];
+  @OneToMany(() => OrderItem, (item) => item.variant)
+  orderItems!: OrderItem[];
 }

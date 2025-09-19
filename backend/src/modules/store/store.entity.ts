@@ -12,6 +12,7 @@ import {
 import { User } from '../user/user.entity';
 import { OneToMany } from 'typeorm';
 import { Product } from '../product/product.entity';
+import { Order } from '../orders/order.entity';
 
 @Entity('stores')
 export class Store {
@@ -62,4 +63,8 @@ export class Store {
 
   @OneToMany(() => Product, (product) => product.store)
   products!: Product[]; // <-- thêm dòng này
+
+  @OneToMany(() => Order,(order) => order.store, {cascade: true})
+  orders!:Order;
+
 }
