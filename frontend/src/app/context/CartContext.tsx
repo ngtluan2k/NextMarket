@@ -18,11 +18,12 @@ interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (productId: number, quantity?: number) => Promise<void>;
+  addToCart: (productId: number, quantity?: number, variantId?: number | null) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   updateQuantity: (productId: number, quantity: number) => Promise<void>;
   refreshCart: () => Promise<void>;
 }
+
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -56,23 +57,27 @@ const refreshCart = async () => {
 };
 
 
-  const addToCart = async (productId: number, quantity = 1) => {
-    try {
-      const response = await fetch('http://localhost:3000/cart/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ productId, quantity }),
-      });
-      if (response.ok) {
-        await refreshCart();
-      }
-    } catch (error) {
-      console.error('Không thể thêm vào giỏ hàng:', error);
+const addToCart = async (productId: number, quantity = 1) => {
+  try {
+    const response = await fetch('http://localhost:3000/cart/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({
+        productId,
+        quantity,
+      }),
+    });
+    if (response.ok) {
+      await refreshCart();
     }
-  };
+  } catch (error) {
+    console.error('Không thể thêm vào giỏ hàng:', error);
+  }
+};
+
 
   const removeFromCart = async (productId: number) => {
     try {

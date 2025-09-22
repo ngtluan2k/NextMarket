@@ -8,7 +8,7 @@ import {
   Phone,
   BadgeCheck,
   Eye,
-  EyeOff,
+  EyeOff, Globe
 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc'; // react-icons/google
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +18,6 @@ export type LoginPayload = {
   password: string;
 };
 
-
 export type RegisterPayload = {
   username: string;
   full_name: string;
@@ -26,6 +25,8 @@ export type RegisterPayload = {
   phone: string;
   gender: string; // "male" | "female" | "other"
   email: string;
+  country: string;
+
   password: string;
 };
 
@@ -59,7 +60,6 @@ const defaultSide =
       </svg>`
   );
 
-
 export default function LoginModal({
   open,
   onClose,
@@ -84,6 +84,8 @@ export default function LoginModal({
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
+    const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
+
 
   // register states
   const [reg, setReg] = useState<RegisterPayload>({
@@ -94,6 +96,7 @@ export default function LoginModal({
     gender: '',
     email: '',
     password: '',
+    country: 'Vietnam',
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -101,6 +104,18 @@ export default function LoginModal({
   const { login } = useAuth();
 
   const emailRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    fetch("https://restcountries.com/v3.1/all?fields=name,cca2")
+      .then((res) => res.json())
+      .then((data) => {
+        const list = data.map((c: any) => ({
+          name: c.name.common,
+          code: c.cca2,
+        }));
+        setCountries(list);
+      });
+  }, [open]);
 
   useEffect(() => {
     if (open) setTimeout(() => emailRef.current?.focus(), 80);
@@ -233,7 +248,7 @@ export default function LoginModal({
           // onLogin && onLogin({ email: data.user.email, password: '' }); // gọi callback nếu có
           if (onLogin) {
             console.log('onLogin is set');
-          }else{
+          } else {
             console.log('onLogin is NOT set');
           }
           // fetch giỏ hàng
@@ -497,6 +512,31 @@ export default function LoginModal({
                   type="password"
                   autoComplete="new-password"
                 />
+              </div>
+
+              {/* Country */}
+              <div className="group">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Đất nước</label>
+                <div
+                  className="relative flex items-center rounded-xl border border-slate-300 bg-white
+                focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100"
+                >
+                  <span className="pointer-events-none absolute left-3 text-slate-400">
+                    <Globe className="h-4 w-4" />
+                  </span>
+                  <select
+                    value={reg.country}
+                    onChange={(e) => setReg({ ...reg, country: e.target.value })}
+                    className="w-full rounded-xl bg-transparent py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none"
+                  >
+                    <option value="Vietnam">Vietnam</option>
+                    {countries.map((c) => (
+                      <option key={c.code} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <FancyButton loading={submitting} type="submit" className="mt-1">

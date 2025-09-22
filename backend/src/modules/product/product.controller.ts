@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Req,
+  Query
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -31,6 +32,11 @@ export class ProductController {
   async getAllProduct() {
     return this.productService.findAllProduct();
   }
+  @Get('search')
+async search(@Query('q') q: string) {
+  const products = await this.productService.searchProducts(q);
+  return { data: products }; // phải trả về object { data: [...] }
+}
 
   // Lấy tất cả sản phẩm của store
   @UseGuards(JwtAuthGuard)
@@ -126,4 +132,6 @@ export class ProductController {
       data,
     };
   }
+
+
 }

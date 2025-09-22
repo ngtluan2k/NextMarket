@@ -53,8 +53,7 @@ export class User {
   @OneToMany(() => VoucherUsage, (usage) => usage.user)
   voucherUsages!: VoucherUsage[];
   
-   @OneToMany(() => UserProfile, (profile) => profile.user)
-  profiles!: UserProfile[];
+
 
   @OneToOne(() => ShoppingCart, (cart) => cart.user, { cascade: true })
   cart!: ShoppingCart;

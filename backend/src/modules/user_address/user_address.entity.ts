@@ -39,7 +39,7 @@ export class UserAddress {
   @Column({ name: 'postal_code' })
   postalCode!: string;
 
-  @Column({ default: true })
+  @Column({name:'is_default', default: true })
   isDefault!: boolean;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })

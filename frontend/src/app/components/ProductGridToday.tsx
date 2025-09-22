@@ -1,11 +1,9 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
 
 type ProductRaw = {
   id: number;
-  slug: string; // cần slug từ API
+  slug: string; 
   name: string;
   media?: { url: string; is_primary?: boolean }[];
   base_price?: string;
@@ -23,20 +21,15 @@ type ProductCardData = {
 };
 
 type Props = {
-  containerClassName?: string; // class cho grid container
-  cardClassName?: string; // class cho từng card
-  showMessage?: (
-    type: 'success' | 'error' | 'warning',
-    content: string
-  ) => void;
+  containerClassName?: string;
+  cardClassName?: string;
 };
 
-export default function ProductGridToday({ containerClassName = "", cardClassName = "",showMessage }: Props) {
+export default function ProductGridToday({ containerClassName = "", cardClassName = "" }: Props) {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { addToCart } = useCart();
 
   useEffect(() => {
     let cancelled = false;
@@ -76,20 +69,6 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
     };
   }, []);
 
-  const handleAddToCart = async (product: ProductItem) => {
-    try {
-      await addToCart(product.id as number);
-      if (showMessage) {
-        console.log("ok")
-        showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
-      }
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-    }
-  };
-   
-
-
   if (loading) return <div>Đang tải sản phẩm…</div>;
   if (error) return <div className="text-red-500">Lỗi: {error}</div>;
   if (products.length === 0) return <div>Chưa có sản phẩm.</div>;
@@ -115,13 +94,6 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
             {p.brandName && <p className="text-xs text-slate-500">{p.brandName}</p>}
             <p className="mt-1 text-sm font-semibold">{Number(p.price).toLocaleString("vi-VN")}đ</p>
           </div>
-
-          <button
-            onClick={() => addToCart(p.id, 1)}
-            className="mt-2 w-full rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 transition"
-          >
-            Thêm vào giỏ
-          </button>
         </div>
       ))}
     </div>

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+// src/components/productDetail/Info.tsx
+import React, { useMemo } from "react";
 import Stars from "../productDetail/Stars";
 import { TIKI_RED } from "../productDetail/productDetail";
 
@@ -9,56 +10,53 @@ const vnd = (n?: number | string) =>
     maximumFractionDigits: 0,
   });
 
-export default function Info({ product }: { product?: any }) {
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
-    product?.variants?.[0]?.id ?? null
-  );
-  const [quantity, setQuantity] = useState(1);
-
-  // Tính giá hiện tại theo variant + pricing_rules
+export default function Info({
+  product,
+  selectedVariantId,
+  setSelectedVariantId,
+  quantity,
+  setQuantity,
+}: {
+  product?: any;
+  selectedVariantId: number | null;
+  setSelectedVariantId: React.Dispatch<React.SetStateAction<number | null>>;
+  quantity: number;
+  setQuantity: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  // --- tính giá ---
   const price = useMemo(() => {
     if (!product) return 0;
-
-    // 1. Giá cơ bản
     let currentPrice = Number(product.base_price ?? 0);
 
-    // 2. Giá theo variant
     if (selectedVariantId) {
       const variant = product.variants?.find((v: any) => v.id === selectedVariantId);
       if (variant) currentPrice = Number(variant.price);
     }
 
-    // 3. Áp dụng pricing_rules nếu đủ điều kiện
+    // áp dụng pricing_rules
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
       .filter((r: any) => {
         const start = new Date(r.starts_at);
         const end = new Date(r.ends_at);
-        const ok = quantity >= r.min_quantity && now >= start && now <= end;
-        return ok;
+        return quantity >= r.min_quantity && now >= start && now <= end;
       })
-      .sort((a: any, b: any) => b.min_quantity - a.min_quantity); // ưu tiên min_quantity cao nhất
+      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 
     return currentPrice;
   }, [product, selectedVariantId, quantity]);
 
-  const listPrice = useMemo(() => {
-    if (!product) return 0;
-    return Number(product.listPrice ?? product.base_price ?? 0);
-  }, [product]);
-
-  const discount = useMemo(() => {
-    if (!price || !listPrice || listPrice <= price) return 0;
-    return Math.round(((listPrice - price) / listPrice) * 100);
-  }, [price, listPrice]);
+  const listPrice = Number(product?.listPrice ?? product?.base_price ?? 0);
+  const discount =
+    listPrice > price ? Math.round(((listPrice - price) / listPrice) * 100) : 0;
 
   if (!product) return null;
 
   const rating = product.rating?.average ?? product.rating ?? 0;
   const reviewsCount = product.rating?.count ?? product.reviewsCount ?? 0;
-const brand = product.brand?.name ?? product.author_name ?? product.author;
+  const brand = product.brand?.name ?? product.author_name ?? product.author;
 
   return (
     <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
@@ -111,12 +109,14 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
 
       {/* Chọn variant */}
       {product.variants?.length > 1 && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex gap-2 flex-wrap">
           {product.variants.map((v: any) => (
             <button
               key={v.id}
               className={`px-3 py-1 border rounded ${
-                v.id === selectedVariantId ? "border-blue-500 text-blue-600" : "border-gray-300"
+                v.id === selectedVariantId
+                  ? "border-blue-500 text-blue-600"
+                  : "border-gray-300"
               }`}
               onClick={() => setSelectedVariantId(v.id)}
             >
@@ -148,7 +148,8 @@ const brand = product.brand?.name ?? product.author_name ?? product.author;
               const now = new Date();
               const start = new Date(r.starts_at);
               const end = new Date(r.ends_at);
-              const isApplied = quantity >= r.min_quantity && now >= start && now <= end;
+              const isApplied =
+                quantity >= r.min_quantity && now >= start && now <= end;
 
               return (
                 <span

@@ -19,6 +19,10 @@ import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from "./components/AddProduct";
 import { AuthProvider } from "./context/AuthContext";
+import FeaturedBrandsPage from "./components/FeaturedBrands";
+import BrandPage from "./page/BrandPage";
+import SearchPage from "./page/SearchPage";
+
 // import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -88,6 +92,11 @@ const App: React.FC = () => {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<Cart showMessage={showMessage} />} />
+        <Route path="/brands" element={<FeaturedBrandsPage />} />
+        <Route path="/brands/:brandId" element={<BrandPage />} />
+        <Route path="/search" element={<SearchPage />} />
+
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </CartProvider>

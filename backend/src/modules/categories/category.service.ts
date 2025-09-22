@@ -91,7 +91,9 @@ async findProductsBySlug(slug: string): Promise<Product[]> {
   const categoryIds = await this.getAllCategoryIds(category.id);
 
   const productCategories = await this.productCategoryRepo.find({
-    where: { category_id: In(categoryIds) },
+    where: { category_id: In(categoryIds),
+     product: { status: 'active' }
+     },
     relations: ['product', 'product.media', 'product.variants', 'product.brand'],
   });
 
@@ -106,6 +108,23 @@ async findProductsBySlug(slug: string): Promise<Product[]> {
   return unique;
 }
 
+async findBrandsByCategorySlug(slug: string) {
+  const products = await this.findProductsBySlug(slug);
+
+  const uniqueBrandsMap = new Map<number, { id: number; name: string; logo_url?: string }>();
+
+  products.forEach((p) => {
+    if (p.brand && !uniqueBrandsMap.has(p.brand.id)) {
+      uniqueBrandsMap.set(p.brand.id, {
+        id: p.brand.id,
+        name: p.brand.name,
+        logo_url: p.brand.logo_url,
+      });
+    }
+  });
+
+  return Array.from(uniqueBrandsMap.values());
+}
 
 
 

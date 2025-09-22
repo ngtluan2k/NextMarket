@@ -6,13 +6,13 @@ import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-
 @ApiBearerAuth('access-token')
 @ApiTags('categories')
 @Controller('categories')
 export class CategoryController {
-  constructor(private readonly categoryService: CategoryService) {}
-
+  constructor(
+    private readonly categoryService: CategoryService
+  ) {}
   @Get()
   // @Permissions('view_category')
   async findAll(@Query('search') search?: string) {
@@ -77,6 +77,14 @@ async create(@Body() dto: CreateCategoryDto) {
       data,
     };
   }
+
+  @Get(':slug/brands')
+async getBrands(@Param('slug') slug: string) {
+  return await this.categoryService.findBrandsByCategorySlug(slug);
+}
+
+
+
 @Get(':id/children')
 async findChildren(@Param('id') id: number) {
   const children = await this.categoryService.findChildren(id);

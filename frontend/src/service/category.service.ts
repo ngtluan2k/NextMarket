@@ -7,20 +7,49 @@ export interface Category {
   children?: Category[];
 }
 
+
+export interface Product {
+  id: number;
+  name: string;
+  media?: { url: string }[];
+  brand?: { id: number; name: string; imageUrl?: string };
+  variants?: any[];
+}
+
+export interface Brand {
+  id: number;
+  name: string;
+  logo_url?: string;
+}
+
+// 1️⃣ Lấy tất cả categories
 export const fetchCategoriesAPI = async (): Promise<Category[]> => {
-  const res = await fetch("http://localhost:3000/categories", {
-  });
+  const res = await fetch("http://localhost:3000/categories");
   if (!res.ok) throw new Error("Failed to fetch categories");
-  return res.json(); // trả về mảng category
+  return res.json();
 };
 
-// API lấy category theo slug
+// 2️⃣ Lấy category theo slug
 export const getCategoryBySlug = async (slug: string): Promise<Category> => {
-  const res = await fetch(`http://localhost:3000/categories/by-slug/${slug}`, {
-  });
+  const res = await fetch(`http://localhost:3000/categories/by-slug/${slug}`);
   if (!res.ok) throw new Error("Category not found");
-  return res.json(); // trả về 1 category object
+  return res.json();
 };
+
+// 3️⃣ Lấy tất cả sản phẩm của category
+export const fetchProductsByCategory = async (slug: string): Promise<Product[]> => {
+  const res = await fetch(`http://localhost:3000/categories/${slug}/products`);
+  if (!res.ok) throw new Error("Failed to fetch products");
+  return res.json(); // backend trả mảng product
+};
+
+// 4️⃣ Lấy brand duy nhất của category
+export const fetchBrandsByCategory = async (slug: string): Promise<Brand[]> => {
+  const res = await fetch(`http://localhost:3000/categories/${slug}/brands`);
+  if (!res.ok) throw new Error("Failed to fetch brands");
+  return res.json(); // backend trả mảng brand
+};
+
 
 // src/service/categorySidebar.service.ts
 export const fetchRootCategoriesAPI = async () => {
