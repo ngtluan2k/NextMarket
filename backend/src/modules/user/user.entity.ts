@@ -10,6 +10,9 @@ import {
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
+import { ShoppingCart } from '../cart/shopping_cart.entity';
+import { Order } from '../orders/order.entity';
+import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 
 @Entity('users')
 export class User {
@@ -51,4 +54,10 @@ export class User {
 
   @OneToMany(() => VoucherUsage, (usage) => usage.user)
   voucherUsages!: VoucherUsage[];
+  @OneToOne(() => ShoppingCart, (cart) => cart.user, { cascade: true })
+  cart!: ShoppingCart;
+  @OneToMany(() => Order, (order) => order.user,{cascade: true} )
+  orders!: Order;
+  @OneToMany(() => OrderStatusHistory, (history) => history.changedBy)
+  orderStatusHistories!: OrderStatusHistory[];
 }

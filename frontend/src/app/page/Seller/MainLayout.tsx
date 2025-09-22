@@ -20,7 +20,7 @@ const pages: Record<string, React.ReactNode> = {
   StoreInventory: <StoreInventory />,
   Customers: <Customer />,
   Invoices: <Invoice />,
-  Settings: <SellerDashboard />,
+  SellerDashboard: <SellerDashboard />,
   Home: <Home />,
 };
 
