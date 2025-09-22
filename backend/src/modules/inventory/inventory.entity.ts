@@ -36,6 +36,6 @@ export class Inventory {
   @Column({ default: 0 })
   used_quantity!: number;
 
-  @UpdateDateColumn()
-  updated_at!: Date;
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  updatedAt!: Date;
 }

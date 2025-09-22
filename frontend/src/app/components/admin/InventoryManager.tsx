@@ -454,7 +454,7 @@ const InventoryManager: React.FC = () => {
             style={{ width: '100%' }}
             placeholder="Lọc theo thương hiệu"
             value={brandFilter || undefined}
-            onChange={(val) => setBrandFilter(val || null)}
+            onChange={(val:number | undefined | null) => setBrandFilter(val || null)}
           >
             {[...new Map(products.map((p) => [p.brand?.id, p.brand])).values()]
               .filter((b) => b)
@@ -471,7 +471,7 @@ const InventoryManager: React.FC = () => {
             style={{ width: '100%' }}
             placeholder="Lọc theo trạng thái"
             value={statusFilter || undefined}
-            onChange={(val) => setStatusFilter(val || null)}
+            onChange={(val: string) => setStatusFilter(val || null)}
           >
             <Option value="out">Hết hàng</Option>
             <Option value="low">Sắp hết (&lt; 10)</Option>

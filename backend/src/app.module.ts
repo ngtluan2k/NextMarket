@@ -12,7 +12,7 @@ import { RolePermissionModule } from './modules/role-permission/role-permission.
 import { UserRoleModule } from './modules/user-role/user-role.module';
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
-import { StoreRating } from './modules/store-rating/store-rating.entity';
+import { StoreRatingModule } from './modules/store-rating/store-rating.module';
 import { StoreDocumentModule } from './modules/store-document/store-document.module';
 import { ProductCategoryModule } from './modules/product_category/product_category.module';
 import { ProductMediaModule } from './modules/product_media/product_media.module';
@@ -25,6 +25,18 @@ import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { UserAddressModule } from './modules/user_address/user_address.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { OrderItemsModule } from './modules/order-items/order-items.module';
+import { OrderStatusHistoryModule } from './modules/order-status-history/order-status-history.module';
+import { OrderInvoicesModule } from './modules/order-invoices/order-invoices.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { RefundsModule } from './modules/refunds/refunds.module';
+import { ReturnsModule } from './modules/returns/returns.module';
+import { CancellationsModule } from './modules/cancellations/cancellations.module';
+import { OrderShipmentsModule } from './modules/order-shipments/order-shipments.module';
+import { ShippingLabelsModule } from './modules/shipping-labels/shipping-labels.module';
+import { ShipmentsModule } from './modules/shipments/shipments.module';
+import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affiliate-commissions.module';
 
 @Module({
   imports: [
@@ -36,6 +48,10 @@ import { UserAddressModule } from './modules/user_address/user_address.module';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'src', 'assets'),
       serveRoot: '/assets',
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
     }),
 
     // Cấu hình DB dùng ConfigService
@@ -55,7 +71,7 @@ import { UserAddressModule } from './modules/user_address/user_address.module';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: false,
+          synchronize: true,
           logging: true,
         };
       },
@@ -64,7 +80,7 @@ import { UserAddressModule } from './modules/user_address/user_address.module';
     ProductModule,
     UserModule,
     CategoryModule,
-    StoreRating,
+    StoreRatingModule,
     StoreModule,
     BrandModule,
     RoleModule,
@@ -81,6 +97,18 @@ import { UserAddressModule } from './modules/user_address/user_address.module';
     VouchersModule,
     VoucherUsageModule,
     UserAddressModule,
+    OrdersModule,
+    OrderItemsModule,
+    OrderStatusHistoryModule,
+    OrderInvoicesModule,
+    PaymentsModule,
+    RefundsModule,
+    ReturnsModule,
+    CancellationsModule,
+    OrderShipmentsModule,
+    ShippingLabelsModule,
+    ShipmentsModule,
+    AffiliateCommissionsModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }
