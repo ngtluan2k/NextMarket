@@ -105,30 +105,52 @@ export default function LoginModal({
     if (open) setTimeout(() => emailRef.current?.focus(), 80);
   }, [open, mode]);
 
-    // ---------- default APIs ----------
-const callDefaultLogin = async (payload: LoginPayload) => {
-  const res = await fetch(`${apiBase}/users/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
-
-  if (data?.access_token) {
-    localStorage.setItem("token", data.access_token);
-    localStorage.setItem("user", JSON.stringify(data.data));
-
-    // fetch giỏ hàng riêng theo user
-    const cartRes = await fetch(`${apiBase}/cart/me`, {
-      headers: { Authorization: `Bearer ${data.access_token}` },
+  // ---------- default APIs ----------
+  const callDefaultLogin = async (payload: LoginPayload) => {
+    const res = await fetch(`${apiBase}/users/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-    const cartJson = await cartRes.json();
-    localStorage.setItem("cart", JSON.stringify(cartJson));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
+
+    if (data?.access_token) {
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.data));
+
+      // fetch giỏ hàng riêng theo user
+      const cartRes = await fetch(`${apiBase}/cart/me`, {
+        headers: { Authorization: `Bearer ${data.access_token}` },
+      });
+      const cartJson = await cartRes.json();
+      localStorage.setItem("cart", JSON.stringify(cartJson));
+    }
+
+    return data;
+  };
+
+  // ========== validate ==========
+
+  function validateLogin(email: string, password: string): string | null {
+    if (!email) return "Email không được bỏ trống";
+    if (!/\S+@\S+\.\S+/.test(email)) return "Email không hợp lệ";
+    if (!password) return "Mật khẩu không được bỏ trống";
+    if (password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
+    return null;
   }
 
-  return data;
-};
+  function validateRegister(reg: RegisterPayload): string | null {
+    if (!reg.username) return "Tên đăng nhập không được bỏ trống";
+    if (!reg.full_name) return "Họ và tên không được bỏ trống";
+    if (!reg.email) return "Email không được bỏ trống";
+    if (!/\S+@\S+\.\S+/.test(reg.email)) return "Email không hợp lệ";
+    if (!reg.password || reg.password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
+    if (!reg.phone) return "Số điện thoại không được bỏ trống";
+    if (!reg.gender) return "Vui lòng chọn giới tính";
+    return null;
+  }
+
 
 
   const callDefaultRegister = async (payload: RegisterPayload) => {
@@ -144,7 +166,7 @@ const callDefaultLogin = async (payload: LoginPayload) => {
   // ---------- submit ----------
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const v = validateLogin();
+    const v = validateLogin(email, password);
     if (v) return setError(v);
     setError(null);
     setSubmitting(true);
@@ -163,7 +185,7 @@ const callDefaultLogin = async (payload: LoginPayload) => {
 
   const handleRegister = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const v = validateRegister();
+    const v = validateRegister(reg);
     if (v) return setError(v);
     setError(null);
     setSubmitting(true);
@@ -182,7 +204,9 @@ const callDefaultLogin = async (payload: LoginPayload) => {
     }
   };
   const RightArt = sideImageUrl || defaultSide;
-
+  if (!open) {
+    return null;
+  }
   return (
     <div aria-modal role="dialog" className="fixed inset-0 z-[100] grid place-items-center">
       {/* Overlay */}

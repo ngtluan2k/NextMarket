@@ -61,14 +61,14 @@ export default function EveryMartHeader({
 }: {
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
-}) {
+}) { 
+  console.log('EveryMartHeader render - openLogin:'); // Debug log
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
 
   const [query, setQuery] = useState('');
   const [openLogin, setOpenLogin] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const { cart, clearCart, loadCart } = useCart();
-
   // Đọc trạng thái đăng nhập (mock) từ localStorage
   useEffect(() => {
     const raw = localStorage.getItem('everymart.me');
@@ -84,8 +84,8 @@ export default function EveryMartHeader({
 
   // Lưu khi thay đổi
   useEffect(() => {
-    if (me) localStorage.setItem('everymart.me', JSON.stringify(me));
-    else localStorage.removeItem('everymart.me');
+    if (me) localStorage.setItem('user', JSON.stringify(me));
+    else localStorage.removeItem('user');
   }, [me]);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -123,6 +123,8 @@ export default function EveryMartHeader({
     e.preventDefault();
     console.log('search:', query);
   };
+
+console.log('Rendering LoginModal with openLogin:', openLogin);
 
   return (
     <header className="w-full bg-white">
@@ -308,12 +310,13 @@ export default function EveryMartHeader({
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-           
-            // lưu token + user
+            console.log('Login successful:', json.data); // Debug log
+             console.log('Current openLogin state:', openLogin); // Debug log
             localStorage.setItem("token", json.access_token);
             localStorage.setItem("everymart.me", JSON.stringify(json.data));
             setMe(json.data);
             loadCart();
+            console.log('Modal should close now'); // Debug log
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

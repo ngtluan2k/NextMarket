@@ -21,4 +21,12 @@ export class UpdateStoreDocumentDto extends PartialType(CreateStoreDocumentDto) 
   @IsOptional()
   @IsDateString()
   verified_at?: string;
+  @ApiProperty ({
+    description: 'đánh dấu thư mục lưu nháp ',
+    example: true,  
+    required: false
+  })
+  @IsOptional()
+  @IsBoolean()
+ override is_draft?: boolean;
 }

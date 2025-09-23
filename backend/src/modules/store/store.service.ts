@@ -375,12 +375,14 @@ export class StoreService {
         // Update existing
         await this.storeEmailRepo.update(existingEmail.id, {
           email: dto.store_information_email.email,
+          is_draft: dto.store_information_email.is_draft ?? dto.is_draft ?? false,
         });
       } else {
         // Create new
         const storeEmailInfo = this.storeEmailRepo.create({
           email: dto.store_information_email.email,
           store_information_id: storeInformation.id,
+          is_draft: dto.store_information_email.is_draft ?? dto.is_draft ?? false,
         });
         await this.storeEmailRepo.save(storeEmailInfo);
       }
@@ -412,6 +414,38 @@ export class StoreService {
           is_draft: dto.is_draft ?? false,
         });
         await this.storeIdentificationRepo.save(storeIdentification);
+      }
+    }
+
+    // 3.5. Tạo hoặc update store documents (nếu truyền qua DTO)
+    if (dto.documents && Array.isArray(dto.documents) && dto.documents.length > 0 && storeInformation) {
+      for (const doc of dto.documents) {
+        // Chiến lược: nếu đã có document cùng doc_type cho store_information_id thì update file_url, ngược lại tạo mới
+        const existingDoc = await this.storeDocumentRepo.findOne({
+          where: {
+            store_information_id: storeInformation.id,
+            doc_type: doc.doc_type,
+          },
+        });
+
+        if (existingDoc) {
+          await this.storeDocumentRepo.update(existingDoc.id, {
+            file_url: doc.file_url,
+            is_draft: (doc as any).is_draft ?? dto.is_draft ?? false,
+            verified: false,
+            verified_at: null,
+          });
+        } else {
+          const newDoc = this.storeDocumentRepo.create({
+            store_information_id: storeInformation.id,
+            doc_type: doc.doc_type,
+            file_url: doc.file_url,
+            is_draft: (doc as any).is_draft ?? dto.is_draft ?? false,
+            verified: false,
+            verified_at: null,
+          });
+          await this.storeDocumentRepo.save(newDoc);
+        }
       }
     }
 
@@ -483,18 +517,7 @@ export class StoreService {
       }
     }
 
-    // 6. Tạo documents (nếu có) - link với store_information_id
-    if (dto.documents && dto.documents.length > 0 && storeInformation) {
-      for (const docDto of dto.documents) {
-        const document = this.storeDocumentRepo.create({
-          store_information_id: storeInformation.id,
-          doc_type: docDto.doc_type,
-          file_url: docDto.file_url,
-          verified: false,
-        });
-        await this.storeDocumentRepo.save(document);
-      }
-    }
+    // 6. Documents đã được xử lý ở bước 3.5 (upsert kèm is_draft). Không xử lý lại tại đây để tránh tạo bản ghi thiếu is_draft.
   }
 
   // Lấy đầy đủ draft data cho frontend
