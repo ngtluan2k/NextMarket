@@ -24,6 +24,9 @@ import StoreLayout from "./page/StoreLayout";
 import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
 import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
 import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
+import CartPage from "./page/CartPage";
+import CheckoutPayment from "./page/CheckoutPayment";
+import OrderSuccess from "./page/OrderSuccess";
 
 // import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
@@ -60,7 +63,7 @@ const App: React.FC = () => {
         <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
-        <Route path="/cart" element={<Cart showMessage={showMessage} />} />
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/test/home" element={<ProductList />} />
         
         {/* Account Routes */}
@@ -93,7 +96,8 @@ const App: React.FC = () => {
 
         {/* Authentication Route */}
         {/* <Route path="/auth" element={<AuthForm />} /> */}
-
+        <Route path="/checkout" element={<CheckoutPayment />} /> 
+        <Route path="/order/success" element={<OrderSuccess />} />
         {/* Catch-all Route */}
         <Route path="/" element={<Home />} />
         <Route path="/home" element={<Home />} />

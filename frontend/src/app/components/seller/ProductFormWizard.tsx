@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Steps, Form, Input, Select, InputNumber, Button, Space,
-  Divider, Typography, message, Switch, DatePicker, Card
+  Divider, Typography, message, Switch, DatePicker, Card,Upload
 } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { CreateProductDto, productService } from '../../../service/product.service';
@@ -17,7 +17,6 @@ type WizardProps = {
   categoriesProp?: { id: number; name: string }[];
 };
 
-// ❌ Bỏ sort_order như bạn yêu cầu
 type Media = { media_type: string; url: string; is_primary?: boolean };
 type Variant = { sku: string; variant_name: string; price: number; stock: number; barcode?: string };
 type Inventory = { variant_sku: string; location: string; quantity: number; used_quantity?: number };
@@ -35,6 +34,8 @@ type FormValues = {
   inventory: Inventory[];
   pricing_rules: PricingRule[];
 };
+
+
 
 export function ProductFormWizard({
   onClose,
@@ -103,6 +104,49 @@ export function ProductFormWizard({
 
   // ---------- MEDIA helpers (Primary duy nhất) ----------
   const mediaWatch: Media[] = Form.useWatch('media', form) || [];
+
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  
+  // handler khi chọn file ở từng dòng media
+  const handleFileSelect = (index: number) => async (info: any) => {
+    // Lấy File an toàn
+    const f: File | undefined =
+      info?.file?.originFileObj ||
+      info?.fileList?.[info.fileList.length - 1]?.originFileObj ||
+      info?.fileList?.[0]?.originFileObj;
+  
+    if (!f) return;
+  
+    if (!f.type?.startsWith?.('image/')) {
+      message.error('Vui lòng chọn file ảnh');
+      return;
+    }
+    const maxSizeMb = 5;
+    if (f.size > maxSizeMb * 1024 * 1024) {
+      message.error(`Ảnh quá lớn (>${maxSizeMb}MB)`);
+      return;
+    }
+  
+    // Chuyển base64 để preview
+    const b64 = await toBase64(f);
+  
+    // Set từng field theo path -> đảm bảo trigger Form.useWatch
+    form.setFieldValue(['media', index, 'media_type'], 'image');
+    form.setFieldValue(['media', index, 'url'], b64);
+  
+    // Nếu chưa có ảnh primary nào -> auto set dòng này là primary
+    const list: Media[] = form.getFieldValue('media') || [];
+    const hasPrimary = list.some(m => m?.is_primary);
+    if (!form.getFieldValue(['media', index, 'is_primary']) && !hasPrimary) {
+      form.setFieldValue(['media', index, 'is_primary'], true);
+    }
+  };
 
   // đặt ảnh index là primary, các ảnh khác tắt
   const makePrimary = (idx: number) => {
@@ -251,79 +295,102 @@ export function ProductFormWizard({
 
         {/* BƯỚC 1: Media — chỉ Primary (không có Thứ tự) */}
         {current === 1 && (
-          <Form.List name="media">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...rest }) => (
-                  <Card
-                    key={key}
-                    size="small"
-                    className="mb-3"
-                    title={`Media #${name + 1}`}
-                    extra={
-                      <Button type="link" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)}>
-                        Xóa
-                      </Button>
-                    }
-                  >
-                    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_140px] items-center" >
-                      <Form.Item
-                        {...rest}
-                        name={[name, 'url']}
-                        label="URL hình ảnh"
-                        rules={[{ required: true, message: 'Nhập URL' }]}
-                      >
-                        <Input placeholder="https://..." />
-                      </Form.Item>
-
-                      <Form.Item
-                        {...rest}
-                        name={[name, 'is_primary']}
-                        label="Primary"
-                        valuePropName="checked"
-                      >
-                        <Switch
-                          checked={!!mediaWatch?.[name]?.is_primary}
-                          onChange={(checked) => {
-                            if (checked) {
-                              // ✅ bật Primary cho dòng hiện tại, các dòng khác tắt
-                              makePrimary(name);
-                            } else {
-                              // cho phép không có primary nào
-                              const cur: Media[] = form.getFieldValue('media') || [];
-                              cur[name] = { ...cur[name], is_primary: false };
-                              form.setFieldsValue({ media: cur });
-                            }
-                          }}
-                        />
-                      </Form.Item>
-
-                      {/* Không còn "Thứ tự" */}
-                      <Form.Item hidden {...rest} name={[name, 'media_type']} initialValue="image">
-                        <Input />
-                      </Form.Item>
-                    </div>
-                  </Card>
-                ))}
-
-                <Button
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    add({
-                      media_type: 'image',
-                      url: '',
-                      // nếu hiện chưa có ảnh primary nào -> ảnh mới sẽ là primary
-                      is_primary: (mediaWatch || []).every((m: any) => !m?.is_primary),
-                    })
+        <Form.List name="media">
+          {(fields, { add, remove }) => (
+            <>
+              {fields.map(({ key, name, ...rest }) => (
+                <Card
+                  key={key}
+                  size="small"
+                  className="mb-3"
+                  title={`Media #${name + 1}`}
+                  extra={
+                    <Button type="link" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)}>
+                      Xóa
+                    </Button>
                   }
                 >
-                  Thêm Media
-                </Button>
-              </>
-            )}
-          </Form.List>
-        )}
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_140px] items-start">
+                    {/* Upload ảnh từ máy */}
+                    <Form.Item {...rest} label="Ảnh" required>
+                    <Upload
+                      accept="image/*"
+                      maxCount={1}
+                      showUploadList={false}
+                      beforeUpload={() => false}        // không auto upload
+                      onChange={handleFileSelect(name)} // dùng handler ở Bước 1
+                    >
+                      <Button icon={<PlusOutlined />}>Chọn ảnh </Button>
+                    </Upload>
 
+
+                      {/* Preview nếu đã có url */}
+                      {mediaWatch?.[name]?.url && (
+                        <div className="mt-2">
+                          <img
+                            src={mediaWatch[name].url as string}
+                            alt={`preview-${name}`}
+                            style={{ maxWidth: 320, maxHeight: 240, borderRadius: 8, display: 'block' }}
+                          />
+                        </div>
+                      )}
+                    </Form.Item>
+
+                    {/* Primary toggle giữ như cũ */}
+                    <Form.Item
+                      {...rest}
+                      name={[name, 'is_primary']}
+                      label="Primary"
+                      valuePropName="checked"
+                    >
+                      <Switch
+                        checked={!!mediaWatch?.[name]?.is_primary}
+                        onChange={(checked) => {
+                          if (checked) {
+                            makePrimary(name);
+                          } else {
+                            const cur: Media[] = form.getFieldValue('media') || [];
+                            cur[name] = { ...cur[name], is_primary: false };
+                            form.setFieldsValue({ media: cur });
+                          }
+                        }}
+                      />
+                    </Form.Item>
+
+                    {/* Ẩn nhưng vẫn validate: phải có url sau khi chọn ảnh */}
+                    <Form.Item
+                      {...rest}
+                      name={[name, 'url']}
+                      hidden
+                      rules={[{ required: true, message: 'Vui lòng chọn ảnh' }]}
+                    >
+                      <Input />
+                    </Form.Item>
+
+                    {/* media_type cố định là 'image' */}
+                    <Form.Item hidden {...rest} name={[name, 'media_type']} initialValue="image">
+                      <Input />
+                    </Form.Item>
+                  </div>
+                </Card>
+              ))}
+
+              <Button
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  add({
+                    media_type: 'image',
+                    url: '',
+                    is_primary: (mediaWatch || []).every((m: any) => !m?.is_primary),
+                  })
+                }
+              >
+                Thêm Media
+              </Button>
+            </>
+          )}
+        </Form.List>
+      )}
         {/* BƯỚC 2: Biến thể */}
         {current === 2 && (
           <Form.List name="variants">
