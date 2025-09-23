@@ -17,6 +17,7 @@ export class CreateProductDto {
   base_price!: number;
 
   @IsNumber()
+  @IsOptional()
   brandId!: number;
 
   @IsArray()

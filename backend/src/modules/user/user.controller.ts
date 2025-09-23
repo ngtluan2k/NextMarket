@@ -1,10 +1,10 @@
-import { Controller, Post, Body, Get , Param , ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Body, Get , Put, Param , ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
-
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -58,6 +58,22 @@ async login(@Body() dto: LoginDto) {
       status: 200,
       message: 'Get profile successful',
       data: profile,
+    };
+  }
+
+   @Put(':id/profile')
+  @ApiOperation({ summary: 'Update user profile by user ID' })
+  @ApiBearerAuth()
+  @ApiBody({ type: UpdateUserProfileDto })
+  async updateUserProfile(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUserProfileDto,
+  ) {
+    const updated = await this.userService.updateProfile(id, dto);
+    return {
+      status: 200,
+      message: 'Update profile successful',
+      data: updated,
     };
   }
 

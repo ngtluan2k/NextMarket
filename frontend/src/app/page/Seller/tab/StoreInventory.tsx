@@ -45,6 +45,7 @@ import StockBadge from '../../../components/seller/StockBadge';
 import type { StatisticProps } from 'antd';
 import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
+import { ProductFormWizard } from '../../../components/seller/ProductFormWizard';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -80,6 +81,9 @@ export default function StoreInventory() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [form] = Form.useForm();
 
+  const [isAddWizardVisible, setAddWizardVisible] = useState(false);
+
+
   useEffect(() => {
     fetchStores();
   }, []);
@@ -92,88 +96,99 @@ export default function StoreInventory() {
     }
   }, [selectedStoreId]);
 
-  const fetchStores = async () => {
-    try {
-      const store = await storeService.getMyStore();
-      if (store) {
-        setStores([store]); // 👈 bọc object thành array
-        setSelectedStoreId(store.id);
-      } else {
-        setStores([]);
-      }
-    } catch (error) {
-      message.error('Không thể tải danh sách cửa hàng');
-      console.error('Lỗi khi tải cửa hàng:', error);
+const fetchStores = async () => {
+  try {
+    const store = await storeService.getMyStore();
+    if (store) {
+      setStores([store]); // 👈 bọc object thành array
+      setSelectedStoreId(store.id);
+    } else {
+      setStores([]);
     }
-  };
+  } catch (error) {
+    message.error('Không thể tải danh sách cửa hàng');
+    console.error('Lỗi khi tải cửa hàng:', error);
+  }
+};
+
+
+
 
   const fetchProducts = async () => {
-    if (!selectedStoreId) return;
+  if (!selectedStoreId) return;
 
-    setLoading(true);
-    try {
-      const apiProducts = await productService.getStoreProducts(
-        selectedStoreId
-      );
-      // console.log('API Products:', apiProducts);
-      if (!Array.isArray(apiProducts)) {
-        console.error('API không trả về mảng:', apiProducts);
-        message.error('Dữ liệu sản phẩm không hợp lệ');
-        setProducts([]);
-        return;
-      }
-      const mappedProducts: Product[] = apiProducts
-        .filter((p) => p.status !== 'deleted') // <--- Lọc bỏ sản phẩm deleted
-        .map((apiProduct: ApiProduct, index: number) => {
-          // ánh xạ sản phẩm bình thường
-          const primaryImage =
-            apiProduct.media?.find(
-              (m) => m.is_primary && m.media_type === 'image'
-            )?.url || '/placeholder.svg';
+  setLoading(true);
+  try {
+    const apiProducts = await productService.getStoreProducts(selectedStoreId);
 
-          const categoryName =
-            apiProduct.categories?.find((c) => c.category?.name)?.category
-              ?.name || 'Chung';
-
-          const stock = apiProduct.variants?.[0]?.stock || 0;
-          const rawPrice =
-            apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
-          const price =
-            typeof rawPrice === 'string'
-              ? parseFloat(rawPrice)
-              : Number(rawPrice);
-          const finalPrice = isNaN(price) ? 0 : price;
-
-          return {
-            key: apiProduct.id.toString(),
-            id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
-            name: apiProduct.name || 'Sản Phẩm Không Xác Định',
-            category: categoryName,
-            price: finalPrice,
-            stock,
-            sold: Math.floor(Math.random() * 50), // placeholder
-            revenue: finalPrice * Math.floor(Math.random() * 50),
-            status: getStockStatus(stock),
-            image: primaryImage,
-            sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
-            description: apiProduct.description || '',
-            tags: [],
-            createdAt:
-              apiProduct.created_at?.split('T')[0] ||
-              new Date().toISOString().split('T')[0],
-            apiId: apiProduct.id,
-          };
-        });
-
-      console.log('Danh Sách Sản Phẩm Đã Ánh Xạ:', mappedProducts);
-      setProducts(mappedProducts);
-    } catch (error) {
-      message.error('Không thể tải danh sách sản phẩm');
-      console.error('Lỗi khi tải sản phẩm:', error);
-    } finally {
-      setLoading(false);
+    if (!Array.isArray(apiProducts)) {
+      console.error('API không trả về mảng:', apiProducts);
+      message.error('Dữ liệu sản phẩm không hợp lệ');
+      setProducts([]);
+      return;
     }
-  };
+
+    // ✅ Lọc chỉ lấy sản phẩm active
+    const activeProducts = apiProducts.filter(
+      (p: ApiProduct) => p.status === 'active'
+    );
+
+    const mappedProducts: Product[] = activeProducts.map(
+      (apiProduct: ApiProduct) => {
+        const primaryImage =
+          apiProduct.media?.find(
+            (m) => m.is_primary && m.media_type === 'image'
+          )?.url || '/placeholder.svg';
+
+        const categoryName =
+          apiProduct.categories?.find((c) => c.category?.name)?.category?.name ||
+          'Chung';
+
+        const stock = apiProduct.variants?.[0]?.stock || 0;
+
+        const rawPrice =
+          apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
+        const price =
+          typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice);
+        const finalPrice = isNaN(price) ? 0 : price;
+
+        const sold = Math.floor(Math.random() * 50);
+        const revenue = finalPrice * sold;
+
+        const status = getStockStatus(stock);
+
+        return {
+          key: apiProduct.id.toString(),
+          id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
+          name: apiProduct.name || 'Sản Phẩm Không Xác Định',
+          category: categoryName,
+          price: finalPrice,
+          stock,
+          sold,
+          revenue,
+          status,
+          image: primaryImage,
+          sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
+          description: apiProduct.description || '',
+          tags: [],
+          createdAt:
+            apiProduct.created_at?.split('T')[0] ||
+            new Date().toISOString().split('T')[0],
+          apiId: apiProduct.id,
+        };
+      }
+    );
+
+    console.log('Danh Sách Sản Phẩm Active:', mappedProducts);
+    setProducts(mappedProducts);
+  } catch (error) {
+    message.error('Không thể tải danh sách sản phẩm');
+    console.error('Lỗi khi tải sản phẩm:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // console.log(products);
 
@@ -198,7 +213,7 @@ export default function StoreInventory() {
   const handleAddProduct = () => {
     setEditingProduct(null);
     form.resetFields();
-    setIsModalVisible(true);
+    setAddWizardVisible(true); 
   };
 
   const handleEditProduct = (product: Product) => {
@@ -221,19 +236,10 @@ export default function StoreInventory() {
       onOk: async () => {
         try {
           await productService.softDeleteProduct(apiId);
-
-          // Cập nhật trạng thái trên UI
-          setProducts(
-            products.map((p) =>
-              p.id === productId ? { ...p, status: 'Hết Hàng' } : p
-            )
-          );
-
-          message.success('Xóa sản phẩm thành công (soft delete)');
-        } catch (error: any) {
-          const errMsg =
-            error.response?.data?.message || 'Không thể xóa sản phẩm';
-          message.error(errMsg); // Hiển thị message từ backend
+          setProducts(products.filter((p) => p.id !== productId));
+          message.success('Xóa sản phẩm thành công');
+        } catch (error) {
+          message.error('Không thể xóa sản phẩm');
           console.error('Lỗi khi xóa sản phẩm:', error);
         }
       },
@@ -252,7 +258,6 @@ export default function StoreInventory() {
 
         const updateDto: UpdateProductDto = {
           name: values.name,
-          slug: values.name.toLowerCase().replace(/\s+/g, '-'),
           description: values.description,
           base_price: values.price,
         };
@@ -270,10 +275,9 @@ export default function StoreInventory() {
       } else {
         const createDto: CreateProductDto = {
           name: values.name,
-          slug: values.name.toLowerCase().replace(/\s+/g, '-'),
           description: values.description,
           base_price: values.price,
-          brand_id: 1, // Có thể cần lấy từ nguồn khác
+          brandId: values.brandId, // Có thể cần lấy từ nguồn khác
         };
 
         const newApiProduct = await productService.createProduct(createDto);
@@ -594,82 +598,22 @@ export default function StoreInventory() {
         </Card>
 
         <Modal
-          title={editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
-          open={isModalVisible}
-          onOk={handleModalOk}
-          onCancel={() => setIsModalVisible(false)}
-          width={800}
-          okText={editingProduct ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm'}
-          okButtonProps={{ className: 'bg-cyan-500 border-cyan-500' }}
+          title="Thêm Sản Phẩm Mới"
+          open={isAddWizardVisible}
+          onCancel={() => setAddWizardVisible(false)}
+          footer={null}
+          width={1000}
+          destroyOnClose
         >
-          <Form form={form} layout="vertical" className="mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="name"
-                label="Tên Sản Phẩm"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập tên sản phẩm' },
-                ]}
-              >
-                <Input placeholder="Nhập tên sản phẩm" />
-              </Form.Item>
-
-              <Form.Item
-                name="sku"
-                label="SKU"
-                rules={[{ required: true, message: 'Vui lòng nhập SKU' }]}
-              >
-                <Input placeholder="Nhập SKU" />
-              </Form.Item>
-
-              <Form.Item
-                name="category"
-                label="Danh Mục"
-                rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  <Select.Option value="Chung">Chung</Select.Option>
-                  {/* Thêm các danh mục khác */}
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="price"
-                label="Giá (₫)"
-                rules={[{ required: true, message: 'Vui lòng nhập giá' }]}
-              >
-                <InputNumber
-                  min={0}
-                  step={1000}
-                  placeholder="0"
-                  className="w-full"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="stock"
-                label="Số Lượng Tồn Kho"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập số lượng tồn kho' },
-                ]}
-              >
-                <InputNumber min={0} placeholder="0" className="w-full" />
-              </Form.Item>
-
-              <Form.Item name="image" label="Hình Ảnh Sản Phẩm">
-                <Input placeholder="URL hình ảnh" />
-              </Form.Item>
-            </div>
-
-            <Form.Item name="description" label="Mô Tả">
-              <Input.TextArea rows={3} placeholder="Nhập mô tả sản phẩm" />
-            </Form.Item>
-
-            <Form.Item name="tags" label="Thẻ">
-              <Select mode="tags" placeholder="Thêm thẻ" className="w-full" />
-            </Form.Item>
-          </Form>
+          <ProductFormWizard
+            onCreated={() => {
+              // reload bảng sau khi tạo
+              fetchProducts();
+            }}
+            onClose={() => setAddWizardVisible(false)}
+          />
         </Modal>
+
       </Content>
     </Layout>
   );
