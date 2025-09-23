@@ -26,6 +26,18 @@ import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { UserAddressModule } from './modules/user_address/user_address.module';
 import { StoreIdentificationModule } from './modules/store-identification/store-identification.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { OrderItemsModule } from './modules/order-items/order-items.module';
+import { OrderStatusHistoryModule } from './modules/order-status-history/order-status-history.module';
+import { OrderInvoicesModule } from './modules/order-invoices/order-invoices.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { RefundsModule } from './modules/refunds/refunds.module';
+import { ReturnsModule } from './modules/returns/returns.module';
+import { CancellationsModule } from './modules/cancellations/cancellations.module';
+import { OrderShipmentsModule } from './modules/order-shipments/order-shipments.module';
+import { ShippingLabelsModule } from './modules/shipping-labels/shipping-labels.module';
+import { ShipmentsModule } from './modules/shipments/shipments.module';
+import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affiliate-commissions.module';
 
 @Module({
   imports: [
@@ -87,6 +99,18 @@ import { StoreIdentificationModule } from './modules/store-identification/store-
     VoucherUsageModule,
     UserAddressModule,
     StoreIdentificationModule,
+    OrdersModule,
+    OrderItemsModule,
+    OrderStatusHistoryModule,
+    OrderInvoicesModule,
+    PaymentsModule,
+    RefundsModule,
+    ReturnsModule,
+    CancellationsModule,
+    OrderShipmentsModule,
+    ShippingLabelsModule,
+    ShipmentsModule,
+    AffiliateCommissionsModule,
   ],
 })
 export class AppModule { }

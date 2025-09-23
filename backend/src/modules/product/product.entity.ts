@@ -16,6 +16,7 @@ import {
   Generated,
   JoinColumn,
 } from 'typeorm';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Entity('products')
 export class Product {
@@ -79,4 +80,6 @@ export class Product {
 
   @OneToMany(() => Inventory, (inventory) => inventory.product)
   inventories!: Inventory[];
+  @OneToMany(() => OrderItem, (item) => item.product)
+  orderItems!: OrderItem[];
 }

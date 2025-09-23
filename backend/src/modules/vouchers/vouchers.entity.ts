@@ -36,8 +36,8 @@ export class Voucher {
   @Column({ type: 'int', default: 0 })
   used_count!: number;
 
-  @CreateDateColumn()
-  created_at!: Date;
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  createdAt!: Date;
 
   @OneToMany(() => VoucherUsage, (usage) => usage.voucher)
   usages!: VoucherUsage[];
