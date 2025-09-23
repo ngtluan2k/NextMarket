@@ -5,7 +5,7 @@ import { StoreInformation } from '../store-information/store-information.entity'
 export class StoreInformationEmail {
   @PrimaryGeneratedColumn()
   id!: number;
-  
+
   @Column()
   store_information_id!: number;
 
@@ -19,6 +19,9 @@ export class StoreInformationEmail {
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
+
+  @Column({ type: 'boolean', default: false })
+  is_draft!: boolean;
 
   @Column({
     type: 'datetime',

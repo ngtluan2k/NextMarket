@@ -10,8 +10,8 @@ export class UserProfile {
   @Column({ type: 'char', length: 36, unique: true })
   uuid!: string;
 
-  @Column()
-  user_id!: number;
+  // @Column()
+  // user_id!: number;
 
   @Column({ nullable: true })
   full_name!: string;

@@ -49,29 +49,18 @@ export default function EveryMartHeader({
 }: {
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
-}) {
+}) { 
+  console.log('EveryMartHeader render - openLogin:'); // Debug log
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
 
   const [query, setQuery] = useState('');
   const [openLogin, setOpenLogin] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
 
-  // Đọc trạng thái đăng nhập (mock) từ localStorage
-  useEffect(() => {
-    const raw = localStorage.getItem('everymart.me');
-    if (raw) {
-      try {
-        setMe(JSON.parse(raw));
-      } catch (err) {
-        console.error('Failed to parse user from localStorage:', err);
-      }
-    }
-  }, []);
-
   // Lưu khi thay đổi
   useEffect(() => {
-    if (me) localStorage.setItem('everymart.me', JSON.stringify(me));
-    else localStorage.removeItem('everymart.me');
+    if (me) localStorage.setItem('user', JSON.stringify(me));
+    else localStorage.removeItem('user');
   }, [me]);
 
 
@@ -82,7 +71,7 @@ export default function EveryMartHeader({
 
   // Đọc trạng thái đăng nhập từ localStorage
   useEffect(() => {
-    const raw = localStorage.getItem("everymart.me");
+    const raw = localStorage.getItem("user");
     if (raw) {
       try {
         setMe(JSON.parse(raw));
@@ -92,27 +81,22 @@ export default function EveryMartHeader({
     }
   }, []);
 
-  // Lưu trạng thái user khi thay đổi
-  useEffect(() => {
-    if (me) localStorage.setItem("everymart.me", JSON.stringify(me));
-    else localStorage.removeItem("everymart.me");
-  }, [me]);
-
   const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  localStorage.removeItem("everymart.me");
-  localStorage.removeItem("cart"); // xoá giỏ hàng cache
-  setMe(null);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("user");
+    localStorage.removeItem("cart"); // xoá giỏ hàng cache
+    setMe(null);
 
 
-};
+  };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("search:", query);
   };
 
+console.log('Rendering LoginModal with openLogin:', openLogin);
 
 
   return (
@@ -281,10 +265,13 @@ export default function EveryMartHeader({
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
+            console.log('Login successful:', json.data); // Debug log
+             console.log('Current openLogin state:', openLogin); // Debug log
 
             localStorage.setItem("token", json.access_token);
             localStorage.setItem("user", JSON.stringify(json.data));
             setMe(json.data);
+            console.log('Modal should close now'); // Debug log
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

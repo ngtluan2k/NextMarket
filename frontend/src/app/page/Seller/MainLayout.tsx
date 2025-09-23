@@ -11,6 +11,7 @@ import Home from '../Home';
 import { SellerDashboard } from '../../components/register_seller/SellerDashboard';
 import SellerHeader from '../../components/seller/SellerHeader';
 import { storeService } from '../../../service/store.service';
+import StoreDraftBanner from './StoreDraftBanner';
 
 const { Content, Footer } = Layout;
 
@@ -26,22 +27,26 @@ const pages: Record<string, React.ReactNode> = {
 
 const SellerMainLayout: React.FC = () => {
   const [activePage, setActivePage] = useState('Dashboard');
+  const [store, setStore] = useState<any>(null);
   const navigate = useNavigate();
-useEffect(() => {
-  const checkStore = async () => {
-    try {
-      const store = await storeService.getMyStore(); // đã là object
-      if (!store) {
+  useEffect(() => {
+    const checkStore = async () => {
+      try {
+        const store = await storeService.getMyStore(); // đã là object
+        if (!store) {
+          navigate('/seller-registration');
+          return;
+        }
+        setStore(store);
+
+      } catch (err) {
+        console.error('Error checking store:', err);
         navigate('/seller-registration');
       }
-    } catch (err) {
-      console.error('Error checking store:', err);
-      navigate('/seller-registration');
-    }
-  };
+    };
 
-  checkStore();
-}, [navigate]);
+    checkStore();
+  }, [navigate]);
 
 
 
@@ -59,7 +64,8 @@ useEffect(() => {
             background: '#F7F7F7',
           }}
         >
-          {pages[activePage]}
+          <StoreDraftBanner isDraft={store?.is_draft} />
+          {!store?.is_draft && pages[activePage]}
         </Content>
         <Footer style={{ textAlign: 'center' }}>
           Ant Design ©2025 Created by Ant UED

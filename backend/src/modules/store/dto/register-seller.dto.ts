@@ -12,6 +12,11 @@ export class StoreEmailDto {
   @IsNotEmpty()
   @IsEmail()
   email!: string;
+
+  @ApiPropertyOptional({ description: 'Lưu nháp email' })
+  @IsOptional()
+  @IsBoolean()
+  is_draft?: boolean;
 }
 
 // Store Document DTO
@@ -25,6 +30,11 @@ export class StoreDocumentDto {
   @IsNotEmpty()
   @IsString()
   file_url!: string;
+
+  @ApiPropertyOptional({ description: 'Lưu nháp tài liệu' })
+  @IsOptional()
+  @IsBoolean()
+  is_draft?: boolean;
 }
 
 export class RegisterSellerDto {

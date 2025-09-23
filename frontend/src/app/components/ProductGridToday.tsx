@@ -59,6 +59,7 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
             image: primaryMedia?.url || "https://via.placeholder.com/220x220?text=No+Image",
             price: mainVariant?.price || p.base_price || "0",
             brandName: p.brand?.name,
+          
           };
         });
 

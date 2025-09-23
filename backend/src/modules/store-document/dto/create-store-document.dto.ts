@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsEnum, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, MaxLength, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 
@@ -34,4 +34,13 @@ export class CreateStoreDocumentDto {
   @IsString()
   @MaxLength(500)
   file_url!: string;
+
+  @ApiProperty ({
+    description: 'đánh dấu thư mục lưu nháp ',
+    example: true,
+    required: false
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_draft?: boolean;
 }

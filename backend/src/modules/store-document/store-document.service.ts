@@ -41,6 +41,7 @@ export class StoreDocumentService {
       ...createDto,
       file_url: filePath,
       verified: false,
+      is_draft: createDto.is_draft ?? false,
     });
 
     return await this.storeDocumentRepo.save(document);

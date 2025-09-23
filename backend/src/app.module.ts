@@ -25,6 +25,7 @@ import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { UserAddressModule } from './modules/user_address/user_address.module';
+import { StoreIdentificationModule } from './modules/store-identification/store-identification.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { UserAddressModule } from './modules/user_address/user_address.module';
     VouchersModule,
     VoucherUsageModule,
     UserAddressModule,
+    StoreIdentificationModule,
   ],
 })
 export class AppModule { }

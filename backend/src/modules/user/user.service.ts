@@ -52,15 +52,8 @@ export class UserService {
       dob: dto.dob,
       phone: dto.phone,
       gender: dto.gender,
+      country: dto.country,
       created_at: new Date(),
-      profile: {
-        uuid: uuidv4(),
-        full_name: dto.full_name,
-        dob: dto.dob,
-        phone: dto.phone,
-        gender: dto.gender,
-        country: dto.country,
-        created_at: new Date(),
       },
     });
 
