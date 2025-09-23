@@ -77,9 +77,9 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
     };
   }, []);
 
-  const handleAddToCart = async (product: ProductItem) => {
+  const handleAddToCart = async (product: ProductRaw) => {
     try {
-      await addToCart(product.id as number);
+      await addToCart(product.id);
       if (showMessage) {
         console.log("ok")
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
@@ -118,7 +118,7 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
           </div>
 
           <button
-            onClick={() => addToCart(p.id, 1)}
+            onClick={() => handleAddToCart(p)}
             className="mt-2 w-full rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 transition"
           >
             Thêm vào giỏ

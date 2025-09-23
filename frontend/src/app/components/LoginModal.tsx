@@ -155,12 +155,12 @@ export default function LoginModal({
 
   const callDefaultRegister = async (payload: RegisterPayload) => {
     const res = await fetch(`${apiBase}/users/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Đăng ký thất bại");
+    if (!res.ok) throw new Error(data?.message || 'Đăng ký thất bại');
     return data;
   };
   // ---------- submit ----------
@@ -177,7 +177,7 @@ export default function LoginModal({
       // close modal
       onClose();
     } catch (err: any) {
-      setError(err?.message ?? "Đăng nhập thất bại. Vui lòng thử lại.");
+      setError(err?.message ?? 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -194,11 +194,11 @@ export default function LoginModal({
       else await callDefaultRegister(reg);
 
       // after successful register, switch to login and prefill email
-      setMode("login");
+      setMode('login');
       setEmail(reg.email);
-      setPassword("");
+      setPassword('');
     } catch (err: any) {
-      setError(err?.message ?? "Đăng ký thất bại. Vui lòng thử lại.");
+      setError(err?.message ?? 'Đăng ký thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -395,32 +395,6 @@ export default function LoginModal({
                   autoComplete="new-password"
                 />
               </div>
-              {/* Country */}
-              <div className="group">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Đất nước</label>
-                <div
-                  className="relative flex items-center rounded-xl border border-slate-300 bg-white
-                focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100"
-                >
-                  <span className="pointer-events-none absolute left-3 text-slate-400">
-                    <Globe className="h-4 w-4" />
-                  </span>
-                  <select
-                    value={reg.country}
-                    onChange={(e) => setReg({ ...reg, country: e.target.value })}
-                    className="w-full rounded-xl bg-transparent py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none"
-                  >
-                    <option value="Vietnam">Vietnam</option>
-                    {countries.map((c) => (
-                      <option key={c.code} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-
               <FancyButton loading={submitting} type="submit" className="mt-1">
                 Tạo tài khoản
               </FancyButton>
