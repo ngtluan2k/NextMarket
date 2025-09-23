@@ -28,7 +28,7 @@ export class UserProfile {
   @Column({ nullable: true })
   avatar_url!: string;
 
-  @Column({ type: 'text', nullable: true , default: 'Việt Nam'})
+  @Column({ type: 'text', nullable: true})
   country!: string;
 
   @Column({ type: 'datetime', nullable: true })

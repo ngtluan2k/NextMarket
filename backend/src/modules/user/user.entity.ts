@@ -10,7 +10,7 @@ import {
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
-import { ShoppingCart } from '../cart/shopping_cart.entity';
+import { ShoppingCart } from '../cart/cart.entity';
 import { Order } from '../orders/order.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 

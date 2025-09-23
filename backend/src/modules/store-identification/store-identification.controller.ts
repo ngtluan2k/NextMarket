@@ -28,7 +28,7 @@ import {
 } from '@nestjs/swagger';
 import { StoreIdentificationService } from './store-identification.service';
 import { CreateStoreIdentificationDto } from './dto/create-store-identification.dto';
-import { UpdateStoreIdentificationDto } from './dto/updat-store-identification.dto';
+import { UpdateStoreIdentificationDto } from './dto/update-store-identification.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { multerConfig } from './config/multer.config';
 
