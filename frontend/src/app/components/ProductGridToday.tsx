@@ -31,7 +31,7 @@ type Props = {
   ) => void;
 };
 
-export default function ProductGridToday({ containerClassName = "", cardClassName = "",showMessage }: Props) {
+export default function ProductGridToday({ containerClassName = "", cardClassName = "", showMessage }: Props) {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,10 +79,13 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
 
   const handleAddToCart = async (product: ProductRaw) => {
     try {
+      console.log("addtocart")
       await addToCart(product.id);
       if (showMessage) {
         console.log("ok")
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
+      }else{
+        console.log(showMessage)
       }
     } catch (error) {
       console.error('Failed to add to cart:', error);

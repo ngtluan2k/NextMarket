@@ -55,7 +55,7 @@ const App: React.FC = () => {
       <Routes>
         {/* <Route path="/login" element={<AuthForm />} /> */}
         <Route path="*" element={<Navigate to="/" />} />
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home showMessage={showMessage}/>} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />

@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { StoreIdentification } from './store-identification.entity';
 import { Store } from '../store/store.entity';
 import { CreateStoreIdentificationDto } from './dto/create-store-identification.dto';
-import { UpdateStoreIdentificationDto } from './dto/updat-store-identification.dto';
+import { UpdateStoreIdentificationDto } from './dto/update-store-identification.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
