@@ -68,10 +68,10 @@ export class ProductService {
 
       // Media
       if (dto.media?.length) {
-        for (const m of dto.media) {
-          await manager.save(ProductMedia, { ...m, product });
-        }
-      }
+  for (const m of dto.media) {
+    await manager.save(ProductMedia, { ...m, product });
+  }
+}
 
       // Variants
       const variantMap: Record<string, any> = {};

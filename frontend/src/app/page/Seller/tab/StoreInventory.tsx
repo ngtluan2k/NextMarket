@@ -133,51 +133,47 @@ const fetchStores = async () => {
       (p: ApiProduct) => p.status === 'active'
     );
 
-    const mappedProducts: Product[] = activeProducts.map(
-      (apiProduct: ApiProduct) => {
-        const primaryImage =
-          apiProduct.media?.find(
-            (m) => m.is_primary && m.media_type === 'image'
-          )?.url || '/placeholder.svg';
+const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) => {
+  const primaryImage =
+    apiProduct.media?.find((m) => m.is_primary && m.media_type === 'image')?.url ||
+    '/placeholder.svg';
 
-        const categoryName =
-          apiProduct.categories?.find((c) => c.category?.name)?.category?.name ||
-          'Chung';
+  const imageUrl = primaryImage.startsWith('/uploads')
+    ? `http://localhost:3000${primaryImage}`
+    : primaryImage;
 
-        const stock = apiProduct.variants?.[0]?.stock || 0;
+  const categoryName =
+    apiProduct.categories?.find((c) => c.category?.name)?.category?.name || 'Chung';
 
-        const rawPrice =
-          apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
-        const price =
-          typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice);
-        const finalPrice = isNaN(price) ? 0 : price;
+  const stock = apiProduct.variants?.[0]?.stock || 0;
 
-        const sold = Math.floor(Math.random() * 50);
-        const revenue = finalPrice * sold;
+  const rawPrice = apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
+  const price = typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice);
+  const finalPrice = isNaN(price) ? 0 : price;
 
-        const status = getStockStatus(stock);
+  const sold = Math.floor(Math.random() * 50);
+  const revenue = finalPrice * sold;
 
-        return {
-          key: apiProduct.id.toString(),
-          id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
-          name: apiProduct.name || 'Sản Phẩm Không Xác Định',
-          category: categoryName,
-          price: finalPrice,
-          stock,
-          sold,
-          revenue,
-          status,
-          image: primaryImage,
-          sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
-          description: apiProduct.description || '',
-          tags: [],
-          createdAt:
-            apiProduct.created_at?.split('T')[0] ||
-            new Date().toISOString().split('T')[0],
-          apiId: apiProduct.id,
-        };
-      }
-    );
+  const status = getStockStatus(stock);
+
+  return {
+    key: apiProduct.id.toString(),
+    id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
+    name: apiProduct.name || 'Sản Phẩm Không Xác Định',
+    category: categoryName,
+    price: finalPrice,
+    stock,
+    sold,
+    revenue,
+    status,
+    image: imageUrl, // ✅ dùng full URL backend
+    sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
+    description: apiProduct.description || '',
+    tags: [],
+    createdAt: apiProduct.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    apiId: apiProduct.id,
+  };
+});
 
     console.log('Danh Sách Sản Phẩm Active:', mappedProducts);
     setProducts(mappedProducts);

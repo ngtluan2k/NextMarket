@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import ProductCard, { Product } from "./ProductCard";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import ProductCard, { Product } from './ProductCard';
+import { useNavigate } from 'react-router-dom';
 
 type ProductRaw = {
   id: number;
@@ -19,7 +19,12 @@ type Props = {
   brandIds?: number[]; // thêm brandIds
 };
 
-const ProductList: React.FC<Props> = ({ products: initialProducts, title, slug, brandIds = [] }) => {
+const ProductList: React.FC<Props> = ({
+  products: initialProducts,
+  title,
+  slug,
+  brandIds = [],
+}) => {
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState<string | null>(null);
@@ -34,23 +39,34 @@ const ProductList: React.FC<Props> = ({ products: initialProducts, title, slug, 
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem('token');
         let url = `http://localhost:3000/categories/${slug}/products`;
         if (slug) url += `?category=${slug}`;
 
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const json = await res.json();
         const rawProducts: ProductRaw[] = json.data || [];
 
         const mapped: Product[] = rawProducts.map((p) => {
-          const primaryMedia = p.media?.find((m) => m.is_primary) || p.media?.[0];
+          const primaryMedia =
+            p.media?.find((m) => m.is_primary) || p.media?.[0];
           const mainVariant = p.variants?.[0];
           return {
             id: p.id,
             slug: p.slug,
             name: p.name,
-            image: primaryMedia?.url || "https://via.placeholder.com/220x220?text=No+Image",
+            image: primaryMedia?.url
+              ? primaryMedia.url.startsWith('http')
+                ? primaryMedia.url // đã là URL web
+                : `http://localhost:3000/${primaryMedia.url.replace(
+                    /^\/+/,
+                    ''
+                  )}` // đường dẫn local
+              : 'https://via.placeholder.com/220x220?text=No+Image',
+
             price: Number(mainVariant?.price || p.base_price || 0),
             brandId: p.brand?.id, // thêm brandId để lọc
             brandName: p.brand?.name,
@@ -58,18 +74,23 @@ const ProductList: React.FC<Props> = ({ products: initialProducts, title, slug, 
         });
 
         // Lọc theo brandIds nếu có
-        const filtered = brandIds.length > 0 ? mapped.filter((p) => p.brandId && brandIds.includes(p.brandId)) : mapped;
+        const filtered =
+          brandIds.length > 0
+            ? mapped.filter((p) => p.brandId && brandIds.includes(p.brandId))
+            : mapped;
 
         if (!cancelled) setProducts(filtered);
       } catch (e: any) {
-        if (!cancelled) setError(e.message || "Không tải được sản phẩm");
+        if (!cancelled) setError(e.message || 'Không tải được sản phẩm');
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     fetchProducts();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [initialProducts, slug, brandIds]);
 
   if (loading) return <div>Đang tải sản phẩm…</div>;
@@ -86,7 +107,11 @@ const ProductList: React.FC<Props> = ({ products: initialProducts, title, slug, 
       {title && <h2 className="mb-3 text-lg font-bold">{title}</h2>}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {products.map((p) => (
-          <div key={p.id} onClick={() => handleClick(p.slug)} className="cursor-pointer">
+          <div
+            key={p.id}
+            onClick={() => handleClick(p.slug)}
+            className="cursor-pointer"
+          >
             <ProductCard product={p} />
           </div>
         ))}

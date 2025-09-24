@@ -1,20 +1,29 @@
 // src/pages/SearchPage.tsx
-import React, { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Product } from "../../service/product.service";
-import EveryMartHeader from "../components/Navbar";
-import Breadcrumb from "../components/Breadcrumb";
-import { useSearchBreadcrumbs } from "../hooks/useSearchBreadcrumbs";
-import { vnd } from "../components/productDetail/BuyBox";
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Product } from '../../service/product.service';
+import EveryMartHeader from '../components/Navbar';
+import Breadcrumb from '../components/Breadcrumb';
+import { useSearchBreadcrumbs } from '../hooks/useSearchBreadcrumbs';
+import { vnd } from '../components/productDetail/BuyBox';
 
 // --- ProductCard riêng cho SearchPage ---
-const SearchProductCard: React.FC<{ product: Product; onClick: () => void }> = ({ product, onClick }) => {
-  const imageUrl =
-    product.media?.find((m) => m.is_primary)?.url ||
-    product.media?.[0]?.url ||
-    "https://via.placeholder.com/220x220?text=No+Image";
+const SearchProductCard: React.FC<{
+  product: Product;
+  onClick: () => void;
+}> = ({ product, onClick }) => {
+  const toImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url; // đã là full URL thì giữ nguyên
+    return `http://localhost:3000${url}`; // thêm host nếu là path uploads
+  };
 
-  const brandName = product.brand?.name ?? "Không có thương hiệu";
+  const imageUrl =
+    toImageUrl(product.media?.find((m) => m.is_primary)?.url) ||
+    toImageUrl(product.media?.[0]?.url) ||
+    'https://via.placeholder.com/220x220?text=No+Image';
+
+  const brandName = product.brand?.name ?? 'Không có thương hiệu';
 
   return (
     <div
@@ -26,10 +35,13 @@ const SearchProductCard: React.FC<{ product: Product; onClick: () => void }> = (
         alt={product.name}
         className="w-full aspect-square object-cover rounded-lg"
       />
+
       <h3 className="mt-2 text-sm font-bold line-clamp-2">{product.name}</h3>
       <p className="text-xs text-slate-500">{brandName}</p>
       {product.base_price != null && (
-        <p className="mt-1 text-sm font-semibold">{vnd(product.base_price as number)}</p>
+        <p className="mt-1 text-sm font-semibold">
+          {vnd(product.base_price as number)}
+        </p>
       )}
     </div>
   );
@@ -37,7 +49,7 @@ const SearchProductCard: React.FC<{ product: Product; onClick: () => void }> = (
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams();
-  const query = searchParams.get("q") || "";
+  const query = searchParams.get('q') || '';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,10 +68,11 @@ export default function SearchPage() {
         );
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
-          throw new Error(json.message || "Lỗi server");
+          throw new Error(json.message || 'Lỗi server');
         }
         const json = await res.json();
-        if (!json.data || !Array.isArray(json.data)) throw new Error("Dữ liệu trả về không hợp lệ");
+        if (!json.data || !Array.isArray(json.data))
+          throw new Error('Dữ liệu trả về không hợp lệ');
         setProducts(json.data);
       } catch (err: any) {
         setError(err.message);
@@ -85,7 +98,9 @@ export default function SearchPage() {
 
           {loading && <div>Đang tìm...</div>}
           {error && <div className="text-red-500">{error}</div>}
-          {!loading && !error && products.length === 0 && <div>Không tìm thấy sản phẩm</div>}
+          {!loading && !error && products.length === 0 && (
+            <div>Không tìm thấy sản phẩm</div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {products.map((p) => (

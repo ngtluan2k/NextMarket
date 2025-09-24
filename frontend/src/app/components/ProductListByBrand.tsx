@@ -50,39 +50,49 @@ const ProductListByBrand: React.FC<Props> = ({ brandIds, categoryIds, title }) =
   <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4`}>
     {title && <h3 className="col-span-full text-lg font-bold">{title}</h3>}
 
-    {products.map((p) => {
-      // lấy ảnh chính từ media, fallback bằng placeholder
-      const imageUrl =
-        p.media?.find((m) => m.is_primary)?.url ||
-        "https://via.placeholder.com/150";
+{products.map((p) => {
+  const primaryMedia = p.media?.find((m) => m.is_primary);
 
-      return (
-        <div
-          key={p.id}
-          className="rounded-xl border border-slate-200 bg-white p-2 hover:shadow-md transition-shadow"
-        >
-          <div
-            className="cursor-pointer"
-            onClick={() => navigate(`/products/slug/${p.slug}`)}
-          >
-            <img
-              src={imageUrl}
-              alt={p.name}
-              className="w-full aspect-square object-cover rounded-lg"
-            />
-            <h3 className="mt-2 text-sm font-bold line-clamp-2">{p.name}</h3>
-            {p.brand?.name && (
-              <p className="text-xs text-slate-500">{p.brand.name}</p>
-            )}
-            {p.base_price != null && (
-              <p className="mt-1 text-sm font-semibold">
-                {Number(p.base_price).toLocaleString("vi-VN")}₫
-              </p>
-            )}
-          </div>
+  const imageUrl = primaryMedia?.url
+    ? primaryMedia.url.startsWith("http")
+      ? primaryMedia.url // đã là URL web
+      : `http://localhost:3000/${primaryMedia.url.replace(/^\/+/, "")}` // đường dẫn local
+    : "https://via.placeholder.com/220x220?text=No+Image";
+
+  return (
+    <div
+      key={p.id}
+      className="rounded-xl border border-slate-200 bg-white p-2 hover:shadow-md transition-shadow"
+    >
+      <div
+        className="cursor-pointer"
+        onClick={() => navigate(`/products/slug/${p.slug}`)}
+      >
+        <div className="relative w-full aspect-square overflow-hidden rounded-lg">
+          <img
+            src={imageUrl}
+            alt={p.name}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src =
+                "https://via.placeholder.com/220x220?text=No+Image";
+            }}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          />
         </div>
-      );
-    })}
+        <h3 className="mt-2 text-sm font-bold line-clamp-2">{p.name}</h3>
+        {p.brand?.name && (
+          <p className="text-xs text-slate-500">{p.brand.name}</p>
+        )}
+        {p.base_price != null && (
+          <p className="mt-1 text-sm font-semibold">
+            {Number(p.base_price).toLocaleString("vi-VN")}₫
+          </p>
+        )}
+      </div>
+    </div>
+  );
+})}
+
   </div>
 );
 
