@@ -71,10 +71,6 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
     };
   }, []);
 
-  
-   
-
-
   if (loading) return <div>Đang tải sản phẩm…</div>;
   if (error) return <div className="text-red-500">Lỗi: {error}</div>;
   if (products.length === 0) return <div>Chưa có sản phẩm.</div>;
