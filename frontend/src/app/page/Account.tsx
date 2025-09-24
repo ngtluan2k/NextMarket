@@ -73,15 +73,6 @@ const Account: React.FC = () => {
                   passwordSet={security?.passwordSet}
                   pinSet={security?.pinSet}
                   social={security?.social}
-                  onChangePhone={() => {}}
-                  onChangeEmail={() => {}}
-                  onChangePassword={() => {}}
-                  onSetupPin={() => {}}
-                  onRequestDelete={() => {}}
-                  onLinkFacebook={() => {}}
-                  onUnlinkFacebook={() => {}}
-                  onLinkGoogle={() => {}}
-                  onUnlinkGoogle={() => {}}
                 />
                 
               </div>
