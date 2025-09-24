@@ -62,7 +62,7 @@ export default function EveryMartHeader({
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
 }) { 
-  console.log('EveryMartHeader render - openLogin:'); // Debug log
+  // console.log('EveryMartHeader render - openLogin:'); // Debug log
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
 
   const [query, setQuery] = useState('');
@@ -88,7 +88,7 @@ export default function EveryMartHeader({
     else localStorage.removeItem('user');
   }, [me]);
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = cart.length;
 
   const navigate = useNavigate();
 
@@ -124,7 +124,7 @@ export default function EveryMartHeader({
     console.log('search:', query);
   };
 
-console.log('Rendering LoginModal with openLogin:', openLogin);
+// console.log('Rendering LoginModal with openLogin:', openLogin);
 
   return (
     <header className="w-full bg-white">

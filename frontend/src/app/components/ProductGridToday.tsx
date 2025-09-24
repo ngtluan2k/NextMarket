@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
 
 type ProductRaw = {
   id: number;
@@ -25,18 +24,13 @@ type ProductCardData = {
 type Props = {
   containerClassName?: string; // class cho grid container
   cardClassName?: string; // class cho từng card
-  showMessage?: (
-    type: 'success' | 'error' | 'warning',
-    content: string
-  ) => void;
 };
 
-export default function ProductGridToday({ containerClassName = "", cardClassName = "", showMessage }: Props) {
+export default function ProductGridToday({ containerClassName = "", cardClassName = "" }: Props) {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { addToCart } = useCart();
 
   useEffect(() => {
     let cancelled = false;
@@ -77,20 +71,7 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
     };
   }, []);
 
-  const handleAddToCart = async (product: ProductRaw) => {
-    try {
-      console.log("addtocart")
-      await addToCart(product.id);
-      if (showMessage) {
-        console.log("ok")
-        showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
-      }else{
-        console.log(showMessage)
-      }
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-    }
-  };
+  
    
 
 
@@ -120,12 +101,12 @@ export default function ProductGridToday({ containerClassName = "", cardClassNam
             <p className="mt-1 text-sm font-semibold">{Number(p.price).toLocaleString("vi-VN")}đ</p>
           </div>
 
-          <button
+          {/* <button
             onClick={() => handleAddToCart(p)}
             className="mt-2 w-full rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 transition"
           >
             Thêm vào giỏ
-          </button>
+          </button> */}
         </div>
       ))}
     </div>

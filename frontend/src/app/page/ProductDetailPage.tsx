@@ -17,7 +17,14 @@ import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
 
-export default function ProductDetailPage() {
+interface Props {
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
+}
+
+export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
   const slug = params.slug ?? ''; // lấy slug từ URL
   const { loading, product, combos } = useProductDetail(slug);
@@ -68,6 +75,7 @@ export default function ProductDetailPage() {
                   product={product}
                   width={L.rightWidth}
                   minHeight={L.buyBoxMinHeight}
+                  showMessage={showMessage}
                 />
               </div>
             </div>
