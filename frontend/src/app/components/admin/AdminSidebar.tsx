@@ -147,7 +147,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       breakpoint="lg"
       collapsedWidth={80}
     >
-
       <Menu
         mode="inline"
         selectedKeys={[activeKey]}
@@ -161,7 +160,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         }}
         className="admin-sidebar-menu"
       />
-
       {/* Custom CSS cho menu */}
       <style>{`
         .admin-sidebar-menu .ant-menu-item,

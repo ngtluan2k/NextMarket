@@ -12,7 +12,7 @@ import { Role } from '../role/role.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
-
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 @Injectable()
 export class UserService {
   constructor(
@@ -123,5 +123,13 @@ export class UserService {
     }
 
     return profile;
+  }
+
+  async updateProfile(userId: number, dto: UpdateUserProfileDto) {
+    const profile = await this.userProfileRepository.findOne({ where: { user_id: userId } });
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    Object.assign(profile, dto); // merge data
+    return await this.userProfileRepository.save(profile);
   }
 }

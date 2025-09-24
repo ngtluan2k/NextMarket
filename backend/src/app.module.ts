@@ -19,6 +19,7 @@ import { ProductMediaModule } from './modules/product_media/product_media.module
 import { VariantModule } from './modules/variant/variant.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
+import { AuthModule } from './common/auth/auth.module';
 
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module';
@@ -72,7 +73,7 @@ import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affi
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: false,
           logging: true,
         };
       },
@@ -111,6 +112,7 @@ import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affi
     ShippingLabelsModule,
     ShipmentsModule,
     AffiliateCommissionsModule,
+    AuthModule
   ],
 })
 export class AppModule { }

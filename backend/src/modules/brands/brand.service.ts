@@ -5,10 +5,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { Brand } from './brand.entity';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
+import { Product } from '../product/product.entity';
+import { Category } from '../categories/category.entity';
 
 @Injectable()
 export class BrandService {
-  constructor(@InjectRepository(Brand) private readonly repo: Repository<Brand>) {}
+  constructor(
+    @InjectRepository(Brand)
+    private readonly repo: Repository<Brand>,
+
+    @InjectRepository(Product)
+    private readonly productRepo: Repository<Product>,
+  ) {}
 
   async list(keyword?: string){
     const where = keyword ? {name: ILike(`%${keyword}%`)}:{};
@@ -47,6 +55,35 @@ export class BrandService {
     await this.repo.remove(brand)
     return {id}
   }
+
+async findProductsByBrand(brandId: number): Promise<Product[]> {
+  return this.productRepo.find({
+    where: { 
+      brand: { id: brandId },
+      status: 'active', // 👈 chỉ lấy sản phẩm active
+    },
+    relations: ['brand', 'media', 'variants', 'categories'],
+  });
+}
+
+async findCategoriesByBrand(brandId: number): Promise<Category[]> {
+  const products = await this.productRepo.find({
+    where: { brand: { id: brandId }, },
+    relations: ['categories', 'categories.category'], // đúng tên property
+  });
+
+  const categoriesMap = new Map<number, Category>();
+
+  for (const product of products) {
+    for (const pc of product.categories) {
+      if (pc.category) {
+        categoriesMap.set(pc.category.id, pc.category);
+      }
+    }
+  }
+
+  return Array.from(categoriesMap.values());
+}
 
 
 }

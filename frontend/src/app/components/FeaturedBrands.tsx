@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export type BrandCard = {
   id: string | number;
-  coverUrl?: string;   // ảnh hero / sản phẩm
-  logoUrl?: string;    // logo thương hiệu (optional)
-  title?: string;      // tên / nhãn
-  tagline?: string;    // mô tả ngắn (optional)
-  href?: string;       // link (optional)
+  coverUrl?: string;
+  logoUrl?: string;
+  title?: string;
+  tagline?: string;
+  href?: string;
 };
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   fetchBrands?: () => Promise<BrandCard[]>;
   seeAllHref?: string;
   className?: string;
+  onSelect?: (brand: BrandCard) => void;
 };
 
 const ph = (w = 260, h = 160) =>
@@ -43,13 +45,15 @@ export default function FeaturedBrands({
   fetchBrands,
   seeAllHref,
   className = "",
+  onSelect,
 }: Props) {
   const [list, setList] = useState<BrandCard[]>(items ?? FALLBACK);
   const [loading, setLoading] = useState<boolean>(!!fetchBrands);
-
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
+
+  const navigate = useNavigate();
 
   // fetch nếu có API
   useEffect(() => {
@@ -94,6 +98,11 @@ export default function FeaturedBrands({
     el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: "smooth" });
   };
 
+  const handleClickBrand = (b: BrandCard) => {
+    onSelect?.(b); // nếu muốn highlight / filter
+    navigate(`/brands/${b.id}`); // điều hướng sang BrandPage
+  };
+
   return (
     <section
       className={`rounded-2xl bg-gradient-to-r from-sky-50 to-indigo-50 p-4 ring-1 ring-slate-200 shadow-xl ${className}`}
@@ -110,25 +119,23 @@ export default function FeaturedBrands({
       <div className="relative">
         {/* arrows */}
         <button
-              aria-label="Prev"
-              onClick={() => scrollByView(-1)}
-              className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center
-                         rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            </button>
-            <button
-              aria-label="Next"
-              onClick={() => scrollByView(1)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center
-                         rounded-full bg-white/90 shadow  ring-1 ring-slate-200 hover:bg-white text-sky-600"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            </button>
+          aria-label="Prev"
+          onClick={() => scrollByView(-1)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </button>
+        <button
+          aria-label="Next"
+          onClick={() => scrollByView(1)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
+          </svg>
+        </button>
 
         {/* scroller */}
         <div
@@ -136,10 +143,10 @@ export default function FeaturedBrands({
           className="no-scrollbar flex gap-4 overflow-x-auto scroll-smooth px-1 py-2"
         >
           {list.map((b) => (
-            <a
+            <div
               key={b.id}
-              href={b.href || "#"}
-              className="w-[260px] shrink-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200 shadow hover:shadow-md transition-shadow"
+              className="w-[260px] shrink-0 rounded-2xl bg-white p-3 ring-1 ring-slate-200 shadow hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleClickBrand(b)}
             >
               <div className="flex h-40 items-center justify-center overflow-hidden rounded-xl bg-slate-50">
                 <img
@@ -170,7 +177,7 @@ export default function FeaturedBrands({
               {b.tagline && (
                 <div className="mt-1 text-[11px] text-slate-600 line-clamp-2">{b.tagline}</div>
               )}
-            </a>
+            </div>
           ))}
         </div>
       </div>

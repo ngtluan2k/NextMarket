@@ -2,32 +2,50 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { getCategoryBySlug } from "../../service/category.service";
-// Bạn sẽ viết service thật ở đây
 
-export function useCategoryBreadcrumbs() {
+interface Category {
+  slug: string;
+  name: string;
+}
+
+export interface Crumb {
+  label: string;
+  to?: string;
+  current?: boolean;
+  name?: string; // giữ luôn name để Breadcrumb click về đúng
+}
+
+export function useCategoryBreadcrumbs(category?: Category): Crumb[] {
   const { slug } = useParams<{ slug: string }>();
   const { pathname } = useLocation();
-  const isExplore = pathname.endsWith("/explore"); // /category/:slug/explore
+  const isExplore = pathname.endsWith("/explore");
 
-  const [catName, setCatName] = useState<string>(""); // rỗng trước
+  const [fetchedCat, setFetchedCat] = useState<Category | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!slug) { setCatName(""); return; }
-    (async () => {
-      try {
-        const data = await getCategoryBySlug(slug); // { id, name, ... }
-        if (!cancelled) setCatName(data?.name ?? "");
-      } catch {
-        if (!cancelled) setCatName(""); // giữ rỗng nếu lỗi
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [slug]);
+    if (!category && slug) {
+      getCategoryBySlug(slug)
+        .then((data) => setFetchedCat({ slug, name: data.name }))
+        .catch(() => setFetchedCat({ slug, name: slug.replace(/-/g, " ") }));
+    }
+  }, [category, slug]);
 
-  // trả mảng crumbs (rỗng/placeholder trước; khi có name => re-render)
+  const activeCategory = category ?? fetchedCat;
+
   return useMemo(() => {
-    const base = [{ label: catName || "Danh mục", to: `/category/${slug}`, current: !isExplore }];
-    return isExplore ? [...base, { label: "Khám phá danh mục", current: true }] : base;
-  }, [catName, slug, isExplore]);
+    if (!slug) return [];
+
+    const base: Crumb[] = [
+      {
+        label: activeCategory?.name || "Danh mục",
+        name: activeCategory?.name, // giữ name để truyền ngược
+        to: `/category/${slug}`,
+        current: !isExplore,
+      },
+    ];
+
+    return isExplore
+      ? [...base, { label: "Khám phá danh mục", current: true }]
+      : base;
+  }, [activeCategory, slug, isExplore]);
 }

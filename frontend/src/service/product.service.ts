@@ -87,12 +87,40 @@ export interface Product {
 
 export interface CreateProductDto {
   name: string;
-  slug: string;
   short_description?: string;
   description?: string;
   base_price?: number;
-  brand_id: number;
+  brandId: number;
+  categories?: number[];
+  media?: Array<{
+    media_type: string;
+    url: string;
+    is_primary?: boolean;
+    sort_order?: number;
+  }>;
+  variants?: Array<{
+    sku: string;
+    variant_name: string;
+    price: number;
+    stock: number;
+    barcode?: string;
+  }>;
+  inventory?: Array<{
+    variant_sku: string;
+    location: string;
+    quantity: number;
+    used_quantity?: number;
+  }>;
+  pricing_rules?: Array<{
+    type: string;
+    min_quantity: number;
+    price: number;
+    cycle?: string;
+    starts_at?: string;
+    ends_at?: string;
+  }>;
 }
+
 
 export type UpdateProductDto = Partial<CreateProductDto>;
 
@@ -129,11 +157,11 @@ class ProductService {
     return response.data;
   }
 
-  async deleteProduct(id: number): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/products/${id}`, {
-      headers: this.getAuthHeaders(),
-    });
-  }
+async softDeleteProduct(id: number): Promise<void> {
+  await axios.delete(`${API_BASE_URL}/products/${id}`, {
+    headers: this.getAuthHeaders(),
+  });
+}
 }
 
 export const productService = new ProductService();

@@ -1,4 +1,5 @@
-import React from 'react';
+// src/app/page/ProductDetailPage.tsx
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -16,11 +17,38 @@ import ProductReviews from '../components/productDetail/ProductReviews';
 import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
+import { useCart } from '../context/CartContext';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const slug = params.slug ?? ''; // lấy slug từ URL
+  const slug = params.slug ?? '';
   const { loading, product, combos } = useProductDetail(slug);
+
+  // --- state quản lý variant + qty ---
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
+    null
+  );
+  const [quantity, setQuantity] = useState<number>(1);
+
+  useEffect(() => {
+    if (!product) return;
+    const defaultVariant = product.variants?.[0]?.id ?? null;
+    setSelectedVariantId(defaultVariant);
+    setQuantity(1);
+  }, [product]);
+
+  const { addToCart } = useCart();
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    try {
+      await addToCart(product.id, quantity, selectedVariantId);
+      console.log('✅ Đã thêm vào giỏ');
+    } catch (err) {
+      console.error('❌ Thêm thất bại', err);
+    }
+  };
+
   return (
     <>
       <EveryMartHeader />
@@ -33,7 +61,7 @@ export default function ProductDetailPage() {
               ['--right' as any]: `${L.rightWidth}px`,
             }}
           >
-            {/* TRÁI: chỉ hàng 1, để self-start để dừng trước Reviews */}
+            {/* TRÁI: Gallery */}
             <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
               <Gallery
                 images={
@@ -48,9 +76,15 @@ export default function ProductDetailPage() {
               />
             </div>
 
-            {/* GIỮA: hàng 1 */}
+            {/* GIỮA: Info + Shipping + ComboStrip + Specs + Description */}
             <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
-              <Info product={product} />
+              <Info
+                product={product}
+                selectedVariantId={selectedVariantId}
+                setSelectedVariantId={setSelectedVariantId}
+                quantity={quantity}
+                setQuantity={setQuantity}
+              />
               <Shipping />
               <ComboStrip items={combos} />
               <SimilarProducts />
@@ -61,22 +95,27 @@ export default function ProductDetailPage() {
               />
             </section>
 
-            {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}
+            {/* PHẢI: BuyBox */}
             <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
               <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
                 <BuyBox
                   product={product}
                   width={L.rightWidth}
                   minHeight={L.buyBoxMinHeight}
+                  selectedVariantId={selectedVariantId}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  onAddToCart={() => handleAddToCart()} // truyền callback chuẩn
                 />
               </div>
             </div>
 
-            {/* REVIEWS: hàng 2, chiếm 2 cột (trái+giữa) */}
+            {/* REVIEWS */}
             <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <ProductReviews />
             </div>
 
+            {/* Explore more */}
             <div className="lg:col-span-3 mt-2">
               <ExploreMore />
             </div>

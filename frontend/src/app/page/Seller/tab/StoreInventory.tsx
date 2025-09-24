@@ -45,7 +45,7 @@ import StockBadge from '../../../components/seller/StockBadge';
 import type { StatisticProps } from 'antd';
 import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
-import { ProductFormWizard } from '../../../components/seller/ProductFormWizard';
+import { ProductForm } from '../../../components/seller/ProductFormWizard';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -115,78 +115,76 @@ const fetchStores = async () => {
 
 
   const fetchProducts = async () => {
-    if (!selectedStoreId) return;
+  if (!selectedStoreId) return;
 
-    setLoading(true);
-    try {
-      const apiProducts = await productService.getStoreProducts(
-        selectedStoreId
-      );
-      // console.log('API Products:', apiProducts);
-      if (!Array.isArray(apiProducts)) {
-        console.error('API không trả về mảng:', apiProducts);
-        message.error('Dữ liệu sản phẩm không hợp lệ');
-        setProducts([]);
-        return;
-      }
-      const mappedProducts: Product[] = apiProducts.map(
-        (apiProduct: ApiProduct, index: number) => {
-          const primaryImage =
-            apiProduct.media?.find(
-              (m) => m.is_primary && m.media_type === 'image'
-            )?.url || '/placeholder.svg';
+  setLoading(true);
+  try {
+    const apiProducts = await productService.getStoreProducts(selectedStoreId);
 
-          const categoryName =
-            apiProduct.categories?.find((c) => c.category?.name)?.category
-              ?.name || 'Chung';
-
-          const stock = apiProduct.variants?.[0]?.stock || 0;
-
-          const rawPrice =
-            apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
-          const price =
-            typeof rawPrice === 'string'
-              ? parseFloat(rawPrice)
-              : Number(rawPrice);
-          const finalPrice = isNaN(price) ? 0 : price;
-
-          const sold = Math.floor(Math.random() * 50); // TODO: Thay bằng dữ liệu thực tế
-          const revenue = finalPrice * sold;
-
-          const status = getStockStatus(stock);
-
-          const mappedProduct = {
-            key: apiProduct.id.toString(),
-            id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
-            name: apiProduct.name || 'Sản Phẩm Không Xác Định',
-            category: categoryName,
-            price: finalPrice,
-            stock,
-            sold,
-            revenue,
-            status,
-            image: primaryImage,
-            sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
-            description: apiProduct.description || '',
-            tags: [], // TODO: Lấy từ bảng product_tag
-            createdAt:
-              apiProduct.created_at?.split('T')[0] ||
-              new Date().toISOString().split('T')[0],
-            apiId: apiProduct.id,
-          };
-          // console.log('Sản Phẩm Đã Ánh Xạ:', mappedProduct);
-          return mappedProduct;
-        }
-      );
-      console.log('Danh Sách Sản Phẩm Đã Ánh Xạ:', mappedProducts);
-      setProducts(mappedProducts);
-    } catch (error) {
-      message.error('Không thể tải danh sách sản phẩm');
-      console.error('Lỗi khi tải sản phẩm:', error);
-    } finally {
-      setLoading(false);
+    if (!Array.isArray(apiProducts)) {
+      console.error('API không trả về mảng:', apiProducts);
+      message.error('Dữ liệu sản phẩm không hợp lệ');
+      setProducts([]);
+      return;
     }
+
+    // ✅ Lọc chỉ lấy sản phẩm active
+    const activeProducts = apiProducts.filter(
+      (p: ApiProduct) => p.status === 'active'
+    );
+
+const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) => {
+  const primaryImage =
+    apiProduct.media?.find((m) => m.is_primary && m.media_type === 'image')?.url ||
+    '/placeholder.svg';
+
+  const imageUrl = primaryImage.startsWith('/uploads')
+    ? `http://localhost:3000${primaryImage}`
+    : primaryImage;
+
+  const categoryName =
+    apiProduct.categories?.find((c) => c.category?.name)?.category?.name || 'Chung';
+
+  const stock = apiProduct.variants?.[0]?.stock || 0;
+
+  const rawPrice = apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
+  const price = typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice);
+  const finalPrice = isNaN(price) ? 0 : price;
+
+  const sold = Math.floor(Math.random() * 50);
+  const revenue = finalPrice * sold;
+
+  const status = getStockStatus(stock);
+
+  return {
+    key: apiProduct.id.toString(),
+    id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
+    name: apiProduct.name || 'Sản Phẩm Không Xác Định',
+    category: categoryName,
+    price: finalPrice,
+    stock,
+    sold,
+    revenue,
+    status,
+    image: imageUrl, // ✅ dùng full URL backend
+    sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
+    description: apiProduct.description || '',
+    tags: [],
+    createdAt: apiProduct.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    apiId: apiProduct.id,
   };
+});
+
+    console.log('Danh Sách Sản Phẩm Active:', mappedProducts);
+    setProducts(mappedProducts);
+  } catch (error) {
+    message.error('Không thể tải danh sách sản phẩm');
+    console.error('Lỗi khi tải sản phẩm:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // console.log(products);
 
@@ -233,7 +231,7 @@ const fetchStores = async () => {
       okType: 'danger',
       onOk: async () => {
         try {
-          await productService.deleteProduct(apiId);
+          await productService.softDeleteProduct(apiId);
           setProducts(products.filter((p) => p.id !== productId));
           message.success('Xóa sản phẩm thành công');
         } catch (error) {
@@ -256,7 +254,6 @@ const fetchStores = async () => {
 
         const updateDto: UpdateProductDto = {
           name: values.name,
-          slug: values.name.toLowerCase().replace(/\s+/g, '-'),
           description: values.description,
           base_price: values.price,
         };
@@ -274,10 +271,9 @@ const fetchStores = async () => {
       } else {
         const createDto: CreateProductDto = {
           name: values.name,
-          slug: values.name.toLowerCase().replace(/\s+/g, '-'),
           description: values.description,
           base_price: values.price,
-          brand_id: 1, // Có thể cần lấy từ nguồn khác
+          brandId: values.brandId, // Có thể cần lấy từ nguồn khác
         };
 
         const newApiProduct = await productService.createProduct(createDto);
@@ -605,13 +601,7 @@ const fetchStores = async () => {
           width={1000}
           destroyOnClose
         >
-          <ProductFormWizard
-            onCreated={() => {
-              // reload bảng sau khi tạo
-              fetchProducts();
-            }}
-            onClose={() => setAddWizardVisible(false)}
-          />
+   < ProductForm/>
         </Modal>
 
       </Content>

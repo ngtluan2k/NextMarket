@@ -6,7 +6,6 @@ import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-
 @ApiBearerAuth('access-token')
 @ApiTags('categories')
 @Controller('categories')

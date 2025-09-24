@@ -10,13 +10,15 @@ interface CartItem {
     name: string;
     base_price: number;
     url: string;
-    media: { url: string; is_primary?: boolean };
+    media: { url: string; is_primary?: boolean }
+    status: 'draft' | 'deleted' | 'active'; // thêm status
+
   };
 }
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (productId: number, quantity?: number) => Promise<void>;
+  addToCart: (productId: number, quantity?: number, variantId?: number | null) => Promise<void>;
   removeFromCart: (productId: number) => Promise<void>;
   updateQuantity: (productId: number, quantity: number) => Promise<void>;
   clearCart: () => void;
