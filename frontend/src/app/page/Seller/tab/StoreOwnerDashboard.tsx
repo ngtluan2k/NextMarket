@@ -1,15 +1,65 @@
 'use client';
-import { Layout, Typography, Select, Button } from 'antd';
-import { ExportOutlined } from '@ant-design/icons';
+import { Layout, Typography, Select, Button, Modal,message } from 'antd';
+import { ExportOutlined, DeleteOutlined } from '@ant-design/icons';
 import SalesOverview from '../../../components/seller/SaleOverview';
 import StatsCards from '../../../components/seller/StartCard';
 import TopSellingProducts from '../../../components/seller/TopSellingProducts';
 import InventoryOverview from '../../../components/seller/InventoryOverview';
 import { Content } from 'antd/es/layout/layout';
+import { useState } from 'react';
 
 const { Title, Text } = Typography;
 
 export default function StoreOwnerDashboard() {
+  const [loading , setLoading]= useState (false);
+
+  const handleDeleteStore = async () => {
+    Modal.confirm({
+      title: '⚠️ Xác nhận xóa cửa hàng',
+      content: (
+        <div>
+          <p>
+            Bạn có chắc chắn muốn <strong>XÓA VĨNH VIỄN</strong> cửa hàng này?
+          </p>
+          
+        </div>
+      ),
+      okText: 'Xóa Ngay',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const token = localStorage.getItem('token');
+          const res = await fetch('http://localhost:3000/stores/my-store', {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            message.success(
+              `✅ Xóa cửa hàng thành công! Bạn sẽ được chuyển về trang chủ.`
+            );
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1500);
+          } else {
+            message.error(`❌ Lỗi: ${data.message || 'Không thể xóa cửa hàng'}`);
+          }
+        } catch (error) {
+          message.error('❌ Lỗi kết nối. Vui lòng thử lại.');
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
   return (
     <Layout className="min-h-screen bg-gray-50">
       <Content className="p-6">
@@ -33,6 +83,14 @@ export default function StoreOwnerDashboard() {
               className="bg-cyan-500 border-cyan-500"
             >
               Xuất Dữ Liệu
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              loading={loading}
+              onClick={handleDeleteStore}
+            >
+              Xóa Cửa Hàng
             </Button>
           </div>
         </div>

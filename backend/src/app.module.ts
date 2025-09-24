@@ -25,6 +25,7 @@ import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { UserAddressModule } from './modules/user_address/user_address.module';
+import { StoreIdentificationModule } from './modules/store-identification/store-identification.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { OrderItemsModule } from './modules/order-items/order-items.module';
 import { OrderStatusHistoryModule } from './modules/order-status-history/order-status-history.module';
@@ -97,6 +98,7 @@ import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affi
     VouchersModule,
     VoucherUsageModule,
     UserAddressModule,
+    StoreIdentificationModule,
     OrdersModule,
     OrderItemsModule,
     OrderStatusHistoryModule,

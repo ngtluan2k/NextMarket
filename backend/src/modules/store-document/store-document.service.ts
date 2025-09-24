@@ -1,8 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreDocument } from './store-document.entity';
-import { CreateStoreDocumentDto, DocumentType } from './dto/create-store-document.dto';
+import {
+  CreateStoreDocumentDto,
+  DocumentType,
+} from './dto/create-store-document.dto';
 import { UpdateStoreDocumentDto } from './dto/update-store-document.dto';
 import { StoreInformation } from '../store-information/store-information.entity';
 import { Store } from '../store/store.entity';
@@ -41,19 +49,23 @@ export class StoreDocumentService {
       ...createDto,
       file_url: filePath,
       verified: false,
+      is_draft: createDto.is_draft ?? false,
     });
 
     return await this.storeDocumentRepo.save(document);
   }
 
   // Lấy tất cả documents của một store
-  async findByStoreInformation(storeInformationId: number, userId: number): Promise<StoreDocument[]> {
+  async findByStoreInformation(
+    storeInformationId: number,
+    userId: number
+  ): Promise<StoreDocument[]> {
     // Verify ownership
     await this.verifyStoreOwnership(storeInformationId, userId);
 
     return await this.storeDocumentRepo.find({
       where: { store_information_id: storeInformationId },
-      order: { id: 'DESC' }
+      order: { id: 'DESC' },
     });
   }
 
@@ -61,7 +73,7 @@ export class StoreDocumentService {
   async findOne(id: number, userId: number): Promise<StoreDocument> {
     const document = await this.storeDocumentRepo.findOne({
       where: { id },
-      relations: ['storeInformation']
+      relations: ['storeInformation'],
     });
 
     if (!document) {
@@ -70,7 +82,7 @@ export class StoreDocumentService {
 
     // Verify ownership through store information
     const store = await this.storeRepo.findOne({
-      where: { id: document.storeInformation.store_id }
+      where: { id: document.storeInformation.store_id },
     });
 
     if (!store || store.user_id !== userId) {
@@ -81,7 +93,11 @@ export class StoreDocumentService {
   }
 
   // Cập nhật document (chủ yếu cho admin verify)
-  async update(id: number, updateDto: UpdateStoreDocumentDto, userId: number): Promise<StoreDocument> {
+  async update(
+    id: number,
+    updateDto: UpdateStoreDocumentDto,
+    userId: number
+  ): Promise<StoreDocument> {
     const document = await this.findOne(id, userId);
 
     Object.assign(document, updateDto);
@@ -111,12 +127,18 @@ export class StoreDocumentService {
     this.validateFile(file, document.doc_type as DocumentType);
 
     // Delete old file
-    if (document.file_url && fs.existsSync(path.join(process.cwd(), document.file_url))) {
+    if (
+      document.file_url &&
+      fs.existsSync(path.join(process.cwd(), document.file_url))
+    ) {
       fs.unlinkSync(path.join(process.cwd(), document.file_url));
     }
 
     // Save new file
-    const newFilePath = this.saveFileToDisk(file, document.doc_type as DocumentType);
+    const newFilePath = this.saveFileToDisk(
+      file,
+      document.doc_type as DocumentType
+    );
 
     // Update document
     document.file_url = newFilePath;
@@ -127,9 +149,12 @@ export class StoreDocumentService {
   }
 
   // Private methods
-  private async verifyStoreOwnership(storeInformationId: number, userId: number): Promise<void> {
+  private async verifyStoreOwnership(
+    storeInformationId: number,
+    userId: number
+  ): Promise<void> {
     const storeInfo = await this.storeInformationRepo.findOne({
-      where: { id: storeInformationId }
+      where: { id: storeInformationId },
     });
 
     if (!storeInfo) {
@@ -137,7 +162,7 @@ export class StoreDocumentService {
     }
 
     const store = await this.storeRepo.findOne({
-      where: { id: storeInfo.store_id }
+      where: { id: storeInfo.store_id },
     });
 
     if (!store || store.user_id !== userId) {
@@ -160,7 +185,9 @@ export class StoreDocumentService {
     const allowedTypes = this.getAllowedMimeTypes(docType);
     if (!allowedTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        `Invalid file type for ${docType}. Allowed types: ${allowedTypes.join(', ')}`
+        `Invalid file type for ${docType}. Allowed types: ${allowedTypes.join(
+          ', '
+        )}`
       );
     }
   }
@@ -180,10 +207,13 @@ export class StoreDocumentService {
   }
 
   // Lấy file data để serve
-  async getFileData(id: number, userId: number): Promise<{
-    data: Buffer,
-    mimetype: string,
-    filename: string
+  async getFileData(
+    id: number,
+    userId: number
+  ): Promise<{
+    data: Buffer;
+    mimetype: string;
+    filename: string;
   }> {
     const document = await this.findOne(id, userId);
 
@@ -216,12 +246,15 @@ export class StoreDocumentService {
     return {
       data: fileData,
       mimetype,
-      filename
+      filename,
     };
   }
 
   // Save file to disk
-  private saveFileToDisk(file: Express.Multer.File, docType: DocumentType): string {
+  private saveFileToDisk(
+    file: Express.Multer.File,
+    docType: DocumentType
+  ): string {
     // Create upload directory if not exists
     const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
     if (!fs.existsSync(uploadDir)) {
@@ -241,12 +274,14 @@ export class StoreDocumentService {
   }
 
   // Admin methods
-  async findAllDocuments(page = 1, limit = 20)
-: Promise<{
-    documents: StoreDocument[],
-    total: number,
-    page: number,
-    totalPages: number
+  async findAllDocuments(
+    page = 1,
+    limit = 20
+  ): Promise<{
+    documents: StoreDocument[];
+    total: number;
+    page: number;
+    totalPages: number;
   }> {
     const [documents, total] = await this.storeDocumentRepo.findAndCount({
       relations: ['storeInformation'],
@@ -259,7 +294,7 @@ export class StoreDocumentService {
       documents,
       total,
       page,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
     };
   }
 

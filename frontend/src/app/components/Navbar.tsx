@@ -1,14 +1,20 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
-  Search, Home, Smile, ShoppingCart, MapPin, Store,
-  CreditCard, Receipt, BadgeDollarSign,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
+  Search,
+  Home,
+  Smile,
+  ShoppingCart,
+  MapPin,
+  Store,
+  CreditCard,
+  Receipt,
+  BadgeDollarSign,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
-import LoginModal, { LoginPayload } from "./LoginModal";
-import AccountMenu, { Me } from "./AccountMenu";
+import LoginModal, { LoginPayload } from './LoginModal';
+import AccountMenu, { Me } from './AccountMenu';
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -27,36 +33,66 @@ export type HeaderLabels = {
 };
 
 const DEFAULT_LABELS: Required<HeaderLabels> = {
-  logoSrc: "/logo.png",
-  brandTagline: "Gì Cũng Có ",
-  searchPlaceholder: "Mo hinh Anime gia re",
-  searchButton: "Tim kiem",
-  home: "Trang chu",
-  account: "Tài khoản",
-  cart: "Giỏ hàng",
-  categories: ["dien gia dung", "me va be", "dien thoai", "the thao", "lam dep"],
-  deliveryPrefix: "Giao đến:",
-  address: "H.Son Ha, TT.Di Lang, Quang Ngai",
-  qa1: "Ưu đãi thẻ, ví",
-  qa2: "Đóng tiền, nạp thẻ",
-  qa3: "Mua trước trả sau",
-  qa4: "Bán hàng cùng EveryMart",
+  logoSrc: '/logo.png',
+  brandTagline: 'Gì Cũng Có ',
+  searchPlaceholder: 'Mo hinh Anime gia re',
+  searchButton: 'Tim kiem',
+  home: 'Trang chu',
+  account: 'Tài khoản',
+  cart: 'Giỏ hàng',
+  categories: [
+    'dien gia dung',
+    'me va be',
+    'dien thoai',
+    'the thao',
+    'lam dep',
+  ],
+  deliveryPrefix: 'Giao đến:',
+  address: 'H.Son Ha, TT.Di Lang, Quang Ngai',
+  qa1: 'Ưu đãi thẻ, ví',
+  qa2: 'Đóng tiền, nạp thẻ',
+  qa3: 'Mua trước trả sau',
+  qa4: 'Bán hàng cùng EveryMart',
 };
 
 export default function EveryMartHeader({
   labels,
-  onLogin, // call API login ở ngoài nếu muốn
+  onLogin,
 }: {
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
-}) {
+}) { 
+  console.log('EveryMartHeader render - openLogin:'); // Debug log
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
 
   const [query, setQuery] = useState('');
   const [openLogin, setOpenLogin] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
-
+  const { cart, clearCart, loadCart } = useCart();
   // Đọc trạng thái đăng nhập (mock) từ localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem('everymart.me');
+    if (raw) {
+      try {
+        loadCart();
+        setMe(JSON.parse(raw));
+      } catch (err) {
+        console.error('Failed to parse user from localStorage:', err);
+      }
+    }
+  }, []);
+
+  // Lưu khi thay đổi
+  useEffect(() => {
+    if (me) localStorage.setItem('user', JSON.stringify(me));
+    else localStorage.removeItem('user');
+  }, [me]);
+
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const navigate = useNavigate();
+
+  // Đọc trạng thái đăng nhập từ localStorage
   useEffect(() => {
     const raw = localStorage.getItem('everymart.me');
     if (raw) {
@@ -68,52 +104,27 @@ export default function EveryMartHeader({
     }
   }, []);
 
-  // Lưu khi thay đổi
+  // Lưu trạng thái user khi thay đổi
   useEffect(() => {
     if (me) localStorage.setItem('everymart.me', JSON.stringify(me));
     else localStorage.removeItem('everymart.me');
   }, [me]);
 
-
-  const { cart } = useCart();
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  const navigate = useNavigate();
-
-  // Đọc trạng thái đăng nhập từ localStorage
-  useEffect(() => {
-    const raw = localStorage.getItem("everymart.me");
-    if (raw) {
-      try {
-        setMe(JSON.parse(raw));
-      } catch (err) {
-        console.error("Failed to parse user from localStorage:", err);
-      }
-    }
-  }, []);
-
-  // Lưu trạng thái user khi thay đổi
-  useEffect(() => {
-    if (me) localStorage.setItem("everymart.me", JSON.stringify(me));
-    else localStorage.removeItem("everymart.me");
-  }, [me]);
-
   const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  localStorage.removeItem("everymart.me");
-  localStorage.removeItem("cart"); // xoá giỏ hàng cache
-  setMe(null);
-
-
-};
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('everymart.me');
+    localStorage.removeItem('cart'); // xoá giỏ hàng cache
+    setMe(null);
+    clearCart();
+  };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("search:", query);
+    console.log('search:', query);
   };
 
-
+console.log('Rendering LoginModal with openLogin:', openLogin);
 
   return (
     <header className="w-full bg-white">
@@ -190,7 +201,7 @@ export default function EveryMartHeader({
             {/* Cart button SPA */}
             <button
               type="button"
-              onClick={() => navigate("/cart")}
+              onClick={() => navigate('/cart')}
               className="group relative flex items-center gap-2 px-3"
             >
               <span className="rounded-lg border border-slate-200 p-2 transition group-hover:border-cyan-600 group-hover:text-cyan-700">
@@ -213,7 +224,9 @@ export default function EveryMartHeader({
             <ul className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-normal text-slate-500 pl-20">
               {L.categories.map((item) => (
                 <li key={item}>
-                  <a href="#" className="no-underline hover:text-cyan-700">{item}</a>
+                  <a href="#" className="no-underline hover:text-cyan-700">
+                    {item}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -221,7 +234,12 @@ export default function EveryMartHeader({
           <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
             <MapPin className="h-4 w-4 text-slate-500" />
             <span>{L.deliveryPrefix}</span>
-            <a href="#" className="truncate max-w-[320px] font-medium underline">{L.address}</a>
+            <a
+              href="#"
+              className="truncate max-w-[320px] font-medium underline"
+            >
+              {L.address}
+            </a>
           </div>
         </div>
 
@@ -231,8 +249,10 @@ export default function EveryMartHeader({
       {/* Quick features */}
       <div className="mx-auto max-w-screen-2xl px-4">
         <div className="flex flex-wrap items-stretch gap-0 border-t border-slate-200 pt-2 text-sm text-slate-700 divide-x divide-slate-200">
-
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="#"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-amber-400 text-white">
               <CreditCard className="h-3.5 w-3.5" />
             </span>
@@ -240,7 +260,10 @@ export default function EveryMartHeader({
               {L.qa1}
             </span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="#"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-green-500 text-white">
               <Receipt className="h-3.5 w-3.5" />
             </span>
@@ -248,7 +271,10 @@ export default function EveryMartHeader({
               {L.qa2}
             </span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="#"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500 text-white">
               <BadgeDollarSign className="h-3.5 w-3.5" />
             </span>
@@ -257,7 +283,10 @@ export default function EveryMartHeader({
             </span>
           </a>
 
-          <a href="myStores" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="myStores"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500 text-white">
               <Store className="h-3.5 w-3.5" />
             </span>
@@ -281,10 +310,13 @@ export default function EveryMartHeader({
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-
+            console.log('Login successful:', json.data); // Debug log
+             console.log('Current openLogin state:', openLogin); // Debug log
             localStorage.setItem("token", json.access_token);
-            localStorage.setItem("user", JSON.stringify(json.data));
+            localStorage.setItem("everymart.me", JSON.stringify(json.data));
             setMe(json.data);
+            loadCart();
+            console.log('Modal should close now'); // Debug log
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SellerFormData, defaultSellerFormData } from '../types';
+import CCCDUpload from './CCCDUpload';
 
 export const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +23,9 @@ export const SellerRegistration: React.FC = () => {
   const [storeInformationId, setStoreInformationId] = useState<number | null>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [businessLicenseUrl, setBusinessLicenseUrl] = useState<string>('');
+  const [storeId, setStoreId] = useState<number | null>(null);
+
 
   // Keys cho localStorage
   const FORM_DATA_KEY = 'seller_registration_form_data';
@@ -88,7 +91,22 @@ export const SellerRegistration: React.FC = () => {
 
     loadSavedData();
   }, []);
+  useEffect(() => {
+    // Ưu tiên URL đã có trong form (do bạn vừa upload đẩy vào)
+    const fromForm =
+      (formData.documents || []).find(d => d?.doc_type === 'BUSINESS_LICENSE' && d?.file_url)?.file_url;
 
+    if (fromForm) {
+      setBusinessLicenseUrl(fromForm);
+      return;
+    }
+
+    // Nếu chưa có trong form, thử lấy từ danh sách documents fetch được
+    const fromServer =
+      (documents || []).find((d: any) => d?.doc_type === 'BUSINESS_LICENSE' && d?.file_url)?.file_url;
+
+    if (fromServer) setBusinessLicenseUrl(fromServer);
+  }, [formData.documents, documents]);
   // Auto-save form data mỗi khi có thay đổi
   useEffect(() => {
     try {
@@ -117,7 +135,20 @@ export const SellerRegistration: React.FC = () => {
   }, [addresses]);
 
   // Load đầy đủ draft data từ server
+  // Helper nhận diện file ảnh
+  const isImageFile = (f: File | null) => !!f && /^image\//.test(f.type);
 
+  // Preview ảnh giấy phép (local URL khi vừa chọn file)
+  useEffect(() => {
+    let tmpUrl: string | null = null;
+    if (selectedDocFile && isImageFile(selectedDocFile)) {
+      tmpUrl = URL.createObjectURL(selectedDocFile);
+      setBusinessLicenseUrl(tmpUrl); // hiện preview ngay khi chọn file
+    }
+    return () => {
+      if (tmpUrl) URL.revokeObjectURL(tmpUrl);
+    };
+  }, [selectedDocFile]);
   const loadFullDraftData = async (
     storeId: number,
     savedFormData: string | null,
@@ -207,6 +238,18 @@ export const SellerRegistration: React.FC = () => {
         console.log('🔄 Mapped form data:', mappedFormData);
         const storeInfoId = draftData.storeInformation?.id ?? null;
         setStoreInformationId(storeInfoId);
+        setStoreId(draftData.store?.id ?? null);
+
+        // Hydrate emails UI state from server draft
+        if (draftData.storeEmail?.email) {
+          const emailItem = {
+            id: draftData.storeEmail.id || Date.now(),
+            email: draftData.storeEmail.email,
+            is_default: true,
+            description: '',
+          };
+          setEmails([emailItem]);
+        }
 
         if (storeInfoId) {
           console.log(`📄 Fetching documents for storeInformationId ${storeInfoId}...`);
@@ -701,7 +744,7 @@ export const SellerRegistration: React.FC = () => {
           setLoading(true);
           const token = localStorage.getItem('token');
           // 1) Nếu có file đã chọn ở UI -> upload trước để lấy URL
-          let docs: Array<{ doc_type: string; file_url: string }> = [];
+          let docs: Array<{ doc_type: string; file_url: string; is_draft?: boolean }> = [];
           if (selectedDocFile) {
             const form = new FormData();
             form.append('file', selectedDocFile);
@@ -714,7 +757,7 @@ export const SellerRegistration: React.FC = () => {
             });
             const upData = await upRes.json();
             if (upRes.ok && upData.file_url) {
-              docs.push({ doc_type: 'BUSINESS_LICENSE', file_url: upData.file_url });
+              docs.push({ doc_type: 'BUSINESS_LICENSE', file_url: upData.file_url, is_draft: true });
             } else {
               setMessage(`❌ Upload giấy phép thất bại: ${upData.message || 'Lỗi'}`);
               setMessageType('error');
@@ -779,11 +822,15 @@ export const SellerRegistration: React.FC = () => {
           const hasIdentificationData =
             formData.store_identification.full_name ||
             formData.store_identification.img_front ||
-            formData.store_identification.img_back;
+            formData.store_identification.img_back ||
+            formData.store_identification.img_front;
 
 
-          if (hasIdentificationData) {
-            stepData.store_identification = formData.store_identification;
+          if (hasIdentificationData && storeId) {
+            stepData.store_identification = {
+              ...formData.store_identification,
+              store_id: String(storeId), // backend đòi string
+            };
           }
 
           // Chỉ gửi bank_account nếu user đã nhập thông tin
@@ -902,78 +949,14 @@ export const SellerRegistration: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setDocuments(data);
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        setDocuments(list);
       }
     } catch (e) {
       console.error(e);
     }
   };
 
-  // --- Upload giấy phép ---
-  // const handleUploadBusinessLicense = async () => {
-  //   if (!storeInformationId) {
-  //     setMessage('❌ Vui lòng lưu Step 2 để tạo "Thông tin kinh doanh" trước khi upload.');
-  //     return;
-  //   }
-  //   if (!selectedDocFile) {
-  //     setMessage('❌ Vui lòng chọn file.');
-  //     return;
-  //   }
-  //   const token = localStorage.getItem('token');
-
-  //   try {
-  //     setUploadingDoc(true);
-  //     setMessage('');
-
-  //     // Bước 1: upload file để lấy URL
-  //     const form = new FormData();
-  //     form.append('file', selectedDocFile);
-  //     form.append('doc_type', 'BUSINESS_LICENSE');
-
-  //     const upRes = await fetch('http://localhost:3000/store-documents/upload-file', {
-  //       method: 'POST',
-  //       headers: { Authorization: `Bearer ${token}` },
-  //       body: form,
-  //     });
-  //     const upData = await upRes.json();
-  //     if (!upRes.ok) {
-  //       setMessage(`❌ Upload file thất bại: ${upData.message || 'Lỗi'}`);
-  //       setMessageType('error');
-  //       return;
-  //     }
-  //     const fileUrl = upData.file_url;
-
-  //     // Bước 2: tạo record giống product media (JSON)
-  //     const createRes = await fetch('http://localhost:3000/store-documents', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //       body: JSON.stringify({
-  //         store_information_id: storeInformationId,
-  //         doc_type: 'BUSINESS_LICENSE',
-  //         file_url: fileUrl,
-  //       }),
-  //     });
-  //     const createData = await createRes.json();
-  //     if (!createRes.ok) {
-  //       setMessage(`❌ Lưu tài liệu thất bại: ${createData.message || 'Lỗi'}`);
-  //       setMessageType('error');
-  //       return;
-  //     }
-
-  //     setMessage('✅ Tải lên và lưu giấy phép thành công');
-  //     setMessageType('success');
-  //     setSelectedDocFile(null);
-  //     await fetchDocuments(storeInformationId);
-  //   } catch (e) {
-  //     setMessage('❌ Lỗi kết nối khi upload/lưu tài liệu');
-  //     setMessageType('error');
-  //   } finally {
-  //     setUploadingDoc(false);
-  //   }
-  // };
 
   // --- Xóa document ---
   const handleDeleteDocument = async (docId: number) => {
@@ -1420,47 +1403,33 @@ export const SellerRegistration: React.FC = () => {
             Hỗ trợ PDF/JPG/PNG, tối đa 10MB. File sẽ lưu với loại: BUSINESS_LICENSE.
           </p>
 
-          {/* Danh sách tài liệu đã upload */}
-          {storeInformationId ? (
-            <ul className="list-group">
-              {documents.length === 0 && (
-                <li className="list-group-item text-muted">Chưa có tài liệu</li>
+          {businessLicenseUrl && (
+            <div className="mt-3">
+              <div className="small text-muted mb-2">Xem nhanh Giấy phép:</div>
+              {businessLicenseUrl.startsWith('/uploads') ? (
+                /\.(png|jpe?g|webp|gif)$/i.test(businessLicenseUrl) ? (
+                  <img
+                    src={`http://localhost:3000${businessLicenseUrl}`}
+                    alt="Business License"
+                    style={{ maxWidth: 280, maxHeight: 240, border: '1px solid #eee', borderRadius: 6 }}
+                  />
+                ) : (
+                  <a
+                    className="btn btn-outline-secondary btn-sm"
+                    href={`http://localhost:3000${businessLicenseUrl}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Mở file
+                  </a>
+                )
+              ) : (
+                <img
+                  src={businessLicenseUrl}
+                  alt="Business License (local)"
+                  style={{ maxWidth: 280, maxHeight: 240, border: '1px solid #eee', borderRadius: 6 }}
+                />
               )}
-              {documents.map((doc: any) => (
-                <li key={doc.id} className="list-group-item d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="fw-bold">{doc.doc_type}</div>
-                    <div className="small text-muted">ID: {doc.id}</div>
-                  </div>
-                  <div className="d-flex gap-2">
-                    <a
-                      className="btn btn-outline-secondary btn-sm"
-                      href={`http://localhost:3000${doc.file_url}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Xem file
-                    </a>
-                    <a
-                      className="btn btn-outline-primary btn-sm"
-                      href={`http://localhost:3000/store-documents/${doc.id}/download`}
-                    >
-                      Tải xuống
-                    </a>
-                    <button
-                      type="button"
-                      className="btn btn-outline-danger btn-sm"
-                      onClick={() => handleDeleteDocument(doc.id)}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div >
-
             </div>
           )}
         </div>
@@ -1492,10 +1461,28 @@ export const SellerRegistration: React.FC = () => {
               required
             >
               <option value="CCCD">Căn cước công dân</option>
-              <option value="CMND">Chứng minh nhân dân</option>
+              {/* <option value="CMND">Chứng minh nhân dân</option>
               <option value="Passport">Hộ chiếu</option>
-              <option value="GPKD">Giấy phép kinh doanh</option>
+              <option value="GPKD">Giấy phép kinh doanh</option> */}
             </select>
+
+            <CCCDUpload
+              storeId={storeId || undefined}
+              token={localStorage.getItem('token') || ''}
+              onUploaded={(side, url) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  store_identification: {
+                    ...prev.store_identification,
+                    img_front: side === 'front' ? url : prev.store_identification.img_front,
+                    img_back: side === 'back' ? url : prev.store_identification.img_back,
+                  },
+                }));
+                setMessage(`✅ Đã upload ảnh ${side === 'front' ? 'mặt trước' : 'mặt sau'}`);
+                setMessageType('success');
+              }}
+              className="mt-3"
+            />
           </div>
 
           <div className="mb-3">

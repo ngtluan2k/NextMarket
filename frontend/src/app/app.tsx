@@ -9,7 +9,7 @@ import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
 import AccountLayout from "./page/account/AccountLayout";
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
-import {SellerDashboard} from './components/register_seller/SellerDashboard';
+import { SellerDashboard } from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
 import NotificationsPage from "./page/account/NotificationsPage";
 import ReturnsPage from "./page/account/ReturnsPage";
@@ -59,13 +59,14 @@ const App: React.FC = () => {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/seller-registration" element={<SellerRegistration />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
-        <Route path='/catepage' element={<CategoryPage/>}/>
+        <Route path='/catepage' element={<CategoryPage />} />
         <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/test/home" element={<ProductList />} />
-        
+    
+<!--         <Route path="/cart" element={<Cart showMessage={showMessage} />} /> -->
         {/* Account Routes */}
         <Route path="/account" element={<AccountLayout />}>
           <Route index element={<Navigate to="profile" replace />} />
@@ -86,27 +87,14 @@ const App: React.FC = () => {
 
        </Route>
         {/* Seller Routes */}
-        <Route path="/seller-registration" element={<SellerRegistration />} />
+        {/* <Route path="/seller-registration" element={<SellerRegistration />} /> */}
         {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
         <Route path="/myStores" element={<SellerMainLayout />} />
         {/* <Route path="/add_product" element={<ProductForm />} /> */}
-
-        {/* Admin Route */}
-        <Route path="/admin" element={<AdminDashboard />} />
-
-        {/* Authentication Route */}
-        {/* <Route path="/auth" element={<AuthForm />} /> */}
         <Route path="/checkout" element={<CheckoutPayment />} /> 
         <Route path="/order/success" element={<OrderSuccess />} />
         {/* Catch-all Route */}
-        <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/seller-registration" element={<SellerRegistration />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
-        <Route path="/cart" element={<Cart showMessage={showMessage} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+           <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </CartProvider>
   );
