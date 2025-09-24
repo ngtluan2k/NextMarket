@@ -143,6 +143,7 @@ async search(@Query('q') q: string) {
     return this.productService.publishProduct(dto, userId);
   }
 
+
  @UseGuards(JwtAuthGuard)
   @Get('store/:storeId')
   @ApiOperation({ summary: 'Lấy tất cả sản phẩm của store theo storeId (chỉ chủ store)' })

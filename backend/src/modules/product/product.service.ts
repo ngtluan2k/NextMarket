@@ -149,6 +149,7 @@ async findOne(id: number, userId?: number) {
   return product;
 }
 
+
 async updateProduct(id: number, dto: CreateProductDto, userId: number) {
   const product = await this.productRepo.findOne({
     where: { id },

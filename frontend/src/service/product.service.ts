@@ -165,4 +165,3 @@ async softDeleteProduct(id: number): Promise<void> {
 }
 
 export const productService = new ProductService();
-
