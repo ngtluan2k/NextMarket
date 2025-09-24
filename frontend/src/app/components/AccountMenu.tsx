@@ -77,7 +77,7 @@ export default function AccountMenu({
           Thông tin tài khoản
         </a>
         <a
-          href="/orders"
+          href="/account/orders"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 hover:bg-slate-50"
         >
           <Package className="h-4 w-4 text-slate-500" />

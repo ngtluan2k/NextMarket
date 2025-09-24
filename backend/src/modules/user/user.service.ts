@@ -54,7 +54,7 @@ export class UserService {
       gender: dto.gender,
       country: dto.country,
       created_at: new Date(),
-      },
+    },
     });
 
   const savedUser = await this.userRepository.save(user);
