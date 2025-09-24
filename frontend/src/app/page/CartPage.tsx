@@ -13,7 +13,17 @@ import { Row, Col ,Typography} from "antd";
 import { useCart } from "../context/CartContext";
 
 const { Title} = Typography;
-const CartPage: React.FC = () => {
+
+
+interface CartProps {
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
+}
+
+
+const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const { cart } = useCart();
 
   const navigate = useNavigate(); 
@@ -82,6 +92,7 @@ const CartPage: React.FC = () => {
               onToggleOne={toggleOne}
               allChecked={allChecked}
               indeterminate={indeterminate}
+              showMessage={showMessage}
             />
             <CartRecommendation />
           </div>
@@ -95,6 +106,7 @@ const CartPage: React.FC = () => {
                 onToggleOne={toggleOne}
                 allChecked={allChecked}
                 indeterminate={indeterminate}
+                showMessage={showMessage}
               />
               <CartRecommendation />
             </Col>

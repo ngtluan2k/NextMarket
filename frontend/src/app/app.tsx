@@ -3,7 +3,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
-import { Cart } from './components/Cart';
+// import { Cart } from './components/Cart';
 import { message } from 'antd';
 import Home from './page/Home';
 import CategoryPage from './page/CategoryPage';
@@ -63,7 +63,7 @@ const App: React.FC = () => {
         <Route path="/add_product" element={<ProductForm />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/products/slug/:slug" element={<ProductDetailPage showMessage={showMessage}/>} />
-        <Route path="/cart" element={<CartPage />} />
+        <Route path="/cart" element={<CartPage showMessage={showMessage}/>} />
         <Route path="/test/home" element={<ProductList />} />
 
         {/* <Route path="/cart" element={<Cart showMessage={showMessage} />} />  */}

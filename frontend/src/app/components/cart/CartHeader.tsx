@@ -1,8 +1,9 @@
 // src/components/cart/CartHeader.tsx
-import React from "react";
-import { Checkbox, Image, Button, Typography } from "antd";
-import { DeleteOutlined, ShoppingCartOutlined } from "@ant-design/icons";
-import { useCart } from "../../context/CartContext";
+import React from 'react';
+import { Checkbox, Image, Button, Typography } from 'antd';
+import { DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { useCart } from '../../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 const { Text, Title } = Typography;
 
@@ -12,7 +13,11 @@ type Props = {
   onToggleOne: (id: number) => void;
   allChecked: boolean;
   indeterminate: boolean;
-  onContinue?: () => void; // <- thêm: dùng cho "Tiếp tục mua sắm"
+  onContinue?: () => void;
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
 };
 
 export const CartHeader: React.FC<Props> = ({
@@ -22,20 +27,30 @@ export const CartHeader: React.FC<Props> = ({
   allChecked,
   indeterminate,
   onContinue,
+  showMessage,
 }) => {
   const { cart, updateQuantity, removeFromCart } = useCart();
-  const GRID = "40px 1fr 200px 160px 200px 80px";
-
+  const GRID = '40px 1fr 200px 160px 200px 80px';
+  const navigate = useNavigate();
   const shopName =
     (cart[0] && (cart[0] as any).shop?.name) ||
     (cart[0] && (cart[0] as any).shop_name) ||
-    "Shop";
+    'Shop';
+
+  const handleRemoveFromCart = (productId: number, productName: string) => {
+    try {
+      removeFromCart(productId);
+      showMessage?.('success', `Removed ${productName} from cart successfully`);
+    } catch (error) {
+      showMessage?.('error', `Failed to remove ${productName} from cart`);
+    }
+  };
 
   // 1) GIỎ TRỐNG -> render header trống + nút "Tiếp tục mua sắm"
   if (cart.length === 0) {
     return (
       <div className="bg-white rounded-md p-6 w-full text-center">
-        <ShoppingCartOutlined style={{ fontSize: 72, color: "#1677ff" }} />
+        <ShoppingCartOutlined style={{ fontSize: 72, color: '#1677ff' }} />
         <Title level={4} style={{ marginTop: 12, marginBottom: 4 }}>
           Giỏ hàng trống
         </Title>
@@ -46,7 +61,7 @@ export const CartHeader: React.FC<Props> = ({
           <Button
             type="primary"
             size="large"
-            onClick={onContinue ?? (() => window.history.back())}
+            onClick={onContinue ?? (() => navigate('/'))}
           >
             Tiếp tục mua sắm
           </Button>
@@ -61,7 +76,7 @@ export const CartHeader: React.FC<Props> = ({
       {/* Header */}
       <div
         className="items-center text-gray-600 text-sm font-medium border-b pb-3 w-full"
-        style={{ display: "grid", gridTemplateColumns: GRID }}
+        style={{ display: 'grid', gridTemplateColumns: GRID }}
       >
         <Checkbox
           checked={allChecked}
@@ -98,7 +113,7 @@ export const CartHeader: React.FC<Props> = ({
           mediaArray.find((m: any) => m?.is_primary)?.url ||
           mediaArray[0]?.url ||
           (item as any).product?.url ||
-          "";
+          '';
 
         const oldPrice: number | undefined = (item as any)?.old_price;
         const deliveryDate: string | undefined = (item as any)?.delivery_date;
@@ -110,7 +125,7 @@ export const CartHeader: React.FC<Props> = ({
           <div
             key={item.id}
             className="items-center border-b py-4 w-full"
-            style={{ display: "grid", gridTemplateColumns: GRID }}
+            style={{ display: 'grid', gridTemplateColumns: GRID }}
           >
             {/* Checkbox từng sản phẩm */}
             <Checkbox
@@ -147,7 +162,7 @@ export const CartHeader: React.FC<Props> = ({
 
             {/* Đơn giá */}
             <div className="text-right">
-              {typeof oldPrice === "number" && (
+              {typeof oldPrice === 'number' && (
                 <Text delete className="text-gray-400 block">
                   {oldPrice.toLocaleString()}đ
                 </Text>
@@ -163,7 +178,10 @@ export const CartHeader: React.FC<Props> = ({
                 <button
                   className="px-2"
                   onClick={() =>
-                    updateQuantity(item.product_id, Math.max(1, item.quantity - 1))
+                    updateQuantity(
+                      item.product_id,
+                      Math.max(1, item.quantity - 1)
+                    )
                   }
                 >
                   -
@@ -196,7 +214,9 @@ export const CartHeader: React.FC<Props> = ({
                 type="text"
                 danger
                 icon={<DeleteOutlined />}
-                onClick={() => removeFromCart(item.product_id)}
+                onClick={() =>
+                  handleRemoveFromCart(item.product_id, item.product.name)
+                }
               />
             </div>
           </div>

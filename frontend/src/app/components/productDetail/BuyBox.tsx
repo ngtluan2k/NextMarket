@@ -63,7 +63,7 @@ export default function BuyBox({
         </div>
       </div>
 
-      {/* <div className="mt-5">
+      <div className="mt-5">
         <div className="text-xs text-slate-500">Số lượng</div>
         <div className="inline-flex items-center rounded-lg border border-slate-200">
           <button
@@ -80,7 +80,7 @@ export default function BuyBox({
             +
           </button>
         </div>
-      </div> */}
+      </div>
 
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
       <div className="text-[26px] font-bold">{vnd((p.price ?? 0) * qty)}</div>

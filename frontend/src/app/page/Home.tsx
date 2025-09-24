@@ -209,7 +209,6 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
             <ProductGridToday
               containerClassName="my-6"
               cardClassName="hover:bg-gray-50"
-              showMessage={showMessage}
             />
           </section>
         </div>
