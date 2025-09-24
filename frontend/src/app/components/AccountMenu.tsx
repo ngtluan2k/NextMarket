@@ -30,7 +30,7 @@ export default function AccountMenu({ className = "" }) {
           <Smile className="h-5 w-5" />
         </span>
         <span className="hidden md:inline truncate max-w-[180px]">
-          Xin chào, {me?.email}
+          Xin chào, {me?.full_name}
         </span>
         <ChevronDown className="h-4 w-4 transition" />
       </button>

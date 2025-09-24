@@ -343,7 +343,19 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-            login(json.data, json.access_token);
+
+            login(json.data, json.access_token); // vẫn lưu payload tạm
+            // 👉 gọi thêm /me để cập nhật đầy đủ thông tin
+            const profileRes = await fetch('http://localhost:3000/users/me', {
+              headers: {
+                Authorization: `Bearer ${json.access_token}`,
+              },
+            });
+            const profileJson = await profileRes.json();
+            if (profileRes.ok) {
+              login(profileJson.data, json.access_token); // update lại me = profile
+            }
+
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

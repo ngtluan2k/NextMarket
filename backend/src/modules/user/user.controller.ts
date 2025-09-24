@@ -1,10 +1,11 @@
-import { Controller, Post, Body, Get , Put, Param , ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Put, Param, ParseIntPipe, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth, } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('users')
 @Controller('users')
@@ -74,6 +75,20 @@ async login(@Body() dto: LoginDto) {
       status: 200,
       message: 'Update profile successful',
       data: updated,
+    };
+  }
+   @Get('me')
+  @ApiOperation({ summary: 'Get current user profile from JWT' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  async getMe(@Req() req: any) {
+    // req.user được gán trong JwtStrategy.validate()
+    const userId = req.user.userId; // phải đảm bảo JwtStrategy trả về userId
+    const profile = await this.userService.getProfile(userId);
+    return {
+      status: 200,
+      message: 'Get current user profile successful',
+      data: profile,
     };
   }
 

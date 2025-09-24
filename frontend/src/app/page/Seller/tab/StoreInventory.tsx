@@ -45,7 +45,7 @@ import StockBadge from '../../../components/seller/StockBadge';
 import type { StatisticProps } from 'antd';
 import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
-import { ProductFormWizard } from '../../../components/seller/ProductFormWizard';
+import { ProductForm } from '../../../components/seller/ProductFormWizard';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -601,13 +601,7 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
           width={1000}
           destroyOnClose
         >
-          <ProductFormWizard
-            onCreated={() => {
-              // reload bảng sau khi tạo
-              fetchProducts();
-            }}
-            onClose={() => setAddWizardVisible(false)}
-          />
+   < ProductForm/>
         </Modal>
 
       </Content>

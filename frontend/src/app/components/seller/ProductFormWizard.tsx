@@ -1,272 +1,234 @@
-// src/components/ProductFormWizard.tsx
-import React, { useEffect, useState } from 'react';
-import {
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Button,
-  Space,
-  Divider,
-  Typography,
-  message,
-  Switch,
-  DatePicker,
-  Card,
-  Steps,
-  FormInstance,
-} from 'antd';
+import React, { useState, useEffect } from 'react';
 
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+export const ProductForm: React.FC = () => {
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [step, setStep] = useState(1);
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+  interface ProductFormState {
+    name: string;
+    short_description?: string;
+    description?: string;
+    base_price: number;
+    brandId: number;
+    categories: number[];
+    media: { media_type: string; url: string; is_primary?: boolean; sort_order?: number; file?: File }[];
+    variants: { sku: string; variant_name: string; price: number; stock: number; barcode?: string }[];
+    inventory: { variant_sku: string; variant_id?: number; product_id?: number; location: string; quantity: number; used_quantity?: number }[];
+    pricing_rules: { type: string; min_quantity: number; price: number; cycle?: string; starts_at?: string | Date; ends_at?: string | Date }[];
+  }
 
-type Media = { media_type: string; file?: File; is_primary?: boolean };
-type Variant = { sku: string; variant_name: string; price: number; stock: number; barcode?: string };
-type Inventory = { variant_sku: string; location: string; quantity: number };
-type PricingRule = { type: string; min_quantity: number; price: number; cycle?: string; starts_at?: string; ends_at?: string };
-
-type FormValues = {
-  name: string;
-  short_description?: string;
-  description?: string;
-  base_price: number;
-  brandId: number;
-  categories: number[];
-  media: Media[];
-  variants: Variant[];
-  inventory: Inventory[];
-  pricing_rules: PricingRule[];
-};
-
-type Props = {
-  brands?: { id: number; name: string }[];
-  categories?: { id: number; name: string }[];
-  onClose?: () => void;
-  onCreated?: () => void;
-};
-
-export const ProductFormWizard: React.FC<Props> = ({ brands: brandsProp = [], categories: categoriesProp = [], onClose, onCreated }) => {
-  const [form] = Form.useForm<FormValues>();
-  const [current, setCurrent] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-
-  const [brands, setBrands] = useState(brandsProp);
-  const [categories, setCategories] = useState(categoriesProp);
-
-  const steps = ['Thông tin', 'Media', 'Biến thể', 'Tồn kho', 'Pricing Rules', 'Xem lại & Tạo'];
+  const [form, setForm] = useState<ProductFormState>({
+    name: '',
+    short_description: '',
+    description: '',
+    base_price: 0,
+    brandId: 0,
+    categories: [],
+    media: [],
+    variants: [],
+    inventory: [],
+    pricing_rules: [],
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!brandsProp.length) {
-      fetch('http://localhost:3000/brands', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.json())
-        .then((data) => setBrands(data.data || []))
-        .catch(() => setBrands([]));
-    }
-    if (!categoriesProp.length) {
-      fetch('http://localhost:3000/categories', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.json())
-        .then((data) => setCategories(data.data || []))
-        .catch(() => setCategories([]));
-    }
+    fetch('http://localhost:3000/brands', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(data => setBrands((data.data || []).map((b: any) => ({ id: Number(b.id), name: b.name }))));
+    fetch('http://localhost:3000/categories', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(data => setCategories((data.data || []).map((c: any) => ({ id: Number(c.id), name: c.name }))));
   }, []);
 
-  const goNext = () => setCurrent((c) => Math.min(c + 1, steps.length - 1));
-  const goPrev = () => setCurrent((c) => Math.max(c - 1, 0));
-
-  const makePrimary = (idx: number) => {
-    const media = form.getFieldValue('media') || [];
-    const next = media.map((m: any, i: number) => ({ ...m, is_primary: i === idx }));
-    form.setFieldsValue({ media: next });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    setForm(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
   };
 
-  const handleCreate = async () => {
-    try {
-      setSubmitting(true);
-      const values = await form.validateFields();
-      const token = localStorage.getItem('token');
-
-      const formData = new FormData();
-      formData.append('name', values.name);
-      formData.append('description', values.description || '');
-      formData.append('base_price', String(values.base_price));
-      formData.append('brandId', String(values.brandId));
-      formData.append('categories', JSON.stringify(values.categories));
-      formData.append('variants', JSON.stringify(values.variants || []));
-      formData.append('inventory', JSON.stringify(values.inventory || []));
-      formData.append('pricing_rules', JSON.stringify(values.pricing_rules || []));
-      (values.media || []).forEach((m: any) => { if (m.file) formData.append('media', m.file); });
-
-      const res = await fetch('http://localhost:3000/products/publish', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed');
-      message.success('Tạo sản phẩm thành công');
-      onCreated?.();
-      onClose?.();
-    } catch (err: any) {
-      message.error(err?.message || 'Lỗi tạo sản phẩm');
-    } finally {
-      setSubmitting(false);
-    }
+  const handleCategoryChange = (id: number) => {
+    setForm(prev => ({
+      ...prev,
+      categories: prev.categories.includes(id) ? prev.categories.filter(c => c !== id) : [...prev.categories, id],
+    }));
   };
 
-  // const formValues = form.getFieldsValue();
-  const formValues = Form.useWatch([], form);
+  const addMedia = () =>
+    setForm(prev => ({ ...prev, media: [...prev.media, { media_type: 'image', url: '', is_primary: false, sort_order: prev.media.length + 1 }] }));
+  const addVariant = () => setForm(prev => ({ ...prev, variants: [...prev.variants, { sku: '', variant_name: '', price: 0, stock: 0 }] }));
+  const addInventory = () =>
+    setForm(prev => ({ ...prev, inventory: [...prev.inventory, { variant_sku: '', variant_id: undefined, product_id: undefined, location: '', quantity: 0 }] }));
+  const addPricingRule = () =>
+    setForm(prev => ({ ...prev, pricing_rules: [...prev.pricing_rules, { type: '', min_quantity: 0, price: 0, cycle: '', starts_at: '', ends_at: '' }] }));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const previewUrl = URL.createObjectURL(file);
+    const newMedia = [...form.media];
+    newMedia[index] = { ...newMedia[index], file, url: previewUrl };
+    setForm({ ...form, media: newMedia });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('short_description', form.short_description || '');
+    formData.append('description', form.description || '');
+    formData.append('base_price', form.base_price.toString());
+    formData.append('brandId', form.brandId.toString());
+    formData.append('categories', JSON.stringify(form.categories));
+    formData.append('variants', JSON.stringify(form.variants));
+    formData.append('inventory', JSON.stringify(form.inventory));
+    formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
+    form.media.forEach(m => m.file && formData.append('media', m.file));
+
+    const res = await fetch('http://localhost:3000/products/publish', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to create product');
+    alert('Product created successfully!');
+  };
+
+  // Step navigation
+  const nextStep = () => setStep(prev => Math.min(prev + 1, 4));
+  const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <Steps current={current} items={steps.map((s) => ({ title: s }))} style={{ marginBottom: 16 }} />
+    <form onSubmit={handleSubmit} className="max-w-5xl mx-auto p-6 space-y-6 bg-white shadow-md rounded-md">
+      <h2 className="text-2xl font-bold text-center mb-6">Create Product</h2>
 
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          name: '',
-          short_description: '',
-          description: '',
-          base_price: 0,
-          brandId: 0,
-          categories: [],
-          media: [],
-          variants: [],
-          inventory: [],
-          pricing_rules: [],
-        }}
-      >
-        {/* Step 0: Info */}
-        {current === 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Form.Item name="name" label="Tên sản phẩm" rules={[{ required: true }]}>
-              <Input placeholder="Tên sản phẩm" />
-            </Form.Item>
-            <Form.Item name="brandId" label="Thương hiệu" rules={[{ required: true }]}>
-              <Select placeholder="Chọn thương hiệu">{brands.map((b) => <Option key={b.id} value={b.id}>{b.name}</Option>)}</Select>
-            </Form.Item>
-            <Form.Item name="short_description" label="Mô tả ngắn"><Input /></Form.Item>
-            <Form.Item name="base_price" label="Giá cơ bản" rules={[{ required: true }]}><InputNumber min={0} className="w-full" /></Form.Item>
-            <Form.Item name="categories" label="Danh mục"><Select mode="multiple">{categories.map((c) => <Option key={c.id} value={c.id}>{c.name}</Option>)}</Select></Form.Item>
-            <Form.Item name="description" label="Mô tả"><Input.TextArea rows={4} /></Form.Item>
+      {/* Step Indicators */}
+      <div className="flex justify-between mb-6">
+        {[1, 2, 3, 4].map(s => (
+          <div key={s} className={`flex-1 text-center py-2 border-b-2 ${step === s ? 'border-blue-600 font-semibold' : 'border-gray-300'}`}>
+            Step {s}
           </div>
-        )}
-
-        {/* Step 1: Media */}
-        {current === 1 && (
-          <Form.List name="media">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...rest }) => (
-                  <Card key={key} size="small" className="mb-3" title={`Media #${name + 1}`} extra={<Button type="link" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)}>Xóa</Button>}>
-                    <Form.Item {...rest} name={[name, 'file']} label="Chọn file" valuePropName="file" getValueFromEvent={(e) => e?.target?.files?.[0]} rules={[{ required: true }]}>
-                      <input type="file" accept="image/*" />
-                    </Form.Item>
-                    <Form.Item {...rest} name={[name, 'is_primary']} label="Primary" valuePropName="checked">
-                      <Switch checked={!!formValues.media?.[name]?.is_primary} onChange={(v) => v && makePrimary(name)} />
-                    </Form.Item>
-                    <Form.Item hidden {...rest} name={[name, 'media_type']} initialValue="image"><Input /></Form.Item>
-                  </Card>
-                ))}
-                <Button icon={<PlusOutlined />} onClick={() => add({ media_type: 'image' })}>Thêm Media</Button>
-              </>
-            )}
-          </Form.List>
-        )}
-
-        {/* Step 2: Variants */}
-        {current === 2 && (
-          <Form.List name="variants">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...rest }) => (
-                  <Card key={key} size="small" className="mb-3" title={`Variant #${name + 1}`} extra={<Button type="link" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)}>Xóa</Button>}>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                      <Form.Item {...rest} name={[name, 'sku']} label="SKU" rules={[{ required: true }]}><Input /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'variant_name']} label="Tên biến thể"><Input /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'price']} label="Giá"><InputNumber min={0} className="w-full" /></Form.Item>
-                      <Form.Item label="Tồn"><InputNumber disabled value={formValues.inventory?.filter((i: any) => i.variant_sku === form.getFieldValue(['variants', name, 'sku']))?.reduce((s, i) => s + i.quantity, 0) || 0} /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'barcode']} label="Barcode"><Input /></Form.Item>
-                    </div>
-                  </Card>
-                ))}
-                <Button icon={<PlusOutlined />} onClick={() => add({ price: 0, stock: 0 })}>Thêm biến thể</Button>
-              </>
-            )}
-          </Form.List>
-        )}
-
-        {/* Step 3: Inventory */}
-        {current === 3 && (
-          <Form.List name="inventory">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...rest }) => (
-                  <Card key={key} size="small" className="mb-3" title={`Inventory #${name + 1}`} extra={<Button type="link" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)}>Xóa</Button>}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Form.Item {...rest} name={[name, 'variant_sku']} label="Variant SKU" rules={[{ required: true }]}><Input /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'location']} label="Vị trí kho"><Input /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'quantity']} label="Số lượng" rules={[{ required: true }]}><InputNumber min={0} className="w-full" /></Form.Item>
-                    </div>
-                  </Card>
-                ))}
-                <Button icon={<PlusOutlined />} onClick={() => add({ quantity: 0 })}>Thêm tồn kho</Button>
-              </>
-            )}
-          </Form.List>
-        )}
-
-        {/* Step 4: Pricing Rules */}
-        {current === 4 && (
-          <Form.List name="pricing_rules">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...rest }) => (
-                  <Card key={key} size="small" className="mb-3" title={`Rule #${name + 1}`} extra={<Button type="link" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)}>Xóa</Button>}>
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                      <Form.Item {...rest} name={[name, 'type']} label="Loại"><Input /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'min_quantity']} label="Min Qty"><InputNumber min={0} className="w-full" /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'price']} label="Giá"><InputNumber min={0} className="w-full" /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'cycle']} label="Chu kỳ"><Input /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'starts_at']} label="Bắt đầu"><DatePicker className="w-full" /></Form.Item>
-                      <Form.Item {...rest} name={[name, 'ends_at']} label="Kết thúc"><DatePicker className="w-full" /></Form.Item>
-                    </div>
-                  </Card>
-                ))}
-                <Button icon={<PlusOutlined />} onClick={() => add({})}>Thêm rule</Button>
-              </>
-            )}
-          </Form.List>
-        )}
-
-        {/* Step 5: Review */}
-        {current === 5 && (
-          <div className="space-y-4">
-            <Title level={5}>Xem lại</Title>
-            <div><Text strong>Tên:</Text> {formValues.name || '—'}</div>
-            <div><Text strong>Brand:</Text> {brands.find((b) => b.id === formValues.brandId)?.name || '—'}</div>
-            <div><Text strong>Giá cơ bản:</Text> {formValues.base_price || 0}</div>
-            <div><Text strong>Danh mục:</Text> {(formValues.categories || []).map((id) => categories.find((c) => c.id === id)?.name).filter(Boolean).join(', ') || '—'}</div>
-            <div><Text strong>Media:</Text> {(formValues.media || []).length}</div>
-            <div><Text strong>Variants:</Text> {(formValues.variants || []).length}</div>
-            <div><Text strong>Inventory:</Text> {(formValues.inventory || []).length}</div>
-            <div><Text strong>Pricing rules:</Text> {(formValues.pricing_rules || []).length}</div>
-          </div>
-        )}
-
-      </Form>
-
-      <Divider />
-
-      <div className="flex justify-between">
-        <Space><Button onClick={onClose}>Hủy</Button></Space>
-        <Space>
-          {current > 0 && <Button onClick={goPrev}>Quay lại</Button>}
-          {current < steps.length - 1
-            ? <Button type="primary" onClick={goNext}>Tiếp tục</Button>
-            : <Button type="primary" loading={submitting} onClick={handleCreate}>Tạo sản phẩm</Button>
-          }
-        </Space>
+        ))}
       </div>
-    </div>
+
+      {/* Step Content */}
+      {step === 1 && (
+        <section className="space-y-4">
+          <h3 className="font-semibold text-lg">Product Info</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-medium mb-1">Product Name</label>
+              <input name="name" value={form.name} onChange={handleChange} required
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Short Description</label>
+              <input name="short_description" value={form.short_description} onChange={handleChange}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block font-medium mb-1">Description</label>
+              <textarea name="description" value={form.description} onChange={handleChange} rows={4}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Base Price</label>
+              <input type="number" name="base_price" value={form.base_price} onChange={handleChange} required
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block font-medium mb-1">Brand</label>
+              <select name="brandId" value={form.brandId} onChange={e => setForm(prev => ({ ...prev, brandId: Number(e.target.value) }))}
+                required className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value={0}>-- Select Brand --</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block font-medium mb-1">Categories</label>
+              <div className="flex flex-wrap gap-3">
+                {categories.map(c => (
+                  <label key={c.id} className="flex items-center gap-1">
+                    <input type="checkbox" checked={form.categories.includes(c.id)} onChange={() => handleCategoryChange(c.id)} className="w-4 h-4" /> {c.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === 2 && (
+        <section className="space-y-4">
+          <h3 className="font-semibold text-lg">Media</h3>
+          {form.media.map((m, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <input type="file" accept="image/*" onChange={e => handleFileChange(e, i)} className="flex-1" />
+              {m.url && <img src={m.url} className="w-20 h-20 object-cover rounded-md" />}
+              <label className="flex items-center gap-1">
+                Primary
+                <input type="checkbox" checked={m.is_primary} onChange={e => { const newMedia = [...form.media]; newMedia[i].is_primary = e.target.checked; setForm({ ...form, media: newMedia }); }} className="w-4 h-4" />
+              </label>
+            </div>
+          ))}
+          <button type="button" onClick={addMedia} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Add Media</button>
+        </section>
+      )}
+
+      {step === 3 && (
+        <section className="space-y-4">
+          <h3 className="font-semibold text-lg">Variants & Inventory</h3>
+          {/* Variants */}
+          {form.variants.map((v, i) => {
+            const totalStock = form.inventory.filter(inv => inv.variant_sku === v.sku).reduce((sum, inv) => sum + inv.quantity, 0);
+            return (
+              <div key={i} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2">
+                <input placeholder="SKU" value={v.sku} onChange={e => { const newVar = [...form.variants]; newVar[i].sku = e.target.value; setForm({ ...form, variants: newVar }); }} className="px-3 py-2 border rounded-md" />
+                <input placeholder="Name" value={v.variant_name} onChange={e => { const newVar = [...form.variants]; newVar[i].variant_name = e.target.value; setForm({ ...form, variants: newVar }); }} className="px-3 py-2 border rounded-md" />
+                <input type="number" placeholder="Price" value={v.price} onChange={e => { const newVar = [...form.variants]; newVar[i].price = +e.target.value; setForm({ ...form, variants: newVar }); }} className="px-3 py-2 border rounded-md" />
+                <input type="number" placeholder="Stock" value={totalStock} readOnly className="px-3 py-2 border rounded-md bg-gray-100" />
+                <input placeholder="Barcode" value={v.barcode || ''} onChange={e => { const newVar = [...form.variants]; newVar[i].barcode = e.target.value; setForm({ ...form, variants: newVar }); }} className="px-3 py-2 border rounded-md" />
+              </div>
+            );
+          })}
+          <button type="button" onClick={addVariant} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Add Variant</button>
+
+          {/* Inventory */}
+          {form.inventory.map((inv, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+              <input placeholder="Variant SKU" value={inv.variant_sku} onChange={e => { const newInv = [...form.inventory]; newInv[i].variant_sku = e.target.value; setForm({ ...form, inventory: newInv }); }} className="px-3 py-2 border rounded-md" />
+              <input placeholder="Location" value={inv.location} onChange={e => { const newInv = [...form.inventory]; newInv[i].location = e.target.value; setForm({ ...form, inventory: newInv }); }} className="px-3 py-2 border rounded-md" />
+              <input type="number" placeholder="Quantity" value={inv.quantity} onChange={e => { const newInv = [...form.inventory]; newInv[i].quantity = +e.target.value; setForm({ ...form, inventory: newInv }); }} className="px-3 py-2 border rounded-md" />
+            </div>
+          ))}
+          <button type="button" onClick={addInventory} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Add Inventory</button>
+        </section>
+      )}
+
+      {step === 4 && (
+        <section className="space-y-4">
+          <h3 className="font-semibold text-lg">Pricing Rules</h3>
+          {form.pricing_rules.map((pr, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-2">
+              <input placeholder="Type" value={pr.type} onChange={e => { const newPR = [...form.pricing_rules]; newPR[i].type = e.target.value; setForm({ ...form, pricing_rules: newPR }); }} className="px-3 py-2 border rounded-md" />
+              <input type="number" placeholder="Min Qty" value={pr.min_quantity} onChange={e => { const newPR = [...form.pricing_rules]; newPR[i].min_quantity = +e.target.value; setForm({ ...form, pricing_rules: newPR }); }} className="px-3 py-2 border rounded-md" />
+              <input type="number" placeholder="Price" value={pr.price} onChange={e => { const newPR = [...form.pricing_rules]; newPR[i].price = +e.target.value; setForm({ ...form, pricing_rules: newPR }); }} className="px-3 py-2 border rounded-md" />
+              <input placeholder="Cycle" value={pr.cycle} onChange={e => { const newPR = [...form.pricing_rules]; newPR[i].cycle = e.target.value; setForm({ ...form, pricing_rules: newPR }); }} className="px-3 py-2 border rounded-md" />
+              <input type="date" value={pr.starts_at as string} onChange={e => { const newPR = [...form.pricing_rules]; newPR[i].starts_at = e.target.value; setForm({ ...form, pricing_rules: newPR }); }} className="px-3 py-2 border rounded-md" />
+              <input type="date" value={pr.ends_at as string} onChange={e => { const newPR = [...form.pricing_rules]; newPR[i].ends_at = e.target.value; setForm({ ...form, pricing_rules: newPR }); }} className="px-3 py-2 border rounded-md" />
+            </div>
+          ))}
+          <button type="button" onClick={addPricingRule} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Add Pricing Rule</button>
+        </section>
+      )}
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-6">
+        {step > 1 && <button type="button" onClick={prevStep} className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">Previous</button>}
+        {step < 4 && <button type="button" onClick={nextStep} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Next</button>}
+        {step === 4 && <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Submit</button>}
+      </div>
+    </form>
   );
 };

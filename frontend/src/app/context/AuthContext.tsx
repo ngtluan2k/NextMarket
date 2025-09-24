@@ -21,15 +21,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+  // 🔹 Hàm gọi /me để verify token
+  const fetchMe = async (token: string) => {
+    try {
+      const res = await fetch('http://localhost:3000/users/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error('Token expired');
+      const json = await res.json();
+      setMe(json.data); // lấy dữ liệu profile từ backend
+      setToken(token);
+    } catch (err) {
+      console.warn('fetchMe error', err);
+      logout(); // xoá nếu token hết hạn hoặc lỗi
+    }
+  };
+
+  // 🔹 Khi app load, thử lấy token từ localStorage và gọi /me để kiểm tra
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
     const tokenStr = localStorage.getItem('token');
-    if (userStr && tokenStr) {
-      try {
-        setMe(JSON.parse(userStr));
-        setToken(tokenStr);
-      } catch {  // eslint-disable-next-line no-empty
-}
+    if (tokenStr) {
+      fetchMe(tokenStr);
     }
   }, []);
 
