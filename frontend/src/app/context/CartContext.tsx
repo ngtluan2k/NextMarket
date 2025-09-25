@@ -12,13 +12,19 @@ interface CartItem {
     url: string;
     media: { url: string; is_primary?: boolean };
   };
+  variant?: {
+    id: number;
+    variant_name: string;
+    price: number;
+    stock: number;
+  };
 }
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (productId: number, quantity?: number) => Promise<void>;
-  removeFromCart: (productId: number) => Promise<void>;
-  updateQuantity: (productId: number, quantity: number) => Promise<void>;
+  addToCart: (productId: number, quantity?: number, variantId?: number) => Promise<void>;
+  removeFromCart: (productId: number, variantId?: number) => Promise<void>;
+  updateQuantity: (productId: number, quantity: number, variantId?: number) => Promise<void>;
   clearCart: () => void;
   loadCart: () => void;
 }
@@ -52,7 +58,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         const data = await response.json();
-        setCart(data);
+        // 👉 FIX HERE: Use data.items instead of data directly
+        setCart(data.items);
       } else {
         setCart([]);
       }
@@ -62,7 +69,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const addToCart = async (productId: number, quantity = 1) => {
+  const addToCart = async (productId: number, quantity = 1, variantId?: number) => {
     try {
       const response = await fetch('http://localhost:3000/cart/add', {
         method: 'POST',
@@ -70,7 +77,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, variantId }),
       });
       if (response.ok) {
         await loadCart();
@@ -81,15 +88,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const removeFromCart = async (productId: number) => {
+  const removeFromCart = async (productId: number, variantId?: number) => {
     try {
       const response = await fetch(
         `http://localhost:3000/cart/remove/${productId}`,
         {
           method: 'DELETE',
           headers: {
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
+          body: JSON.stringify({ variantId }),
         }
       );
       if (response.ok) {
@@ -101,7 +110,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const updateQuantity = async (productId: number, quantity: number) => {
+  const updateQuantity = async (productId: number, quantity: number, variantId?: number) => {
     try {
       const response = await fetch('http://localhost:3000/cart/update', {
         method: 'PUT',
@@ -109,12 +118,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, variantId }),
       });
       if (response.ok) {
         await loadCart();
       }
     } catch (error) {
+      alert('Không thể cập nhật số lượng');
       console.error('Không thể cập nhật số lượng:', error);
     }
   };

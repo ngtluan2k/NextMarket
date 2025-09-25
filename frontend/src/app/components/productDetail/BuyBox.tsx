@@ -13,6 +13,10 @@ const vnd = (n?: number) =>
 
 export default function BuyBox({
   product,
+  selectedVariantId,
+  quantity,
+  setQuantity,
+  calculatedPrice,
   width,
   minHeight,
   stickyTop,
@@ -20,6 +24,10 @@ export default function BuyBox({
   showMessage,
 }: {
   product?: Product;
+  selectedVariantId: number;
+  quantity: number;
+  setQuantity: (qty: number) => void;
+  calculatedPrice: number;
   width?: number;
   minHeight?: number;
   stickyTop?: number;
@@ -29,18 +37,16 @@ export default function BuyBox({
     content: string
   ) => void;
 }) {
-  const [qty, setQty] = useState(1);
   const p = product ?? {};
   const { addToCart } = useCart();
 
   console.log(JSON.stringify(p));
 
-
   const handleAddToCart = async (product: Product, quantity: number) => {
     try {
       console.log('Adding to cart:', product.name, 'Quantity:', quantity);
       // Assuming addToCart can handle quantity; adjust if your context/API differs
-      await addToCart(Number(product.id), quantity); // Pass quantity if supported
+      await addToCart(Number(product.id), quantity, selectedVariantId); // Pass quantity if supported
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
@@ -57,8 +63,10 @@ export default function BuyBox({
         <img src="" className="h-6 w-6" alt="" />
         <div>
           <div className="flex items-center gap-1 text-xs text-slate-500">
-          <div className="text-sm font-semibold">{p.store?.name || 'Tech Store'}</div>
-              OFFICIAL <BadgeCheck className="h-4 w-4 text-sky-600" />
+            <div className="text-sm font-semibold">
+              {p.store?.name || 'Tech Store'}
+            </div>
+            OFFICIAL <BadgeCheck className="h-4 w-4 text-sky-600" />
           </div>
         </div>
       </div>
@@ -68,14 +76,14 @@ export default function BuyBox({
         <div className="inline-flex items-center rounded-lg border border-slate-200">
           <button
             className="px-3 py-2 hover:bg-slate-50"
-            onClick={() => setQty(Math.max(1, qty - 1))}
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
           >
             -
           </button>
-          <div className="w-10 text-center text-sm">{qty}</div>
+          <div className="w-10 text-center text-sm">{quantity}</div>
           <button
             className="px-3 py-2 hover:bg-slate-50"
-            onClick={() => setQty(qty + 1)}
+            onClick={() => setQuantity(quantity + 1)}
           >
             +
           </button>
@@ -83,19 +91,21 @@ export default function BuyBox({
       </div>
 
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold">{vnd((p.price ?? 0) * qty)}</div>
+      <div className="text-[26px] font-bold">
+        {vnd((p.price ?? 0) * quantity)}
+      </div>
 
       <div className="mt-4 space-y-2">
         <button
           className="h-11 w-full rounded-xl px-4 text-base font-semibold text-white"
           style={{ background: TIKI_RED }}
-          onClick={() => onBuyNow?.({ product: p, qty })}
+          onClick={() => onBuyNow?.({ product: p, qty: quantity })}
         >
           Mua ngay
         </button>
         <button
           className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-          onClick={() => handleAddToCart(p, qty)}
+          onClick={() => handleAddToCart(p, quantity)}
         >
           Thêm vào giỏ
         </button>

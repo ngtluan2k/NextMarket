@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -28,6 +28,45 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
   const slug = params.slug ?? ''; // lấy slug từ URL
   const { loading, product, combos } = useProductDetail(slug);
+
+  // Shared state for pricing calculation
+  const [selectedVariantId, setSelectedVariantId] = useState<number>(
+    product?.variants?.[0]?.id ?? null
+  );
+  const [quantity, setQuantity] = useState(1);
+
+  // Calculate price with pricing rules (same logic as Info.tsx)
+  const calculatedPrice = useMemo(() => {
+    if (!product) return 0;
+
+    // 1. Base price
+    let currentPrice = Number(product.base_price ?? 0);
+
+    // 2. Variant price
+    if (selectedVariantId) {
+      const variant = product.variants?.find(
+        (v: any) => v.id === selectedVariantId
+      );
+      if (variant) currentPrice = Number(variant.price);
+    }
+
+    // 3. Apply pricing rules
+    const now = new Date();
+    const validRules = (product.pricing_rules ?? [])
+      .filter((r: any) => {
+        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
+        const end = r.ends_at
+          ? new Date(r.ends_at)
+          : new Date(8640000000000000);
+        return quantity >= r.min_quantity && now >= start && now <= end;
+      })
+      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+
+    if (validRules.length) currentPrice = Number(validRules[0].price);
+
+    return currentPrice;
+  }, [product, selectedVariantId, quantity]);
+
   return (
     <>
       <EveryMartHeader />
@@ -57,7 +96,13 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
             {/* GIỮA: hàng 1 */}
             <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
-              <Info product={product} />
+              <Info
+                product={product}
+                selectedVariantId={selectedVariantId}
+                setSelectedVariantId={setSelectedVariantId}
+                quantity={quantity}
+                setQuantity={setQuantity}
+              />
               <Shipping />
               <ComboStrip items={combos} />
               <SimilarProducts />
@@ -73,6 +118,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
               <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
                 <BuyBox
                   product={product}
+                  selectedVariantId={selectedVariantId}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  calculatedPrice={calculatedPrice}
                   width={L.rightWidth}
                   minHeight={L.buyBoxMinHeight}
                   showMessage={showMessage}

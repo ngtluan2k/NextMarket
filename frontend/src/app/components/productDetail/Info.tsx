@@ -9,13 +9,20 @@ const vnd = (n?: number | string) =>
     maximumFractionDigits: 5,
   });
 
-export default function Info({ product }: { product?: any }) {
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
-    product?.variants?.[0]?.id ?? null
-  );
-  const [quantity, setQuantity] = useState(1);
+export default function Info({
+  product,
+  selectedVariantId,
+  setSelectedVariantId,
+  quantity,
+  setQuantity,
+}: {
+  product?: any;
+  selectedVariantId: number | null;
+  setSelectedVariantId: (id: number) => void;
+  quantity: number;
+  setQuantity: (qty: number) => void;
+}) {
 
-  
   // Tính giá hiện tại theo variant + pricing_rules
   const price = useMemo(() => {
     if (!product) return 0;
