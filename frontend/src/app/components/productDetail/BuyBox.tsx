@@ -47,8 +47,7 @@ export default function BuyBox({
   const handleAddToCart = async (product: Product, quantity: number) => {
     try {
       console.log('Adding to cart:', product.name, 'Quantity:', quantity);
-      // Assuming addToCart can handle quantity; adjust if your context/API differs
-      await addToCart(Number(product.id), quantity, selectedVariantId); // Pass quantity if supported
+      await addToCart(Number(product.id), quantity, selectedVariantId);
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
