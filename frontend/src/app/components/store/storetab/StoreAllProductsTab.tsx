@@ -31,7 +31,7 @@ export default function StoreAllProductsTab() {
       setLoading(true);
       const qs = new URLSearchParams({ q, sort, page: String(page), pageSize: String(pageSize) });
       if (category) qs.set("category", category);
-      const res = await fetch(`/api/stores/${slug}/products?` + qs.toString());
+      const res = await fetch(`http://localhost:3000/stores/slug/${slug}/all`);
       const data = await res.json();
       setGridData(data);
       setErr(null);

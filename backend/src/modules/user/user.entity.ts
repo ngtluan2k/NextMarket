@@ -12,7 +12,7 @@ import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { ShoppingCart } from '../cart/cart.entity';
 import { Order } from '../orders/order.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
-
+import { Store } from '../store/store.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -42,6 +42,9 @@ export class User {
 
   @Column({ type: 'datetime', nullable: true })
   updated_at!: Date;
+
+@OneToOne(() => Store, (store) => store.user, { cascade: true })
+store!: Store;
 
   @OneToOne(() => UserProfile, (profile) => profile.user, {
     cascade: true,

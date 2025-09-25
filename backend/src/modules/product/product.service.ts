@@ -32,7 +32,7 @@ export class ProductService {
     @InjectRepository(Inventory)
     private readonly inventoryRepo: Repository<Inventory>,
     @InjectRepository(PricingRules)
-    private readonly pricingRuleRepo: Repository<PricingRules>,
+    private readonly pricingRuleRepo: Repository<PricingRules>
   ) {}
 
   async saveProduct(
@@ -41,9 +41,10 @@ export class ProductService {
     status: 'draft' | 'active'
   ) {
     return this.dataSource.transaction(async (manager) => {
-      const store = await manager.findOne(Store, {
-        where: { user_id: userId },
-      });
+      const store = await manager
+        .createQueryBuilder(Store, 'store')
+        .where('store.user_id = :userId', { userId })
+        .getOne();
       if (!store) throw new NotFoundException('Store not found');
       const slug = await generateUniqueSlug(this.productRepo, dto.name);
 
@@ -68,10 +69,10 @@ export class ProductService {
 
       // Media
       if (dto.media?.length) {
-  for (const m of dto.media) {
-    await manager.save(ProductMedia, { ...m, product });
-  }
-}
+        for (const m of dto.media) {
+          await manager.save(ProductMedia, { ...m, product });
+        }
+      }
 
       // Variants
       const variantMap: Record<string, any> = {};
@@ -130,68 +131,97 @@ export class ProductService {
     return this.saveProduct(dto, userId, 'active');
   }
   // ProductService.ts
-async findAll(userId: number) {
-  return this.productRepo.find({
-    where: { store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-}
+  async findAll(userId: number) {
+    return this.productRepo.find({
+      where: { store: { user_id: userId } },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+  }
 
-async findOne(id: number, userId?: number) {
-  const product = await this.productRepo.findOne({
-    where: userId
-      ? { id, store: { user_id: userId } } // chỉ check nếu có userId
-      : { id },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
+  async findOne(id: number, userId?: number) {
+    const product = await this.productRepo.findOne({
+      where: userId
+        ? { id, store: { user_id: userId } } // chỉ check nếu có userId
+        : { id },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
 
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
 
+  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Not allowed');
 
-async updateProduct(id: number, dto: CreateProductDto, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id },
-    relations: ['store'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('Not allowed');
+    // Cập nhật tất cả các thông tin như createProduct
+    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
+  }
 
-  // Cập nhật tất cả các thông tin như createProduct
-  return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
-}
+  async removeProduct(productId: number, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
 
-async removeProduct(productId: number, userId: number) {
-  const product = await this.productRepo.findOne({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Product not found');
 
-  if (!product) throw new NotFoundException('Product not found');
+    // đổi status thành deleted
+    product.status = 'deleted';
+    await this.productRepo.save(product); // lưu lại database
 
+    return { message: 'Product has been soft-deleted' };
+  }
 
-  // đổi status thành deleted
-  product.status = 'deleted';
-  await this.productRepo.save(product); // lưu lại database
+  async findAllProduct() {
+    return this.productRepo.find({
+      where: { status: 'active' },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ], // nếu muốn show thêm info store
+    });
+  }
+  // product.service.ts
+  async findBySlug(slug: string) {
+    const product = await this.productRepo.findOne({
+      where: { slug },
+      relations: [
+        'media',
+        'variants',
+        'brand',
+        'categories',
+        'pricing_rules',
+        'store',
+      ],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
 
-  return { message: 'Product has been soft-deleted' };
-}
-
-
-
-async findAllProduct() {
-  return this.productRepo.find({
-    where: { status: 'active' },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'], // nếu muốn show thêm info store
-  });
-}
-// product.service.ts
-async findBySlug(slug: string) {
-  const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
- });
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
-
-async findAllByStoreId(storeId: number) {
+  async findAllByStoreId(storeId: number) {
     return this.productRepo.find({
       where: { store_id: storeId },
       relations: [
@@ -204,23 +234,40 @@ async findAllByStoreId(storeId: number) {
       ],
     });
   }
-async searchProducts(query: string) {
-  if (!query) return [];
+  async searchProducts(query: string) {
+    if (!query) return [];
 
-  return this.productRepo.find({
-    where: [
-      { name: Like(`%${query}%`), status: 'active' },
-      { slug: Like(`%${query}%`), status: 'active' },
-      { description: Like(`%${query}%`), status: 'active' },
-    ],
-    relations: ['store', 'media', 'brand'],
-    take: 10,
+    return this.productRepo.find({
+      where: [
+        { name: Like(`%${query}%`), status: 'active' },
+        { slug: Like(`%${query}%`), status: 'active' },
+        { description: Like(`%${query}%`), status: 'active' },
+      ],
+      relations: ['store', 'media', 'brand'],
+      take: 10,
+    });
+  }
+async toggleProductStatus(productId: number, userId: number) {
+  const product = await this.productRepo.findOne({
+    where: { id: productId },
+    relations: ['store'], // phải có để kiểm tra quyền
   });
+
+  if (!product) throw new NotFoundException('Product not found');
+  if (product.store.user_id !== userId)
+    throw new ForbiddenException('Bạn không có quyền chỉnh sửa sản phẩm này');
+
+  product.status = product.status === 'active' ? 'draft' : 'active';
+  return this.productRepo.save(product);
 }
 
-
-
-
-
+  async countByStoreId(storeId: number): Promise<number> {
+    return this.productRepo.count({
+      where: {
+        store: { id: storeId }, // nếu Product có quan hệ ManyToOne với Store
+        status: 'active', // nếu chỉ muốn đếm sản phẩm đang active
+      },
+    });
+  }
 
 }

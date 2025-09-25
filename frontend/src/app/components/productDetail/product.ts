@@ -28,7 +28,7 @@ export type Product = {
     starts_at?: string;
     ends_at?: string;
   }>;
-  store?: { id?: number; name?: string }; // ✅ thêm store ở đây
+  store?: { id?: number; name?: string; slug?: string; logo_url?: string }; // ✅ thêm store ở đây
 };
 
 export type CardItem = {

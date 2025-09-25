@@ -46,7 +46,7 @@ export default function StoreTopBar({
   const { pathname } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
 
-  const computedBase = basePath ?? `/store/${storeSlug}`;
+  const computedBase = basePath ?? `/stores/slug/${storeSlug}`;
   const computedTabs = useMemo(() => {
     if (tabs?.length) {
       return tabs.map(t => ({ ...t, href: t.href ?? `${computedBase}${t.key === "home" ? "" : `/${t.key}`}` }));
@@ -187,7 +187,17 @@ export default function StoreTopBar({
 }
 
 async function defaultFetchStore(slug: string): Promise<StoreInfo> {
-  const res = await fetch(`/api/stores/${encodeURIComponent(slug)}`);
+  const res = await fetch(`http://localhost:3000/stores/slug/${slug}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const json = await res.json();
+  return {
+    id: json.data.id,
+    name: json.data.name,
+    avatarUrl: json.data.avatarUrl,
+    isOfficial: json.data.isOfficial,
+    rating: json.data.rating,
+    followers: json.data.followers,
+  };
 }
+
+

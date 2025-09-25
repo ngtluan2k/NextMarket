@@ -162,6 +162,17 @@ async softDeleteProduct(id: number): Promise<void> {
     headers: this.getAuthHeaders(),
   });
 }
+
+// ✅ Mới: Cập nhật trạng thái sản phẩm (active / draft)
+  async toggleProductStatus(id: number): Promise<Product> {
+  const response = await axios.patch(
+    `${API_BASE_URL}/products/${id}/toggle-status`,
+    {}, // body rỗng
+    { headers: this.getAuthHeaders() }
+  );
+  return response.data;
+}
+
 }
 
 export const productService = new ProductService();

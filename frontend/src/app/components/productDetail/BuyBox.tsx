@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { Product } from '../productDetail/product';
 import { TIKI_RED } from '../productDetail/productDetail';
+import { useNavigate } from 'react-router-dom';
 
 export const vnd = (n?: number) =>
   (n ?? 0).toLocaleString('vi-VN', {
@@ -41,6 +42,8 @@ export default function BuyBox({
   }) => void;
 }) {
   // --- tính giá dựa trên variant + pricing_rules ---
+  const navigate = useNavigate();
+
   const price = useMemo(() => {
     if (!product) return 0;
 
@@ -74,25 +77,28 @@ export default function BuyBox({
 
   if (!product) return null;
 
+  const handleClickStore = () => {
+    if (product.store?.slug) {
+      navigate(`/stores/slug/${product.store.slug}`);
+    }
+  };
+
   return (
     <aside
       className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
       style={{ width, minHeight, top: stickyTop }}
     >
       {/* Seller info */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 cursor-pointer" onClick={handleClickStore}>
         <img
-          src="https://via.placeholder.com/24"
+          src={product.store?.logo_url ?? "https://via.placeholder.com/24"}
           className="h-6 w-6 rounded-full"
-          alt=""
+          alt={product.store?.name ?? "Store"}
         />
         <div>
-          <div className="text-sm font-semibold">
-            {product.store?.name ?? 'Official Store'}
-          </div>
+          <div className="text-sm font-semibold">{product.store?.name ?? 'Official Store'}</div>
           <div className="flex items-center gap-1 text-xs text-slate-500">
-            <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
-            {(product.rating ?? 0).toFixed(1)}
+            <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL • {(product.rating ?? 0).toFixed(1)}
           </div>
         </div>
       </div>

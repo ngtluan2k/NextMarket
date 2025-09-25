@@ -16,6 +16,7 @@ import {
   Form,
   InputNumber,
   Statistic,
+  Switch,
   message,
 } from 'antd';
 import {
@@ -60,6 +61,7 @@ interface Product {
   sold: number;
   revenue: number;
   status: 'Còn Hàng' | 'Sắp Hết Hàng' | 'Hết Hàng';
+  statusApi: 'active' | 'draft';
   image: string;
   sku: string;
   description: string;
@@ -130,7 +132,7 @@ const fetchStores = async () => {
 
     // ✅ Lọc chỉ lấy sản phẩm active
     const activeProducts = apiProducts.filter(
-      (p: ApiProduct) => p.status === 'active'
+      (p: ApiProduct) => p.status !== 'deleted'
     );
 
 const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) => {
@@ -166,7 +168,8 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
     sold,
     revenue,
     status,
-    image: imageUrl, // ✅ dùng full URL backend
+    statusApi: apiProduct.status as 'active' | 'draft', // ✅ ép kiểu
+    image: imageUrl,
     sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
     description: apiProduct.description || '',
     tags: [],
@@ -174,6 +177,7 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
     apiId: apiProduct.id,
   };
 });
+
 
     console.log('Danh Sách Sản Phẩm Active:', mappedProducts);
     setProducts(mappedProducts);
@@ -411,6 +415,47 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
       ],
       onFilter: (value, record) => record.status === value,
     },
+
+   {
+  title: 'Tình Trạng',
+  dataIndex: 'statusApi',
+  key: 'statusApi',
+  render: (_: any, record: Product) => (
+    <Switch
+      checked={record.statusApi === 'active'}
+      checkedChildren="Active"
+      unCheckedChildren="Draft"
+      onChange={async () => {
+        if (!record.apiId) {
+          message.error('Không thể cập nhật sản phẩm không có API ID');
+          return;
+        }
+
+        try {
+          // Gọi API toggle trạng thái sản phẩm
+          const updatedProduct = await productService.toggleProductStatus(record.apiId);
+
+          // Xác định newStatus type-safe
+          const newStatus: 'active' | 'draft' =
+            updatedProduct.status === 'active' ? 'active' : 'draft';
+
+          // Cập nhật state products để UI thay đổi ngay
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.apiId === record.apiId ? { ...p, statusApi: newStatus } : p
+            )
+          );
+
+          message.success(`Cập nhật trạng thái thành ${newStatus}`);
+        } catch (error) {
+          message.error('Cập nhật trạng thái thất bại');
+          console.error(error);
+        }
+      }}
+    />
+  ),
+},
+
     {
       title: 'Hành Động',
       key: 'actions',

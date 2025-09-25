@@ -87,10 +87,10 @@ const App: React.FC = () => {
           </Route>
 
           {/* Store Routes */}
-          <Route path="/store/:slug" element={<StoreLayout />}>
+          <Route path="/stores/slug/:slug" element={<StoreLayout />}>
             <Route index element={<StoreHomeTab />} />
-            <Route path="all" element={<StoreAllProductsTab />} />
-            <Route path="profile" element={<StoreProfileTab />} /> 
+            <Route path="/stores/slug/:slug/all" element={<StoreAllProductsTab />} />
+            <Route path="/stores/slug/:slug/profile" element={<StoreProfileTab />} /> 
           </Route>
 
           {/* Brands */}
