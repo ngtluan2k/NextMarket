@@ -91,9 +91,7 @@ export default function BuyBox({
       </div>
 
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold">
-        {vnd((p.price ?? 0) * quantity)}
-      </div>
+      <div className="text-[26px] font-bold">{vnd(calculatedPrice)}</div>
 
       <div className="mt-4 space-y-2">
         <button
