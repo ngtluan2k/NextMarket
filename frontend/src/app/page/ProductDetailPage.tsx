@@ -29,20 +29,17 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const slug = params.slug ?? '';
   const { loading, product, combos } = useProductDetail(slug);
 
-  // Shared state for pricing calculation
+  // console.log("currentProducts: ", JSON.stringify(product))
   const [selectedVariantId, setSelectedVariantId] = useState<number>(
     product?.variants?.[0]?.id ?? null
   );
   const [quantity, setQuantity] = useState(1);
 
-  // Calculate price with pricing rules (same logic as Info.tsx)
   const calculatedPrice = useMemo(() => {
     if (!product) return 0;
 
-    // 1. Base price
     let currentPrice = Number(product.base_price ?? 0);
 
-    // 2. Variant price
     if (selectedVariantId) {
       const variant = product.variants?.find(
         (v: any) => v.id === selectedVariantId
@@ -50,7 +47,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
       if (variant) currentPrice = Number(variant.price);
     }
 
-    // 3. Apply pricing rules
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
       .filter((r: any) => {
@@ -67,7 +63,23 @@ export default function ProductDetailPage({ showMessage }: Props) {
     return currentPrice;
   }, [product, selectedVariantId, quantity]);
 
-
+  const galleryImages = useMemo(() => {
+    if (!product) return [];
+    if (!selectedVariantId) {
+      return Array.isArray(product.media)
+        ? product.media.map((m: { url: string }) => m.url)
+        : [];
+    }
+    const variantIndex = product.variants?.findIndex(
+      (v: any) => v.id === selectedVariantId
+    ) ?? -1;
+    if (variantIndex >= 0 && product.media?.[variantIndex]) {
+      return [product.media[variantIndex].url];
+    }
+    return Array.isArray(product.media)
+      ? product.media.map((m: { url: string }) => m.url)
+      : [];
+  }, [product, selectedVariantId]);
 
   useEffect(() => {
     if (!product) return;
@@ -88,14 +100,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
               ['--right' as any]: `${L.rightWidth}px`,
             }}
           >
-            {/* TRÁI: Gallery */}
             <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
               <Gallery
-                images={
-                  Array.isArray(product?.media)
-                    ? product.media.map((m: { url: string }) => m.url)
-                    : []
-                }
+                images={galleryImages}
                 width={L.leftWidth}
                 galleryHeight={L.galleryHeight}
                 thumbHeight={L.thumbHeight}
@@ -103,7 +110,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
               />
             </div>
 
-            {/* GIỮA: Info + Shipping + ComboStrip + Specs + Description */}
             <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
               <Info
                 product={product}
@@ -122,7 +128,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
               />
             </section>
 
-            {/* PHẢI: BuyBox */}
             <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
               <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
                 <BuyBox
@@ -138,12 +143,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
               </div>
             </div>
 
-            {/* REVIEWS */}
             <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <ProductReviews />
             </div>
 
-            {/* Explore more */}
             <div className="lg:col-span-3 mt-2">
               <ExploreMore />
             </div>

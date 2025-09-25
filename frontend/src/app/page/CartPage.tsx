@@ -23,7 +23,7 @@ interface CartProps {
 
 const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const { cart } = useCart();
-
+  console.log('Cart contents:', cart);  
   const navigate = useNavigate();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
