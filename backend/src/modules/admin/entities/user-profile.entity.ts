@@ -11,8 +11,8 @@ export class UserProfile {
   @Generated('uuid')
   uuid!: string;
 
-  // @Column()
-  // user_id!: number;
+  @Column()
+  user_id!: number;
 
   @Column({ nullable: true })
   full_name!: string;
@@ -29,7 +29,7 @@ export class UserProfile {
   @Column({ nullable: true })
   avatar_url!: string;
 
-  @Column({ type: 'text', nullable: true})
+  @Column({ type: 'text', nullable: true , default: 'Việt Nam'})
   country!: string;
 
   @Column({ type: 'datetime', nullable: true })
