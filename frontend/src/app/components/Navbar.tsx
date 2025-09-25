@@ -65,14 +65,15 @@ export interface ProductSuggestion {
 }
 
 export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
+
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [openLogin, setOpenLogin] = useState(false);
-
   const { cart } = useCart();
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = cart.length;
+
 
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();

@@ -1,8 +1,10 @@
+
 // src/components/productDetail/BuyBox.tsx
 import React, { useMemo } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { Product } from '../productDetail/product';
 import { TIKI_RED } from '../productDetail/productDetail';
+import { useCart } from '../../context/CartContext';
 
 export const vnd = (n?: number) =>
   (n ?? 0).toLocaleString('vi-VN', {
@@ -13,67 +15,46 @@ export const vnd = (n?: number) =>
 
 export default function BuyBox({
   product,
-  width,
-  minHeight,
-  stickyTop,
   selectedVariantId,
   quantity,
   setQuantity,
+  calculatedPrice,
+  width,
+  minHeight,
+  stickyTop,
   onBuyNow,
-  onAddToCart,
+  showMessage,
 }: {
   product?: Product;
+  selectedVariantId: number;
+  quantity: number;
+  setQuantity: (qty: number) => void;
+  calculatedPrice: number;
   width?: number;
   minHeight?: number;
   stickyTop?: number;
-  selectedVariantId?: number | null;
-  quantity: number;
-  setQuantity: React.Dispatch<React.SetStateAction<number>>;
-  onBuyNow?: (p: {
-    product?: Product;
-    qty: number;
-    variantId?: number | null;
-  }) => void;
-  onAddToCart?: (p: {
-    product?: Product;
-    qty: number;
-    variantId?: number | null;
-  }) => void;
+  onBuyNow?: (p: { product?: Product; qty: number }) => void;
+  showMessage?: (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => void;
 }) {
-  // --- tính giá dựa trên variant + pricing_rules ---
-  const price = useMemo(() => {
-    if (!product) return 0;
+  const p = product ?? {};
+  const { addToCart } = useCart();
 
-    // 1. Giá cơ bản theo variant hoặc base_price
-    let currentPrice = Number(product.base_price ?? 0);
-    if (selectedVariantId) {
-      const variant: any = product.variants?.find(
-        (v: any) => v.id === selectedVariantId
-      );
-      if (variant) currentPrice = Number(variant.price);
+  // console.log(JSON.stringify(p));
+
+  const handleAddToCart = async (product: Product, quantity: number) => {
+    try {
+      console.log('Adding to cart:', product.name, 'Quantity:', quantity);
+      await addToCart(Number(product.id), quantity, selectedVariantId);
+      if (showMessage) {
+        showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
+      }
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
     }
-
-    // 2. Lấy rules từ product (không lấy từ variant)
-    const rules: { min_qty: number; price: number }[] = (
-      product.pricing_rules ?? []
-    ).map((r: any) => ({
-      min_qty: r.min_quantity,
-      price: Number(r.price),
-    }));
-
-    // 3. Áp dụng rule dựa trên quantity
-    if (rules.length > 0) {
-      const matched = rules
-        .filter((r) => quantity >= r.min_qty)
-        .sort((a, b) => b.min_qty - a.min_qty)[0];
-      if (matched) currentPrice = matched.price;
-    }
-
-    return currentPrice;
-  }, [product, selectedVariantId, quantity]);
-
-  if (!product) return null;
-
+  };
   return (
     <aside
       className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
@@ -88,11 +69,11 @@ export default function BuyBox({
         />
         <div>
           <div className="text-sm font-semibold">
-            {product.store?.name ?? 'Official Store'}
+            {p.store?.name ?? 'Official Store'}
           </div>
           <div className="flex items-center gap-1 text-xs text-slate-500">
             <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
-            {(product.rating ?? 0).toFixed(1)}
+            {(p.rating ?? 0).toFixed(1)}
           </div>
         </div>
       </div>
@@ -119,26 +100,21 @@ export default function BuyBox({
 
       {/* Price */}
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold">{vnd(price * quantity)}</div>
+      <div className="text-[26px] font-bold">{vnd(calculatedPrice)}</div>
+
 
       {/* Actions */}
       <div className="mt-4 space-y-2">
         <button
           className="h-11 w-full rounded-xl px-4 text-base font-semibold text-white"
           style={{ background: TIKI_RED }}
-          onClick={() =>
-            onBuyNow?.({ product, qty: quantity, variantId: selectedVariantId })
-          }
+          onClick={() => onBuyNow?.({ product: p, qty: quantity })}
         >
           Mua ngay
         </button>
         <button
           className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            if (product) {
-              onAddToCart?.({ product, qty: quantity });
-            }
-          }}
+          onClick={() => handleAddToCart(p, quantity)}
         >
           Thêm vào giỏ
         </button>

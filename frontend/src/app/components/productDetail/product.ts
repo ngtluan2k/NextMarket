@@ -14,22 +14,28 @@ export type Product = {
   slug?: string;
   author?: string;
   images?: string[];
-  media?: { url: string; is_primary?: boolean }[];
   base_price?: number | string;
   variants?: Variant[];
   price?: number;
   listPrice?: number;
   rating?: number;
   reviewsCount?: number;
-  sellerName?: string;
-  pricing_rules?: Array<{
-    min_quantity: number;
-    price: number | string;
-    starts_at?: string;
-    ends_at?: string;
-  }>;
-  store?: { id?: number; name?: string }; // ✅ thêm store ở đây
+  media?: { url: string; is_primary?: boolean }[];
+  store?: { name: string; slug: string };
 };
+
+// export type CardItem = {
+//   id?: string;
+
+//   sellerName?: string;
+//   pricing_rules?: Array<{
+//     min_quantity: number;
+//     price: number | string;
+//     starts_at?: string;
+//     ends_at?: string;
+//   }>;
+//   store?: { id?: number; name?: string }; // ✅ thêm store ở đây
+// };
 
 export type CardItem = {
   id?: number;
@@ -38,5 +44,5 @@ export type CardItem = {
   price?: number;
   listPrice?: number;
   rating?: number;
-  variantId?: number; // nếu muốn lưu variant được chọn trên card
+  variantId?: number;
 };

@@ -26,13 +26,12 @@ import StoreLayout from "./page/StoreLayout";
 import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
 import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
 import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
-import { Cart } from "./components/Cart";
-import CartPage from "./page/CartPage";
 import CheckoutPayment from "./page/CheckoutPayment";
 import OrderSuccess from "./page/OrderSuccess";
 import FeaturedBrandsPage from "./components/FeaturedBrands";
 import BrandPage from "./page/BrandPage";
 import SearchPage from "./page/SearchPage";
+import CartPage from "./page/CartPage";
 
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
@@ -60,8 +59,8 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/catepage" element={<CategoryPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
-          <Route path="/cart" element={<Cart showMessage={showMessage} />} />
+          <Route path="/products/slug/:slug" element={<ProductDetailPage showMessage={showMessage}/>} />
+          <Route path="/cart" element={<CartPage showMessage={showMessage} />} />
           <Route path="/test/home" element={<ProductList />} />
           <Route path="/checkout" element={<CheckoutPayment />} />
           <Route path="/order/success" element={<OrderSuccess />} />
