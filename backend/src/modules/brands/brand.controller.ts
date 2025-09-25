@@ -13,6 +13,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 @Controller('brands')
 export class BrandController {
   constructor(private readonly service: BrandService) {}
+  
    
 
   @Get()
@@ -56,4 +57,28 @@ export class BrandController {
         await this.service.remove(id)
         return id
     }
+@Get(':brandId/products')
+  async getProductsByBrand(@Param('brandId') brandId: number) {
+    const products = await this.service.findProductsByBrand(brandId);
+    return {
+      message: products.length
+        ? `Lấy danh sách sản phẩm của brand ${brandId} thành công`
+        : 'Brand này chưa có sản phẩm',
+      total: products.length,
+      data: products,
+    };
+  }
+
+@Get(':brandId/categories')
+  async getCategoriesByBrand(@Param('brandId', ParseIntPipe) brandId: number) {
+    const categories = await this.service.findCategoriesByBrand(brandId);
+    return {
+      message: categories.length
+        ? `Lấy danh sách category của brand ${brandId} thành công`
+        : 'Brand này chưa có category',
+      total: categories.length,
+      data: categories,
+    };
+  }
+
 }

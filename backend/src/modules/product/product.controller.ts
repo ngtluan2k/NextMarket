@@ -7,6 +7,9 @@ import {
   Body,
   Param,
   Req,
+  Query,
+  UseInterceptors,
+  UploadedFiles
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -19,6 +22,11 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiOperation } from '@nestjs/swagger';
 import { StoreService } from '../store/store.service';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import { FilesInterceptor } from '@nestjs/platform-express';
+
 @Controller('products')
 export class ProductController {
   constructor(
@@ -31,6 +39,11 @@ export class ProductController {
   async getAllProduct() {
     return this.productService.findAllProduct();
   }
+  @Get('search')
+async search(@Query('q') q: string) {
+  const products = await this.productService.searchProducts(q);
+  return { data: products }; // phải trả về object { data: [...] }
+}
 
   // Lấy tất cả sản phẩm của store
   @UseGuards(JwtAuthGuard)
@@ -67,10 +80,11 @@ export class ProductController {
   }
 
   // Xóa sản phẩm
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(@Param('id') id: number, @Req() req: any) {
     const userId = req.user.id;
-    return this.productService.remove(id, userId);
+    return this.productService.removeProduct(id, userId);
   }
 
   // Publish sản phẩm (đăng lên store)
@@ -86,12 +100,49 @@ export class ProductController {
     return this.productService.saveProduct(product as any, userId, 'active');
   }
 
+
   @Post('publish')
   @UseGuards(JwtAuthGuard)
-  async publish(@Body() dto: CreateProductDto, @Req() req: any) {
+  @UseInterceptors(
+    FilesInterceptor('media', 10, {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/products';
+          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    }),
+  )
+  async publish(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() dto: any, // dùng any vì các trường JSON gửi qua FormData là string
+    @Req() req: any,
+  ) {
+    // Parse các trường JSON từ FormData
+    if (dto.variants) dto.variants = JSON.parse(dto.variants);
+    if (dto.inventory) dto.inventory = JSON.parse(dto.inventory);
+    if (dto.pricing_rules) dto.pricing_rules = JSON.parse(dto.pricing_rules);
+    if (dto.categories) dto.categories = JSON.parse(dto.categories);
+
+    // Chuyển file thành media metadata
+    if (files?.length) {
+      dto.media = files.map((file, index) => ({
+        file_name: file.filename,
+        media_type: 'image',
+        is_primary: index === 0,
+        url: `/uploads/products/${file.filename}`,
+      }));
+    }
+
     const userId = req.user.id;
     return this.productService.publishProduct(dto, userId);
   }
+
 
  @UseGuards(JwtAuthGuard)
   @Get('store/:storeId')
@@ -125,4 +176,6 @@ export class ProductController {
       data,
     };
   }
+
+
 }

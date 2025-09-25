@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+
+// src/components/productDetail/BuyBox.tsx
+import React, { useMemo } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { Product } from '../productDetail/product';
 import { TIKI_RED } from '../productDetail/productDetail';
 import { useCart } from '../../context/CartContext';
 
-const vnd = (n?: number) =>
+export const vnd = (n?: number) =>
   (n ?? 0).toLocaleString('vi-VN', {
     style: 'currency',
     currency: 'VND',
-    maximumFractionDigits: 4,
+    maximumFractionDigits: 0,
   });
 
 export default function BuyBox({
@@ -59,18 +61,25 @@ export default function BuyBox({
       className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
       style={{ width, minHeight, top: stickyTop }}
     >
+      {/* Seller info */}
       <div className="flex items-center gap-2">
-        <img src="" className="h-6 w-6" alt="" />
+        <img
+          src="https://via.placeholder.com/24"
+          className="h-6 w-6 rounded-full"
+          alt=""
+        />
         <div>
+          <div className="text-sm font-semibold">
+            {p.store?.name ?? 'Official Store'}
+          </div>
           <div className="flex items-center gap-1 text-xs text-slate-500">
-            <div className="text-sm font-semibold">
-              {p.store?.name || 'Tech Store'}
-            </div>
-            OFFICIAL <BadgeCheck className="h-4 w-4 text-sky-600" />
+            <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
+            {(p.rating ?? 0).toFixed(1)}
           </div>
         </div>
       </div>
 
+      {/* Quantity */}
       <div className="mt-5">
         <div className="text-xs text-slate-500">Số lượng</div>
         <div className="inline-flex items-center rounded-lg border border-slate-200">
@@ -90,9 +99,12 @@ export default function BuyBox({
         </div>
       </div>
 
+      {/* Price */}
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
       <div className="text-[26px] font-bold">{vnd(calculatedPrice)}</div>
 
+
+      {/* Actions */}
       <div className="mt-4 space-y-2">
         <button
           className="h-11 w-full rounded-xl px-4 text-base font-semibold text-white"
@@ -107,6 +119,7 @@ export default function BuyBox({
         >
           Thêm vào giỏ
         </button>
+
         <button className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-700">
           Mua trước trả sau
         </button>

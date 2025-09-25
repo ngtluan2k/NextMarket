@@ -152,7 +152,7 @@ export const SellerRegistration: React.FC = () => {
   const loadFullDraftData = async (
     storeId: number,
     savedFormData: string | null,
-    suppressMessage: boolean = false
+    suppressMessage = false
   ) => {
     try {
       const token = localStorage.getItem('token');
@@ -322,7 +322,6 @@ export const SellerRegistration: React.FC = () => {
         if (mappedFormData.store_information.name) step = 3;
 
         if (mappedFormData.store_identification.full_name && mappedFormData.bank_account.bank_name) step = 4;
-
         if (!savedFormData) {
           setCurrentStep(step);
         }
@@ -744,7 +743,7 @@ export const SellerRegistration: React.FC = () => {
           setLoading(true);
           const token = localStorage.getItem('token');
           // 1) Nếu có file đã chọn ở UI -> upload trước để lấy URL
-          let docs: Array<{ doc_type: string; file_url: string; is_draft?: boolean }> = [];
+          const docs: Array<{ doc_type: string; file_url: string; is_draft?: boolean }> = [];
           if (selectedDocFile) {
             const form = new FormData();
             form.append('file', selectedDocFile);

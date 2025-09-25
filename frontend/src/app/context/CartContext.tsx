@@ -10,7 +10,9 @@ interface CartItem {
     name: string;
     base_price: number;
     url: string;
-    media: { url: string; is_primary?: boolean };
+    media: { url: string; is_primary?: boolean }
+    status: 'draft' | 'deleted' | 'active'; // thêm status
+
   };
   variant?: {
     id: number;

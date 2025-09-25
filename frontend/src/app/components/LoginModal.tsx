@@ -1,9 +1,17 @@
 // src/components/LoginModal.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Mail, Lock, User, Calendar, Phone, BadgeCheck, Eye, EyeOff, Globe
-} from "lucide-react";
-
+  Mail,
+  Lock,
+  User,
+  Calendar,
+  Phone,
+  BadgeCheck,
+  Eye,
+  EyeOff, Globe
+} from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc'; // react-icons/google
+import { useAuth } from '../context/AuthContext';
 
 export type LoginPayload = {
   email: string;
@@ -32,7 +40,7 @@ type LoginModalProps = {
 };
 
 const defaultSide =
-  "data:image/svg+xml;utf8," +
+  'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='560' height='560'>
         <defs>
@@ -56,37 +64,45 @@ export default function LoginModal({
   onClose,
   onLogin,
   onRegister,
-  title = "Xin chào,",
+  title = 'Xin chào,',
   sideImageUrl,
-  apiBase = "http://localhost:3000",
+  apiBase = 'http://localhost:3000',
 }: LoginModalProps) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const { me } = useAuth(); // ✅ lấy user từ context
+
+  // Ưu tiên full_name nếu có, fallback về email
+  const greeting = me?.full_name
+    ? `Xin chào, ${me.full_name}`
+    : me?.email
+    ? `Xin chào, ${me.email}`
+    : title;
 
   // login states
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
+    const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
 
 
   // register states
   const [reg, setReg] = useState<RegisterPayload>({
-    username: "",
-    full_name: "",
-    dob: "",
-    phone: "",
-    gender: "",
-    email: "",
-    password: "",
-    country: "Vietnam",
+    username: '',
+    full_name: '',
+    dob: '',
+    phone: '',
+    gender: '',
+    email: '',
+    password: '',
+    country: 'Vietnam',
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
 
   const emailRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (!open) return;
     fetch("https://restcountries.com/v3.1/all?fields=name,cca2")
@@ -100,58 +116,60 @@ export default function LoginModal({
       });
   }, [open]);
 
-
   useEffect(() => {
     if (open) setTimeout(() => emailRef.current?.focus(), 80);
   }, [open, mode]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  // ---------- validate ----------
+  const validateLogin = () => {
+    if (!/^\S+@\S+\.\S+$/.test(email)) return 'Email không hợp lệ';
+    if (password.length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
+    return null;
+  };
+  const validateRegister = () => {
+    if (!reg.username) return 'Vui lòng nhập Username';
+    if (!reg.full_name) return 'Vui lòng nhập Họ tên';
+    if (!reg.dob) return 'Vui lòng chọn ngày sinh';
+    if (!reg.phone) return 'Vui lòng nhập SĐT';
+    if (!reg.gender) return 'Vui lòng chọn giới tính';
+    if (!/^\S+@\S+\.\S+$/.test(reg.email)) return 'Email không hợp lệ';
+    if ((reg.password || '').length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
+    return null;
+  };
+
   // ---------- default APIs ----------
   const callDefaultLogin = async (payload: LoginPayload) => {
     const res = await fetch(`${apiBase}/users/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || "Đăng nhập thất bại");
+    if (!res.ok) throw new Error(data?.message || 'Đăng nhập thất bại');
 
     if (data?.access_token) {
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.data));
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.data));
 
       // fetch giỏ hàng riêng theo user
       const cartRes = await fetch(`${apiBase}/cart/me`, {
         headers: { Authorization: `Bearer ${data.access_token}` },
       });
       const cartJson = await cartRes.json();
-      localStorage.setItem("cart", JSON.stringify(cartJson));
+      localStorage.setItem('cart', JSON.stringify(cartJson));
     }
 
     return data;
   };
-
-  // ========== validate ==========
-
-  function validateLogin(email: string, password: string): string | null {
-    if (!email) return "Email không được bỏ trống";
-    if (!/\S+@\S+\.\S+/.test(email)) return "Email không hợp lệ";
-    if (!password) return "Mật khẩu không được bỏ trống";
-    if (password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
-    return null;
-  }
-
-  function validateRegister(reg: RegisterPayload): string | null {
-    if (!reg.username) return "Tên đăng nhập không được bỏ trống";
-    if (!reg.full_name) return "Họ và tên không được bỏ trống";
-    if (!reg.email) return "Email không được bỏ trống";
-    if (!/\S+@\S+\.\S+/.test(reg.email)) return "Email không hợp lệ";
-    if (!reg.password || reg.password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
-    if (!reg.phone) return "Số điện thoại không được bỏ trống";
-    if (!reg.gender) return "Vui lòng chọn giới tính";
-    return null;
-  }
-
-
 
   const callDefaultRegister = async (payload: RegisterPayload) => {
     const res = await fetch(`${apiBase}/users/register`, {
@@ -166,7 +184,7 @@ export default function LoginModal({
   // ---------- submit ----------
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const v = validateLogin(email, password);
+    const v = validateLogin();
     if (v) return setError(v);
     setError(null);
     setSubmitting(true);
@@ -185,7 +203,7 @@ export default function LoginModal({
 
   const handleRegister = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const v = validateRegister(reg);
+    const v = validateRegister();
     if (v) return setError(v);
     setError(null);
     setSubmitting(true);
@@ -203,14 +221,70 @@ export default function LoginModal({
       setSubmitting(false);
     }
   };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const width = 500;
+      const height = 600;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      const popup = window.open(
+        `${apiBase}/auth/google`,
+        'GoogleLogin',
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+
+      if (!popup) throw new Error('Không thể mở popup');
+
+      const listener = (event: MessageEvent) => {
+        // kiểm tra origin
+        if (event.origin !== new URL(apiBase).origin) return;
+        const data = event.data;
+
+        if (data?.access_token) {
+          login(data.user, data.access_token); // ✅ gọi context login
+          // onLogin && onLogin({ email: data.user.email, password: '' }); // gọi callback nếu có
+          if (onLogin) {
+            console.log('onLogin is set');
+          } else {
+            console.log('onLogin is NOT set');
+          }
+          // fetch giỏ hàng
+          fetch(`${apiBase}/cart/me`, {
+            headers: { Authorization: `Bearer ${data.access_token}` },
+          })
+            .then((res) => res.json())
+            .then((cartJson) =>
+              localStorage.setItem('cart', JSON.stringify(cartJson))
+            );
+
+          onClose();
+          popup.close();
+          window.removeEventListener('message', listener);
+          window.location.href = '/home';
+        }
+      };
+
+      window.addEventListener('message', listener);
+    } catch (err: any) {
+      setError(err.message || 'Đăng nhập Google thất bại');
+    }
+  };
+
   const RightArt = sideImageUrl || defaultSide;
-  if (!open) {
-    return null;
-  }
+
   return (
-    <div aria-modal role="dialog" className="fixed inset-0 z-[100] grid place-items-center">
+    <div
+      aria-modal
+      role="dialog"
+      className="fixed inset-0 z-[100] grid place-items-center"
+    >
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
 
       {/* Modal */}
       <div
@@ -224,30 +298,47 @@ export default function LoginModal({
           aria-label="Đóng"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M6 6l12 12M18 6L6 18"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
         {/* Left: form */}
         <div className="p-7 sm:p-9">
           <div className="mb-3">
-            <h3 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h3>
-            <p className="mt-1 text-sm text-slate-600">Đăng nhập hoặc tạo tài khoản để mua sắm nhanh hơn</p>
+            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+              {title}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Đăng nhập hoặc tạo tài khoản để mua sắm nhanh hơn
+            </p>
           </div>
 
           {/* Tabs */}
           <div className="mt-2 flex w-full rounded-xl bg-slate-100 p-1">
             <button
               className={`flex-1 rounded-lg  py-2 text-sm font-medium transition
-                ${mode === "login" ? "bg-white shadow text-sky-700" : "text-slate-600 hover:text-slate-800"}`}
-              onClick={() => setMode("login")}
+                ${
+                  mode === 'login'
+                    ? 'bg-white shadow text-sky-700'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              onClick={() => setMode('login')}
             >
               Đăng nhập
             </button>
             <button
               className={`flex-1 rounded-lg  py-2 text-sm font-medium transition
-                ${mode === "register" ? "bg-white shadow text-sky-700" : "text-slate-600 hover:text-slate-800"}`}
-              onClick={() => setMode("register")}
+                ${
+                  mode === 'register'
+                    ? 'bg-white shadow text-sky-700'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              onClick={() => setMode('register')}
             >
               Đăng ký
             </button>
@@ -261,7 +352,7 @@ export default function LoginModal({
           )}
 
           {/* Content */}
-          {mode === "login" ? (
+          {mode === 'login' ? (
             <form onSubmit={handleLogin} className="mt-5 space-y-4">
               <Field
                 ref={emailRef}
@@ -279,7 +370,7 @@ export default function LoginModal({
                 value={password}
                 onChange={setPassword}
                 iconLeft={<Lock className="h-4 w-4" />}
-                type={showPw ? "text" : "password"}
+                type={showPw ? 'text' : 'password'}
                 autoComplete="current-password"
                 rightSlot={
                   <button
@@ -287,7 +378,11 @@ export default function LoginModal({
                     className="rounded-md p-1 text-slate-500 hover:bg-slate-100"
                     onClick={() => setShowPw((v) => !v)}
                   >
-                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPw ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 }
               />
@@ -302,7 +397,10 @@ export default function LoginModal({
                   />
                   Ghi nhớ đăng nhập
                 </label>
-                <a href="#" className="text-xs font-medium text-sky-600 hover:underline">
+                <a
+                  href="#"
+                  className="text-xs font-medium text-sky-600 hover:underline"
+                >
                   Quên mật khẩu?
                 </a>
               </div>
@@ -310,9 +408,24 @@ export default function LoginModal({
               <FancyButton loading={submitting} type="submit" className="mt-2">
                 Tiếp tục
               </FancyButton>
+
+              {/* Google Login Button */}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  <FcGoogle className="h-5 w-5" />
+                  Đăng nhập với Google
+                </button>
+              </div>
             </form>
           ) : (
-            <form onSubmit={handleRegister} className="mt-5 grid grid-cols-1 gap-4">
+            <form
+              onSubmit={handleRegister}
+              className="mt-5 grid grid-cols-1 gap-4"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 required">
                 <Field
                   label="Username"
@@ -349,12 +462,14 @@ export default function LoginModal({
 
               {/* Gender chips */}
               <div>
-                <div className="mb-1 text-sm font-medium text-slate-700">Giới tính</div>
+                <div className="mb-1 text-sm font-medium text-slate-700">
+                  Giới tính
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { key: "male", label: "Nam" },
-                    { key: "female", label: "Nữ" },
-                    { key: "other", label: "Khác" },
+                    { key: 'male', label: 'Nam' },
+                    { key: 'female', label: 'Nữ' },
+                    { key: 'other', label: 'Khác' },
                   ].map((g) => {
                     const active = reg.gender === g.key;
                     return (
@@ -364,9 +479,11 @@ export default function LoginModal({
                         onClick={() => setReg({ ...reg, gender: g.key })}
                         aria-pressed={active}
                         className={`h-9 rounded-full border px-4 text-sm transition
-                              ${active
-                            ? "border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100"
-                            : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                              ${
+                                active
+                                  ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
+                                  : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                              }`}
                       >
                         {g.label}
                       </button>
@@ -395,6 +512,32 @@ export default function LoginModal({
                   autoComplete="new-password"
                 />
               </div>
+
+              {/* Country */}
+              <div className="group">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Đất nước</label>
+                <div
+                  className="relative flex items-center rounded-xl border border-slate-300 bg-white
+                focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100"
+                >
+                  <span className="pointer-events-none absolute left-3 text-slate-400">
+                    <Globe className="h-4 w-4" />
+                  </span>
+                  <select
+                    value={reg.country}
+                    onChange={(e) => setReg({ ...reg, country: e.target.value })}
+                    className="w-full rounded-xl bg-transparent py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none"
+                  >
+                    <option value="Vietnam">Vietnam</option>
+                    {countries.map((c) => (
+                      <option key={c.code} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <FancyButton loading={submitting} type="submit" className="mt-1">
                 Tạo tài khoản
               </FancyButton>
@@ -402,11 +545,11 @@ export default function LoginModal({
           )}
 
           <p className="mt-4 text-xs leading-relaxed text-slate-500">
-            Bằng việc tiếp tục, bạn đã đọc và đồng ý với{" "}
+            Bằng việc tiếp tục, bạn đã đọc và đồng ý với{' '}
             <a href="#" className="font-medium text-sky-600 hover:underline">
               điều khoản sử dụng
-            </a>{" "}
-            và{" "}
+            </a>{' '}
+            và{' '}
             <a href="#" className="font-medium text-sky-600 hover:underline">
               chính sách bảo mật
             </a>
@@ -416,10 +559,18 @@ export default function LoginModal({
 
         {/* Right: artwork */}
         <div className="hidden min-h-[480px] bg-gradient-to-br from-sky-50 to-indigo-50 p-8 lg:flex lg:flex-col lg:items-center lg:justify-center">
-          <img src={RightArt} alt="Welcome" className="max-h-[300px] w-full object-contain" />
+          <img
+            src={RightArt}
+            alt="Welcome"
+            className="max-h-[300px] w-full object-contain"
+          />
           <div className="mt-6 text-center">
-            <div className="text-base font-semibold text-slate-900">Mua sắm tại EveryMart</div>
-            <div className="mt-1 text-sm text-slate-600">Nhiều ưu đãi mỗi ngày</div>
+            <div className="text-base font-semibold text-slate-900">
+              Mua sắm tại EveryMart
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              Nhiều ưu đãi mỗi ngày
+            </div>
           </div>
         </div>
       </div>
@@ -442,19 +593,30 @@ type FieldProps = {
 
 const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
   {
-    label, value, onChange, placeholder, type = "text", iconLeft, rightSlot, autoComplete,
+    label,
+    value,
+    onChange,
+    placeholder,
+    type = 'text',
+    iconLeft,
+    rightSlot,
+    autoComplete,
   },
   ref
 ) {
   return (
     <div className="group">
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
       <div
         className="relative flex items-center rounded-xl border border-slate-300 bg-white
                     focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100"
       >
         {iconLeft && (
-          <span className="pointer-events-none absolute left-3 text-slate-400">{iconLeft}</span>
+          <span className="pointer-events-none absolute left-3 text-slate-400">
+            {iconLeft}
+          </span>
         )}
         <input
           ref={ref}
@@ -464,7 +626,9 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
           type={type}
           autoComplete={autoComplete}
           className={`w-full rounded-xl bg-transparent  py-2.5 text-sm text-slate-900 outline-none
-                        ${iconLeft ? "pl-10" : "pl-3"} ${rightSlot ? "pr-10" : "pr-3"}`}
+                        ${iconLeft ? 'pl-10' : 'pl-3'} ${
+            rightSlot ? 'pr-10' : 'pr-3'
+          }`}
         />
         {rightSlot && <span className="absolute right-2">{rightSlot}</span>}
       </div>
@@ -475,7 +639,7 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
 function FancyButton({
   children,
   loading,
-  className = "",
+  className = '',
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
   return (
@@ -489,8 +653,18 @@ function FancyButton({
       {loading ? (
         <span className="inline-flex items-center gap-2">
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" className="fill-none stroke-white/30" strokeWidth="4" />
-            <path d="M22 12a10 10 0 0 1-10 10" className="fill-none stroke-white" strokeWidth="4" />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              className="fill-none stroke-white/30"
+              strokeWidth="4"
+            />
+            <path
+              d="M22 12a10 10 0 0 1-10 10"
+              className="fill-none stroke-white"
+              strokeWidth="4"
+            />
           </svg>
           Đang xử lý...
         </span>

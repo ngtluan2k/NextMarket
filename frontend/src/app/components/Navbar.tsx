@@ -1,27 +1,29 @@
-import React, { useEffect, useState } from 'react';
+// src/components/EveryMartHeader.tsx
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Home,
   Smile,
   ShoppingCart,
-  MapPin,
   Store,
   CreditCard,
   Receipt,
   BadgeDollarSign,
+  MapPin,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-
+import { useAuth } from '../context/AuthContext';
 import LoginModal, { LoginPayload } from './LoginModal';
-import AccountMenu, { Me } from './AccountMenu';
+import AccountMenu from './AccountMenu';
+import debounce from 'lodash.debounce';
+
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
   searchPlaceholder?: string;
   searchButton?: string;
   home?: string;
-  account?: string;
   cart?: string;
   categories?: string[];
   deliveryPrefix?: string;
@@ -36,95 +38,84 @@ const DEFAULT_LABELS: Required<HeaderLabels> = {
   logoSrc: '/logo.png',
   brandTagline: 'Gì Cũng Có ',
   searchPlaceholder: 'Mo hinh Anime gia re',
-  searchButton: 'Tim kiem',
-  home: 'Trang chu',
-  account: 'Tài khoản',
+  searchButton: 'Tìm kiếm',
+  home: 'Trang chủ',
   cart: 'Giỏ hàng',
   categories: [
-    'dien gia dung',
-    'me va be',
-    'dien thoai',
-    'the thao',
-    'lam dep',
+    'Điện gia dụng',
+    'Mẹ và bé',
+    'Điện thoại',
+    'Thể thao',
+    'Làm đẹp',
   ],
   deliveryPrefix: 'Giao đến:',
-  address: 'H.Son Ha, TT.Di Lang, Quang Ngai',
+  address: 'H.Sơn Hà, TT.Di Lăng, Quảng Ngãi',
   qa1: 'Ưu đãi thẻ, ví',
   qa2: 'Đóng tiền, nạp thẻ',
   qa3: 'Mua trước trả sau',
   qa4: 'Bán hàng cùng EveryMart',
 };
 
-export default function EveryMartHeader({
-  labels,
-  onLogin,
-}: {
-  labels?: HeaderLabels;
-  onLogin?: (payload: LoginPayload) => Promise<void> | void;
-}) { 
-  // console.log('EveryMartHeader render - openLogin:'); // Debug log
+export interface ProductSuggestion {
+  id: number;
+  name: string;
+  slug: string;
+  brand?: { name: string };
+  media?: { url: string; is_primary: boolean }[];
+}
+
+export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
+
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
-
   const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [openLogin, setOpenLogin] = useState(false);
-  const [me, setMe] = useState<Me | null>(null);
-  const { cart, clearCart, loadCart } = useCart();
-  // Đọc trạng thái đăng nhập (mock) từ localStorage
-  useEffect(() => {
-    const raw = localStorage.getItem('everymart.me');
-    if (raw) {
-      try {
-        loadCart();
-        setMe(JSON.parse(raw));
-      } catch (err) {
-        console.error('Failed to parse user from localStorage:', err);
-      }
-    }
-  }, []);
-
-  // Lưu khi thay đổi
-  useEffect(() => {
-    if (me) localStorage.setItem('user', JSON.stringify(me));
-    else localStorage.removeItem('user');
-  }, [me]);
-
+  const { cart } = useCart();
   const totalItems = cart.length;
 
+
   const navigate = useNavigate();
+  const { me, login, logout } = useAuth();
 
-  // Đọc trạng thái đăng nhập từ localStorage
-  useEffect(() => {
-    const raw = localStorage.getItem('everymart.me');
-    if (raw) {
-      try {
-        setMe(JSON.parse(raw));
-      } catch (err) {
-        console.error('Failed to parse user from localStorage:', err);
-      }
+  const fetchSuggestions = async (q: string) => {
+    if (!q) {
+      setSuggestions([]);
+      return;
     }
-  }, []);
-
-  // Lưu trạng thái user khi thay đổi
-  useEffect(() => {
-    if (me) localStorage.setItem('everymart.me', JSON.stringify(me));
-    else localStorage.removeItem('everymart.me');
-  }, [me]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('everymart.me');
-    localStorage.removeItem('cart'); // xoá giỏ hàng cache
-    setMe(null);
-    clearCart();
+    setLoadingSuggestions(true);
+    try {
+      const res = await fetch(
+        `http://localhost:3000/products/search?q=${encodeURIComponent(
+          q
+        )}&limit=5`
+      );
+      const json = await res.json();
+      setSuggestions(json.data || []);
+    } catch (err) {
+      console.error(err);
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
   };
+
+  // Debounce 300ms
+  const debouncedFetch = debounce(fetchSuggestions, 300);
+
+  useEffect(() => {
+    debouncedFetch(query);
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [query]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('search:', query);
+    if (!query) return;
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+    setSuggestions([]);
   };
-
-// console.log('Rendering LoginModal with openLogin:', openLogin);
 
   return (
     <header className="w-full bg-white">
@@ -155,7 +146,7 @@ export default function EveryMartHeader({
           </a>
 
           {/* Search */}
-          <form onSubmit={onSubmit} className="w-full">
+          <form onSubmit={onSubmit} className="w-full relative">
             <div className="relative flex h-12 w-full items-center rounded-2xl border border-slate-300 bg-white focus-within:border-cyan-600">
               <Search className="pointer-events-none absolute left-3 h-5 w-5 text-slate-400" />
               <input
@@ -171,6 +162,53 @@ export default function EveryMartHeader({
               >
                 {L.searchButton}
               </button>
+
+              {/* Suggestions dropdown */}
+              {suggestions.length > 0 && (
+                <ul className="absolute top-full left-0 right-0 bg-white border border-slate-300 shadow-lg rounded-b-md z-50 max-h-60 overflow-auto">
+                  {suggestions.map((p) => (
+                    <li
+                      key={p.id}
+                      className="px-3 py-2 cursor-pointer hover:bg-slate-100 flex items-center gap-2"
+                      onClick={() => {
+                        navigate(`/products/slug/${p.slug}`);
+                        setQuery('');
+                        setSuggestions([]);
+                      }}
+                    >
+                      {p.media?.[0]?.url &&
+                        (() => {
+                          const rawUrl = p.media[0].url;
+                          const imageUrl = rawUrl.startsWith('http')
+                            ? rawUrl
+                            : `http://localhost:3000/${rawUrl.replace(
+                                /^\/+/,
+                                ''
+                              )}`;
+
+                          return (
+                            <img
+                              src={imageUrl}
+                              alt={p.name}
+                              className="h-6 w-6 object-cover rounded"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'https://via.placeholder.com/40x40?text=No+Img';
+                              }}
+                            />
+                          );
+                        })()}
+
+                      <span>{p.name}</span>
+                      {p.brand?.name && (
+                        <span className="text-xs text-slate-500">
+                          ({p.brand.name})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </form>
 
@@ -182,10 +220,8 @@ export default function EveryMartHeader({
               </span>
               <span className="hidden md:inline">{L.home}</span>
             </a>
-
-            {/* Tài khoản */}
             {me ? (
-              <AccountMenu me={me} onLogout={handleLogout} className="px-0" />
+              <AccountMenu />
             ) : (
               <button
                 type="button"
@@ -195,10 +231,9 @@ export default function EveryMartHeader({
                 <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
                   <Smile className="h-5 w-5" />
                 </span>
-                <span className="hidden md:inline">{L.account}</span>
+                <span className="hidden md:inline">Đăng nhập</span>
               </button>
             )}
-            {/* Cart button SPA */}
             <button
               type="button"
               onClick={() => navigate('/cart')}
@@ -217,7 +252,7 @@ export default function EveryMartHeader({
           </nav>
         </div>
 
-        {/* Row 2 */}
+        {/* Row 2: Categories */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center mt-[-20px] gap-4 pb-2">
           <div />
           <div className="w-full px-20 ml-8">
@@ -282,7 +317,6 @@ export default function EveryMartHeader({
               {L.qa3}
             </span>
           </a>
-
           <a
             href="myStores"
             className="group flex items-center gap-2 px-3 py-2 self-stretch"
@@ -297,11 +331,11 @@ export default function EveryMartHeader({
         </div>
       </div>
 
-      {/* Modal Đăng nhập */}
+      {/* Login Modal */}
       <LoginModal
         open={openLogin}
         onClose={() => setOpenLogin(false)}
-        onLogin={async (data) => {
+        onLogin={async (data: LoginPayload) => {
           try {
             const res = await fetch('http://localhost:3000/users/login', {
               method: 'POST',
@@ -310,13 +344,19 @@ export default function EveryMartHeader({
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-            console.log('Login successful:', json.data); // Debug log
-             console.log('Current openLogin state:', openLogin); // Debug log
-            localStorage.setItem("token", json.access_token);
-            localStorage.setItem("everymart.me", JSON.stringify(json.data));
-            setMe(json.data);
-            loadCart();
-            console.log('Modal should close now'); // Debug log
+
+            login(json.data, json.access_token); // vẫn lưu payload tạm
+            // 👉 gọi thêm /me để cập nhật đầy đủ thông tin
+            const profileRes = await fetch('http://localhost:3000/users/me', {
+              headers: {
+                Authorization: `Bearer ${json.access_token}`,
+              },
+            });
+            const profileJson = await profileRes.json();
+            if (profileRes.ok) {
+              login(profileJson.data, json.access_token); // update lại me = profile
+            }
+
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

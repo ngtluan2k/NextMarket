@@ -1,4 +1,3 @@
-// user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -57,7 +56,7 @@ export class User {
   @OneToOne(() => ShoppingCart, (cart) => cart.user, { cascade: true })
   cart!: ShoppingCart;
   @OneToMany(() => Order, (order) => order.user,{cascade: true} )
-  orders!: Order;
+  orders!: Order[];
   @OneToMany(() => OrderStatusHistory, (history) => history.changedBy)
   orderStatusHistories!: OrderStatusHistory[];
 }

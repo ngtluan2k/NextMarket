@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+// src/components/productDetail/Info.tsx
+import React, { useMemo } from 'react';
 import Stars from '../productDetail/Stars';
 import { TIKI_RED } from '../productDetail/productDetail';
+import { useNavigate } from 'react-router-dom';
 
 const vnd = (n?: number | string) =>
   Number(n ?? 0).toLocaleString('vi-VN', {
@@ -23,14 +25,11 @@ export default function Info({
   setQuantity: (qty: number) => void;
 }) {
 
-  // Tính giá hiện tại theo variant + pricing_rules
+  const navigate = useNavigate();
   const price = useMemo(() => {
     if (!product) return 0;
-
-    // 1. Giá cơ bản
     let currentPrice = Number(product.base_price ?? 0);
 
-    // 2. Giá theo variant
     if (selectedVariantId) {
       const variant = product.variants?.find(
         (v: any) => v.id === selectedVariantId
@@ -38,7 +37,7 @@ export default function Info({
       if (variant) currentPrice = Number(variant.price);
     }
 
-    // 3. Áp dụng pricing_rules nếu đủ điều kiện
+    // áp dụng pricing_rules
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
       .filter((r: any) => {
@@ -57,15 +56,9 @@ export default function Info({
     return currentPrice;
   }, [product, selectedVariantId, quantity]);
 
-  const listPrice = useMemo(() => {
-    if (!product) return 0;
-    return Number(product.listPrice ?? product.base_price ?? 0);
-  }, [product]);
-
-  const discount = useMemo(() => {
-    if (!price || !listPrice || listPrice <= price) return 0;
-    return Math.round(((listPrice - price) / listPrice) * 100);
-  }, [price, listPrice]);
+  const listPrice = Number(product?.listPrice ?? product?.base_price ?? 0);
+  const discount =
+    listPrice > price ? Math.round(((listPrice - price) / listPrice) * 100) : 0;
 
   if (!product) return null;
 
@@ -83,12 +76,16 @@ export default function Info({
         <span className="rounded border border-sky-500 px-2 py-[2px] font-medium text-sky-600">
           CHÍNH HÃNG
         </span>
-        {brand && (
+        {brand?.name && (
           <span className="text-slate-500">
             Thương hiệu:{' '}
-            <a href="#" className="text-sky-700 hover:underline">
+            <button
+              type="button"
+              onClick={() => navigate(`/brands/${brand.id ?? brand.name}`)}
+              className="text-sky-700 hover:underline"
+            >
               {brand}
-            </a>
+            </button>
           </span>
         )}
       </div>
@@ -127,7 +124,7 @@ export default function Info({
 
       {/* Chọn variant */}
       {product.variants?.length > 1 && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex gap-2 flex-wrap">
           {product.variants.map((v: any) => (
             <button
               key={v.id}

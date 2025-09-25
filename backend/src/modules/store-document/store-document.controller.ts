@@ -119,7 +119,6 @@ export class StoreDocumentController {
     @Res() res: Response,
   ) {
     const fileData = await this.storeDocumentService.getFileData(id, req.user.id);
-
     res.set({
       'Content-Type': fileData.mimetype,
       'Content-Disposition': `attachment; filename="${fileData.filename}"`,
@@ -141,7 +140,6 @@ export class StoreDocumentController {
     @Res() res: Response,
   ) {
     const fileData = await this.storeDocumentService.getFileData(id, req.user.id);
-
     res.set({
       'Content-Type': fileData.mimetype,
       'Content-Disposition': `inline; filename="${fileData.filename}"`,

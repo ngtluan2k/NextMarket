@@ -67,23 +67,36 @@ export default function YouMayAlsoLikeProducts({
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data: any[] = await res.json();
 
-        const mapped: LikeItem[] = data.map((p) => {
-          const primaryMedia = p.media?.find((m: any) => m.is_primary) || p.media?.[0];
-          const mainVariant = p.variants?.[0];
-          const price = Number(mainVariant?.price || p.base_price || 0);
-          const oldPrice = p.base_price && price < Number(p.base_price) ? Number(p.base_price) : undefined;
-          const percentOff = oldPrice ? Math.round(((oldPrice - price) / oldPrice) * 100) : undefined;
+const mapped: LikeItem[] = data.map((p) => {
+  const primaryMedia = p.media?.find((m: any) => m.is_primary) || p.media?.[0];
+  const mainVariant = p.variants?.[0];
+  const price = Number(mainVariant?.price || p.base_price || 0);
+  const oldPrice =
+    p.base_price && price < Number(p.base_price)
+      ? Number(p.base_price)
+      : undefined;
+  const percentOff = oldPrice
+    ? Math.round(((oldPrice - price) / oldPrice) * 100)
+    : undefined;
 
-          return {
-            id: p.id,
-            name: p.name,
-            imageUrl: primaryMedia?.url || ph(),
-            price,
-            oldPrice,
-            percentOff,
-            slug: p.slug,
-          };
-        });
+  const buildImageUrl = (url?: string) => {
+    if (!url) return ph(); // fallback svg
+    return url.startsWith("http")
+      ? url // nếu đã là URL web thì giữ nguyên
+      : `http://localhost:3000/${url.replace(/^\/+/, "")}`; // nếu là path local thì ghép base
+  };
+
+  return {
+    id: p.id,
+    name: p.name,
+    imageUrl: buildImageUrl(primaryMedia?.url),
+    price,
+    oldPrice,
+    percentOff,
+    slug: p.slug,
+  };
+});
+
 
         if (!cancelled) setList(mapped);
       } catch (e: any) {

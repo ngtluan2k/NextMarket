@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -26,7 +26,7 @@ interface Props {
 
 export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
-  const slug = params.slug ?? ''; // lấy slug từ URL
+  const slug = params.slug ?? '';
   const { loading, product, combos } = useProductDetail(slug);
 
   // Shared state for pricing calculation
@@ -67,6 +67,15 @@ export default function ProductDetailPage({ showMessage }: Props) {
     return currentPrice;
   }, [product, selectedVariantId, quantity]);
 
+
+
+  useEffect(() => {
+    if (!product) return;
+    const defaultVariant = product.variants?.[0]?.id ?? null;
+    setSelectedVariantId(defaultVariant);
+    setQuantity(1);
+  }, [product]);
+
   return (
     <>
       <EveryMartHeader />
@@ -79,7 +88,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               ['--right' as any]: `${L.rightWidth}px`,
             }}
           >
-            {/* TRÁI: chỉ hàng 1, để self-start để dừng trước Reviews */}
+            {/* TRÁI: Gallery */}
             <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
               <Gallery
                 images={
@@ -94,7 +103,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               />
             </div>
 
-            {/* GIỮA: hàng 1 */}
+            {/* GIỮA: Info + Shipping + ComboStrip + Specs + Description */}
             <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
               <Info
                 product={product}
@@ -113,7 +122,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               />
             </section>
 
-            {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}
+            {/* PHẢI: BuyBox */}
             <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
               <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
                 <BuyBox
@@ -129,11 +138,12 @@ export default function ProductDetailPage({ showMessage }: Props) {
               </div>
             </div>
 
-            {/* REVIEWS: hàng 2, chiếm 2 cột (trái+giữa) */}
+            {/* REVIEWS */}
             <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <ProductReviews />
             </div>
 
+            {/* Explore more */}
             <div className="lg:col-span-3 mt-2">
               <ExploreMore />
             </div>

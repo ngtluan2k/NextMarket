@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  OneToOne
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
@@ -18,9 +19,10 @@ export class ShoppingCart {
   @Column({ type: 'char', length: 36, unique: true })
   uuid!: string;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
-  user!: User;
+  @OneToOne(() => User, (user) => user.cart)
+@JoinColumn({ name: 'user_id' })
+user!: User;
+
 
   @Column()
   user_id!: number;

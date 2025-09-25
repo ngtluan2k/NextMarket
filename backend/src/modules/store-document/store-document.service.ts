@@ -300,7 +300,6 @@ export class StoreDocumentService {
 
   async verifyDocument(id: number): Promise<StoreDocument> {
     const document = await this.storeDocumentRepo.findOne({ where: { id } });
-
     if (!document) {
       throw new NotFoundException('Document not found');
     }
@@ -313,7 +312,6 @@ export class StoreDocumentService {
 
   async rejectDocument(id: number): Promise<StoreDocument> {
     const document = await this.storeDocumentRepo.findOne({ where: { id } });
-
     if (!document) {
       throw new NotFoundException('Document not found');
     }
