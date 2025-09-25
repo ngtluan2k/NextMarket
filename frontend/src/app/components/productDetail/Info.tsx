@@ -8,7 +8,7 @@ const vnd = (n?: number | string) =>
   Number(n ?? 0).toLocaleString('vi-VN', {
     style: 'currency',
     currency: 'VND',
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 5,
   });
 
 export default function Info({
@@ -20,12 +20,12 @@ export default function Info({
 }: {
   product?: any;
   selectedVariantId: number | null;
-  setSelectedVariantId: React.Dispatch<React.SetStateAction<number | null>>;
+  setSelectedVariantId: (id: number) => void;
   quantity: number;
-  setQuantity: React.Dispatch<React.SetStateAction<number>>;
+  setQuantity: (qty: number) => void;
 }) {
+
   const navigate = useNavigate();
-  // --- tính giá ---
   const price = useMemo(() => {
     if (!product) return 0;
     let currentPrice = Number(product.base_price ?? 0);
@@ -41,9 +41,13 @@ export default function Info({
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
       .filter((r: any) => {
-        const start = new Date(r.starts_at);
-        const end = new Date(r.ends_at);
-        return quantity >= r.min_quantity && now >= start && now <= end;
+        const start = r.starts_at ? new Date(r.starts_at) : new Date(0); // Default to epoch if null (always started)
+        const end = r.ends_at
+          ? new Date(r.ends_at)
+          : new Date(8640000000000000); // Default to max date if null (never ends)
+        const now = new Date();
+        const ok = quantity >= r.min_quantity && now >= start && now <= end;
+        return ok;
       })
       .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
 
@@ -60,9 +64,7 @@ export default function Info({
 
   const rating = product.rating?.average ?? product.rating ?? 0;
   const reviewsCount = product.rating?.count ?? product.reviewsCount ?? 0;
-  const brand = product.brand ?? {
-    name: product.author_name ?? product.author,
-  };
+  const brand = product.brand?.name ?? product.author_name ?? product.author;
 
   return (
     <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
@@ -82,7 +84,7 @@ export default function Info({
               onClick={() => navigate(`/brands/${brand.id ?? brand.name}`)}
               className="text-sky-700 hover:underline"
             >
-              {brand.name}
+              {brand}
             </button>
           </span>
         )}
@@ -158,9 +160,9 @@ export default function Info({
           {product.pricing_rules
             .sort((a: any, b: any) => a.min_quantity - b.min_quantity)
             .map((r: any) => {
+              const start = new Date(r.starts_at ?? 0); // Default to epoch if null/undefined
+              const end = new Date(r.ends_at ?? 8640000000000000); // Default to max date if null/undefined
               const now = new Date();
-              const start = new Date(r.starts_at);
-              const end = new Date(r.ends_at);
               const isApplied =
                 quantity >= r.min_quantity && now >= start && now <= end;
 

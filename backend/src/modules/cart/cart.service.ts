@@ -6,6 +6,8 @@ import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
 import { User } from '../user/user.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { PricingRulesService } from '../pricing-rule/pricing-rule.service';
 
 @Injectable()
 export class CartService {
@@ -19,7 +21,8 @@ export class CartService {
     @InjectRepository(Variant)
     private variantRepository: Repository<Variant>,
     @InjectRepository(User)
-    private userRepository: Repository<User>
+    private userRepository: Repository<User>,
+    private pricingRulesService: PricingRulesService
   ) {}
 
   async getOrCreateCart(userId: number): Promise<ShoppingCart> {
@@ -30,6 +33,7 @@ export class CartService {
         'items.product',
         'items.variant',
         'items.product.media',
+        'items.product.pricing_rules',
       ],
     });
     if (!cart) {
@@ -52,6 +56,7 @@ export class CartService {
   ): Promise<CartItem> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
+      relations: ['pricing_rules'],
     });
     if (!product) {
       throw new NotFoundException('Sản phẩm không tìm thấy');
@@ -104,25 +109,28 @@ export class CartService {
       });
     }
 
+    cartItem.price = this.calculatePriceWithRulesForItem(product, variant, cartItem.quantity);
+
     return this.cartItemRepository.save(cartItem);
   }
 
-  async getCart(userId: number): Promise<CartItem[]> {
+  async getCart(userId: number): Promise<any> {
     const cart = await this.getOrCreateCart(userId);
-    return this.cartItemRepository.find({
-      where: { cart_id: cart.id },
-      relations: ['product', 'variant', 'product.media'],
+    const cartWithCalculatedPrices = cart.items.map((item) => {
+      return {
+        ...item,
+        price: this.calculatePriceWithRules(item),
+      };
     });
+    return { ...cart, items: cartWithCalculatedPrices };
   }
 
-  async removeFromCart(
-    userId: number,
-    productId: number,
-  ): Promise<void> {
+  async removeFromCart(userId: number, productId: number, variantId?: number): Promise<void> {
     const cart = await this.getOrCreateCart(userId);
     const result = await this.cartItemRepository.delete({
       cart_id: cart.id,
       product_id: productId,
+      variant_id: variantId ?? undefined,
     });
     if (result.affected === 0) {
       throw new NotFoundException('Mục giỏ hàng không tìm thấy');
@@ -142,6 +150,7 @@ export class CartService {
         product_id: productId,
         variant_id: variantId ?? undefined,
       },
+      relations: ['product', 'product.pricing_rules', 'variant'],
     });
     if (!cartItem) {
       throw new NotFoundException('Mục giỏ hàng không tìm thấy');
@@ -162,11 +171,74 @@ export class CartService {
       }
     }
     cartItem.quantity = quantity;
+    // Recalculate price with rules
+    cartItem.price = this.calculatePriceWithRulesForItem(cartItem.product, cartItem.variant, quantity);
     return this.cartItemRepository.save(cartItem);
   }
 
   async clearCart(userId: number): Promise<void> {
     const cart = await this.getOrCreateCart(userId);
     await this.cartItemRepository.delete({ cart_id: cart.id });
+  }
+
+  private calculatePriceWithRules(item: CartItem): number {
+    const product = item.product;
+    if (!product) {
+      return 0; // Or handle as an error
+    }
+
+    // Start with the base price or variant price
+    let currentPrice = item.variant
+      ? Number(item.variant.price)
+      : Number(product.base_price);
+
+    // Find the best applicable pricing rule
+    const now = new Date();
+    const validRules = (product.pricing_rules ?? [])
+      .filter((rule) => {
+        const startsAt = rule.starts_at
+          ? new Date(rule.starts_at)
+          : new Date(0);
+        const endsAt = rule.ends_at
+          ? new Date(rule.ends_at)
+          : new Date(8640000000000000);
+        const minQuantity = rule.min_quantity ?? 0; // Fix: Provide a default value
+        return item.quantity >= minQuantity && now >= startsAt && now <= endsAt;
+      })
+      .sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0)); // Fix: Also provide a default value here
+
+    if (validRules.length > 0) {
+      const bestRule = validRules[0];
+      currentPrice = Number(bestRule.price);
+    }
+    return currentPrice;
+  }
+
+  private calculatePriceWithRulesForItem(product: Product, variant: Variant | null, quantity: number): number {
+    // Start with the base price or variant price
+    let currentPrice = variant
+      ? Number(variant.price)
+      : Number(product.base_price);
+
+    // Find the best applicable pricing rule
+    const now = new Date();
+    const validRules = (product.pricing_rules ?? [])
+      .filter((rule) => {
+        const startsAt = rule.starts_at
+          ? new Date(rule.starts_at)
+          : new Date(0);
+        const endsAt = rule.ends_at
+          ? new Date(rule.ends_at)
+          : new Date(8640000000000000);
+        const minQuantity = rule.min_quantity ?? 0;
+        return quantity >= minQuantity && now >= startsAt && now <= endsAt;
+      })
+      .sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0));
+
+    if (validRules.length > 0) {
+      const bestRule = validRules[0];
+      currentPrice = Number(bestRule.price);
+    }
+    return currentPrice;
   }
 }

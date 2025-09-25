@@ -15,8 +15,14 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { generateUniqueSlug } from '../../common/utils/slug.util';
 import { Inventory } from '../inventory/inventory.entity';
+import {
+  CategoryDto,
+  MediaDto,
+  PricingRuleDto,
+  ProductResponseDto,
+  VariantDto,
+} from './dto/product-response.dto';
 import { Like } from 'typeorm';
-
 @Injectable()
 export class ProductService {
   constructor(
@@ -164,18 +170,7 @@ export class ProductService {
     return product;
   }
 
-  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
-    const product = await this.productRepo.findOne({
-      where: { id },
-      relations: ['store'],
-    });
-    if (!product) throw new NotFoundException('Product not found');
-    if (product.store.user_id !== userId)
-      throw new ForbiddenException('Not allowed');
 
-    // Cập nhật tất cả các thông tin như createProduct
-    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
-  }
 
   async removeProduct(productId: number, userId: number) {
     const product = await this.productRepo.findOne({
@@ -189,6 +184,28 @@ export class ProductService {
     await this.productRepo.save(product); // lưu lại database
 
     return { message: 'Product has been soft-deleted' };
+  }
+
+  
+  // product.service.ts
+ 
+
+  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Not allowed');
+
+    // Cập nhật tất cả các thông tin như createProduct
+    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
+  }
+
+  async remove(id: number, userId: number) {
+    const product = await this.findOne(id, userId);
+    return this.productRepo.remove(product);
   }
 
   async findAllProduct() {
@@ -205,20 +222,93 @@ export class ProductService {
     });
   }
   // product.service.ts
-  async findBySlug(slug: string) {
-    const product = await this.productRepo.findOne({
-      where: { slug },
-      relations: [
+  // async findBySlug(slug: string) {
+  //   const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
+  //  });
+  //   if (!product) throw new NotFoundException('Product not found');
+  //   return product;
+  // }
+
+  async findBySlug(slug: string): Promise<ProductResponseDto> {
+    const product = await this.productRepo
+      .createQueryBuilder('product')
+      .select([
+        'product.id',
+        'product.name',
+        'product.slug',
+        'product.short_description',
+        'product.base_price',
+        'product.status',
+      ])
+      .leftJoinAndSelect(
+        'product.media',
         'media',
-        'variants',
-        'brand',
-        'categories',
+        'media.is_primary = :isPrimary',
+        { isPrimary: true }
+      )
+      .leftJoinAndSelect('product.variants', 'variants')
+      .addSelect([
+        'variants.id',
+        'variants.variant_name',
+        'variants.price',
+        'variants.stock',
+      ])
+      .leftJoinAndSelect('product.brand', 'brand')
+      .addSelect(['brand.name'])
+      .leftJoinAndSelect('product.categories', 'categories')
+      .leftJoinAndSelect('categories.category', 'category')
+      .addSelect(['category.name'])
+      .leftJoinAndSelect(
+        'product.pricing_rules',
         'pricing_rules',
-        'store',
-      ],
-    });
+        'pricing_rules.ends_at > :now',
+        { now: new Date() }
+      )
+      .addSelect([
+        'pricing_rules.type',
+        'pricing_rules.min_quantity',
+        'pricing_rules.price',
+        'pricing_rules.starts_at',
+        'pricing_rules.ends_at',
+      ])
+      .leftJoinAndSelect('product.store', 'store')
+      .addSelect(['store.name', 'store.slug'])
+      .where('product.slug = :slug', { slug })
+      .getOne();
+
     if (!product) throw new NotFoundException('Product not found');
-    return product;
+
+    // Map sang DTO
+    const response: ProductResponseDto = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      short_description: product.short_description,
+      base_price: product.base_price,
+      media: product.media.map((m): MediaDto => ({ url: m.url })),
+      variants: product.variants.map(
+        (v): VariantDto => ({
+          id: v.id,
+          variant_name: v.variant_name,
+          price: v.price,
+          stock: v.stock,
+        })
+      ),
+      brand: { name: product.brand.name },
+      categories: product.categories.map(
+        (c): CategoryDto => ({ name: c.category.name })
+      ),
+      pricing_rules: product.pricing_rules.map(
+        (pr): PricingRuleDto => ({
+          type: pr.type,
+          min_quantity: pr.min_quantity,
+          price: pr.price,
+        })
+      ),
+      store: { name: product.store.name, slug: product.store.slug },
+    };
+
+    return response;
   }
 
   async findAllByStoreId(storeId: number) {
