@@ -21,6 +21,8 @@ interface CartProps {
   ) => void;
 }
 
+
+//cartPage 
 const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const { cart } = useCart();
   console.log('Cart contents:', cart);  
