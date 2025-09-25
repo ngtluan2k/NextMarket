@@ -58,15 +58,39 @@ export default function EveryMartHeader({
 
   // Đọc trạng thái đăng nhập (mock) từ localStorage
   useEffect(() => {
-    const raw = localStorage.getItem('everymart.me');
-    if (raw) {
-      try {
-        setMe(JSON.parse(raw));
-      } catch (err) {
-        console.error('Failed to parse user from localStorage:', err);
-      }
+  // Đọc từ localStorage khi component mount
+  const raw = localStorage.getItem("user"); // Đổi từ "everymart.me" thành "user"
+  if (raw) {
+    try {
+      setMe(JSON.parse(raw));
+    } catch (err) {
+      console.error("Failed to parse user from localStorage:", err);
     }
-  }, []);
+  }
+
+  // Listen cho localStorage changes từ other components
+  const handleStorageChange = () => {
+    const updatedUser = localStorage.getItem("user");
+    if (updatedUser) {
+      try {
+        setMe(JSON.parse(updatedUser));
+      } catch (err) {
+        console.error("Failed to parse updated user:", err);
+      }
+    } else {
+      setMe(null);
+    }
+  };
+
+  // Listen for custom storage events
+  window.addEventListener("userLogin", handleStorageChange);
+  window.addEventListener("userLogout", handleStorageChange);
+
+  return () => {
+    window.removeEventListener("userLogin", handleStorageChange);
+    window.removeEventListener("userLogout", handleStorageChange);
+  };
+}, []);
 
   // Lưu khi thay đổi
   useEffect(() => {

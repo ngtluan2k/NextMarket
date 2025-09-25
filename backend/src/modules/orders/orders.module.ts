@@ -6,6 +6,8 @@
   import { Store } from '../store/store.entity';
   import { Order } from '../orders/order.entity';
   import { UserAddress } from '../user_address/user_address.entity';
+import { OrderItem } from '../order-items/order-item.entity';
+import { Inventory } from '../inventory/inventory.entity';
 
   @Module({
     imports: [
@@ -13,7 +15,9 @@
         Order,
         User,
         Store,
-        UserAddress
+        UserAddress,
+        OrderItem,
+        Inventory
       ]),
     ],
     controllers: [OrdersController],

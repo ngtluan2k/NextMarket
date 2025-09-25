@@ -16,11 +16,34 @@ import ProductReviews from '../components/productDetail/ProductReviews';
 import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
-
+import { useState, useEffect } from 'react';
 export default function ProductDetailPage() {
   const params = useParams();
   const slug = params.slug ?? ''; // lấy slug từ URL
   const { loading, product, combos } = useProductDetail(slug);
+  useEffect(() => {
+    if (product) {
+      console.log('🔍 Debug cấu trúc product:', {
+        coId: !!product.id,
+        coUuid: !!product.uuid,
+        coPrice: !!product.price,
+        coBasePrice: !!product.base_price,
+        coName: !!product.name,
+        productDay: product,
+      });
+    }
+  }, [product]);
+
+  // Giải pháp thay thế: Chuyển đổi dữ liệu product trước khi truyền vào BuyBox
+  const transformedProduct = product
+    ? {
+        ...product,
+        id: product.id || product.uuid,
+        price: product.price || product.base_price, // Đây là điểm quan trọng!
+        name: product.name || product.title,
+      }
+    : undefined;
+
   return (
     <>
       <EveryMartHeader />
@@ -64,11 +87,13 @@ export default function ProductDetailPage() {
             {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}
             <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
               <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
-                <BuyBox
-                  product={product}
-                  width={L.rightWidth}
-                  minHeight={L.buyBoxMinHeight}
-                />
+                {product && (
+                  <BuyBox
+                    product={transformedProduct}
+                    width={L.rightWidth}
+                    minHeight={L.buyBoxMinHeight}
+                  />
+                )}
               </div>
             </div>
 
