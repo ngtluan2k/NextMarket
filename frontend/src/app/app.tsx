@@ -95,7 +95,7 @@ const App: React.FC = () => {
 
           {/* Brands */}
           <Route path="/brands" element={<FeaturedBrandsPage />} />
-          <Route path="/brands/:slug" element={<BrandPage />} />
+          <Route path="/brands/:brandId" element={<BrandPage />} />
 
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
