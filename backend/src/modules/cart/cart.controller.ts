@@ -31,7 +31,8 @@ export class CartController {
     return this.cartService.addToCart(
       req.user.userId,
       body.productId,
-      body.quantity
+      body.quantity,
+      body.variantId,
     );
   }
 
@@ -43,12 +44,13 @@ export class CartController {
   @Put('update')
   async updateQuantity(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; quantity: number }
+    @Body() body: { productId: number; quantity: number; variantId?: number }
   ) {
     return this.cartService.updateQuantity(
       req.user.userId,
       body.productId,
-      body.quantity
+      body.quantity,
+      body.variantId
     );
   }
 
@@ -58,7 +60,7 @@ export class CartController {
     @Param('productId') productId: number,
     @Body() body?: { variantId?: number }
   ) {
-    await this.cartService.removeFromCart(req.user.userId, +productId);
+    await this.cartService.removeFromCart(req.user.userId, +productId, body?.variantId);
     return { message: 'Đã xóa khỏi giỏ hàng' };
   }
 

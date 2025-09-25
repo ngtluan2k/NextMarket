@@ -60,7 +60,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         const data = await response.json();
-        // 👉 FIX HERE: Use data.items instead of data directly
+        // console.log("value inside cart: "+JSON.stringify(data.items))
         setCart(data.items);
       } else {
         setCart([]);

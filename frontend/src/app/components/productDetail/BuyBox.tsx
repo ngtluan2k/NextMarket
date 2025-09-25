@@ -42,7 +42,7 @@ export default function BuyBox({
   const p = product ?? {};
   const { addToCart } = useCart();
 
-  console.log(JSON.stringify(p));
+  // console.log(JSON.stringify(p));
 
   const handleAddToCart = async (product: Product, quantity: number) => {
     try {
