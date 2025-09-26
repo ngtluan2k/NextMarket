@@ -1,15 +1,16 @@
 import { message } from 'antd';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface CartItem {
+export interface CartItem {
   id: number;
-  product_id: number;
+  productId: number;  
+  variantId?: number;  
   quantity: number;
   price: number;
   product: {
     id: number;
     name: string;
-    base_price: number;
+    basePrice: number; 
     url: string;
     media: { url: string; is_primary?: boolean }
     status: 'draft' | 'deleted' | 'active';

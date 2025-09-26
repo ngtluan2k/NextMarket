@@ -4,12 +4,6 @@ import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
 import { PRODUCT_DETAIL_LAYOUT as L } from '../components/productDetail/productDetail';
-import {
-  Gallery,
-  Info,
-  Shipping,
-  ComboStrip,
-} from '../components/productDetail';
 import SimilarProducts from '../components/productDetail/SimilarProducts';
 import ProductDescription from '../components/productDetail/ProductDescription';
 import ProductReviews from '../components/productDetail/ProductReviews';
@@ -18,6 +12,12 @@ import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
 import { useCart } from '../context/CartContext';
 import { Spin } from 'antd';
+import {
+  Gallery,
+  Info,
+  Shipping,
+  ComboStrip,
+} from '../components/productDetail';
 
 interface Props {
   showMessage?: (
@@ -51,8 +51,29 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
+  useEffect(() => {
+    if (product) {
+      console.log('🔍 Debug cấu trúc product:', {
+        coId: !!product.id,
+        coUuid: !!product.uuid,
+        coPrice: !!product.price,
+        coBasePrice: !!product.base_price,
+        coName: !!product.name,
+        productDay: product,
+      });
+    }
+  }, [product]);
 
-  // Initialize selected variant from localStorage (only on first render)
+  // Giải pháp thay thế: Chuyển đổi dữ liệu product trước khi truyền vào BuyBox
+  const transformedProduct = product
+    ? {
+        ...product,
+        id: product.id || product.uuid,
+        price: product.price || product.base_price, // Đây là điểm quan trọng!
+        name: product.name || product.title,
+      }
+    : undefined;
+
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
       const stored = localStorage.getItem(`lastVariant_${slug}`);
@@ -90,7 +111,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
     const currentVariantId = selectedVariantId ?? undefined;
     const cartItem = cart.find(
       (item) =>
-        item.product_id === product.id &&
+        item.productId === product.id &&
         (item.variant
           ? item.variant.id === currentVariantId
           : currentVariantId === undefined)
@@ -165,12 +186,13 @@ export default function ProductDetailPage({ showMessage }: Props) {
       <div className="min-h-screen flex flex-col bg-gray-50">
         <EveryMartHeader />
         <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
-          <Spin tip="Loading product details..."/>
+          <Spin tip="Loading product details..." />
         </main>
         <Footer />
       </div>
     );
   }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <EveryMartHeader />
@@ -208,7 +230,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
             <MemoizedComboStrip items={combos} />
             {/* Lazy-loaded components with fallback */}
             <Suspense fallback={<div>Loading similar products...</div>}>
-             <LazySimilarProducts productId={product.id} />
+              <LazySimilarProducts productId={product.id} />
             </Suspense>
             <Suspense fallback={<div>Loading specs...</div>}>
               <MemoizedProductSpecs product={product} loading={loading} />
@@ -233,17 +255,40 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 minHeight={L.buyBoxMinHeight}
                 showMessage={showMessage}
               />
+              {/* </section> */}
+
+              {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}
+              <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
+                <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
+                  {product && (
+                    <BuyBox
+                      product={transformedProduct}
+                      width={L.rightWidth}
+                      minHeight={L.buyBoxMinHeight}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* REVIEWS: hàng 2, chiếm 2 cột (trái+giữa) */}
+              <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
+                <ProductReviews />
+              </div>
+
+              <div className="lg:col-span-3 mt-2">
+                <ExploreMore />
+              </div>
             </div>
-          </div>
-          <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-            <Suspense fallback={<div>Loading reviews...</div>}>
-              <LazyProductReviews />
-            </Suspense>
-          </div>
-          <div className="lg:col-span-3 mt-2">
-            <Suspense fallback={<div>Loading more products...</div>}>
-              <LazyExploreMore />
-            </Suspense>
+            <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
+              <Suspense fallback={<div>Loading reviews...</div>}>
+                <LazyProductReviews />
+              </Suspense>
+            </div>
+            <div className="lg:col-span-3 mt-2">
+              <Suspense fallback={<div>Loading more products...</div>}>
+                <LazyExploreMore />
+              </Suspense>
+            </div>
           </div>
         </div>
       </main>

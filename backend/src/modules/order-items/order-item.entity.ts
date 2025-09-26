@@ -19,7 +19,7 @@ export class OrderItem {
   @Generated('uuid')
   uuid!: string;
 
-  @ManyToOne(() => Order, (order) => order.items, { nullable: false })
+  @ManyToOne(() => Order, (order) => order.orderItem, { nullable: false })
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 

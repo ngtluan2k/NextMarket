@@ -26,16 +26,18 @@ import StoreLayout from "./page/StoreLayout";
 import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
 import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
 import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
-import CheckoutPayment from "./page/CheckoutPayment";
-import OrderSuccess from "./page/OrderSuccess";
 import FeaturedBrandsPage from "./components/FeaturedBrands";
 import BrandPage from "./page/BrandPage";
 import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
+import OrderDetail from "./components/productDetail/OrderDetails";
+import CheckoutPayment from "./page/CheckoutPayment";
+import OrderSuccess from "./page/OrderSuccess";
 
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
 }
+
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -51,20 +53,30 @@ const App: React.FC = () => {
   };
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        {contextHolder}
-        <Routes>
-          {/* Home & General */}
-          <Route path="/" element={<Home />} />
-          <Route path="/catepage" element={<CategoryPage />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/products/slug/:slug" element={<ProductDetailPage showMessage={showMessage}/>} />
-          <Route path="/cart" element={<CartPage showMessage={showMessage} />} />
-          <Route path="/test/home" element={<ProductList />} />
-          <Route path="/checkout" element={<CheckoutPayment />} />
-          <Route path="/order/success" element={<OrderSuccess />} />
-          <Route path="/add_product" element={<ProductForm />} />
+    <CartProvider>
+      {contextHolder}
+      <Routes>
+        {/* <Route path="/login" element={<AuthForm />} /> */}
+        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/seller-registration" element={<SellerRegistration />} />
+        <Route path="/seller-dashboard" element={<SellerDashboard />} />
+        <Route path='/catepage' element={<CategoryPage/>}/>
+        <Route path="/add_product" element={<ProductForm />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
+        <Route path="/order-detail" element={<OrderDetail />} />
+        <Route path="/test/home" element={<ProductList />} />
+        
+        {/* Account Routes */}
+        <Route path="/account" element={<AccountLayout />}>
+          <Route index element={<Navigate to="profile" replace />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="returns" element={<ReturnsPage />} />
+        </Route>
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -102,8 +114,19 @@ const App: React.FC = () => {
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </CartProvider>
-    </AuthProvider>
+        <Route path="/checkout" element={<CheckoutPayment />} /> 
+        <Route path="/order/success" element={<OrderSuccess />} />
+
+        {/* Catch-all Route */}
+                <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/seller-registration" element={<SellerRegistration />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+    </CartProvider>
+    
   );
 };
 

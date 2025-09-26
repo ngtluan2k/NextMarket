@@ -1,55 +1,56 @@
-// src/components/productDetail/product.ts
-export type Variant = {
-  id: number;
-  variant_name?: string;
-  price?: number | string; // API có thể trả string, convert khi dùng
+export type StoreInfo = {
+  id?: number;
+  name?: string;
+  logo?: string;
+  user_id?: number;
+};
+
+export type BrandInfo = {
+  id?: number;
+  name?: string;
+  logo_url?: string;
+};
+
+export type MediaInfo = {
+  id?: number;
+  url: string;
+  is_primary?: boolean;
+};
+
+export type VariantInfo = {
+  id?: number;
   sku?: string;
-  stock?: number;
-  // thêm field tùy bạn (attributes, options, ...)
+  name?: string;
+  price?: number;
+};
+
+export type PricingRuleInfo = {
+  id?: number;
+  type?: string;
+  min_quantity?: number;
+  price?: number;
+  cycle?: string;
+  starts_at?: string;
+  ends_at?: string;
 };
 
 export type Product = {
   id?: number;
+  uuid?: string;
   name?: string;
   slug?: string;
-  author?: string;
-  images?: string[];
-  base_price?: number | string;
-  variants?: Variant[];
-  price?: number;
-  listPrice?: number;
-  rating?: number;
-  reviewsCount?: number;
-  sellerName?: string;
-  pricing_rules?: Array<{
-    min_quantity: number;
-    price: number | string;
-    starts_at?: string;
-    ends_at?: string;
-  }>;
-  store?: { id?: number; name?: string; slug?: string; logo_url?: string }; // ✅ thêm store ở đây
-  media?: { url: string; is_primary?: boolean }[];
-};
-
-// export type CardItem = {
-//   id?: string;
-
-//   sellerName?: string;
-//   pricing_rules?: Array<{
-//     min_quantity: number;
-//     price: number | string;
-//     starts_at?: string;
-//     ends_at?: string;
-//   }>;
-//   store?: { id?: number; name?: string }; // ✅ thêm store ở đây
-// };
-
-export type CardItem = {
-  id?: number;
-  name?: string;
-  image?: string;
-  price?: number;
-  listPrice?: number;
-  rating?: number;
-  variantId?: number;
+  short_description?: string;
+  description?: string;
+  base_price?: number;
+  status?: string;
+  store?: StoreInfo;
+  brand?: BrandInfo;
+  media?: MediaInfo[];
+  variants?: VariantInfo[];
+  pricing_rules?: PricingRuleInfo[];
+  price?: number; 
+  listPrice?: number; 
+  rating?: number; 
+  reviewsCount?: number; 
+  sellerName?: string; 
 };
