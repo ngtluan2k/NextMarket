@@ -19,7 +19,7 @@ export default function Info({
   calculatedPrice,
 }: {
   product?: any;
-  selectedVariantId: number | null;
+  selectedVariantId: number | null; // CHANGED: Allow null
   setSelectedVariantId: (id: number) => void;
   quantity: number;
   setQuantity: (qty: number) => void;
@@ -107,6 +107,7 @@ export default function Info({
                   : 'border-gray-300'
               }`}
               onClick={() => setSelectedVariantId(v.id)}
+              disabled={selectedVariantId === null} // NEW: Disable if no variant selected
             >
               {v.variant_name} ({vnd(v.price)})
             </button>
