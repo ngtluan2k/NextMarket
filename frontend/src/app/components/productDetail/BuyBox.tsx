@@ -4,6 +4,7 @@ import { Product } from '../productDetail/product';
 import { TIKI_RED } from '../productDetail/productDetail';
 import { useCart } from '../../context/CartContext';
 
+
 export const vnd = (n?: number) =>
   (n ?? 0).toLocaleString('vi-VN', {
     style: 'currency',
@@ -25,7 +26,7 @@ export default function BuyBox({
   showMessage,
 }: {
   product?: Product;
-  selectedVariantId: number;
+  selectedVariantId: number | null; // CHANGED: Allow null
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
@@ -45,7 +46,8 @@ export default function BuyBox({
   const handleAddToCart = async (product: Product, quantity: number) => {
     try {
       console.log('Adding to cart:', product.name, 'Quantity:', quantity);
-      await addToCart(Number(product.id), quantity, selectedVariantId);
+      // Only pass variantId if it's not null
+      await addToCart(Number(product.id), quantity, selectedVariantId ?? undefined);
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
@@ -62,7 +64,7 @@ export default function BuyBox({
       {/* Seller info */}
       <div className="flex items-center gap-2">
         <img
-          src="https://via.placeholder.com/24"
+          src=""
           className="h-6 w-6 rounded-full"
           alt=""
         />

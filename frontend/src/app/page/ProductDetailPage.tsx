@@ -16,6 +16,7 @@ import ProductReviews from '../components/productDetail/ProductReviews';
 import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
+import { useCart } from '../context/CartContext';
 
 interface Props {
   showMessage?: (
@@ -28,13 +29,48 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
   const slug = params.slug ?? '';
   const { loading, product, combos } = useProductDetail(slug);
-
-  const [selectedVariantId, setSelectedVariantId] = useState<number>(
-    product?.variants?.[0]?.id ?? null
-  );
+  const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
-  // Calculate price based on variant and pricing rules
+  console.log("current product : " + JSON.stringify(product))
+
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(() => {
+    const stored = localStorage.getItem(`lastVariant_${slug}`);
+    return stored ? Number(stored) : null;
+  });
+
+  useEffect(() => {
+    if (selectedVariantId !== null) {
+      localStorage.setItem(`lastVariant_${slug}`, selectedVariantId.toString());
+    }
+  }, [selectedVariantId, slug]);
+
+  useEffect(() => {
+    if (!product) return;
+
+    const storedVariant = localStorage.getItem(`lastVariant_${slug}`);
+    const validVariantIds = product.variants?.map((v: any) => v.id) || [];
+    if (!storedVariant || !validVariantIds.includes(Number(storedVariant))) {
+      const defaultVariant = product.variants?.[0]?.id ?? null;
+      setSelectedVariantId(defaultVariant);
+    }
+
+    const currentVariantId = selectedVariantId ?? undefined;
+    const cartItem = cart.find(
+      (item) =>
+        item.product_id === product.id &&
+        (item.variant
+          ? item.variant.id === currentVariantId
+          : currentVariantId === undefined)
+    );
+
+    if (cartItem) {
+      setQuantity(cartItem.quantity);
+    } else {
+      setQuantity(1);
+    }
+  }, [product, selectedVariantId, cart, slug]);
+
   const { calculatedPrice, totalPrice } = useMemo(() => {
     if (!product) return { calculatedPrice: 0, totalPrice: 0 };
 
@@ -66,29 +102,36 @@ export default function ProductDetailPage({ showMessage }: Props) {
     };
   }, [product, selectedVariantId, quantity]);
 
-  const galleryImages = useMemo(() => {
-    if (!product) return [];
-    if (!selectedVariantId) {
-      return Array.isArray(product.media)
-        ? product.media.map((m: { url: string }) => m.url)
-        : [];
+  const galleryData = useMemo(() => {
+    if (!product || !product.variants) {
+      return {
+        images: Array.isArray(product?.media)
+          ? product.media.map((m: { url: string }) => m.url)
+          : [],
+        variantMap: {},
+      };
     }
-    const variantIndex = product.variants?.findIndex(
-      (v: any) => v.id === selectedVariantId
-    ) ?? -1;
-    if (variantIndex >= 0 && product.media?.[variantIndex]) {
-      return [product.media[variantIndex].url];
-    }
-    return Array.isArray(product.media)
-      ? product.media.map((m: { url: string }) => m.url)
-      : [];
-  }, [product, selectedVariantId]);
 
-  useEffect(() => {
-    if (!product) return;
-    const defaultVariant = product.variants?.[0]?.id ?? null;
-    setSelectedVariantId(defaultVariant);
-    setQuantity(1);
+    const images: string[] = [];
+    const variantMap: { [key: number]: number } = {};
+
+    product.variants.forEach((variant: any, index: number) => {
+      if (product.media?.[index]?.url) {
+        images.push(product.media[index].url);
+        variantMap[variant.id] = images.length - 1;
+      }
+    });
+
+    if (images.length === 0) {
+      return {
+        images: Array.isArray(product.media)
+          ? product.media.map((m: { url: string }) => m.url)
+          : [],
+        variantMap: {},
+      };
+    }
+
+    return { images, variantMap };
   }, [product]);
 
   return (
@@ -105,7 +148,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
           >
             <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
               <Gallery
-                images={galleryImages}
+                images={galleryData.images}
+                variantMap={galleryData.variantMap}
+                selectedVariantId={selectedVariantId}
+                setSelectedVariantId={setSelectedVariantId}
                 width={L.leftWidth}
                 galleryHeight={L.galleryHeight}
                 thumbHeight={L.thumbHeight}

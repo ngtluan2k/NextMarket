@@ -13,7 +13,7 @@ import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 
 interface AuthRequest extends Request {
-  user: { userId: number; username?: string }; // sửa theo payload JWT của bạn
+  user: { userId: number; username?: string };
 }
 
 @Controller('cart')

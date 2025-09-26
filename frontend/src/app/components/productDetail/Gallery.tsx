@@ -1,14 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Image as ImageIcon } from "lucide-react";
 
 export default function Gallery({
   images,
+  variantMap,
+  selectedVariantId,
+  setSelectedVariantId,
   width,
   galleryHeight,
   thumbHeight,
   stickyTop,
 }: {
   images?: string[];
+  variantMap?: { [key: number]: number };
+  selectedVariantId: number | null;
+  setSelectedVariantId: (id: number) => void;
   width?: number;
   galleryHeight?: number;
   thumbHeight?: number;
@@ -16,6 +22,15 @@ export default function Gallery({
 }) {
   const list = images ?? [];
   const [idx, setIdx] = useState(0);
+
+  // Sync gallery index with selected variant
+  useEffect(() => {
+    if (selectedVariantId !== null && variantMap && variantMap[selectedVariantId] !== undefined) {
+      setIdx(variantMap[selectedVariantId]);
+    } else if (list.length > 0) {
+      setIdx(0); // Default to first image if no variant selected or no mapping
+    }
+  }, [selectedVariantId, variantMap, list]);
 
   // Hàm xử lý URL ảnh
   const resolveUrl = (u: string) =>
@@ -51,12 +66,21 @@ export default function Gallery({
       </div>
 
       <div className="mt-3 grid grid-cols-4 gap-3">
-        {list.slice(0, 4).map((u, i) => {
+        {list.map((u, i) => {
           const imageUrl = resolveUrl(u);
+          // Find the variant ID for this image index
+          const variantId = Object.keys(variantMap || {}).find(
+            (key) => variantMap![Number(key)] === i
+          );
           return (
             <button
               key={i}
-              onClick={() => setIdx(i)}
+              onClick={() => {
+                setIdx(i);
+                if (variantId) {
+                  setSelectedVariantId(Number(variantId));
+                }
+              }}
               className={`overflow-hidden rounded-lg ring-1 ${
                 idx === i ? "ring-sky-500" : "ring-slate-200"
               }`}
