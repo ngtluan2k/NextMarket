@@ -195,8 +195,10 @@ async function defaultFetchStore(slug: string): Promise<StoreInfo> {
     name: json.data.name,
     avatarUrl: json.data.avatarUrl,
     isOfficial: json.data.isOfficial,
-    rating: json.data.rating,
-    followers: json.data.followers,
+    rating: json.data.rating?.length
+    ? json.data.rating.reduce((sum: number, r: any) => sum + r.value, 0) / json.data.rating.length
+    : 0, // 👈
+  followers: json.data.follower?.length ?? 0, // 👈
   };
 }
 

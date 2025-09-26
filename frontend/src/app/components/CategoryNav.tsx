@@ -33,7 +33,6 @@ export default function CategoryNav({
       try {
         setLoading(true);
         setError(null);
-
         const rawData = await fetchCategoriesAPI();
 
         if (!Array.isArray(rawData)) {

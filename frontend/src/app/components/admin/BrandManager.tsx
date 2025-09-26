@@ -1,7 +1,7 @@
 // src/components/admin/brandManager.tsx
-import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form } from "react-bootstrap";
-import axios from "axios";
+import React, { useEffect, useState } from 'react';
+import { Table, Button, Modal, Form } from 'react-bootstrap';
+import axios from 'axios';
 
 interface Brand {
   id: number;
@@ -14,11 +14,12 @@ const BrandManager: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null); // file upload mới
+  const [logoPreview, setLogoPreview] = useState<string>(''); // link hiện tại để show
 
-  const token = localStorage.getItem("token"); // lấy token từ localStorage
+  const token = localStorage.getItem('token'); // lấy token từ localStorage
 
   useEffect(() => {
     fetchBrands();
@@ -26,48 +27,67 @@ const BrandManager: React.FC = () => {
 
   const fetchBrands = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/brands", {
+      const res = await axios.get('http://localhost:3000/brands', {
         headers: { Authorization: `Bearer ${token}` },
       });
       // nếu backend trả { data: [...] } thì dùng res.data.data
       setBrands(res.data.data || res.data);
     } catch (err) {
-      console.error("Fetch brands failed:", err);
+      console.error('Fetch brands failed:', err);
     }
   };
 
   const handleSave = async () => {
-    const payload = { name, description, logo_url: logoUrl };
     try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('description', description);
+
+      if (logoFile) {
+        // nếu chọn logo mới
+        formData.append('logo', logoFile);
+      }
+
       if (editingBrand) {
-        // update
         await axios.put(
           `http://localhost:3000/brands/${editingBrand.id}`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
         );
       } else {
-        // create
-        await axios.post("http://localhost:3000/brands", payload, {
-          headers: { Authorization: `Bearer ${token}` },
+        await axios.post('http://localhost:3000/brands', formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
         });
       }
+
+      // reset form
       setShowModal(false);
       setEditingBrand(null);
-      setName("");
-      setDescription("");
-      setLogoUrl("");
+      setName('');
+      setDescription('');
+      setLogoFile(null);
+      setLogoPreview('');
+
       fetchBrands();
     } catch (err) {
-      console.error("Save brand failed:", err);
+      console.error('Save brand failed:', err);
     }
   };
 
   const handleEdit = (brand: Brand) => {
     setEditingBrand(brand);
     setName(brand.name);
-    setDescription(brand.description || "");
-    setLogoUrl(brand.logo_url || "");
+    setDescription(brand.description || '');
+    setLogoFile(null); // reset file mới
+    setLogoPreview(toImageUrl(brand.logo_url || '')); // giữ lại logo cũ để xem
     setShowModal(true);
   };
 
@@ -78,9 +98,14 @@ const BrandManager: React.FC = () => {
       });
       fetchBrands();
     } catch (err) {
-      console.error("Delete brand failed:", err);
+      console.error('Delete brand failed:', err);
     }
   };
+const toImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url; 
+  return `http://localhost:3000${url}`;
+};
 
   return (
     <div>
@@ -89,9 +114,10 @@ const BrandManager: React.FC = () => {
         className="mb-3"
         onClick={() => {
           setEditingBrand(null);
-          setName("");
-          setDescription("");
-          setLogoUrl("");
+          setName('');
+          setDescription('');
+          setLogoFile(null);
+          setLogoPreview('');
           setShowModal(true);
         }}
       >
@@ -117,12 +143,12 @@ const BrandManager: React.FC = () => {
               <td>
                 {brand.logo_url ? (
                   <img
-                    src={brand.logo_url}
+                    src={toImageUrl(brand.logo_url)}
                     alt={brand.name}
                     style={{ width: 60 }}
                   />
                 ) : (
-                  "No logo"
+                  'No logo'
                 )}
               </td>
               <td>
@@ -132,7 +158,7 @@ const BrandManager: React.FC = () => {
                   onClick={() => handleEdit(brand)}
                 >
                   Edit
-                </Button>{" "}
+                </Button>{' '}
                 <Button
                   variant="danger"
                   size="sm"
@@ -148,7 +174,7 @@ const BrandManager: React.FC = () => {
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>{editingBrand ? "Edit Brand" : "Add Brand"}</Modal.Title>
+          <Modal.Title>{editingBrand ? 'Edit Brand' : 'Add Brand'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
@@ -171,12 +197,23 @@ const BrandManager: React.FC = () => {
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Logo URL</Form.Label>
+              <Form.Label>Logo</Form.Label>
               <Form.Control
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="Enter logo URL"
+                type="file"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setLogoFile(e.target.files[0]);
+                    setLogoPreview(URL.createObjectURL(e.target.files[0])); // preview ảnh mới chọn
+                  }
+                }}
               />
+              {logoPreview && (
+                <img
+                  src={logoPreview}
+                  alt="logo preview"
+                  style={{ width: 100, marginTop: 10 }}
+                />
+              )}
             </Form.Group>
           </Form>
         </Modal.Body>
