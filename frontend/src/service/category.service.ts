@@ -5,6 +5,7 @@ export interface Category {
   slug: string;
   parent_id?: number | null;
   children?: Category[];
+  image?: string;
 }
 
 
@@ -25,10 +26,10 @@ export interface Brand {
 // 1️⃣ Lấy tất cả categories
 export const fetchCategoriesAPI = async (): Promise<Category[]> => {
   const res = await fetch("http://localhost:3000/categories");
-  if (!res.ok) throw new Error("Failed to fetch categories");
-  return res.json();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  const json = await res.json();
+  return json.data || [];
 };
-
 // 2️⃣ Lấy category theo slug
 export const getCategoryBySlug = async (slug: string): Promise<Category> => {
   const res = await fetch(`http://localhost:3000/categories/by-slug/${slug}`);

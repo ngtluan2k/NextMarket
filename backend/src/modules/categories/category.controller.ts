@@ -17,6 +17,7 @@ export class CategoryController {
   // @Permissions('view_category')
   async findAll(@Query('search') search?: string) {
     const data = await this.categoryService.findAll(search);
+    console.log('data: ', JSON.stringify(data))
     return {
       message: 'Lấy danh sách category thành công',
       total: data.length,

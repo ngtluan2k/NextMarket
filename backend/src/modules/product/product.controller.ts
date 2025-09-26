@@ -221,11 +221,20 @@ export class ProductController {
     };
   }
 
-@Patch(':id/toggle-status')
-@UseGuards(JwtAuthGuard)
-async toggleStatus(@Param('id') id: number, @Req() req: any) {
-  const userId = req.user.sub;
-  return this.productService.toggleProductStatus(id, userId);
-}
+  @Patch(':id/toggle-status')
+  @UseGuards(JwtAuthGuard)
+  async toggleStatus(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user.sub;
+    return this.productService.toggleProductStatus(id, userId);
+  }
 
+  @Get(':id/similar')
+  @ApiOperation({ summary: 'Get similar products based on tags' })
+  async getSimilarProducts(@Param('id') id: number) {
+    const products = await this.productService.findSimilarProducts(id);
+    return {
+      message: 'Similar products retrieved successfully',
+      data: products,
+    };
+  }
 }

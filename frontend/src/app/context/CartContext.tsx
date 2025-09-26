@@ -1,3 +1,4 @@
+import { message } from 'antd';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface CartItem {
@@ -11,8 +12,7 @@ interface CartItem {
     base_price: number;
     url: string;
     media: { url: string; is_primary?: boolean }
-    status: 'draft' | 'deleted' | 'active'; // thêm status
-
+    status: 'draft' | 'deleted' | 'active';
   };
   variant?: {
     id: number;
@@ -103,7 +103,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const addToCart = async (productId: number, quantity = 1, variantId?: number) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
-      alert('Vui lòng đăng nhập để thêm vào giỏ hàng');
+      message.warning('Vui lòng đăng nhập để thêm vào giỏ hàng');
       return;
     }
     try {
@@ -119,7 +119,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         await loadCart();
       }
     } catch (error) {
-      alert('Không thể thêm vào giỏ hàng');
+      message.warning('Không thể thêm vào giỏ hàng');
       console.error('Không thể thêm vào giỏ hàng:', error);
     }
   };
