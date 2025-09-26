@@ -29,14 +29,14 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const slug = params.slug ?? '';
   const { loading, product, combos } = useProductDetail(slug);
 
-  // console.log("currentProducts: ", JSON.stringify(product))
   const [selectedVariantId, setSelectedVariantId] = useState<number>(
     product?.variants?.[0]?.id ?? null
   );
   const [quantity, setQuantity] = useState(1);
 
-  const calculatedPrice = useMemo(() => {
-    if (!product) return 0;
+  // Calculate price based on variant and pricing rules
+  const { calculatedPrice, totalPrice } = useMemo(() => {
+    if (!product) return { calculatedPrice: 0, totalPrice: 0 };
 
     let currentPrice = Number(product.base_price ?? 0);
 
@@ -60,7 +60,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 
-    return currentPrice;
+    return {
+      calculatedPrice: currentPrice,
+      totalPrice: currentPrice * quantity,
+    };
   }, [product, selectedVariantId, quantity]);
 
   const galleryImages = useMemo(() => {
@@ -117,6 +120,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 setSelectedVariantId={setSelectedVariantId}
                 quantity={quantity}
                 setQuantity={setQuantity}
+                calculatedPrice={calculatedPrice}
               />
               <Shipping />
               <ComboStrip items={combos} />
@@ -136,6 +140,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
                   quantity={quantity}
                   setQuantity={setQuantity}
                   calculatedPrice={calculatedPrice}
+                  totalPrice={totalPrice}
                   width={L.rightWidth}
                   minHeight={L.buyBoxMinHeight}
                   showMessage={showMessage}

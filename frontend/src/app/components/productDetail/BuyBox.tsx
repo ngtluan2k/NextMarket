@@ -1,6 +1,4 @@
-
-// src/components/productDetail/BuyBox.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { Product } from '../productDetail/product';
 import { TIKI_RED } from '../productDetail/productDetail';
@@ -19,6 +17,7 @@ export default function BuyBox({
   quantity,
   setQuantity,
   calculatedPrice,
+  totalPrice,
   width,
   minHeight,
   stickyTop,
@@ -30,6 +29,7 @@ export default function BuyBox({
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
+  totalPrice: number;
   width?: number;
   minHeight?: number;
   stickyTop?: number;
@@ -42,8 +42,6 @@ export default function BuyBox({
   const p = product ?? {};
   const { addToCart } = useCart();
 
-  // console.log(JSON.stringify(p));
-
   const handleAddToCart = async (product: Product, quantity: number) => {
     try {
       console.log('Adding to cart:', product.name, 'Quantity:', quantity);
@@ -55,6 +53,7 @@ export default function BuyBox({
       console.error('Failed to add to cart:', error);
     }
   };
+
   return (
     <aside
       className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
@@ -100,8 +99,7 @@ export default function BuyBox({
 
       {/* Price */}
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold">{vnd(calculatedPrice)}</div>
-
+      <div className="text-[26px] font-bold">{vnd(totalPrice)}</div>
 
       {/* Actions */}
       <div className="mt-4 space-y-2">
