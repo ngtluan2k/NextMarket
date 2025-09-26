@@ -1,71 +1,72 @@
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import StoreCategorySidebar, { StoreCategory } from "../StoreCategorySidebar";
-import StoreProductsGrid, { SortKey, StoreProductsResponse } from "../StoreProductsGrid";
+import StoreProductsGrid from "../StoreProductsGrid";
 
 export default function StoreAllProductsTab() {
-  const { slug = "" } = useParams();
+  const { slug = "" } = useParams<{ slug: string }>();
   const { search, pathname } = useLocation();
   const navigate = useNavigate();
-  const params = new URLSearchParams(search);
-  const category = params.get("category"); // đọc từ URL
 
-  // (demo) dữ liệu danh mục – bạn thay bằng API thật
-  const [cats, setCats] = useState<StoreCategory[]>([]);
+  const params = new URLSearchParams(search);
+  const categorySlug = params.get("category");
+
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
+    let alive = true;
     (async () => {
-      // const data = await fetch(`/api/stores/${slug}/categories`).then(r=>r.json());
-      const data: StoreCategory[] = []; // <- thay bằng API
-      setCats(data);
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `http://localhost:3000/stores/slug/${slug}/categories`
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (alive) setCategories(json.data ?? []);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, [slug]);
 
-  // state cho grid
-  const [gridData, setGridData] = useState<StoreProductsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+const selectCategory = (newSlug: string | null) => {
+  const p = new URLSearchParams();
 
-  // khi grid báo tham số (q/sort/page) thay đổi → gọi API
-  const handleParamsChange = async ({ q, sort, page, pageSize }: { q: string; sort: SortKey; page: number; pageSize: number; }) => {
-    try {
-      setLoading(true);
-      const qs = new URLSearchParams({ q, sort, page: String(page), pageSize: String(pageSize) });
-      if (category) qs.set("category", category);
-      const res = await fetch(`http://localhost:3000/stores/slug/${slug}/all`);
-      const data = await res.json();
-      setGridData(data);
-      setErr(null);
-    } catch (e: any) {
-      setErr(e.message || "Không thể tải danh sách sản phẩm");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (newSlug) {
+    p.set("category", newSlug);
+  }
 
-  // chọn danh mục → cập nhật URL param category, reset page=1
-  const selectCategory = (id: string | number | null) => {
-    const p = new URLSearchParams(search);
-    if (id == null) p.delete("category");
-    else p.set("category", String(id));
-    p.set("page", "1");
-    navigate(`${pathname}?${p.toString()}`);
-  };
+  const query = p.toString();
+  navigate(query ? `${pathname}?${query}` : pathname);
+};
+
 
   return (
     <div className="grid grid-cols-1 gap-1 lg:grid-cols-[260px_1fr]">
-      {/* sidebar: ẩn trên mobile */}
+      {/* Sidebar danh mục */}
       <div className="hidden lg:block">
         <StoreCategorySidebar
-          items={cats}
-          selectedId={category}
+          items={categories}
+          selectedSlug={categorySlug}
           onSelect={selectCategory}
+          className="sticky top-20"
+          title="Danh mục sản phẩm"
         />
+        {loading && (
+          <div className="text-sm text-slate-500 mt-2">Đang tải...</div>
+        )}
       </div>
 
-      {/* grid */}
-      <StoreProductsGrid
-        storeSlug={slug}
-      />
+      {/* Grid sản phẩm */}
+      <StoreProductsGrid storeSlug={slug} categorySlug={categorySlug} />
     </div>
   );
 }

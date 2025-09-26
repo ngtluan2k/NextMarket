@@ -1,74 +1,121 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export type StoreCategory = {
   id: string | number;
   name: string;
-  count?: number;         // optional, nếu muốn hiện số lượng
+  slug: string;
+  count?: number; // optional, số lượng sản phẩm
 };
 
 type Props = {
-  items: StoreCategory[];
-  selectedId?: string | number | null;
-  onSelect?: (id: string | number | null) => void;
+  items?: StoreCategory[];
+  fetchItems?: () => Promise<StoreCategory[]>;
+  selectedSlug?: string | null;
+  onSelect?: (slug: string | null) => void;
   className?: string;
   title?: string;
-  maxVisible?: number;    // số mục hiển thị trước khi bấm "Xem thêm"
+  maxVisible?: number;
 };
 
-export default function StoreCategorySidebarSimple({
+export default function StoreCategorySidebar({
   items,
-  selectedId = null,
+  fetchItems,
+  selectedSlug = null,
   onSelect,
   className,
   title = "Danh mục sản phẩm",
   maxVisible = 10,
 }: Props) {
+  const [fetched, setFetched] = useState<StoreCategory[]>([]);
+  const [loading, setLoading] = useState(!!fetchItems);
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? items : items.slice(0, maxVisible);
-  const hasMore = items.length > maxVisible;
+
+  // Nếu có fetchItems thì tự fetch
+  useEffect(() => {
+    let alive = true;
+    if (fetchItems) {
+      (async () => {
+        try {
+          setLoading(true);
+          const data = await fetchItems();
+          if (alive) setFetched(data);
+        } catch (err) {
+          console.error("Fetch categories failed:", err);
+        } finally {
+          if (alive) setLoading(false);
+        }
+      })();
+    }
+    return () => {
+      alive = false;
+    };
+  }, [fetchItems]);
+
+  // Ưu tiên items từ props, nếu không có thì dùng fetched
+  const categories = items ?? fetched;
+  const visible = showAll ? categories : categories.slice(0, maxVisible);
+  const hasMore = categories.length > maxVisible;
 
   return (
-    <aside className={["rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", className || ""].join(" ")}>
-      <div className="mb-2 px-1 text-sm font-semibold text-slate-900">{title}</div>
+    <aside
+      className={[
+        "rounded-2xl border bg-white p-3 shadow-sm",
+        className || "",
+      ].join(" ")}
+    >
+      <div className="mb-2 text-sm font-semibold">{title}</div>
 
-      {/* nút "Tất cả" */}
       <button
         onClick={() => onSelect?.(null)}
-        className={[
-          "block w-full rounded px-1 py-1.5 text-left text-sm leading-5",
-          selectedId == null ? "font-medium text-slate-900" : "text-slate-700 hover:text-slate-900",
-        ].join(" ")}
+        className={
+          selectedSlug == null
+            ? "font-medium text-slate-900 block w-full text-left py-1.5"
+            : "text-slate-700 hover:text-slate-900 block w-full text-left py-1.5"
+        }
       >
         Tất cả
       </button>
 
-      <ul className="mt-1 divide-y divide-slate-100">
-        {visible.map((c) => {
-          const active = String(selectedId ?? "") === String(c.id);
-          return (
-            <li key={c.id} className="first:pt-0 last:pb-0">
-              <button
-                onClick={() => onSelect?.(c.id)}
-                className={[
-                  "block w-full px-1 py-2 text-left text-sm leading-5",
-                  active ? "font-medium text-slate-900" : "text-slate-700 hover:text-slate-900",
-                ].join(" ")}
-              >
-                <span className="break-words">{c.name}</span>
-                {/* nếu muốn số lượng ở cuối:
-                {typeof c.count === "number" && (
-                  <span className="ml-1 text-xs text-slate-500">({c.count.toLocaleString("vi-VN")})</span>
-                )} */}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {loading ? (
+        <div className="mt-2 space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-4 w-full rounded bg-slate-200 animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <ul className="mt-1 divide-y divide-slate-100">
+          {visible.map((c) => {
+            const active = selectedSlug === c.slug;
+            return (
+              <li key={c.id}>
+                <button
+                  onClick={() => onSelect?.(c.slug)}
+                  className={
+                    active
+                      ? "font-medium text-slate-900 block w-full text-left py-2"
+                      : "text-slate-700 hover:text-slate-900 block w-full text-left py-2"
+                  }
+                >
+                  {c.name}
+                  {typeof c.count === "number" && (
+                    <span className="ml-1 text-xs text-slate-500">
+                      ({c.count.toLocaleString("vi-VN")})
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {hasMore && (
-        <div className="mt-2 px-1">
+        <div className="mt-2">
           <button
-            className="text-sm font-medium text-blue-600 hover:underline"
+            className="text-sm text-blue-600 hover:underline"
             onClick={() => setShowAll((v) => !v)}
           >
             {showAll ? "Thu gọn" : "Xem thêm"}

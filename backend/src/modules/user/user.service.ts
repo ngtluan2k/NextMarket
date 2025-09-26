@@ -13,6 +13,7 @@ import { UserRole } from '../user-role/user-role.entity';
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { UpdateUsernameDto } from './dto/update-username.dto';
 @Injectable()
 export class UserService {
   constructor(
@@ -125,11 +126,31 @@ export class UserService {
     return profile;
   }
 
-  async updateProfile(userId: number, dto: UpdateUserProfileDto) {
-    const profile = await this.userProfileRepository.findOne({ where: { user_id: userId } });
-    if (!profile) throw new NotFoundException('Profile not found');
+  async updateProfile(userId: number, dto: UpdateUserProfileDto, username?: string) {
+  const profile = await this.userProfileRepository.findOne({
+    where: { user_id: userId },
+    relations: ['user'],
+  });
+  if (!profile) throw new NotFoundException('Profile not found');
 
-    Object.assign(profile, dto); // merge data
-    return await this.userProfileRepository.save(profile);
+  // Merge dữ liệu profile
+  Object.assign(profile, dto);
+  await this.userProfileRepository.save(profile);
+
+  // Nếu có username mới -> update bảng users
+  if (username && profile.user) {
+    profile.user.username = username;
+    await this.userRepository.save(profile.user);
   }
+
+  return profile;
+}
+
+async updateUsername(userId: number, dto: UpdateUsernameDto) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    user.username = dto.username;
+    return await this.userRepository.save(user);
+  }
+
 }
