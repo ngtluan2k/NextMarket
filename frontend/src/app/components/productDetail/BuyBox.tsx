@@ -45,30 +45,34 @@ export default function BuyBox({
   // fallback product object
   const p = product ?? {};
 
-  // --- tính giá dựa trên variant + pricing_rules ---
-  const price = useMemo(() => {
-    if (!product) return 0;
+// --- tính giá dựa trên variant + pricing_rules ---
+const unitPrice = useMemo(() => {
+  if (!product) return 0;
 
-    let currentPrice = calculatedPrice;
+  let currentPrice = calculatedPrice;
 
-    // lấy rules từ product
-    const rules: { min_qty: number; price: number }[] = (
-      product.pricing_rules ?? []
-    ).map((r: any) => ({
-      min_qty: r.min_quantity,
-      price: Number(r.price),
-    }));
+  // lấy rules từ product
+  const rules: { min_qty: number; price: number }[] = (
+    product.pricing_rules ?? []
+  ).map((r: any) => ({
+    min_qty: r.min_quantity,
+    price: Number(r.price),
+  }));
 
-    // áp dụng rule theo quantity
-    if (rules.length > 0) {
-      const matched = rules
-        .filter((r) => quantity >= r.min_qty)
-        .sort((a, b) => b.min_qty - a.min_qty)[0];
-      if (matched) currentPrice = matched.price;
-    }
+  // áp dụng rule theo quantity
+  if (rules.length > 0) {
+    const matched = rules
+      .filter((r) => quantity >= r.min_qty)
+      .sort((a, b) => b.min_qty - a.min_qty)[0];
+    if (matched) currentPrice = matched.price;
+  }
 
-    return currentPrice;
-  }, [product, calculatedPrice, quantity]);
+  return currentPrice;
+}, [product, calculatedPrice, quantity]);
+
+// giá tổng = đơn giá x số lượng
+const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
+
 
   if (!product) return null;
 
@@ -141,7 +145,8 @@ export default function BuyBox({
 
       {/* Price */}
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold">{vnd(price)}</div>
+      <div className="text-[26px] font-bold">{vnd(totalPrice)}</div>
+
 
       {/* Actions */}
       <div className="mt-4 space-y-2">

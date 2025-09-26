@@ -24,6 +24,7 @@ import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-request.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { Product } from '../product/product.entity';
+import { Category } from '../categories/category.entity';
 
 @Injectable()
 export class StoreService {
@@ -703,6 +704,59 @@ export class StoreService {
 
     if (!store) return null;
     return store;
+  }
+
+  async findProductsBySlug(slug: string, categorySlug?: string): Promise<Store | null> {
+  if (!slug) throw new BadRequestException('Slug không hợp lệ');
+
+  const store = await this.storeRepo.findOne({
+    where: { slug },
+    relations: [
+      'products',
+      'products.media',
+      'products.categories',
+      'products.categories.category',
+    ],
+  });
+
+  if (!store) return null;
+
+  if (categorySlug) {
+    store.products = store.products.filter((p) =>
+      p.categories.some((pc) => pc.category.slug === categorySlug),
+    );
+  }
+
+  return store;
+}
+
+async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
+    const products = await this.productRepo.find({
+      where: { store: { id: storeId } },
+      relations: ['categories', 'categories.category'],
+    });
+
+    const countMap = new Map<number, { category: Category; count: number }>();
+
+    for (const product of products) {
+      for (const pc of product.categories) {
+        if (pc.category) {
+          const entry = countMap.get(pc.category.id);
+          if (entry) {
+            entry.count += 1;
+          } else {
+            countMap.set(pc.category.id, { category: pc.category, count: 1 });
+          }
+        }
+      }
+    }
+
+    return Array.from(countMap.values()).map(({ category, count }) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      count,
+    }));
   }
 
 

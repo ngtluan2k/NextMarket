@@ -1,7 +1,7 @@
 import { useState } from "react";
 import AccountProfileForm, { ProfileFormValues } from "../../components/account/AccountProfileForm";
 import AccountSecurityPanel from "../../components/account/AccountSecurityPanel";
-import { updateUserProfile, getCurrentUserId } from "../../../service/user-profile.service";
+import { updateUserProfile, getCurrentUserId, updateUsername  } from "../../../service/user-profile.service";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileFormValues | undefined>();
@@ -17,43 +17,48 @@ export default function ProfilePage() {
   }>();
 
   const handleSave = async (v: ProfileFormValues) => {
-    const userId = getCurrentUserId();
-    if (!userId) {
-      setMessage({ type: 'error', text: 'Không tìm thấy thông tin đăng nhập' });
-      return;
+  const userId = getCurrentUserId();
+  if (!userId) {
+    setMessage({ type: 'error', text: 'Không tìm thấy thông tin đăng nhập' });
+    return;
+  }
+
+  setLoadingProfile(true);
+  setMessage(null);
+
+  try {
+    // Convert form values to API format
+    const dobString = v.dob?.day && v.dob?.month && v.dob?.year
+      ? `${v.dob.year}-${String(v.dob.month).padStart(2,'0')}-${String(v.dob.day).padStart(2,'0')}`
+      : null;
+
+    // 1️⃣ Update profile table
+    const updateData = {
+      full_name: v.fullName || null,
+      dob: dobString,
+      gender: v.gender || null,
+      country: v.country || null,
+      avatar_url: v.avatarUrl || null,
+    };
+    await updateUserProfile(userId, updateData);
+
+    // 2️⃣ Update username table
+    if (v.nickname) {
+      await updateUsername(userId, { username: v.nickname });
     }
 
-    setLoadingProfile(true);
-    setMessage(null);
-    
-    try {
-      // Convert form values to API format
-      const dobString = v.dob?.day && v.dob?.month && v.dob?.year 
-        ? `${v.dob.year}-${String(v.dob.month).padStart(2, '0')}-${String(v.dob.day).padStart(2, '0')}`
-        : null;
-
-      const updateData = {
-        full_name: v.fullName || null,
-        dob: dobString,
-        gender: v.gender || null,
-        country: v.nationality || null,
-        avatar_url: v.avatarUrl || null,
-      };
-
-      await updateUserProfile(userId, updateData);
-      setProfile(v);
-      setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error instanceof Error ? error.message : 'Lỗi cập nhật thông tin' 
-      });
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
-
+    setProfile(v);
+    setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    setMessage({
+      type: 'error',
+      text: error instanceof Error ? error.message : 'Lỗi cập nhật thông tin',
+    });
+  } finally {
+    setLoadingProfile(false);
+  }
+};
   return (
     <>
       <h1 className="text-2xl font-semibold text-slate-900 mb-4">Thông tin tài khoản</h1>

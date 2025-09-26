@@ -6,7 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
-
+import { UpdateUsernameDto } from './dto/update-username.dto';
 @ApiTags('users')
 @Controller('users')
 export class UserController {
@@ -90,6 +90,15 @@ async login(@Body() dto: LoginDto) {
       message: 'Get current user profile successful',
       data: profile,
     };
+  }
+
+   @Put(':id/username')
+  async updateUsername(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUsernameDto,
+  ) {
+    const data = await this.userService.updateUsername(id, dto);
+    return { status: 200, message: 'Username updated', data };
   }
 
 }
