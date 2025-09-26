@@ -64,7 +64,7 @@ export default function ProductFlashSale({
             id: p.id,
             slug: p.slug,
             name: p.name,
-            image: primaryMedia?.url || "https://via.placeholder.com/110?text=No+Image",
+            image: primaryMedia?.url || "",
             price: Number(mainVariant?.price || p.base_price || 0),
             originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
             brandName: p.brand?.name,
@@ -149,7 +149,7 @@ export default function ProductFlashSale({
                       className="mx-auto block h-[110px] w-[110px] rounded-lg object-cover"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src =
-                          "https://via.placeholder.com/110?text=%20";
+                          "";
                       }}
                     />
                   </div>

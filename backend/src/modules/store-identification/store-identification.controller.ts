@@ -28,7 +28,7 @@ import {
 } from '@nestjs/swagger';
 import { StoreIdentificationService } from './store-identification.service';
 import { CreateStoreIdentificationDto } from './dto/create-store-identification.dto';
-import { UpdateStoreIdentificationDto } from './dto/updat-store-identification.dto';
+import { UpdateStoreIdentificationDto } from './dto/update-store-identification.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { multerConfig } from './config/multer.config';
 
@@ -44,7 +44,7 @@ export class StoreIdentificationController {
   @ApiOperation({ summary: 'Create store identification' })
   @ApiResponse({ status: 201, description: 'Store identification created successfully' })
   async create(@Body() createDto: CreateStoreIdentificationDto, @Req() req: any) {
-    return await this.storeIdentificationService.create(createDto, req.user.id);
+    return await this.storeIdentificationService.create(createDto, req.user.userId);
   }
 
   // Lấy store identification theo store_id
@@ -52,7 +52,7 @@ export class StoreIdentificationController {
   @ApiOperation({ summary: 'Get store identification by store ID' })
   @ApiResponse({ status: 200, description: 'Store identification details' })
   async findByStoreId(@Param('storeId', ParseIntPipe) storeId: number, @Req() req: any) {
-    return await this.storeIdentificationService.findByStoreId(storeId, req.user.id);
+    return await this.storeIdentificationService.findByStoreId(storeId, req.user.userId);
   }
 
   // Upload ảnh CCCD tạm thời (giống upload Giấy phép) - KHÔNG cần store_id, chỉ trả về file_url
@@ -108,7 +108,7 @@ export class StoreIdentificationController {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-    return await this.storeIdentificationService.uploadFrontImage(storeId, file, req.user.id);
+    return await this.storeIdentificationService.uploadFrontImage(storeId, file, req.user.userId);
   }
 
   // Upload ảnh mặt sau CCCD (có storeId, ghi DB)
@@ -134,7 +134,7 @@ export class StoreIdentificationController {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-    return await this.storeIdentificationService.uploadBackImage(storeId, file, req.user.id);
+    return await this.storeIdentificationService.uploadBackImage(storeId, file, req.user.userId);
   }
 
   // Xem ảnh mặt trước
@@ -145,12 +145,12 @@ export class StoreIdentificationController {
     @Req() req: any,
     @Res() res: Response,
   ) {
-    const identification = await this.storeIdentificationService.findByStoreId(storeId, req.user.id);
+    const identification = await this.storeIdentificationService.findByStoreId(storeId, req.user.userId);
     if (!identification || !identification.img_front) {
       return res.status(404).json({ message: 'Front image not found' });
     }
 
-    const fileData = await this.storeIdentificationService.getFileData(identification.img_front, req.user.id);
+    const fileData = await this.storeIdentificationService.getFileData(identification.img_front,req.user.userId);
     
     res.set({
       'Content-Type': fileData.mimetype,
@@ -169,12 +169,12 @@ export class StoreIdentificationController {
     @Req() req: any,
     @Res() res: Response,
   ) {
-    const identification = await this.storeIdentificationService.findByStoreId(storeId, req.user.id);
+    const identification = await this.storeIdentificationService.findByStoreId(storeId,req.user.userId);
     if (!identification || !identification.img_back) {
       return res.status(404).json({ message: 'Back image not found' });
     }
 
-    const fileData = await this.storeIdentificationService.getFileData(identification.img_back, req.user.id);
+    const fileData = await this.storeIdentificationService.getFileData(identification.img_back,req.user.userId);
     
     res.set({
       'Content-Type': fileData.mimetype,
@@ -194,7 +194,7 @@ export class StoreIdentificationController {
     @Body() updateDto: UpdateStoreIdentificationDto,
     @Req() req: any,
   ) {
-    return await this.storeIdentificationService.update(storeId, updateDto, req.user.id);
+    return await this.storeIdentificationService.update(storeId, updateDto,req.user.userId);
   }
 
   // Xóa store identification
@@ -202,7 +202,7 @@ export class StoreIdentificationController {
   @ApiOperation({ summary: 'Delete store identification' })
   @ApiResponse({ status: 200, description: 'Store identification deleted successfully' })
   async remove(@Param('storeId', ParseIntPipe) storeId: number, @Req() req: any) {
-    await this.storeIdentificationService.remove(storeId, req.user.id);
+    await this.storeIdentificationService.remove(storeId,req.user.userId);
     return { message: 'Store identification deleted successfully' };
   }
 }

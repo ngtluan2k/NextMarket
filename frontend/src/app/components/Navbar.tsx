@@ -1,11 +1,12 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Search, Home, Smile, ShoppingCart, MapPin, Store,
   CreditCard, Receipt, BadgeDollarSign,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../hooks/useAuth";
 
 import LoginModal, { LoginPayload } from "./LoginModal";
 import AccountMenu, { Me } from "./AccountMenu";
@@ -50,53 +51,23 @@ export default function EveryMartHeader({
   labels?: HeaderLabels;
   onLogin?: (payload: LoginPayload) => Promise<void> | void;
 }) { 
-  console.log('EveryMartHeader render - openLogin:'); // Debug log
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
 
   const [query, setQuery] = useState('');
   const [openLogin, setOpenLogin] = useState(false);
-  const [me, setMe] = useState<Me | null>(null);
-
-  // Lưu khi thay đổi
-  useEffect(() => {
-    if (me) localStorage.setItem('user', JSON.stringify(me));
-    else localStorage.removeItem('user');
-  }, [me]);
-
+  
+  // Sử dụng custom hook để quản lý auth state
+  const { user, isAuthenticated, login, logout } = useAuth();
 
   const { cart } = useCart();
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const navigate = useNavigate();
 
-  // Đọc trạng thái đăng nhập từ localStorage
-  useEffect(() => {
-    const raw = localStorage.getItem("user");
-    if (raw) {
-      try {
-        setMe(JSON.parse(raw));
-      } catch (err) {
-        console.error("Failed to parse user from localStorage:", err);
-      }
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("user");
-    localStorage.removeItem("cart"); // xoá giỏ hàng cache
-    setMe(null);
-
-
-  };
-
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("search:", query);
   };
-
-console.log('Rendering LoginModal with openLogin:', openLogin);
 
 
   return (
@@ -157,8 +128,8 @@ console.log('Rendering LoginModal with openLogin:', openLogin);
             </a>
 
             {/* Tài khoản */}
-            {me ? (
-              <AccountMenu me={me} onLogout={handleLogout} className="px-0" />
+            {isAuthenticated && user ? (
+              <AccountMenu me={user as Me} onLogout={logout} className="px-0" />
             ) : (
               <button
                 type="button"
@@ -265,13 +236,9 @@ console.log('Rendering LoginModal with openLogin:', openLogin);
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-            console.log('Login successful:', json.data); // Debug log
-             console.log('Current openLogin state:', openLogin); // Debug log
-
-            localStorage.setItem("token", json.access_token);
-            localStorage.setItem("user", JSON.stringify(json.data));
-            setMe(json.data);
-            console.log('Modal should close now'); // Debug log
+            
+            // Sử dụng custom hook để login
+            login(json.data, json.access_token);
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);

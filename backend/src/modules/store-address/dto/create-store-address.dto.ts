@@ -20,12 +20,17 @@ export class CreateStoreAddressDto {
   @ApiProperty({ description: 'Thành phố' })
   @IsNotEmpty()
   @IsString()
-  city!: string;
+  district!: string;
 
   @ApiProperty({ description: 'Tỉnh/Thành phố' })
   @IsNotEmpty()
   @IsString()
   province!: string;
+
+  @ApiPropertyOptional({ description: 'Phường/Xã' })
+  @IsOptional()
+  @IsString()
+  ward?: string;
 
   @ApiProperty({ description: 'Quốc gia' })
   @IsNotEmpty()

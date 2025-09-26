@@ -20,8 +20,8 @@ export class StoreInformationEmail {
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @Column({ type: 'boolean', default: false })
-  is_draft!: boolean;
+  // @Column({ type: 'boolean', default: false })
+  // is_draft!: boolean;
 
   @Column({
     type: 'datetime',

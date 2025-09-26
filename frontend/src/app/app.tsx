@@ -8,7 +8,7 @@ import { message } from "antd";
 import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
 import AccountLayout from "./page/account/AccountLayout";
-import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
+import { SellerRegistration } from "./components/register_seller/SellerRegistration";
 import { SellerDashboard } from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
 import NotificationsPage from "./page/account/NotificationsPage";
@@ -18,6 +18,7 @@ import ProfilePage from "./page/account/ProfilePage";
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from "./components/AddProduct";
+import StoreManagerDetail from "./components/admin/StoreManagerDetail";
 
 // import AuthForm from "./components/auth/AuthForm";
 const App: React.FC = () => {
@@ -87,6 +88,7 @@ const App: React.FC = () => {
         {/* <Route path="/products/slug/:slug" element={<ProductDetailPage />} /> */}
         {/* <Route path="/cart" element={<Cart showMessage={showMessage} />} /> */}
         {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
+        <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />.
       </Routes>
     </CartProvider>
   );

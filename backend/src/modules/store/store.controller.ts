@@ -1,5 +1,5 @@
 
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException, ForbiddenException, ParseIntPipe } from '@nestjs/common';
 
 import { StoreService } from './store.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -69,6 +69,15 @@ export class StoreController {
     return {
       message: 'Chi tiết cửa hàng',
       data: store,
+    };
+  }
+  @Get(':id/full')
+  @ApiOperation({ summary: 'Lấy đầy đủ thông tin cửa hàng và các dữ liệu liên quan' })
+  async getFull(@Param('id') id: number) {
+    const data = await this.storeService.getFullData(id);
+    return {
+      message: 'Chi tiết đầy đủ cửa hàng',
+      data,
     };
   }
 

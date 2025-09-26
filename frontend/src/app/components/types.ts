@@ -46,7 +46,7 @@ export interface SellerFormData {
   };
 
   // Store Email (optional)
-  store_information_email?: {
+  store_information_email: {
     email: string;
   };
 
