@@ -61,7 +61,6 @@ export default function BuyBox({
       className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
       style={{ width, minHeight, top: stickyTop }}
     >
-      {/* Seller info */}
       <div className="flex items-center gap-2">
         <img
           src=""

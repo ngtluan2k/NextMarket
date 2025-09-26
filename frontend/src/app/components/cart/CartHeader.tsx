@@ -119,7 +119,7 @@ export const CartHeader: React.FC<Props> = ({
         const deliveryDate: string | undefined = (item as any)?.delivery_date;
         const color: string | undefined = (item as any)?.product?.color;
 
-        const checked = selectedIds.includes(item.product_id);
+        const checked = selectedIds.includes(item.id);  // Check by cart item id
 
         return (
           <div
@@ -130,7 +130,7 @@ export const CartHeader: React.FC<Props> = ({
             {/* Checkbox từng sản phẩm */}
             <Checkbox
               checked={checked}
-              onChange={() => onToggleOne(item.product_id)}
+              onChange={() => onToggleOne(item.id)}  // Toggle by cart item id
             />
 
             {/* Thông tin sản phẩm */}
