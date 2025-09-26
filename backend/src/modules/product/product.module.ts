@@ -16,6 +16,8 @@ import { PricingRuleModule } from '../pricing-rule/pricing-rule.module';
 import { ProductCategory } from '../product_category/product_category.entity';
 import { ProductCategoryModule } from '../product_category/product_category.module';
 import { StoreModule } from '../store/store.module';
+import { ProductTag } from '../product_tag/product_tag.entity';
+import { Tag } from '../tag/tag.entity';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { StoreModule } from '../store/store.module';
       Inventory,
       PricingRules,
       ProductCategory,
+      ProductTag,
+      Tag,
     ]),
     forwardRef(() => ProductMediaModule),
     forwardRef(() => VariantModule),

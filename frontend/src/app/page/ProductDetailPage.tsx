@@ -208,7 +208,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
             <MemoizedComboStrip items={combos} />
             {/* Lazy-loaded components with fallback */}
             <Suspense fallback={<div>Loading similar products...</div>}>
-              <LazySimilarProducts />
+             <LazySimilarProducts productId={product.id} />
             </Suspense>
             <Suspense fallback={<div>Loading specs...</div>}>
               <MemoizedProductSpecs product={product} loading={loading} />
@@ -250,75 +250,4 @@ export default function ProductDetailPage({ showMessage }: Props) {
       <Footer />
     </div>
   );
-  // return (
-  //   <div className="min-h-screen flex flex-col bg-gray-50">
-  //     <EveryMartHeader />
-  //     <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
-  //       <div
-  //         className="grid gap-4 lg:grid-cols-[var(--left)_minmax(0,1fr)_var(--right)] items-start"
-  //         style={{
-  //           ['--left' as any]: `${L.leftWidth}px`,
-  //           ['--right' as any]: `${L.rightWidth}px`,
-  //         }}
-  //       >
-  //         <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
-  //           <MemoizedGallery
-  //             images={galleryData.images}
-  //             variantMap={galleryData.variantMap}
-  //             selectedVariantId={selectedVariantId}
-  //             setSelectedVariantId={setSelectedVariantId}
-  //             width={L.leftWidth}
-  //             galleryHeight={L.galleryHeight}
-  //             thumbHeight={L.thumbHeight}
-  //             stickyTop={L.buyBoxStickyTop}
-  //           />
-  //         </div>
-
-  //         <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
-  //           <MemoizedInfo
-  //             product={product}
-  //             selectedVariantId={selectedVariantId}
-  //             setSelectedVariantId={setSelectedVariantId}
-  //             quantity={quantity}
-  //             setQuantity={setQuantity}
-  //             calculatedPrice={calculatedPrice}
-  //           />
-  //           <MemoizedShipping />
-  //           <MemoizedComboStrip items={combos} />
-  //           <MemoizedSimilarProducts />
-  //           <MemoizedProductSpecs product={product} loading={loading} />
-  //           <MemoizedProductDescription
-  //             html={product?.short_description}
-  //             loading={!product}
-  //           />
-  //         </section>
-
-  //         <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
-  //           <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
-  //             <MemoizedBuyBox
-  //               product={product}
-  //               selectedVariantId={selectedVariantId}
-  //               quantity={quantity}
-  //               setQuantity={setQuantity}
-  //               calculatedPrice={calculatedPrice}
-  //               totalPrice={totalPrice}
-  //               width={L.rightWidth}
-  //               minHeight={L.buyBoxMinHeight}
-  //               showMessage={showMessage}
-  //             />
-  //           </div>
-  //         </div>
-
-  //         <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-  //           <ProductReviews />
-  //         </div>
-
-  //         <div className="lg:col-span-3 mt-2">
-  //           <ExploreMore />
-  //         </div>
-  //       </div>
-  //     </main>
-  //     <Footer />
-  //   </div>
-  // );
 }

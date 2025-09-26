@@ -23,6 +23,8 @@ import {
   VariantDto,
 } from './dto/product-response.dto';
 import { Like } from 'typeorm';
+import { ProductTag } from '../product_tag/product_tag.entity';
+import { Tag } from '../tag/tag.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -38,7 +40,11 @@ export class ProductService {
     @InjectRepository(Inventory)
     private readonly inventoryRepo: Repository<Inventory>,
     @InjectRepository(PricingRules)
-    private readonly pricingRuleRepo: Repository<PricingRules>
+    private readonly pricingRuleRepo: Repository<PricingRules>,
+    @InjectRepository(ProductTag)
+    private readonly productTagRepo: Repository<ProductTag>,
+    @InjectRepository(Tag)
+    private readonly tagRepo: Repository<Tag>
   ) {}
 
   async saveProduct(
@@ -170,8 +176,6 @@ export class ProductService {
     return product;
   }
 
-
-
   async removeProduct(productId: number, userId: number) {
     const product = await this.productRepo.findOne({
       where: { id: productId },
@@ -186,9 +190,7 @@ export class ProductService {
     return { message: 'Product has been soft-deleted' };
   }
 
-  
   // product.service.ts
- 
 
   async updateProduct(id: number, dto: CreateProductDto, userId: number) {
     const product = await this.productRepo.findOne({
@@ -337,19 +339,19 @@ export class ProductService {
       take: 10,
     });
   }
-async toggleProductStatus(productId: number, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id: productId },
-    relations: ['store'], // phải có để kiểm tra quyền
-  });
+  async toggleProductStatus(productId: number, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['store'], // phải có để kiểm tra quyền
+    });
 
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId)
-    throw new ForbiddenException('Bạn không có quyền chỉnh sửa sản phẩm này');
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Bạn không có quyền chỉnh sửa sản phẩm này');
 
-  product.status = product.status === 'active' ? 'draft' : 'active';
-  return this.productRepo.save(product);
-}
+    product.status = product.status === 'active' ? 'draft' : 'active';
+    return this.productRepo.save(product);
+  }
 
   async countByStoreId(storeId: number): Promise<number> {
     return this.productRepo.count({
@@ -360,4 +362,33 @@ async toggleProductStatus(productId: number, userId: number) {
     });
   }
 
+  async findSimilarProducts(productId: number): Promise<Product[]> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['productTags', 'productTags.tag'],
+    });
+
+    if (!product) throw new NotFoundException('Product not found');
+
+    const tagIds = product.productTags.map((pt) => pt.tag_id);
+
+    if (tagIds.length === 0) return [];
+
+    const similarProducts = await this.productRepo
+      .createQueryBuilder('p')
+      .innerJoin('product_tag', 'pt', 'pt.product_id = p.id')
+      .where('pt.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('p.id != :productId', { productId })
+      .andWhere('p.status = :status', { status: 'active' })
+      .leftJoinAndSelect('p.media', 'media', 'media.is_primary = :isPrimary', {
+        isPrimary: true,
+      })
+      .leftJoinAndSelect('p.brand', 'brand')
+      .leftJoinAndSelect('p.store', 'store')
+      .distinct(true)
+      .take(10) // Limit to 10 similar products
+      .getMany();
+
+    return similarProducts;
+  }
 }

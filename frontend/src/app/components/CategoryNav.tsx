@@ -1,6 +1,6 @@
-// src/components/CategoryNav.tsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchCategoriesAPI } from '../../service/category.service';
 
 export type Category = {
   id: string | number;
@@ -33,28 +33,17 @@ export default function CategoryNav({
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3000/categories', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const rawData = await fetchCategoriesAPI();
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-
-        const json = await res.json();
-        const data = json?.data || [];
-        const toImageUrl = (url?: string) => {
-          if (!url) return 'https://via.placeholder.com/43x43?text=%3F';
-          if (url.startsWith('http')) return url;
-          return `http://localhost:3000${url}`;
-        };
-        // Lọc chỉ lấy category cha
-        const parents = data.filter((it: any) => !it.parent_id);
-
-        const mapped: Category[] = parents.map((it: any) => ({
+        if (!Array.isArray(rawData)) {
+          throw new Error('Dữ liệu danh mục không hợp lệ');
+        }
+        const parents = rawData.filter((it) => !it.parent_id);
+        const mapped: Category[] = parents.map((it) => ({
           id: it.id,
           name: it.name,
-          slug: it.slug || String(it.id), // ưu tiên slug, fallback id
-          iconUrl: toImageUrl(it.image),
+          slug: it.slug || String(it.id),
+          iconUrl: it.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(it.name)}&background=random`,
         }));
 
         if (!cancelled) setCategories(mapped);
