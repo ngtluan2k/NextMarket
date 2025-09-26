@@ -1,5 +1,4 @@
-// src/components/productDetail/Info.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import Stars from '../productDetail/Stars';
 import { TIKI_RED } from '../productDetail/productDetail';
 import { useNavigate } from 'react-router-dom';
@@ -17,48 +16,22 @@ export default function Info({
   setSelectedVariantId,
   quantity,
   setQuantity,
+  calculatedPrice,
 }: {
   product?: any;
-  selectedVariantId: number | null;
+  selectedVariantId: number | null; // CHANGED: Allow null
   setSelectedVariantId: (id: number) => void;
   quantity: number;
   setQuantity: (qty: number) => void;
+  calculatedPrice: number;
 }) {
-
   const navigate = useNavigate();
-  const price = useMemo(() => {
-    if (!product) return 0;
-    let currentPrice = Number(product.base_price ?? 0);
-
-    if (selectedVariantId) {
-      const variant = product.variants?.find(
-        (v: any) => v.id === selectedVariantId
-      );
-      if (variant) currentPrice = Number(variant.price);
-    }
-
-    // áp dụng pricing_rules
-    const now = new Date();
-    const validRules = (product.pricing_rules ?? [])
-      .filter((r: any) => {
-        const start = r.starts_at ? new Date(r.starts_at) : new Date(0); // Default to epoch if null (always started)
-        const end = r.ends_at
-          ? new Date(r.ends_at)
-          : new Date(8640000000000000); // Default to max date if null (never ends)
-        const now = new Date();
-        const ok = quantity >= r.min_quantity && now >= start && now <= end;
-        return ok;
-      })
-      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
-
-    if (validRules.length) currentPrice = Number(validRules[0].price);
-
-    return currentPrice;
-  }, [product, selectedVariantId, quantity]);
 
   const listPrice = Number(product?.listPrice ?? product?.base_price ?? 0);
   const discount =
-    listPrice > price ? Math.round(((listPrice - price) / listPrice) * 100) : 0;
+    listPrice > calculatedPrice
+      ? Math.round(((listPrice - calculatedPrice) / listPrice) * 100)
+      : 0;
 
   if (!product) return null;
 
@@ -110,9 +83,9 @@ export default function Info({
           className="text-[28px] font-bold leading-none"
           style={{ color: TIKI_RED }}
         >
-          {vnd(price)}
+          {vnd(calculatedPrice)}
         </div>
-        {listPrice && listPrice !== price && (
+        {listPrice && listPrice !== calculatedPrice && (
           <div className="text-slate-400 line-through">{vnd(listPrice)}</div>
         )}
         {discount > 0 && (
@@ -134,6 +107,7 @@ export default function Info({
                   : 'border-gray-300'
               }`}
               onClick={() => setSelectedVariantId(v.id)}
+              disabled={selectedVariantId === null} // NEW: Disable if no variant selected
             >
               {v.variant_name} ({vnd(v.price)})
             </button>
@@ -160,8 +134,8 @@ export default function Info({
           {product.pricing_rules
             .sort((a: any, b: any) => a.min_quantity - b.min_quantity)
             .map((r: any) => {
-              const start = new Date(r.starts_at ?? 0); // Default to epoch if null/undefined
-              const end = new Date(r.ends_at ?? 8640000000000000); // Default to max date if null/undefined
+              const start = new Date(r.starts_at ?? 0);
+              const end = new Date(r.ends_at ?? 8640000000000000);
               const now = new Date();
               const isApplied =
                 quantity >= r.min_quantity && now >= start && now <= end;

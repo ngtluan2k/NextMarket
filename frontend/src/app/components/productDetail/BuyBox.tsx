@@ -6,6 +6,7 @@ import { TIKI_RED } from '../productDetail/productDetail';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 
+
 export const vnd = (n?: number) =>
   (n ?? 0).toLocaleString('vi-VN', {
     style: 'currency',
@@ -19,6 +20,7 @@ export default function BuyBox({
   quantity,
   setQuantity,
   calculatedPrice,
+  totalPrice,
   width,
   minHeight,
   stickyTop,
@@ -26,10 +28,11 @@ export default function BuyBox({
   showMessage,
 }: {
   product?: Product;
-  selectedVariantId: number;
+  selectedVariantId: number | null; // CHANGED: Allow null
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
+  totalPrice: number;
   width?: number;
   minHeight?: number;
   stickyTop?: number;
@@ -75,7 +78,8 @@ export default function BuyBox({
   const handleAddToCart = async (product: Product, quantity: number) => {
     try {
       console.log('Adding to cart:', product.name, 'Quantity:', quantity);
-      await addToCart(Number(product.id), quantity, selectedVariantId);
+      // Only pass variantId if it's not null
+      await addToCart(Number(product.id), quantity, selectedVariantId ?? undefined);
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
@@ -141,7 +145,7 @@ export default function BuyBox({
 
       {/* Price */}
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold">{vnd(price)}</div>
+      <div className="text-[26px] font-bold">{vnd(totalPrice)}</div>
 
       {/* Actions */}
       <div className="mt-4 space-y-2">

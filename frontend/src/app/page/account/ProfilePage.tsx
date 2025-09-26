@@ -36,7 +36,7 @@ export default function ProfilePage() {
         full_name: v.fullName || null,
         dob: dobString,
         gender: v.gender || null,
-        country: v.nationality || null,
+        country: v.country || null,
         avatar_url: v.avatarUrl || null,
       };
 
