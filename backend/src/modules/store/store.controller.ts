@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Query,
   Post,
   Put,
   Delete,
@@ -9,9 +10,10 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-
+import { InjectRepository } from '@nestjs/typeorm';
 import { StoreService } from './store.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -21,13 +23,18 @@ import { RequirePermissions as Permissions } from '../../common/auth/permission.
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProductService } from '../product/product.service';
+import { Store } from './store.entity';
+import { Repository } from 'typeorm';
+
 @ApiTags('stores')
 @ApiBearerAuth('access-token')
 @Controller('stores')
 export class StoreController {
 constructor(
       private readonly productService: ProductService,
-      private readonly storeService: StoreService
+      private readonly storeService: StoreService,
+      @InjectRepository(Store)
+    private readonly storeRepo: Repository<Store>,
     ) {}  
   
 
@@ -197,8 +204,8 @@ constructor(
 
   @Get('slug/:slug/all')
 @ApiOperation({ summary: 'Lấy tất cả sản phẩm của store theo slug' })
-async getStoreProducts(@Param('slug') slug: string) {
-  const store = await this.storeService.findBySlug(slug);
+async getStoreProducts(@Param('slug') slug: string,  @Query('category') categorySlug?: string,) {
+  const store = await this.storeService.findProductsBySlug(slug, categorySlug);
   if (!store) {
     throw new BadRequestException('Store không tồn tại');
   }
@@ -250,5 +257,18 @@ async getStoreProfile(@Param('slug') slug: string) {
     data: profileData,
   };
 }
+
+@Get('slug/:slug/categories')
+  async getStoreCategories(@Param('slug') slug: string) {
+    const store = await this.storeRepo.findOne({ where: { slug } });
+    if (!store) throw new NotFoundException('Store not found');
+
+    const categories = await this.storeService.findCategoriesByStoreWithCount(store.id);
+    return {
+      message: `Danh mục sản phẩm của store ${store.name}`,
+      total: categories.length,
+      data: categories,
+    };
+  }
 
 }

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export type BrandCard = {
   id: string | number;
@@ -20,7 +20,7 @@ type Props = {
 };
 
 const ph = (w = 260, h = 160) =>
-  "data:image/svg+xml;utf8," +
+  'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
       <defs><linearGradient id='g' x1='0' x2='1'>
@@ -36,15 +36,15 @@ const ph = (w = 260, h = 160) =>
 const FALLBACK: BrandCard[] = Array.from({ length: 8 }).map((_, i) => ({
   id: `sk-${i}`,
   coverUrl: ph(),
-  title: "Đang cập nhật…",
+  title: 'Đang cập nhật…',
 }));
 
 export default function FeaturedBrands({
-  title = "Thương hiệu nổi bật",
+  title = 'Thương hiệu nổi bật',
   items,
   fetchBrands,
   seeAllHref,
-  className = "",
+  className = '',
   onSelect,
 }: Props) {
   const [list, setList] = useState<BrandCard[]>(items ?? FALLBACK);
@@ -63,7 +63,15 @@ export default function FeaturedBrands({
       try {
         setLoading(true);
         const data = await fetchBrands();
-        if (!cancelled && data?.length) setList(data);
+
+        // map coverUrl / logoUrl qua toImageUrl
+        const mapped = data.map((b: BrandCard) => ({
+          ...b,
+          coverUrl: toImageUrl(b.coverUrl),
+          logoUrl: toImageUrl(b.logoUrl),
+        }));
+
+        if (!cancelled && mapped.length) setList(mapped);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -84,23 +92,28 @@ export default function FeaturedBrands({
     updateArrows();
     const el = scrollerRef.current;
     if (!el) return;
-    el.addEventListener("scroll", updateArrows);
-    window.addEventListener("resize", updateArrows);
+    el.addEventListener('scroll', updateArrows);
+    window.addEventListener('resize', updateArrows);
     return () => {
-      el.removeEventListener("scroll", updateArrows);
-      window.removeEventListener("resize", updateArrows);
+      el.removeEventListener('scroll', updateArrows);
+      window.removeEventListener('resize', updateArrows);
     };
   }, [list.length]);
 
   const scrollByView = (dir: 1 | -1) => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: "smooth" });
+    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
   };
 
   const handleClickBrand = (b: BrandCard) => {
     onSelect?.(b); // nếu muốn highlight / filter
     navigate(`/brands/${b.id}`); // điều hướng sang BrandPage
+  };
+  const toImageUrl = (url?: string) => {
+    if (!url) return ph(); // fallback placeholder
+    if (url.startsWith('http')) return url;
+    return `http://localhost:3000${url}`;
   };
 
   return (
@@ -110,7 +123,10 @@ export default function FeaturedBrands({
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">{title}</h3>
         {seeAllHref && (
-          <a href={seeAllHref} className="text-xs font-semibold text-sky-600 hover:underline">
+          <a
+            href={seeAllHref}
+            className="text-xs font-semibold text-sky-600 hover:underline"
+          >
             Xem tất cả
           </a>
         )}
@@ -151,7 +167,7 @@ export default function FeaturedBrands({
               <div className="flex h-40 items-center justify-center overflow-hidden rounded-xl bg-slate-50">
                 <img
                   src={b.coverUrl || ph()}
-                  alt={b.title || ""}
+                  alt={b.title || ''}
                   className="max-h-full w-full object-contain"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).src = ph();
@@ -163,19 +179,22 @@ export default function FeaturedBrands({
                 {b.logoUrl && (
                   <img
                     src={b.logoUrl}
-                    alt={b.title || "logo"}
+                    alt={b.title || 'logo'}
                     className="h-7 w-7 rounded object-contain"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+                      (e.currentTarget as HTMLImageElement).style.visibility =
+                        'hidden';
                     }}
                   />
                 )}
                 <div className="text-xs font-semibold text-slate-900 line-clamp-1">
-                  {b.title || ""}
+                  {b.title || ''}
                 </div>
               </div>
               {b.tagline && (
-                <div className="mt-1 text-[11px] text-slate-600 line-clamp-2">{b.tagline}</div>
+                <div className="mt-1 text-[11px] text-slate-600 line-clamp-2">
+                  {b.tagline}
+                </div>
               )}
             </div>
           ))}

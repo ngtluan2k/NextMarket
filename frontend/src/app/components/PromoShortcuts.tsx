@@ -1,6 +1,6 @@
 // src/components/CategoryGrid.tsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export type Category = {
   id: string | number;
@@ -16,8 +16,8 @@ type Props = {
 };
 
 export default function CategoryGrid({
-  title = "Danh mục",
-  className = "",
+  title = 'Danh mục',
+  className = '',
   skeletonCount = 8,
 }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -32,8 +32,8 @@ export default function CategoryGrid({
       try {
         setLoading(true);
         setError(null);
-        const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:3000/categories", {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:3000/categories', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -42,16 +42,22 @@ export default function CategoryGrid({
 
         const parents = data.filter((it: any) => !it.parent_id);
 
+        const toImageUrl = (url?: string) => {
+          if (!url) return 'https://via.placeholder.com/43x43?text=%3F';
+          if (url.startsWith('http')) return url;
+          return `http://localhost:3000${url}`;
+        };
+
         const mapped: Category[] = parents.map((it: any) => ({
           id: it.id,
           name: it.name,
           slug: it.slug || String(it.id),
-          iconUrl: it.image || "https://via.placeholder.com/36",
+          iconUrl: toImageUrl(it.image),
         }));
 
         if (!cancelled) setCategories(mapped);
       } catch (e: any) {
-        if (!cancelled) setError(e.message || "Không tải được danh mục");
+        if (!cancelled) setError(e.message || 'Không tải được danh mục');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -67,7 +73,6 @@ export default function CategoryGrid({
     <section
       className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow-xl p-4 ${className}`}
     >
-
       <ul className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-6 gap-y-6">
         {loading &&
           Array.from({ length: skeletonCount }).map((_, i) => (
@@ -83,7 +88,9 @@ export default function CategoryGrid({
           categories.map((c) => (
             <li key={c.id} className="flex justify-center">
               <button
-                onClick={() => navigate(`/category/${c.slug}`, { state: { title: c.name } })}
+                onClick={() =>
+                  navigate(`/category/${c.slug}`, { state: { title: c.name } })
+                }
                 className="group flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl"
                 aria-label={c.name}
               >
@@ -94,7 +101,7 @@ export default function CategoryGrid({
                     className="h-9 w-9 object-contain"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src =
-                        "https://via.placeholder.com/36";
+                        'https://via.placeholder.com/36';
                     }}
                   />
                 </div>
@@ -109,9 +116,7 @@ export default function CategoryGrid({
           <li className="px-2 py-3 text-xs text-slate-500">Chưa có danh mục</li>
         )}
 
-        {error && (
-          <li className="px-2 py-3 text-xs text-red-600">{error}</li>
-        )}
+        {error && <li className="px-2 py-3 text-xs text-red-600">{error}</li>}
       </ul>
     </section>
   );

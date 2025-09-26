@@ -127,4 +127,46 @@ export function getCurrentUserId(): number | null {
     console.error('Error decoding token:', error);
     return null;
   }
+
+  
 }
+/**
+ * Update username
+ * @param userId - User ID
+ * @param data - Object containing the new username
+ * @returns Promise<UserProfile> (updated user info)
+ */
+export async function updateUsername(userId: number, data: { username: string }): Promise<UserProfile['user']> {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/users/${userId}/username`, { // endpoint của user
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result: { status: number; message: string; data: UserProfile['user'] } = await response.json();
+
+    if (result.status !== 200) {
+      throw new Error(result.message || 'Failed to update username');
+    }
+
+    return result.data;
+  } catch (error) {
+    console.error('Error updating username:', error);
+    throw error;
+  }
+}
+
