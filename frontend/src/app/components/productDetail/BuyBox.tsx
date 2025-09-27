@@ -1,11 +1,12 @@
 // src/components/productDetail/BuyBox.tsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { Product } from '../productDetail/product';
 import { TIKI_RED } from '../productDetail/productDetail';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
-
+import LoginModal from '../LoginModal';
+import { useLocation } from 'react-router-dom';
 
 export const vnd = (n?: number) =>
   (n ?? 0).toLocaleString('vi-VN', {
@@ -43,38 +44,46 @@ export default function BuyBox({
 }) {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const [loading, setLoading] = useState(false);
+  const [availability, setAvailability] = useState({
+    isAvailable: true,
+    stock: 999,
+  });
+
+  const location = useLocation();
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // fallback product object
   const p = product ?? {};
 
-// --- tính giá dựa trên variant + pricing_rules ---
-const unitPrice = useMemo(() => {
-  if (!product) return 0;
+  // --- tính giá dựa trên variant + pricing_rules ---
+  const unitPrice = useMemo(() => {
+    if (!product) return 0;
 
-  let currentPrice = calculatedPrice;
+    let currentPrice = calculatedPrice;
 
-  // lấy rules từ product
-  const rules: { min_qty: number; price: number }[] = (
-    product.pricing_rules ?? []
-  ).map((r: any) => ({
-    min_qty: r.min_quantity,
-    price: Number(r.price),
-  }));
+    // lấy rules từ product
+    const rules: { min_qty: number; price: number }[] = (
+      product.pricing_rules ?? []
+    ).map((r: any) => ({
+      min_qty: r.min_quantity,
+      price: Number(r.price),
+    }));
 
-  // áp dụng rule theo quantity
-  if (rules.length > 0) {
-    const matched = rules
-      .filter((r) => quantity >= r.min_qty)
-      .sort((a, b) => b.min_qty - a.min_qty)[0];
-    if (matched) currentPrice = matched.price;
-  }
+    // áp dụng rule theo quantity
+    if (rules.length > 0) {
+      const matched = rules
+        .filter((r) => quantity >= r.min_qty)
+        .sort((a, b) => b.min_qty - a.min_qty)[0];
+      if (matched) currentPrice = matched.price;
+    }
 
-  return currentPrice;
-}, [product, calculatedPrice, quantity]);
+    return currentPrice;
+  }, [product, calculatedPrice, quantity]);
 
-// giá tổng = đơn giá x số lượng
-const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
-
+  // giá tổng = đơn giá x số lượng
+  const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
 
   if (!product) return null;
 
@@ -82,7 +91,11 @@ const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
     try {
       console.log('Adding to cart:', product.name, 'Quantity:', quantity);
       // Only pass variantId if it's not null
-      await addToCart(Number(product.id), quantity, selectedVariantId ?? undefined);
+      await addToCart(
+        Number(product.id),
+        quantity,
+        selectedVariantId ?? undefined
+      );
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
@@ -98,6 +111,74 @@ const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
     if (product.store?.slug) {
       navigate(`/stores/slug/${product.store.slug}`);
     }
+  };
+
+  const handleBuyNow = async () => {
+    console.log('🛒 BuyNow clicked', { productId: product?.id, quantity });
+    if (!product?.id || !product?.name) {
+      console.error('❌ Invalid product data', product);
+      alert('Thông tin sản phẩm không hợp lệ');
+      return;
+    }
+
+    if (!availability.isAvailable) {
+      console.error('❌ Product not available', { stock: availability.stock });
+      alert('Sản phẩm hiện không đủ số lượng');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('🔐 No token, saving buyNowData');
+      const productData = {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: unitPrice, // lấy giá theo rule
+        base_price: product.base_price,
+        listPrice: product.listPrice,
+        media: product.media,
+        store: product.store,
+        rating: product.rating,
+        reviewsCount: product.reviewsCount,
+      };
+      localStorage.setItem(
+        'buyNowData',
+        JSON.stringify({ product: productData, qty: quantity })
+      );
+      localStorage.setItem('returnUrl', location.pathname);
+      setShowLoginModal(true);
+      return;
+    }
+
+    console.log('✅ Authenticated, preparing checkout state');
+    const checkoutState = {
+      items: [
+        {
+          id: product.id,
+          product_id: product.id,
+          price: unitPrice,
+          quantity,
+          product: {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            price: unitPrice,
+            base_price: product.base_price,
+            listPrice: product.listPrice,
+            media: product.media,
+            store: product.store,
+            rating: product.rating,
+            reviewsCount: product.reviewsCount,
+          },
+        },
+      ],
+      subtotal: unitPrice * quantity,
+    };
+
+    console.log('🧭 Navigating to /checkout with state:', checkoutState);
+    onBuyNow?.({ product, qty: quantity });
+    navigate('/checkout', { state: checkoutState });
   };
 
   return (
@@ -150,15 +231,19 @@ const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
       <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
       <div className="text-[26px] font-bold">{vnd(totalPrice)}</div>
 
-
       {/* Actions */}
       <div className="mt-4 space-y-2">
         <button
-          className="h-11 w-full rounded-xl px-4 text-base font-semibold text-white"
+          className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
+            !availability.isAvailable || loading
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:opacity-90'
+          }`}
           style={{ background: TIKI_RED }}
-          onClick={() => onBuyNow?.({ product: p, qty: quantity })}
+          onClick={handleBuyNow}
+          disabled={!availability.isAvailable || loading}
         >
-          Mua ngay
+          {loading ? 'Đang xử lý...' : 'Mua ngay'}
         </button>
         <button
           className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"

@@ -39,6 +39,9 @@ import { OrderShipmentsModule } from './modules/order-shipments/order-shipments.
 import { ShippingLabelsModule } from './modules/shipping-labels/shipping-labels.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affiliate-commissions.module';
+import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
+import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
+
 
 @Module({
   imports: [
@@ -112,7 +115,11 @@ import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affi
     ShippingLabelsModule,
     ShipmentsModule,
     AffiliateCommissionsModule,
-    AuthModule
+    AuthModule,
+    PaymentMethodsModule,
+    PaymentTransactionsModule,
+    
+
   ],
 })
 export class AppModule { }

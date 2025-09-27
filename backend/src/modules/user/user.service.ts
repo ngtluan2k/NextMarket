@@ -32,14 +32,16 @@ export class UserService {
     return this.userRepository.find();
   }
   
-  async register(dto: CreateUserDto) {
-  // Kiểm tra email đã tồn tại
-  const exist = await this.userRepository.findOne({ where: { email: dto.email } });
-  if (exist) throw new BadRequestException('Email already exists');
+async register(dto: CreateUserDto) {
+  // Kiểm tra email và username đã tồn tại
+  const exist = await this.userRepository.findOne({ where: [{ email: dto.email }, { username: dto.username }] });
+  if (exist) {
+    if (exist.email === dto.email) throw new BadRequestException('Email đã tồn tại');
+    if (exist.username === dto.username) throw new BadRequestException('Tên đăng nhập đã tồn tại');
+  }
 
   const hashed = await bcrypt.hash(dto.password, 10);
 
-  // Tạo user
   const user = this.userRepository.create({
     uuid: uuidv4(),
     username: dto.username,
@@ -56,11 +58,19 @@ export class UserService {
       country: dto.country,
       created_at: new Date(),
     },
-    });
+  });
 
-  const savedUser = await this.userRepository.save(user);
+  let savedUser;
+  try {
+    savedUser = await this.userRepository.save(user);
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      if (err.message.includes('username')) throw new BadRequestException('Tên đăng nhập đã tồn tại');
+      if (err.message.includes('email')) throw new BadRequestException('Email đã tồn tại');
+    }
+    throw err;
+  }
 
-  // Gán role mặc định "user"
   const role = await this.roleRepository.findOne({ where: { name: 'user' } });
   if (!role) throw new BadRequestException('Default role not found');
 
@@ -70,9 +80,9 @@ export class UserService {
   });
   await this.userRoleRepository.save(userRole);
 
-
   return savedUser;
 }
+
 
 
   async login(dto: LoginDto) {

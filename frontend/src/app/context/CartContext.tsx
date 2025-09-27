@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface CartItem {
   id: number;
-  product_id: number;
+  productId: number;
   quantity: number;
   price: number;
   product: {
