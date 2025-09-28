@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { Product } from './product.entity';
 import { Store } from '../store/store.entity';
 import { Brand } from '../brands/brand.entity';
@@ -20,11 +20,12 @@ import {
   MediaDto,
   PricingRuleDto,
   ProductResponseDto,
-  VariantDto,
+  InventoryDto,
 } from './dto/product-response.dto';
 import { Like } from 'typeorm';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
+import {  Not } from 'typeorm';
 @Injectable()
 export class ProductService {
   constructor(
@@ -44,7 +45,9 @@ export class ProductService {
     @InjectRepository(ProductTag)
     private readonly productTagRepo: Repository<ProductTag>,
     @InjectRepository(Tag)
-    private readonly tagRepo: Repository<Tag>
+    private readonly tagRepo: Repository<Tag>,
+    @InjectRepository(ProductCategory)
+    private readonly productCategoryRepo: Repository<ProductCategory>,
   ) {}
 
   async saveProduct(
@@ -192,18 +195,144 @@ export class ProductService {
 
   // product.service.ts
 
-  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
-    const product = await this.productRepo.findOne({
-      where: { id },
-      relations: ['store'],
-    });
-    if (!product) throw new NotFoundException('Product not found');
-    if (product.store.user_id !== userId)
-      throw new ForbiddenException('Not allowed');
-
-    // Cập nhật tất cả các thông tin như createProduct
-    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
+async updateProduct(id: number, dto: any, userId: number) {
+  // --- Lấy product ---
+  const product = await this.productRepo.findOne({
+    where: { id },
+    relations: [
+      'store',
+      'categories',
+      'variants',
+      'variants.inventories',
+      'media',
+      'pricing_rules',
+    ],
+  });
+  if (!product) throw new NotFoundException('Product not found');
+  if (product.store.user_id !== userId) {
+    throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
   }
+
+  // --- Update product chính ---
+  const updatedProduct = await this.productRepo.save({
+    ...product,
+    ...dto,
+    status: product.status, // giữ nguyên status
+  });
+
+  // --- Update categories ---
+  if (dto.categories) {
+    await this.productCategoryRepo.delete({ product: { id } });
+    for (const catId of dto.categories) {
+      await this.productCategoryRepo.save({
+        product: { id },
+        category: { id: catId },
+      });
+    }
+  }
+
+  // --- Update media ---
+  if (dto.media) {
+    const dtoMediaIds = dto.media.map((m: any) => m.id).filter(Boolean);
+    await this.mediaRepo.delete({
+      product: { id },
+      id: Not(In(dtoMediaIds.length ? dtoMediaIds : [0])),
+    });
+
+    for (const mediaDto of dto.media) {
+      if (mediaDto.id) {
+        await this.mediaRepo.update(mediaDto.id, { ...mediaDto });
+      } else {
+        await this.mediaRepo.save({ ...mediaDto, product: { id } });
+      }
+    }
+  }
+
+  // --- Update variants + inventories ---
+  if (dto.variants) {
+    const dtoVariantIds = dto.variants.map((v: any) => v.id).filter(Boolean);
+
+    await this.variantRepo.delete({
+      product: { id },
+      id: Not(In(dtoVariantIds.length ? dtoVariantIds : [0])),
+    });
+
+    for (const variantDto of dto.variants) {
+      let variant: Variant;
+
+      if (variantDto.id) {
+  await this.variantRepo.update(variantDto.id, { ...variantDto });
+  const found = await this.variantRepo.findOne({ where: { id: variantDto.id } });
+  if (!found) throw new NotFoundException('Variant not found after update');
+  variant = found;
+} else {
+  variant = await this.variantRepo.save({ ...variantDto, product: { id } });
+}
+
+
+      // --- Inventories ---
+      if (variantDto.inventories) {
+        const dtoInvIds = variantDto.inventories.map((inv: any) => inv.id).filter(Boolean);
+
+        await this.inventoryRepo.delete({
+          variant: { id: variant.id },
+          id: Not(In(dtoInvIds.length ? dtoInvIds : [0])),
+        });
+
+        for (const invDto of variantDto.inventories) {
+          if (invDto.id) {
+            await this.inventoryRepo.update(invDto.id, { ...invDto });
+          } else {
+            await this.inventoryRepo.save({ ...invDto, variant: { id: variant.id } });
+          }
+        }
+      }
+    }
+  }
+
+  // --- Update pricing_rules ---
+  if (dto.pricing_rules) {
+    const dtoRuleIds = dto.pricing_rules.map((r: any) => r.id).filter(Boolean);
+
+    await this.pricingRuleRepo.delete({
+      product: { id },
+      id: Not(In(dtoRuleIds.length ? dtoRuleIds : [0])),
+    });
+
+    for (const rule of dto.pricing_rules) {
+      if (rule.id) {
+        await this.pricingRuleRepo.update(rule.id, { ...rule, product: { id } });
+      } else {
+        await this.pricingRuleRepo.save({ ...rule, product: { id } });
+      }
+    }
+  }
+
+  return updatedProduct;
+}
+
+
+
+async updateAndPublishProduct(id: number, dto: any, userId: number) {
+  const product = await this.productRepo.findOne({
+    where: { id },
+    relations: ['store'],
+  });
+
+  if (!product) throw new NotFoundException('Product not found');
+
+  if (product.store.user_id !== userId) {
+    throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
+  }
+
+  // Update + force publish
+  return await this.productRepo.save({
+    ...product,
+    ...dto,
+    status: 'active',
+  });
+}
+
 
   async remove(id: number, userId: number) {
     const product = await this.findOne(id, userId);
@@ -231,87 +360,79 @@ export class ProductService {
   //   return product;
   // }
 
-  async findBySlug(slug: string): Promise<ProductResponseDto> {
-    const product = await this.productRepo
-      .createQueryBuilder('product')
-      .select([
-        'product.id',
-        'product.name',
-        'product.slug',
-        'product.short_description',
-        'product.base_price',
-        'product.status',
-      ])
-      .leftJoinAndSelect(
-        'product.media',
-        'media',
-        'media.is_primary = :isPrimary',
-        { isPrimary: true }
-      )
-      .leftJoinAndSelect('product.variants', 'variants')
-      .addSelect([
-        'variants.id',
-        'variants.variant_name',
-        'variants.price',
-        'variants.stock',
-      ])
-      .leftJoinAndSelect('product.brand', 'brand')
-      .addSelect(['brand.name'])
-      .leftJoinAndSelect('product.categories', 'categories')
-      .leftJoinAndSelect('categories.category', 'category')
-      .addSelect(['category.name'])
-      .leftJoinAndSelect(
-        'product.pricing_rules',
-        'pricing_rules',
-        'pricing_rules.ends_at > :now',
-        { now: new Date() }
-      )
-      .addSelect([
-        'pricing_rules.type',
-        'pricing_rules.min_quantity',
-        'pricing_rules.price',
-        'pricing_rules.starts_at',
-        'pricing_rules.ends_at',
-      ])
-      .leftJoinAndSelect('product.store', 'store')
-      .addSelect(['store.name', 'store.slug'])
-      .where('product.slug = :slug', { slug })
-      .getOne();
+async findBySlug(slug: string): Promise<ProductResponseDto> {
+  const product = await this.productRepo
+    .createQueryBuilder('product')
+    .leftJoinAndSelect('product.media', 'media')
+    .leftJoinAndSelect('product.variants', 'variant')
+    .leftJoinAndSelect('variant.inventories', 'inventory') // join inventory theo variant
+    .leftJoinAndSelect('product.brand', 'brand')
+    .leftJoinAndSelect('product.categories', 'pc')
+    .leftJoinAndSelect('pc.category', 'category')
+    .leftJoinAndSelect('product.pricing_rules', 'pricing_rules')
+    .leftJoinAndSelect('product.store', 'store')
+    .where('product.slug = :slug', { slug })
+    .getOne();
 
-    if (!product) throw new NotFoundException('Product not found');
+  if (!product) throw new NotFoundException('Product not found');
 
-    // Map sang DTO
-    const response: ProductResponseDto = {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      short_description: product.short_description,
-      base_price: product.base_price,
-      media: product.media.map((m): MediaDto => ({ url: m.url })),
-      variants: product.variants.map(
-        (v): VariantDto => ({
-          id: v.id,
-          variant_name: v.variant_name,
-          price: v.price,
-          stock: v.stock,
-        })
-      ),
-      brand: { name: product.brand.name },
-      categories: product.categories.map(
-        (c): CategoryDto => ({ name: c.category.name })
-      ),
-      pricing_rules: product.pricing_rules.map(
-        (pr): PricingRuleDto => ({
-          type: pr.type,
-          min_quantity: pr.min_quantity,
-          price: pr.price,
-        })
-      ),
-      store: { name: product.store.name, slug: product.store.slug },
-    };
+  // Map inventory theo variant SKU
+  const variantInventoryMap: Record<string, InventoryDto[]> = {};
+  product.variants.forEach((v) => {
+    variantInventoryMap[v.sku] = (v.inventories || []).map((inv) => ({
+      id: inv.id,
+      variant_sku: v.sku,
+      location: inv.location,
+      quantity: inv.quantity,
+      used_quantity: inv.used_quantity,
+    }));
+  });
 
-    return response;
-  }
+  // Map product sang DTO
+  const response: ProductResponseDto = {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    short_description: product.short_description,
+    description: product.description,
+    status: product.status,
+    base_price: product.base_price,
+    media: product.media.map((m) => ({
+      url: m.url,
+    })),
+    variants: product.variants.map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      variant_name: v.variant_name,
+      price: v.price,
+      stock: v.stock,
+      inventory: variantInventoryMap[v.sku] || [],
+    })),
+    inventories: variantInventoryMap, // toàn bộ inventory map
+    brand: product.brand ? { id: product.brand.id, name: product.brand.name } : undefined,
+    categories: product.categories.map((pc) => ({
+  id: pc.category.id,
+  name: pc.category.name,
+})),
+
+    pricing_rules: product.pricing_rules.map((pr) => ({
+      id: pr.id,
+      type: pr.type,
+      min_quantity: pr.min_quantity,
+      price: pr.price,
+      cycle: pr.cycle,
+      starts_at: pr.starts_at,
+      ends_at: pr.ends_at,
+    })),
+    store: product.store
+      ? { id: product.store.id, name: product.store.name, slug: product.store.slug }
+      : undefined,
+  };
+
+  return response;
+}
+
+
 
   async findAllByStoreId(storeId: number) {
     return this.productRepo.find({

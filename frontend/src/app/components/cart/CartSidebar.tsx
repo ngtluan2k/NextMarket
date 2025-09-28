@@ -45,6 +45,7 @@ type Props = {
   userAddress?: UserAddress | null;
   items?: CheckoutItem[];
   etaLabel?: string;
+  onSubmit?: () => void;
 };
 
 export const CartSidebar: React.FC<Props> = ({
@@ -58,6 +59,7 @@ export const CartSidebar: React.FC<Props> = ({
   userAddress,
   items = [],
   etaLabel,
+  
 }) => {
   const { cart } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();

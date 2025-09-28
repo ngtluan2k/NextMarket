@@ -73,6 +73,14 @@ export interface Product {
     created_at: string;
     updated_at: string;
   }>;
+  inventory?: {
+    variant_sku: string;
+    variant_id?: number;
+    product_id?: number;
+    location: string;
+    quantity: number;
+    used_quantity?: number;
+  }[];
   pricing_rules?: Array<{
     id: number;
     uuid: string;
@@ -149,12 +157,7 @@ class ProductService {
     return response.data;
   }
 
-  async updateProduct(id: number, dto: UpdateProductDto): Promise<Product> {
-    const response = await axios.put(`${API_BASE_URL}/products/${id}`, dto, {
-      headers: this.getAuthHeaders(),
-    });
-    return response.data;
-  }
+
 
   async softDeleteProduct(id: number): Promise<void> {
     await axios.delete(`${API_BASE_URL}/products/${id}`, {
@@ -178,6 +181,29 @@ class ProductService {
     );
     return response.data.data; // Assuming the API returns { message: string, data: Product[] }
   }
+
+  // Cập nhật draft
+// Cập nhật draft
+async updateProduct(id: number, dto: FormData) {
+  const res = await axios.put(
+    `${API_BASE_URL}/products/${id}`,
+    dto,
+    { headers: this.getAuthHeaders() } // KHÔNG thêm Content-Type
+  );
+  return res.data;
+}
+
+async updateAndPublishProduct(id: number, dto: FormData) {
+  const res = await axios.put(
+    `${API_BASE_URL}/products/${id}/publish`,
+    dto,
+    { headers: this.getAuthHeaders() }
+  );
+  return res.data;
+}
+
+
+
 }
 
 export const productService = new ProductService();
