@@ -1,28 +1,69 @@
-import { IsNumber, IsOptional, IsPositive, IsUUID, IsString } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  ValidateNested,
+  IsArray,
+  Min,
+  IsInt,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class CreateOrderItemInput {
+  @IsInt()
+  @Type(() => Number)
+  productId!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  variantId?: number;
+
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  quantity!: number;
+
+  @IsPositive()
+  @Type(() => Number)
+  price!: number;
+}
 
 export class CreateOrderDto {
-  @IsNumber()
+  @IsInt()
+  @Type(() => Number)
   userId!: number;
 
-  @IsNumber()
+  @IsInt()
+  @Type(() => Number)
   storeId!: number;
 
-  @IsNumber()
+  @IsInt()
+  @Type(() => Number)
   addressId!: number;
 
   @IsNumber()
   @IsPositive()
+  @Type(() => Number)
   totalAmount!: number;
 
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   shippingFee?: number;
 
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   discountTotal?: number;
 
   @IsString()
   @IsOptional()
   currency?: string = 'VND';
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemInput)
+  items!: CreateOrderItemInput[];
 }

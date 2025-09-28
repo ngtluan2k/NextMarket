@@ -1,26 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserAddressDto } from './dto/create-user_address.dto';
 import { UpdateUserAddressDto } from './dto/update-user_address.dto';
+import { UserAddress } from './user_address.entity';
 
 @Injectable()
 export class UserAddressService {
-  create(createUserAddressDto: CreateUserAddressDto) {
-    return 'This action adds a new userAddress';
+  constructor(
+    @InjectRepository(UserAddress)
+    private readonly userAddressRepo: Repository<UserAddress>,
+  ) {}
+
+  async create(createUserAddressDto: CreateUserAddressDto) {
+    const newAddress = this.userAddressRepo.create(createUserAddressDto);
+    return await this.userAddressRepo.save(newAddress);
   }
 
-  findAll() {
-    return `This action returns all userAddress`;
+  async findAll() {
+    return await this.userAddressRepo.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} userAddress`;
+  async findOne(id: number) {
+    return await this.userAddressRepo.findOne({ where: { id } });
   }
 
-  update(id: number, updateUserAddressDto: UpdateUserAddressDto) {
-    return `This action updates a #${id} userAddress`;
+  async update(id: number, updateUserAddressDto: UpdateUserAddressDto) {
+    await this.userAddressRepo.update(id, updateUserAddressDto);
+    return this.findOne(id);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} userAddress`;
+  async remove(id: number) {
+    const toDelete = await this.findOne(id);
+    if (!toDelete) return null;
+    await this.userAddressRepo.delete(id);
+    return toDelete;
   }
 }

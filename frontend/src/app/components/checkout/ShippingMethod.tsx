@@ -8,9 +8,7 @@ export type CheckoutItem = {
   name: string;
   image?: string;
   quantity: number;
-  /** Có thể là number hoặc string từ API */
   price: number | string;
-  /** giá cũ (để gạch) nếu có – cũng có thể là string */
   oldPrice?: number | string;
 };
 
@@ -24,24 +22,23 @@ type Props = {
   etaLabel?: string;
   storeName?: string;
   saving?: number | null;
-  /** phí ship hiện tại */
   shippingFee?: number | string | null;
-  /** phí ship cũ để gạch (ví dụ 32.700đ) */
   shippingFeeOld?: number | string | null;
 
   methodLabel?: string;
   badgeLabel?: string;
 };
 
-/** Ép về số an toàn */
-const toNum = (v: number | string | null | undefined) => {
+/** Convert mọi loại value về number an toàn */
+const toNum = (v: number | string | null | undefined): number | null => {
   if (v === null || v === undefined) return null;
-  const n = typeof v === "string" ? Number((v as string).replace(/[^\d.-]/g, "")) : v;
-  return Number.isFinite(n) ? (n as number) : null;
+  const n =
+    typeof v === "string" ? Number(v.replace(/[^\d.-]/g, "")) : Number(v);
+  return Number.isFinite(n) ? n : null;
 };
 
-/** Format VND (có đ) – hiển thị rỗng nếu không hợp lệ */
-const fmt = (v?: number | string | null) => {
+/** Format VND */
+const fmt = (v?: number | string | null): string => {
   const n = toNum(v);
   return n === null ? "" : `${n.toLocaleString("vi-VN")} đ`;
 };
@@ -59,7 +56,8 @@ export const ShippingMethod: React.FC<Props> = ({
   badgeLabel = "GIAO TIẾT KIỆM",
 }) => {
   return (
-    <Card title="Chọn hình thức giao hàng" styles={{ body: { paddingTop: 12 } }}>
+    <Card title="Chọn hình thức giao hàng" bodyStyle={{ paddingTop: 12 }}>
+      {/* Chọn loại giao hàng */}
       <Radio.Group
         value={selected}
         onChange={(e) => onChange(e.target.value as ShippingMethodType)}
@@ -69,15 +67,19 @@ export const ShippingMethod: React.FC<Props> = ({
           size="small"
           style={{
             marginBottom: 12,
-            border: selected === "economy" ? "1px solid #1677ff" : "1px solid #f0f0f0",
-            background: selected === "economy" ? "rgba(22,119,255,0.06)" : "transparent",
+            border:
+              selected === "economy"
+                ? "1px solid #1677ff"
+                : "1px solid #f0f0f0",
+            background:
+              selected === "economy" ? "rgba(22,119,255,0.06)" : "transparent",
           }}
           bodyStyle={{ padding: 12 }}
         >
           <div className="flex items-center gap-8">
             <Radio value="economy">{methodLabel}</Radio>
             {typeof saving === "number" && saving > 0 && (
-              <Text type="secondary" style={{ color: "#52c41a" }}>
+              <Text style={{ color: "#52c41a" }}>
                 -{Math.round(saving / 1000)}K
               </Text>
             )}
@@ -85,7 +87,9 @@ export const ShippingMethod: React.FC<Props> = ({
         </Card>
       </Radio.Group>
 
+      {/* Thông tin ETA + sản phẩm + phí ship */}
       <Card size="small" type="inner" style={{ marginTop: 8 }} bodyStyle={{ padding: 12 }}>
+        {/* ETA */}
         {etaLabel && (
           <div className="flex items-center gap-2 mb-10" style={{ fontWeight: 500 }}>
             📦 <span style={{ color: "#1677ff" }}>{etaLabel}</span>
@@ -93,7 +97,6 @@ export const ShippingMethod: React.FC<Props> = ({
         )}
 
         <div
-          className="grid grid-cols-[1fr_260px] gap-12"
           style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12 }}
         >
           {/* Trái: danh sách sản phẩm */}
@@ -107,19 +110,20 @@ export const ShippingMethod: React.FC<Props> = ({
             {items.map((it) => {
               const p = toNum(it.price);
               const op = toNum(it.oldPrice);
+
               return (
                 <div
                   key={it.id}
-                  className="items-center"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "56px 1fr auto",
                     gap: 12,
                     marginTop: 12,
+                    alignItems: "center",
                   }}
                 >
                   <Image
-                    src={it.image}
+                    src={it.image || ""}
                     alt={it.name}
                     width={56}
                     height={56}
@@ -128,7 +132,6 @@ export const ShippingMethod: React.FC<Props> = ({
                     fallback="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56'/>"
                   />
 
-                  {/* Tên + SL */}
                   <div style={{ lineHeight: 1.4 }}>
                     <Text ellipsis style={{ maxWidth: 320 }}>
                       {it.name}
@@ -138,13 +141,12 @@ export const ShippingMethod: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  {/* GIÁ BÊN PHẢI */}
-                  <div className="text-right" style={{ minWidth: 110 }}>
+                  <div style={{ minWidth: 110, textAlign: "right" }}>
                     {op !== null && p !== null && op > p && (
                       <Text
                         delete
                         type="secondary"
-                        style={{ display: "block", fontSize: 12, lineHeight: 1 }}
+                        style={{ display: "block", fontSize: 12 }}
                       >
                         {fmt(op)}
                       </Text>
@@ -169,7 +171,9 @@ export const ShippingMethod: React.FC<Props> = ({
                 {toNum(shippingFee) === 0 ? (
                   <Tag color="green">MIỄN PHÍ</Tag>
                 ) : (
-                  toNum(shippingFee) !== null && <Text strong>{fmt(shippingFee)}</Text>
+                  toNum(shippingFee) !== null && (
+                    <Text strong>{fmt(shippingFee)}</Text>
+                  )
                 )}
               </div>
             )}
@@ -195,7 +199,7 @@ export const ShippingMethod: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Link mã shop (tuỳ chọn) */}
+        {/* Link mã shop */}
         <div
           className="flex items-center gap-2 mt-12"
           style={{ color: "#1677ff", cursor: "pointer" }}
