@@ -33,6 +33,8 @@ import FeaturedBrandsPage from "./components/FeaturedBrands";
 import BrandPage from "./page/BrandPage";
 import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
+import OtpVerifyPage from "./page/OtpVerify";
+
 
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
@@ -112,6 +114,7 @@ const App: React.FC = () => {
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/verify-otp" element={<OtpVerifyPage />} />
       </Routes>
     </CartProvider>
     </AuthProvider>
