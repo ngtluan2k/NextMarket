@@ -72,15 +72,15 @@ export interface Product {
     barcode: string;
     created_at: string;
     updated_at: string;
+    inventories?: Array<{
+      id: number;
+      uuid: string;
+      location: string;
+      quantity: number;
+      used_quantity?: number;
+    }>;
   }>;
-  inventory?: {
-    variant_sku: string;
-    variant_id?: number;
-    product_id?: number;
-    location: string;
-    quantity: number;
-    used_quantity?: number;
-  }[];
+  
   pricing_rules?: Array<{
     id: number;
     uuid: string;

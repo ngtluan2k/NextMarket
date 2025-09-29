@@ -51,7 +51,7 @@ export class Variant {
   updated_at!: Date;
 
   // === Relations ===
-  @OneToMany(() => Inventory, (inventory) => inventory.variant)
+  @OneToMany(() => Inventory, (inventories) => inventories.variant)
   inventories!: Inventory[];
   @OneToMany(() => OrderItem, (item) => item.variant)
   orderItems!: OrderItem[];

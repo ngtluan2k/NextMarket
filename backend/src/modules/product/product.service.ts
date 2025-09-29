@@ -171,6 +171,7 @@ export class ProductService {
         'categories',
         'media',
         'variants',
+        'variants.inventories',
         'pricing_rules',
       ],
     });
@@ -196,49 +197,47 @@ export class ProductService {
   // product.service.ts
 
 async updateProduct(id: number, dto: any, userId: number) {
-  // --- Lấy product ---
+  // --- Lấy product với tất cả quan hệ ---
   const product = await this.productRepo.findOne({
     where: { id },
     relations: [
       'store',
+      'brand',
       'categories',
+      'media',
       'variants',
       'variants.inventories',
-      'media',
       'pricing_rules',
     ],
   });
   if (!product) throw new NotFoundException('Product not found');
+
   if (product.store.user_id !== userId) {
     throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
   }
 
-  // --- Update product chính ---
+  // --- Cập nhật product chính ---
   const updatedProduct = await this.productRepo.save({
     ...product,
     ...dto,
-    status: product.status, // giữ nguyên status
+      status: dto.status ?? product.status,
   });
 
-  // --- Update categories ---
-  if (dto.categories) {
-    await this.productCategoryRepo.delete({ product: { id } });
+  // --- Update categories (giữ nguyên quan hệ, không delete cũ nếu muốn) ---
+  if (Array.isArray(dto.categories)) {
     for (const catId of dto.categories) {
-      await this.productCategoryRepo.save({
-        product: { id },
-        category: { id: catId },
-      });
+      const exists = product.categories.find(c => c.id === catId);
+      if (!exists) {
+        await this.productCategoryRepo.save({
+          product: { id },
+          category: { id: catId },
+        });
+      }
     }
   }
 
   // --- Update media ---
-  if (dto.media) {
-    const dtoMediaIds = dto.media.map((m: any) => m.id).filter(Boolean);
-    await this.mediaRepo.delete({
-      product: { id },
-      id: Not(In(dtoMediaIds.length ? dtoMediaIds : [0])),
-    });
-
+  if (Array.isArray(dto.media)) {
     for (const mediaDto of dto.media) {
       if (mediaDto.id) {
         await this.mediaRepo.update(mediaDto.id, { ...mediaDto });
@@ -249,61 +248,48 @@ async updateProduct(id: number, dto: any, userId: number) {
   }
 
   // --- Update variants + inventories ---
-  if (dto.variants) {
-    const dtoVariantIds = dto.variants.map((v: any) => v.id).filter(Boolean);
+ if (Array.isArray(dto.variants)) {
+  for (const variantDto of dto.variants) {
+    let variant: Variant;
 
-    await this.variantRepo.delete({
-      product: { id },
-      id: Not(In(dtoVariantIds.length ? dtoVariantIds : [0])),
-    });
+    // Tách inventories ra khỏi dữ liệu variant
+    const { inventories, ...variantData } = variantDto;
 
-    for (const variantDto of dto.variants) {
-      let variant: Variant;
+    if (variantDto.id) {
+      // Chỉ update variant, không chạm inventories
+      await this.variantRepo.update(variantDto.id, { ...variantData });
 
-      if (variantDto.id) {
-  await this.variantRepo.update(variantDto.id, { ...variantDto });
-  const found = await this.variantRepo.findOne({ where: { id: variantDto.id } });
-  if (!found) throw new NotFoundException('Variant not found after update');
-  variant = found;
-} else {
-  variant = await this.variantRepo.save({ ...variantDto, product: { id } });
-}
+      const found = await this.variantRepo.findOne({
+        where: { id: variantDto.id },
+      });
+      if (!found) throw new NotFoundException('Variant not found after update');
+      variant = found!;
+    } else {
+      // Lưu variant mới
+      variant = await this.variantRepo.save({ ...variantData, product: { id } });
+    }
 
-
-      // --- Inventories ---
-      if (variantDto.inventories) {
-        const dtoInvIds = variantDto.inventories.map((inv: any) => inv.id).filter(Boolean);
-
-        await this.inventoryRepo.delete({
-          variant: { id: variant.id },
-          id: Not(In(dtoInvIds.length ? dtoInvIds : [0])),
-        });
-
-        for (const invDto of variantDto.inventories) {
-          if (invDto.id) {
-            await this.inventoryRepo.update(invDto.id, { ...invDto });
-          } else {
-            await this.inventoryRepo.save({ ...invDto, variant: { id: variant.id } });
-          }
+    // --- Update inventories riêng ---
+    if (Array.isArray(inventories)) {
+      for (const invDto of inventories) {
+        if (invDto.id) {
+          await this.inventoryRepo.update(invDto.id, { ...invDto });
+        } else {
+          await this.inventoryRepo.save({ ...invDto, variant: { id: variant.id } });
         }
       }
     }
   }
+}
+
 
   // --- Update pricing_rules ---
-  if (dto.pricing_rules) {
-    const dtoRuleIds = dto.pricing_rules.map((r: any) => r.id).filter(Boolean);
-
-    await this.pricingRuleRepo.delete({
-      product: { id },
-      id: Not(In(dtoRuleIds.length ? dtoRuleIds : [0])),
-    });
-
-    for (const rule of dto.pricing_rules) {
-      if (rule.id) {
-        await this.pricingRuleRepo.update(rule.id, { ...rule, product: { id } });
+  if (Array.isArray(dto.pricing_rules)) {
+    for (const ruleDto of dto.pricing_rules) {
+      if (ruleDto.id) {
+        await this.pricingRuleRepo.update(ruleDto.id, { ...ruleDto, product: { id } });
       } else {
-        await this.pricingRuleRepo.save({ ...rule, product: { id } });
+        await this.pricingRuleRepo.save({ ...ruleDto, product: { id } });
       }
     }
   }
@@ -443,6 +429,7 @@ async findBySlug(slug: string): Promise<ProductResponseDto> {
         'categories',
         'media',
         'variants',
+        'variants.inventories',
         'pricing_rules',
       ],
     });

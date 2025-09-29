@@ -55,9 +55,10 @@ export class ProductController {
   }
 
   // Lấy 1 sản phẩm theo id
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: number, @Req() req: any) {
-    const userId = req.user.id;
+    const userId = req.user.sub;
     return this.productService.findOne(id, userId);
   }
 
@@ -227,7 +228,6 @@ export class ProductController {
       data: products,
     };
   }
-
 @Put(':id')
 @UseGuards(JwtAuthGuard)
 @UseInterceptors(
@@ -243,33 +243,44 @@ export class ProductController {
         cb(null, uniqueSuffix + extname(file.originalname));
       },
     }),
-  })
+  }),
 )
 async updateDraft(
   @Param('id') id: number,
   @UploadedFiles() files: Express.Multer.File[],
   @Body() dto: any,
-  @Req() req: any
+  @Req() req: any,
 ) {
-  // Parse JSON từ FormData
-  if (dto.variants) dto.variants = JSON.parse(dto.variants);
-  if (dto.inventory) dto.inventory = JSON.parse(dto.inventory);
-  if (dto.pricing_rules) dto.pricing_rules = JSON.parse(dto.pricing_rules);
-  if (dto.categories) dto.categories = JSON.parse(dto.categories);
+  // --- Parse JSON từ FormData và chuẩn hóa thành array ---
+  dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
+  dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
+  dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
+  dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
+  dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
 
-  // Nếu có media
+  // --- Merge media_meta + files mới ---
+  dto.media = dto.media_meta.map((m: any) => ({
+    ...m,
+    url: m.url ? m.url.replace(/^https?:\/\/[^/]+/, '') : '', // chuyển URL cũ thành relative
+  }));
+
   if (files?.length) {
-    dto.media = files.map((file, index) => ({
-      file_name: file.filename,
-      media_type: 'image',
-      is_primary: index === 0,
-      url: `/uploads/products/${file.filename}`,
-    }));
+    files.forEach((file) => {
+      dto.media.push({
+        file_name: file.filename,
+        media_type: 'image',
+        is_primary: false,
+        url: `/uploads/products/${file.filename}`,
+        sort_order: dto.media.length + 1,
+      });
+    });
   }
 
+  // --- Gọi service update ---
   const userId = req.user.sub;
   return this.productService.updateProduct(id, dto, userId);
 }
+
 
 @Put(':id/publish')
 @UseGuards(JwtAuthGuard)

@@ -51,7 +51,7 @@ import { EditProductForm } from '../../../components/seller/EditProductForm';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-interface Product {
+export interface Product {
   key: string;
   id: string;
   name: string;
@@ -69,7 +69,7 @@ interface Product {
   description: string;
   tags: string[];
   createdAt: string;
-categories: { id: number; name: string }[];
+  categories: { id: number; name: string }[];
   media: {
     media_type: string;
     url: string;
@@ -84,15 +84,14 @@ categories: { id: number; name: string }[];
     price: number;
     stock: number;
     barcode?: string;
+    inventories?: {
+      id?: number;
+      location: string;
+      quantity: number;
+      used_quantity?: number;
+    }[];
   }[];
-  inventory: {
-    variant_sku: string;
-    variant_id?: number;
-    product_id?: number;
-    location: string;
-    quantity: number;
-    used_quantity?: number;
-  }[];
+
   pricing_rules: {
     type: string;
     min_quantity: number;
@@ -118,6 +117,11 @@ export default function StoreInventory() {
   const [form] = Form.useForm();
 
   const [isAddWizardVisible, setAddWizardVisible] = useState(false);
+  const handleProductUpdated = (updatedProduct: Product) => {
+  setProducts((prev) =>
+    prev.map((p) => (p.apiId === updatedProduct.apiId ? updatedProduct : p))
+  );
+};
 
   useEffect(() => {
     fetchStores();
@@ -168,7 +172,9 @@ export default function StoreInventory() {
       );
 
       const mappedProducts: Product[] = activeProducts.map(
+        
         (apiProduct: ApiProduct) => {
+          
           // Lấy ảnh chính
           const primaryImage =
             apiProduct.media?.find(
@@ -223,12 +229,11 @@ export default function StoreInventory() {
             brandId: apiProduct.brand?.id || apiProduct.brand_id || 0,
 
             // ✅ categories là số
-categories:
-  apiProduct.categories?.map((c) => ({
-    id: c.category_id || c.id,
-    name: c.category?.name || '',
-  })) || [],
-
+            categories:
+              apiProduct.categories?.map((c) => ({
+                id: c.category_id || c.id,
+                name: c.category?.name || '',
+              })) || [],
 
             // ✅ media
             media:
@@ -242,8 +247,11 @@ categories:
               })) || [],
 
             // ✅ variants
+            // variants
+            
             variants:
               apiProduct.variants?.map((v) => ({
+                
                 id: v.id,
                 sku: v.sku,
                 variant_name: v.variant_name,
@@ -251,17 +259,13 @@ categories:
                   typeof v.price === 'string' ? parseFloat(v.price) : v.price,
                 stock: v.stock,
                 barcode: v.barcode,
-              })) || [],
-
-            // ✅ inventory
-            inventory:
-              apiProduct.inventory?.map((inv) => ({
-                variant_sku: inv.variant_sku,
-                variant_id: inv.variant_id,
-                product_id: inv.product_id,
-                location: inv.location,
-                quantity: inv.quantity,
-                used_quantity: inv.used_quantity,
+                inventories:
+                  v.inventories?.map((inv) => ({
+                    id: inv.id,
+                    location: inv.location,
+                    quantity: inv.quantity,
+                    used_quantity: inv.used_quantity || 0,
+                  })) || [],
               })) || [],
 
             // ✅ pricing_rules
@@ -758,8 +762,12 @@ categories:
             width={800}
           >
             <EditProductForm
+            
               product={editingProduct}
+              
               onClose={() => setEditingProduct(null)}
+                onProductUpdated={handleProductUpdated}
+
             />
           </Modal>
         )}

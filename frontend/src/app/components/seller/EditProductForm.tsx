@@ -1,18 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { productService } from '../../../service/product.service';
-
+import type {Product}  from '../../page/Seller/tab/StoreInventory';
 interface EditProductFormProps {
   product: any; // dữ liệu sản phẩm cần sửa
   onClose: () => void; // đóng modal
+  onProductUpdated?: (updatedProduct: Product) => void;
 }
 
 export const EditProductForm: React.FC<EditProductFormProps> = ({
   product,
   onClose,
+    onProductUpdated,
 }) => {
+  console.log('Props from parent:', { product, onClose });
+  console.log(
+    'Inventory của variant đầu tiên:',
+    product.variants[0]?.inventories
+  );
+
   const [step, setStep] = useState(1);
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [deletedMediaIds, setDeletedMediaIds] = useState<number[]>([]);
+  const [addingMedia, setAddingMedia] = useState(false); // track user đang thêm media mới
 
   interface ProductFormState {
     name: string;
@@ -22,6 +32,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     brandId: number;
     categories: number[]; // lưu id
     media: {
+      id?: number;
       media_type: string;
       url: string;
       is_primary?: boolean;
@@ -29,6 +40,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       file?: File;
     }[];
     variants: {
+      id?: number;
       sku: string;
       variant_name: string;
       price: number;
@@ -36,11 +48,18 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       barcode?: string;
     }[];
     inventory: {
+      id?: number;
       variant_sku: string;
       variant_id?: number;
       product_id?: number;
       location: string;
       quantity: number;
+      inventories?: {
+        id?: number;
+        location: string;
+        quantity: number;
+        used_quantity?: number;
+      }[];
     }[];
     pricing_rules: {
       type: string;
@@ -69,7 +88,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   useEffect(() => {
     const token = localStorage.getItem('token');
 
-    // fetch brands và categories song song
     const fetchData = async () => {
       try {
         const [brandsRes, categoriesRes] = await Promise.all([
@@ -87,17 +105,17 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         setBrands(brandsData);
         setCategories(categoriesData);
 
-        // chỉ preload product khi brands + categories đã có
         if (product) {
-          // map variants + stock
+          // Map variants + stock
           const variantsWithStock = (product.variants || []).map((v: any) => {
-            const totalStock = (product.inventory || [])
-              .filter((inv: any) => inv.variant_id === v.id)
-              .reduce((sum: number, inv: any) => sum + inv.quantity, 0);
+            const totalStock = (v.inventories || []).reduce(
+              (sum: number, inv: any) => sum + inv.quantity,
+              0
+            );
             return { ...v, stock: totalStock };
           });
 
-          // map pricing rules
+          // Map pricing rules
           const pricingRules = (product.pricing_rules || []).map((pr: any) => ({
             ...pr,
             starts_at: pr.starts_at
@@ -108,20 +126,20 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               : '',
           }));
 
-          // map inventory + variant_sku
-          const inventoryWithSKU = (product.inventory || []).map((inv: any) => {
-            const variant = product.variants.find(
-              (v: any) => v.id === inv.variant_id
-            );
-            return {
-              ...inv,
-              variant_sku: variant?.sku || '',
-            };
-          });
+          // Flatten inventories from variants
+          const inventoryWithSKU = (product.variants || []).flatMap((v: any) =>
+            (v.inventories || []).map((inv: any) => ({
+              id: inv.id,
+              variant_sku: v.sku,
+              variant_id: v.id,
+              product_id: product.id,
+              location: inv.location,
+              quantity: inv.quantity,
+              used_quantity: inv.used_quantity || 0,
+            }))
+          );
 
-          // map category ids dựa trên categories fetch xong
           const categoryIds = (product.categories || []).map((c: any) => c.id);
-          setForm((prev) => ({ ...prev, categories: categoryIds }));
 
           setForm({
             name: product.name || '',
@@ -130,20 +148,21 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             base_price: product.base_price || 0,
             brandId: product.brandId || 0,
             categories: categoryIds,
-            media: product.media || [],
+            media: (product.media || []).filter(
+              (m: any) => m.url && m.url !== ''
+            ),
             variants: variantsWithStock,
             inventory: inventoryWithSKU,
             pricing_rules: pricingRules,
           });
         }
       } catch (err) {
-        console.error('Failed to fetch brands or categories', err);
+        console.error('Lỗi khi tải brands hoặc categories:', err);
       }
     };
 
     fetchData();
   }, [product]);
-
   // Handlers
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -164,29 +183,33 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     }));
   };
 
+  const addMedia = () =>
+    setForm((prev) => ({
+      ...prev,
+      media: [
+        ...prev.media,
+        {
+          media_type: 'image',
+          url: '',
+          is_primary: false,
+          sort_order: prev.media.length + 1,
+        },
+      ],
+    }));
+
+  // Xử lý thay đổi file
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     index: number
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const previewUrl = URL.createObjectURL(file);
     const newMedia = [...form.media];
-    newMedia[index] = {
-      ...newMedia[index],
-      file,
-      url: URL.createObjectURL(file),
-    };
-    setForm((prev) => ({ ...prev, media: newMedia }));
+    newMedia[index] = { ...newMedia[index], file, url: previewUrl };
+    setForm({ ...form, media: newMedia });
   };
 
-  const addMedia = () =>
-    setForm((prev) => ({
-      ...prev,
-      media: [
-        ...prev.media,
-        { media_type: 'image', url: '', sort_order: prev.media.length + 1 },
-      ],
-    }));
   const addVariant = () =>
     setForm((prev) => ({
       ...prev,
@@ -200,7 +223,13 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       ...prev,
       inventory: [
         ...prev.inventory,
-        { variant_sku: '', location: '', quantity: 0 },
+        {
+          variant_sku: '',
+          variant_id: undefined,
+          product_id: undefined,
+          location: '',
+          quantity: 0,
+        },
       ],
     }));
   const addPricingRule = () =>
@@ -235,31 +264,81 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     });
     return errors;
   };
+  const variantsWithStock = form.variants.map((v) => {
+    const totalStock = form.inventory
+      .filter((inv) => inv.variant_sku === v.sku)
+      .reduce((sum, inv) => sum + inv.quantity, 0);
+    return { ...v, stock: totalStock };
+  });
 
-  const handleSubmit = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('short_description', form.short_description || '');
-      formData.append('description', form.description || '');
-      formData.append('base_price', String(form.base_price));
-      formData.append('brandId', String(form.brandId));
-      formData.append('categories', JSON.stringify(form.categories));
-      formData.append('variants', JSON.stringify(form.variants));
-      formData.append('inventory', JSON.stringify(form.inventory));
-      formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
+  // Khi submit, lọc bỏ các slot rỗng
+const handleSubmit = async (status: 'draft' | 'active') => {
+  try {
+    // --- Tách media cũ và media mới ---
+    const existingMedia = form.media.filter((m) => m.url && !m.file); // chỉ media đã có url
+    const newMedia = form.media.filter((m) => m.file); // media mới upload
 
-      form.media.forEach((m) => {
-        if (m.file) formData.append('media', m.file);
-      });
+    // --- Tạo FormData ---
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('short_description', form.short_description || '');
+    formData.append('description', form.description || '');
+    formData.append('base_price', String(form.base_price));
+    formData.append('brandId', String(form.brandId));
+    formData.append('categories', JSON.stringify(form.categories));
+    formData.append('variants', JSON.stringify(variantsWithStock));
+    formData.append('inventory', JSON.stringify(form.inventory));
+    formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
+    formData.append('status', status);
 
-      await productService.updateProduct(product.apiId, formData);
-      alert('Product updated successfully!');
-      onClose();
-    } catch (err: any) {
-      alert(err.message);
+    // --- Chỉ gửi media cũ trong media_meta ---
+    formData.append(
+      'media_meta',
+      JSON.stringify(
+        existingMedia.map((m, idx) => ({
+          id: (m as any).id || null,
+          url: m.url,
+          media_type: m.media_type,
+          is_primary: m.is_primary || false,
+          sort_order: m.sort_order || idx + 1,
+        }))
+      )
+    );
+
+    // --- Gửi media mới riêng ---
+    newMedia.forEach((m) => {
+      if (m.file) formData.append('media', m.file);
+    });
+
+    // --- Gửi các media bị xóa nếu có ---
+    if (deletedMediaIds.length) {
+      formData.append('deleted_media_ids', JSON.stringify(deletedMediaIds));
     }
-  };
+
+    // --- Gọi API update ---
+    const updatedApiProduct = await productService.updateProduct(
+      product.apiId,
+      formData
+    );
+
+    // --- Map dữ liệu mới sang Product để update state cha ---
+    const updatedProduct: Product = {
+      ...product,
+      ...form, // dữ liệu từ form
+      base_price: Number(form.base_price),
+      statusApi: status,
+    };
+
+    // --- Gọi callback nếu có để update state cha ---
+    onProductUpdated?.(updatedProduct);
+
+    alert('Product updated successfully!');
+    onClose();
+  } catch (err: any) {
+    alert(err.message || 'Update failed');
+  }
+};
+
 
   const submitForm = async (isDraft: boolean) => {
     const errors = !isDraft ? validateForm() : [];
@@ -267,7 +346,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       alert('Please fix the following errors:\n' + errors.join('\n'));
       return;
     }
-    await handleSubmit();
+
+    const status = isDraft ? 'draft' : 'active';
+    await handleSubmit(status); // truyền status đúng
   };
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 4));
@@ -391,25 +472,31 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       {step === 2 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Media</h3>
+
           {form.media.map((m, i) => (
             <div key={i} className="flex items-center gap-4">
+              {/* Input file */}
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileChange(e, i)}
                 className="flex-1"
               />
+
+              {/* Preview image */}
               {m.url && (
                 <img
                   src={m.url}
                   className="w-20 h-20 object-cover rounded-md"
                 />
               )}
+
+              {/* Primary checkbox */}
               <label className="flex items-center gap-1">
                 Primary
                 <input
                   type="checkbox"
-                  checked={m.is_primary}
+                  checked={m.is_primary || false}
                   onChange={(e) => {
                     const newMedia = [...form.media];
                     newMedia[i].is_primary = e.target.checked;
@@ -418,8 +505,30 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   className="w-4 h-4"
                 />
               </label>
+
+              {/* Delete button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const removed = form.media[i];
+
+                  // Nếu media cũ (có id), thêm vào deletedMediaIds
+                  if (removed.id) {
+                    setDeletedMediaIds((prev) => [...prev, Number(removed.id)]);
+                  }
+
+                  // Xóa media khỏi form
+                  const newMedia = form.media.filter((_, idx) => idx !== i);
+                  setForm({ ...form, media: newMedia });
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded-md"
+              >
+                Delete
+              </button>
             </div>
           ))}
+
+          {/* Add Media button */}
           <button
             type="button"
             onClick={addMedia}
@@ -433,138 +542,117 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       {step === 3 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Variants & Inventory</h3>
-
+          {/* Variants */}
           {form.variants.map((v, i) => {
-            const variantInventory = form.inventory.filter(
-              (inv) => inv.variant_sku === v.sku
-            );
-
+            const totalStock = form.inventory
+              .filter((inv) => inv.variant_sku === v.sku)
+              .reduce((sum, inv) => sum + inv.quantity, 0);
             return (
-              <div key={i} className="mb-4 border p-3 rounded-md">
-                <h4 className="font-medium mb-2">
-                  {v.variant_name || 'Variant'} (SKU: {v.sku})
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2">
-                  <input
-                    placeholder="SKU"
-                    value={v.sku}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].sku = e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className="px-3 py-2 border rounded-md"
-                  />
-                  <input
-                    placeholder="Name"
-                    value={v.variant_name}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].variant_name = e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className="px-3 py-2 border rounded-md"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Price"
-                    value={v.price}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].price = +e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className="px-3 py-2 border rounded-md"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Total Stock"
-                    value={variantInventory.reduce(
-                      (sum, inv) => sum + inv.quantity,
-                      0
-                    )}
-                    readOnly
-                    className="px-3 py-2 border rounded-md bg-gray-100"
-                  />
-                  <input
-                    placeholder="Barcode"
-                    value={v.barcode || ''}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].barcode = e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className="px-3 py-2 border rounded-md"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  {variantInventory.map((inv, j) => (
-                    <div
-                      key={j}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                    >
-                      <input
-                        placeholder="Location"
-                        value={inv.location}
-                        onChange={(e) => {
-                          const newInv = [...form.inventory];
-                          newInv[j].location = e.target.value; // <- sửa ở đây
-                          setForm({ ...form, inventory: newInv });
-                        }}
-                        className="px-3 py-2 border rounded-md"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Quantity"
-                        value={inv.quantity}
-                        onChange={(e) => {
-                          const newInv = [...form.inventory];
-                          newInv[j].quantity = +e.target.value; // <- sửa ở đây
-                          setForm({ ...form, inventory: newInv });
-                        }}
-                        className="px-3 py-2 border rounded-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newInv = form.inventory.filter(
-                            (ii) => ii !== inv
-                          );
-                          setForm({ ...form, inventory: newInv });
-                        }}
-                        className="px-3 py-2 bg-red-500 text-white rounded-md"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        inventory: [
-                          ...prev.inventory,
-                          { variant_sku: v.sku, location: '', quantity: 0 },
-                        ],
-                      }))
-                    }
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md"
-                  >
-                    Add Inventory
-                  </button>
-                </div>
+              <div
+                key={i}
+                className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-2"
+              >
+                <input
+                  placeholder="SKU"
+                  value={v.sku}
+                  onChange={(e) => {
+                    const newVar = [...form.variants];
+                    newVar[i].sku = e.target.value;
+                    setForm({ ...form, variants: newVar });
+                  }}
+                  className="px-3 py-2 border rounded-md"
+                />
+                <input
+                  placeholder="Name"
+                  value={v.variant_name}
+                  onChange={(e) => {
+                    const newVar = [...form.variants];
+                    newVar[i].variant_name = e.target.value;
+                    setForm({ ...form, variants: newVar });
+                  }}
+                  className="px-3 py-2 border rounded-md"
+                />
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={v.price}
+                  onChange={(e) => {
+                    const newVar = [...form.variants];
+                    newVar[i].price = +e.target.value;
+                    setForm({ ...form, variants: newVar });
+                  }}
+                  className="px-3 py-2 border rounded-md"
+                />
+                <input
+                  type="number"
+                  placeholder="Stock"
+                  value={totalStock}
+                  readOnly
+                  className="px-3 py-2 border rounded-md bg-gray-100"
+                />
+                <input
+                  placeholder="Barcode"
+                  value={v.barcode || ''}
+                  onChange={(e) => {
+                    const newVar = [...form.variants];
+                    newVar[i].barcode = e.target.value;
+                    setForm({ ...form, variants: newVar });
+                  }}
+                  className="px-3 py-2 border rounded-md"
+                />
               </div>
             );
           })}
-
           <button
             type="button"
             onClick={addVariant}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Add Variant
+          </button>
+
+          {/* Inventory */}
+          {form.inventory.map((inv, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+              <input
+                placeholder="Variant SKU"
+                value={inv.variant_sku}
+                onChange={(e) => {
+                  const newInv = [...form.inventory];
+                  newInv[i].variant_sku = e.target.value;
+                  setForm({ ...form, inventory: newInv });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+              <input
+                placeholder="Location"
+                value={inv.location}
+                onChange={(e) => {
+                  const newInv = [...form.inventory];
+                  newInv[i].location = e.target.value;
+                  setForm({ ...form, inventory: newInv });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+              <input
+                type="number"
+                placeholder="Quantity"
+                value={inv.quantity}
+                onChange={(e) => {
+                  const newInv = [...form.inventory];
+                  newInv[i].quantity = +e.target.value;
+                  setForm({ ...form, inventory: newInv });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addInventory}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Add Inventory
           </button>
         </section>
       )}
@@ -676,9 +764,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             >
               Publish
             </button>
+
             <button
               type="button"
-              onClick={() => submitForm(true)} // Save Draft
+              onClick={() => handleSubmit('draft')} // Save Draft
               className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
             >
               Save Draft
