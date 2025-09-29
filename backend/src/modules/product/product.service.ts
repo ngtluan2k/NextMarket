@@ -158,22 +158,62 @@ export class ProductService {
   }
 
   async findOne(id: number, userId?: number) {
-    const product = await this.productRepo.findOne({
-      where: userId
-        ? { id, store: { user_id: userId } } // chỉ check nếu có userId
-        : { id },
-      relations: [
-        'store',
-        'brand',
-        'categories',
-        'media',
-        'variants',
-        'pricing_rules',
-      ],
+    return this.getProductStock(id, userId);
+  }
+
+  async getProductStock(productId: number, userId?: number) {
+    const product = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('variant.inventories', 'inventory')
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.store', 'store')
+      .leftJoinAndSelect('product.categories', 'categories')
+      .leftJoinAndSelect('categories.category', 'category')
+      .where('product.id =: productId', { productId })
+      .andWhere(
+        userId ? 'store.user_id = :userId' : '1=1',
+        userId
+          ? {
+              userId,
+            }
+          : {}
+      )
+      .getOne();
+    if (!product) throw new NotFoundException('Product not found! ');
+    const variantsWithStock = product.variants.map((variant) => {
+      const inventoryDetails = variant.inventories.map((inv) => ({
+        location: inv.location,
+        quantity: inv.quantity,
+        used_quantity: inv.used_quantity,
+        reserved_stock: inv.reserved_stock,
+        available_quantity: Math.max(
+          0,
+          inv.quantity - inv.used_quantity - inv.reserved_stock
+        ),
+      }));
+
+      const totalAvailable = inventoryDetails.reduce(
+        (sum, inv) => sum + inv.available_quantity,
+        0
+      );
+
+      return {
+        ...variant,
+        available_stock: totalAvailable,
+        inventory_details: inventoryDetails,
+      };
     });
 
-    if (!product) throw new NotFoundException('Product not found');
-    return product;
+    return {
+      ...product,
+      variants: variantsWithStock,
+      total_available_stock: variantsWithStock.reduce(
+        (sum, v) => sum + v.available_stock,
+        0
+      ),
+    };
   }
 
   async removeProduct(productId: number, userId: number) {

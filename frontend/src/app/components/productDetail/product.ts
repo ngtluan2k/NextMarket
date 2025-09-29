@@ -1,8 +1,9 @@
 export type StoreInfo = {
   id?: number;
   name?: string;
-  logo?: string;
+  logo_url?: string;
   user_id?: number;
+  slug?: string;
 };
 
 export type BrandInfo = {
@@ -22,6 +23,7 @@ export type VariantInfo = {
   sku?: string;
   name?: string;
   price?: number;
+  stock?: number;
 };
 
 export type PricingRuleInfo = {
@@ -48,9 +50,19 @@ export type Product = {
   media?: MediaInfo[];
   variants?: VariantInfo[];
   pricing_rules?: PricingRuleInfo[];
-  price?: number; 
-  listPrice?: number; 
-  rating?: number; 
-  reviewsCount?: number; 
-  sellerName?: string; 
+  price?: number;
+  listPrice?: number;
+  rating?: number;
+  reviewsCount?: number;
+  sellerName?: string;
+};
+
+export type CardItem = {
+  id?: number;
+  name?: string;
+  image?: string;
+  price?: number;
+  listPrice?: number;
+  rating?: number;
+  variantId?: number;
 };

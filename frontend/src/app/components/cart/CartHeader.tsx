@@ -37,9 +37,10 @@ export const CartHeader: React.FC<Props> = ({
     (cart[0] && (cart[0] as any).shop_name) ||
     'Shop';
 
-  const handleRemoveFromCart = (productId: number, productName: string, variantId?: number) => {
+  const handleRemoveFromCart = async (productId: number, productName: string, variantId?: number) => {
     try {
-      removeFromCart(productId, variantId);
+      console.log(productId)
+      await removeFromCart(productId, variantId);
       showMessage?.('success', `Removed ${productName} from cart successfully`);
     } catch (error) {
       showMessage?.('error', `Failed to remove ${productName} from cart`);
@@ -184,7 +185,7 @@ export const CartHeader: React.FC<Props> = ({
                   className="px-2"
                   onClick={() =>
                     updateQuantity(
-                      item.product_id,
+                      item.id,
                       Math.max(1, item.quantity - 1),
                       item.variant?.id
                     )
@@ -201,7 +202,7 @@ export const CartHeader: React.FC<Props> = ({
                 <button
                   className="px-2"
                   onClick={() =>
-                    updateQuantity(item.product_id, item.quantity + 1, item.variant?.id)
+                    updateQuantity(item.product.id, item.quantity + 1, item.variant?.id)
                   }
                 >
                   +
@@ -221,7 +222,7 @@ export const CartHeader: React.FC<Props> = ({
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() =>
-                  handleRemoveFromCart(item.product_id, item.product.name, item.variant?.id)
+                  handleRemoveFromCart(item.product.id, item.product.name, item.variant?.id)
                 }
               />
             </div>

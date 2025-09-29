@@ -3,8 +3,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface CartItem {
   id: number;
-  productId: number;  
-  variantId?: number;  
   quantity: number;
   price: number;
   product: {

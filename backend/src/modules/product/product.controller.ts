@@ -61,6 +61,7 @@ export class ProductController {
     return this.productService.findOne(id, userId);
   }
 
+
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FilesInterceptor('media', 10, {

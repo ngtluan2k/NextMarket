@@ -1,5 +1,12 @@
 export const TIKI_RED = "#ff424e";
 
+export const vnd = (n?: number) =>
+  (n ?? 0).toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  });
+
 export const PRODUCT_DETAIL_LAYOUT = {
   container: 1440,     // bề rộng tổng
   leftWidth: 420,      // KHUNG TRÁI

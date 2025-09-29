@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
-import { Card, Typography, Button, Tag, message } from "antd";
+import React, { useEffect } from 'react';
+import { Card, Typography, Button, Tag, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from "../../context/CartContext";
-import { api } from "../../../config/api";
-import { CheckoutItem } from "../../components/checkout/ShippingMethod";
+import { useCart } from '../../context/CartContext';
+import { api } from '../../../config/api';
+import { CheckoutItem } from '../../components/checkout/ShippingMethod';
 
 const { Text } = Typography;
 
@@ -37,7 +37,7 @@ type CartItem = {
 type Props = {
   selectedTotal: number;
   selectedCount: number;
-  mode?: "cart" | "checkout";
+  mode?: 'cart' | 'checkout';
   submitLabel?: string;
   selectedPaymentMethod?: string;
   paymentMethods?: PaymentMethodResponse[];
@@ -45,12 +45,13 @@ type Props = {
   userAddress?: UserAddress | null;
   items?: CheckoutItem[];
   etaLabel?: string;
+  onSubmit?: () => void;
 };
 
 export const CartSidebar: React.FC<Props> = ({
   selectedTotal,
   selectedCount,
-  mode = "cart",
+  mode = 'cart',
   submitLabel,
   selectedPaymentMethod,
   paymentMethods = [],
@@ -58,22 +59,23 @@ export const CartSidebar: React.FC<Props> = ({
   userAddress,
   items = [],
   etaLabel,
+  onSubmit
 }) => {
   const { cart } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
     try {
-      const userId = Number(localStorage.getItem("userId") || 1);
+      const userId = Number(localStorage.getItem('userId') || 1);
       const storeId = cart[0]?.storeId || 1;
 
       if (!userAddress || userAddress.id === 0) {
-        message.error("Vui lòng chọn địa chỉ giao hàng");
+        message.error('Vui lòng chọn địa chỉ giao hàng');
         return;
       }
 
       if (paymentMethods.length === 0 || !selectedPaymentMethod) {
-        message.error("Vui lòng chọn phương thức thanh toán");
+        message.error('Vui lòng chọn phương thức thanh toán');
         return;
       }
 
@@ -94,10 +96,10 @@ export const CartSidebar: React.FC<Props> = ({
         // Xóa shippingMethod và paymentMethod khỏi payload
       };
 
-      console.log("📦 Tạo đơn hàng:", orderPayload);
-      const orderRes = await api.post("/orders", orderPayload);
+      console.log('📦 Tạo đơn hàng:', orderPayload);
+      const orderRes = await api.post('/orders', orderPayload);
       const order = orderRes.data;
-      console.log("📦 Đơn hàng đã được tạo:", order);
+      console.log('📦 Đơn hàng đã được tạo:', order);
 
       // 2. Tìm phương thức thanh toán được chọn
       const selectedMethod = paymentMethods.find(
@@ -105,11 +107,13 @@ export const CartSidebar: React.FC<Props> = ({
       );
 
       if (!selectedMethod) {
-        message.error(`Không tìm thấy phương thức thanh toán: ${selectedPaymentMethod}`);
+        message.error(
+          `Không tìm thấy phương thức thanh toán: ${selectedPaymentMethod}`
+        );
         return;
       }
 
-      console.log("💳 Sử dụng phương thức thanh toán:", selectedMethod);
+      console.log('💳 Sử dụng phương thức thanh toán:', selectedMethod);
 
       // 3. Tạo thanh toán
       const paymentPayload = {
@@ -118,17 +122,17 @@ export const CartSidebar: React.FC<Props> = ({
         amount: Number(selectedTotal),
       };
 
-      console.log("💳 Tạo thanh toán:", paymentPayload);
-      const paymentRes = await api.post("/payments", paymentPayload);
+      console.log('💳 Tạo thanh toán:', paymentPayload);
+      const paymentRes = await api.post('/payments', paymentPayload);
       const { redirectUrl, payment } = paymentRes.data;
 
-      console.log("💳 Kết quả thanh toán:", paymentRes.data);
+      console.log('💳 Kết quả thanh toán:', paymentRes.data);
 
       if (redirectUrl) {
-        console.log("🔗 Chuyển hướng đến:", redirectUrl);
+        console.log('🔗 Chuyển hướng đến:', redirectUrl);
         window.location.href = redirectUrl;
       } else {
-        console.log("✅ Không cần chuyển hướng, chuyển đến trang thành công");
+        console.log('✅ Không cần chuyển hướng, chuyển đến trang thành công');
         navigate('/order/success', {
           state: {
             orderCode: order.uuid || order.id,
@@ -141,13 +145,18 @@ export const CartSidebar: React.FC<Props> = ({
         });
       }
     } catch (err: any) {
-      console.error("❌ Lỗi tạo đơn hàng/thanh toán:", err.response?.data || err.message);
-      message.error(err.response?.data?.message || "Không thể tạo đơn hàng");
+      console.error(
+        '❌ Lỗi tạo đơn hàng/thanh toán:',
+        err.response?.data || err.message
+      );
+      message.error(err.response?.data?.message || 'Không thể tạo đơn hàng');
     }
   };
 
   return (
-    <div style={{ position: "sticky", top: 24, maxWidth: 360, marginLeft: "auto" }}>
+    <div
+      style={{ position: 'sticky', top: 24, maxWidth: 360, marginLeft: 'auto' }}
+    >
       {/* Địa chỉ giao hàng */}
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
@@ -161,8 +170,8 @@ export const CartSidebar: React.FC<Props> = ({
           <>
             <p>
               <Text strong>
-                {userAddress.name ?? "Người nhận"} |{" "}
-                {userAddress.phone ?? "Chưa có SĐT"}
+                {userAddress.name ?? 'Người nhận'} |{' '}
+                {userAddress.phone ?? 'Chưa có SĐT'}
               </Text>
             </p>
             <p>{userAddress.fullAddress}</p>
@@ -184,12 +193,12 @@ export const CartSidebar: React.FC<Props> = ({
         <div className="flex flex-col gap-2">
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              border: "1px solid #1890ff",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: '1px solid #1890ff',
               borderRadius: 6,
-              padding: "8px 12px",
+              padding: '8px 12px',
             }}
           >
             <Text strong className="text-blue-600">
@@ -201,12 +210,12 @@ export const CartSidebar: React.FC<Props> = ({
           </div>
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              border: "1px solid #1890ff",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: '1px solid #1890ff',
               borderRadius: 6,
-              padding: "8px 12px",
+              padding: '8px 12px',
             }}
           >
             <Text strong className="text-blue-600">
@@ -224,20 +233,20 @@ export const CartSidebar: React.FC<Props> = ({
 
       {/* Tổng tiền */}
       <Card>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Text>Tổng tiền hàng ({selectedCount})</Text>
           <Text>{selectedTotal.toLocaleString()}đ</Text>
         </div>
 
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
+            display: 'flex',
+            justifyContent: 'space-between',
             marginTop: 8,
           }}
         >
           <Text strong>Tổng thanh toán</Text>
-          <Text strong style={{ color: "red", fontSize: 18 }}>
+          <Text strong style={{ color: 'red', fontSize: 18 }}>
             {selectedTotal.toLocaleString()}đ
           </Text>
         </div>
@@ -250,7 +259,8 @@ export const CartSidebar: React.FC<Props> = ({
           disabled={selectedCount === 0}
           onClick={handleSubmit}
         >
-          {submitLabel ?? (mode === "checkout" ? "Đặt hàng" : `Mua Hàng (${selectedCount})`)}
+          {submitLabel ??
+            (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}
         </Button>
       </Card>
     </div>
