@@ -1,7 +1,7 @@
-// src/page/OrderSuccess.tsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, Row, Col, Typography, Button, Divider, Tag, Image } from "antd";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import axios from "axios"; // Giả sử dùng axios để gọi API
 
 const { Title, Text } = Typography;
 
@@ -20,19 +20,86 @@ type OrderSuccessState = {
   }>;
 };
 
+type ApiResponse = OrderSuccessState & { success: boolean; message: string };
+
 const fmt = (n?: number | string) =>
   n === undefined || n === null
     ? ""
     : `${(typeof n === "string" ? Number(n) : n).toLocaleString("vi-VN")} đ`;
 
 const OrderSuccess: React.FC = () => {
-  const nav = useNavigate();
-  const { state } = useLocation() as { state: OrderSuccessState };
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [orderData, setOrderData] = useState<OrderSuccessState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const pm = state?.paymentMethodLabel ?? "—";
-  const total = state?.total ?? 0;
-  const code = state?.orderCode ?? "—";
-  const eta = state?.etaLabel ?? "";
+  // Lấy dữ liệu từ query string
+  const paymentUuid = searchParams.get("paymentUuid");
+  const responseCode = searchParams.get("responseCode");
+  const message = searchParams.get("message");
+
+  // Fetch dữ liệu từ API khi component mount
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      if (!paymentUuid) {
+        setError("Không tìm thấy mã thanh toán.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get<ApiResponse>(
+          `http://localhost:3000/orders/payment/${paymentUuid}`
+        );
+        if (response.data.success) {
+          setOrderData(response.data);
+        } else {
+          setError(response.data.message || "Lỗi khi lấy thông tin đơn hàng.");
+        }
+      } catch (err) {
+        setError("Lỗi kết nối đến server. Vui lòng thử lại.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [paymentUuid]);
+
+  // Dữ liệu fallback nếu API chưa tải xong
+  const pm = orderData?.paymentMethodLabel ?? "VNPay";
+  const total = orderData?.total ?? 0;
+  const code = orderData?.orderCode ?? paymentUuid ?? "—";
+  const eta = orderData?.etaLabel ?? "";
+  const items = orderData?.items ?? [];
+
+  const isSuccess = responseCode === "00";
+
+  if (loading) {
+    return <div>Đang tải...</div>; // Hiển thị loading state
+  }
+
+  if (error || !isSuccess) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#f6f7fb]">
+        <main className="mx-auto w-full max-w-[1280px] px-6 lg:px-8 py-8 flex-1">
+          <div style={{ textAlign: "center", color: "#ff4d4f" }}>
+            <Title level={4}>Đặt hàng thất bại!</Title>
+            <Text>{error || message || "Vui lòng thử lại sau."}</Text>
+            <Button
+              type="primary"
+              style={{ marginTop: 16 }}
+              onClick={() => navigate("/")}
+            >
+              Quay về trang chủ
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f6f7fb]">
@@ -84,7 +151,11 @@ const OrderSuccess: React.FC = () => {
 
                 <Divider style={{ margin: "14px 0" }} />
 
-                <Button type="default" block onClick={() => nav("/")}>
+                <Button
+                  type="default"
+                  block
+                  onClick={() => navigate("/")}
+                >
                   Quay về trang chủ
                 </Button>
               </div>
@@ -118,7 +189,7 @@ const OrderSuccess: React.FC = () => {
               )}
 
               {/* item tóm tắt */}
-              {state?.items?.[0] && (
+              {items[0] && (
                 <div
                   style={{
                     display: "grid",
@@ -128,8 +199,8 @@ const OrderSuccess: React.FC = () => {
                   }}
                 >
                   <Image
-                    src={state.items[0].image}
-                    alt={state.items[0].name}
+                    src={items[0].image}
+                    alt={items[0].name}
                     width={48}
                     height={48}
                     style={{ borderRadius: 8, objectFit: "cover" }}
@@ -137,9 +208,9 @@ const OrderSuccess: React.FC = () => {
                   />
                   <div>
                     <Text ellipsis style={{ display: "block", maxWidth: 260 }}>
-                      {state.items[0].name}
+                      {items[0].name}
                     </Text>
-                    <Text type="secondary">SL: x{state.items[0].quantity}</Text>
+                    <Text type="secondary">SL: x{items[0].quantity}</Text>
                   </div>
                 </div>
               )}

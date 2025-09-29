@@ -1,57 +1,122 @@
+import { IsEnum, IsString, IsNumber, IsDateString, IsOptional, IsBoolean, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { VoucherType, VoucherDiscountType, VoucherStatus, VoucherCollectionType } from '../vouchers.entity';
 
-import { IsNotEmpty, IsString, IsOptional, IsNumber, IsDate, Min, IsPositive } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer'; 
+class TimeRestrictionDto {
+  @IsOptional()
+  @IsArray()
+  days_of_week?: number[];
+
+  @IsOptional()
+  @IsArray()
+  hours?: { start: string; end: string }[];
+}
+
+class UserConditionDto {
+  @IsOptional()
+  @IsNumber()
+  min_orders?: number;
+
+  @IsOptional()
+  @IsArray()
+  vip_level?: string[];
+
+  @IsOptional()
+  @IsArray()
+  user_tags?: string[];
+}
 
 export class CreateVoucherDto {
-  @ApiProperty()
-  @IsNotEmpty()
   @IsString()
   code!: string;
 
-  @ApiPropertyOptional()
+  @IsString()
+  title!: string;
+
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  discount_type!: string;
+  @IsEnum(VoucherType)
+  type?: VoucherType;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @IsEnum(VoucherDiscountType)
+  discount_type!: VoucherDiscountType;
+
   @IsNumber()
-
-  @Min(1) 
-  @IsPositive() 
   discount_value!: number;
 
-  @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
+  max_discount_amount?: number;
 
-  @Min(1) 
-  @IsPositive() 
+  @IsOptional()
+  @IsNumber()
   min_order_amount?: number;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsDate()
-  @Type(() => Date) 
-  start_date!: Date;
+  @IsDateString()
+  start_date!: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsDate()
-  @Type(() => Date)
-  end_date!: Date;
+  @IsDateString()
+  end_date!: string;
 
-  @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
+  total_usage_limit?: number;
 
-  @Min(1) 
-  @IsPositive() 
-  usage_limit?: number;
+  @IsNumber()
+  per_user_limit!: number;
+
+  @IsOptional()
+  @IsNumber()
+  collection_limit?: number;
+
+  @IsEnum(VoucherStatus)
+  status!: VoucherStatus;
+
+  @IsEnum(VoucherCollectionType)
+  collection_type!: VoucherCollectionType;
+
+  @IsNumber()
+  priority!: number;
+
+  @IsBoolean()
+  stackable!: boolean;
+
+  @IsBoolean()
+  new_user_only!: boolean;
+
+  @IsOptional()
+  @IsArray()
+  applicable_store_ids?: number[];
+
+  @IsOptional()
+  @IsArray()
+  applicable_category_ids?: number[];
+
+  @IsOptional()
+  @IsArray()
+  applicable_product_ids?: number[];
+
+  @IsOptional()
+  @IsArray()
+  excluded_product_ids?: number[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserConditionDto)
+  user_conditions?: UserConditionDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TimeRestrictionDto)
+  time_restrictions?: TimeRestrictionDto;
+
+  @IsOptional()
+  @IsString()
+  image_url?: string;
+
+  @IsOptional()
+  @IsString()
+  theme_color?: string;
 }

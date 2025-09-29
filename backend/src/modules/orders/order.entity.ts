@@ -16,6 +16,8 @@ import { OrderItem } from '../order-items/order-item.entity';
 import {  OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { OrderInvoice } from '../order-invoices/order-invoice.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
+import { Payment } from '../payments/payment.entity';
+import { Refund } from '../refunds/refund.entity';
 
 export enum OrderStatuses {
   Pending = 0,
@@ -56,6 +58,15 @@ export class Order {
     default: OrderStatuses.Pending,
   })
   status!: OrderStatuses;
+
+  @Column({
+    name: 'sub_total',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  subtotal?: number;
 
   @Column({
     name: 'shipping_fee',
@@ -104,4 +115,10 @@ export class Order {
 
   @OneToMany(() => VoucherUsage, (usage) => usage.order)
   voucherUsages!: VoucherUsage[];
+  
+  @OneToMany(() => Payment, (payment) => payment.order)
+  payment!: Payment[];
+
+  @OneToMany(() => Refund, (refund) => refund.order)
+  refund!: Refund[];
 }
