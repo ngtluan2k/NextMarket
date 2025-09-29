@@ -1,34 +1,80 @@
-// src/hooks/useAuth.ts
-import { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
 
-export type UserData = {
+export interface User {
   id: number;
-    username: string;
+  username: string;
   email: string;
   roles: string[];
   permissions: string[];
-};
+}
 
-export function useAuth() {
-  const [user, setUser] = useState<UserData | null>(null);
+export const useAuth = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    if (token && userData) setUser(JSON.parse(userData));
+    const loadUser = () => {
+      try {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+        
+        if (token && userData) {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+        // Clear invalid data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Load initial state
+    loadUser();
+
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user' || e.key === 'token') {
+        loadUser();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
-  const login = (userData: UserData, token: string) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
+  const login = (userData: User, token: string) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('cart');
+    localStorage.clear();
     setUser(null);
+    // Force reload to ensure complete state reset
+    window.location.reload();
   };
 
-  return { user, login, logout };
-}
+  const isAuthenticated = !!user;
+
+  return {
+    user,
+    loading,
+    isAuthenticated,
+    login,
+    logout,
+  };
+};

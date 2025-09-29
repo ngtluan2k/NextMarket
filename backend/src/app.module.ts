@@ -19,6 +19,7 @@ import { ProductMediaModule } from './modules/product_media/product_media.module
 import { VariantModule } from './modules/variant/variant.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
+import { AuthModule } from './common/auth/auth.module';
 
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module';
@@ -39,6 +40,9 @@ import { ShippingLabelsModule } from './modules/shipping-labels/shipping-labels.
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affiliate-commissions.module';
 import { ProvincesModule } from './provinces/provinces.module';
+import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
+import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
+
 
 @Module({
   imports: [
@@ -73,7 +77,7 @@ import { ProvincesModule } from './provinces/provinces.module';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: false,
           logging: true,
         };
       },
@@ -113,6 +117,11 @@ import { ProvincesModule } from './provinces/provinces.module';
     ShipmentsModule,
     AffiliateCommissionsModule,
     ProvincesModule,
+    AuthModule,
+    PaymentMethodsModule,
+    PaymentTransactionsModule,
+    
+
   ],
 })
 export class AppModule { }

@@ -12,7 +12,8 @@ import { Role } from '../role/role.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { UserProfile } from '../admin/entities/user-profile.entity';
 import { NotFoundException } from '@nestjs/common/exceptions/not-found.exception';
-
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { UpdateUsernameDto } from './dto/update-username.dto';
 @Injectable()
 export class UserService {
   constructor(
@@ -31,14 +32,16 @@ export class UserService {
     return this.userRepository.find();
   }
   
-  async register(dto: CreateUserDto) {
-  // Kiểm tra email đã tồn tại
-  const exist = await this.userRepository.findOne({ where: { email: dto.email } });
-  if (exist) throw new BadRequestException('Email already exists');
+async register(dto: CreateUserDto) {
+  // Kiểm tra email và username đã tồn tại
+  const exist = await this.userRepository.findOne({ where: [{ email: dto.email }, { username: dto.username }] });
+  if (exist) {
+    if (exist.email === dto.email) throw new BadRequestException('Email đã tồn tại');
+    if (exist.username === dto.username) throw new BadRequestException('Tên đăng nhập đã tồn tại');
+  }
 
   const hashed = await bcrypt.hash(dto.password, 10);
 
-  // Tạo user
   const user = this.userRepository.create({
     uuid: uuidv4(),
     username: dto.username,
@@ -54,12 +57,20 @@ export class UserService {
       gender: dto.gender,
       country: dto.country,
       created_at: new Date(),
-      },
-    });
+    },
+  });
 
-  const savedUser = await this.userRepository.save(user);
+  let savedUser;
+  try {
+    savedUser = await this.userRepository.save(user);
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      if (err.message.includes('username')) throw new BadRequestException('Tên đăng nhập đã tồn tại');
+      if (err.message.includes('email')) throw new BadRequestException('Email đã tồn tại');
+    }
+    throw err;
+  }
 
-  // Gán role mặc định "user"
   const role = await this.roleRepository.findOne({ where: { name: 'user' } });
   if (!role) throw new BadRequestException('Default role not found');
 
@@ -69,9 +80,9 @@ export class UserService {
   });
   await this.userRoleRepository.save(userRole);
 
-
   return savedUser;
 }
+
 
 
   async login(dto: LoginDto) {
@@ -124,4 +135,32 @@ export class UserService {
 
     return profile;
   }
+
+  async updateProfile(userId: number, dto: UpdateUserProfileDto, username?: string) {
+  const profile = await this.userProfileRepository.findOne({
+    where: { user_id: userId },
+    relations: ['user'],
+  });
+  if (!profile) throw new NotFoundException('Profile not found');
+
+  // Merge dữ liệu profile
+  Object.assign(profile, dto);
+  await this.userProfileRepository.save(profile);
+
+  // Nếu có username mới -> update bảng users
+  if (username && profile.user) {
+    profile.user.username = username;
+    await this.userRepository.save(profile.user);
+  }
+
+  return profile;
+}
+
+async updateUsername(userId: number, dto: UpdateUsernameDto) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    user.username = dto.username;
+    return await this.userRepository.save(user);
+  }
+
 }

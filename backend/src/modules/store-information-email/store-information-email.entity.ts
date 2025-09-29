@@ -5,7 +5,6 @@ import { StoreInformation } from '../store-information/store-information.entity'
 export class StoreInformationEmail {
   @PrimaryGeneratedColumn()
   id!: number;
-
   @Column()
   store_information_id!: number;
 

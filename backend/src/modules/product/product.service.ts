@@ -15,6 +15,16 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { generateUniqueSlug } from '../../common/utils/slug.util';
 import { Inventory } from '../inventory/inventory.entity';
+import {
+  CategoryDto,
+  MediaDto,
+  PricingRuleDto,
+  ProductResponseDto,
+  VariantDto,
+} from './dto/product-response.dto';
+import { Like } from 'typeorm';
+import { ProductTag } from '../product_tag/product_tag.entity';
+import { Tag } from '../tag/tag.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -22,7 +32,19 @@ export class ProductService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(Store)
     private readonly storeRepo: Repository<Store>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    @InjectRepository(Variant)
+    private readonly variantRepo: Repository<Variant>,
+    @InjectRepository(ProductMedia)
+    private readonly mediaRepo: Repository<ProductMedia>,
+    @InjectRepository(Inventory)
+    private readonly inventoryRepo: Repository<Inventory>,
+    @InjectRepository(PricingRules)
+    private readonly pricingRuleRepo: Repository<PricingRules>,
+    @InjectRepository(ProductTag)
+    private readonly productTagRepo: Repository<ProductTag>,
+    @InjectRepository(Tag)
+    private readonly tagRepo: Repository<Tag>
   ) {}
 
   async saveProduct(
@@ -31,9 +53,10 @@ export class ProductService {
     status: 'draft' | 'active'
   ) {
     return this.dataSource.transaction(async (manager) => {
-      const store = await manager.findOne(Store, {
-        where: { user_id: userId },
-      });
+      const store = await manager
+        .createQueryBuilder(Store, 'store')
+        .where('store.user_id = :userId', { userId })
+        .getOne();
       if (!store) throw new NotFoundException('Store not found');
       const slug = await generateUniqueSlug(this.productRepo, dto.name);
 
@@ -120,54 +143,177 @@ export class ProductService {
     return this.saveProduct(dto, userId, 'active');
   }
   // ProductService.ts
-async findAll(userId: number) {
-  return this.productRepo.find({
-    where: { store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-}
+  async findAll(userId: number) {
+    return this.productRepo.find({
+      where: { store: { user_id: userId } },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
+  }
 
-async findOne(id: number, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id, store: { user_id: userId } },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
+  async findOne(id: number, userId?: number) {
+    const product = await this.productRepo.findOne({
+      where: userId
+        ? { id, store: { user_id: userId } } // chỉ check nếu có userId
+        : { id },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+    });
 
-async updateProduct(id: number, dto: CreateProductDto, userId: number) {
-  const product = await this.productRepo.findOne({
-    where: { id },
-    relations: ['store'],
-  });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('Not allowed');
+    if (!product) throw new NotFoundException('Product not found');
+    return product;
+  }
 
-  // Cập nhật tất cả các thông tin như createProduct
-  return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
-}
+  async removeProduct(productId: number, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
 
-async remove(id: number, userId: number) {
-  const product = await this.findOne(id, userId);
-  return this.productRepo.remove(product);
-}
+    if (!product) throw new NotFoundException('Product not found');
 
-async findAllProduct() {
-  return this.productRepo.find({
-    where: { status: 'active' },
-    relations: ['store', 'brand', 'categories', 'media', 'variants', 'pricing_rules'], // nếu muốn show thêm info store
-  });
-}
-// product.service.ts
-async findBySlug(slug: string) {
-  const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
- });
-  if (!product) throw new NotFoundException('Product not found');
-  return product;
-}
+    // đổi status thành deleted
+    product.status = 'deleted';
+    await this.productRepo.save(product); // lưu lại database
 
-async findAllByStoreId(storeId: number) {
+    return { message: 'Product has been soft-deleted' };
+  }
+
+  // product.service.ts
+
+  async updateProduct(id: number, dto: CreateProductDto, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Not allowed');
+
+    // Cập nhật tất cả các thông tin như createProduct
+    return this.saveProduct(dto, userId, product.status as 'draft' | 'active');
+  }
+
+  async remove(id: number, userId: number) {
+    const product = await this.findOne(id, userId);
+    return this.productRepo.remove(product);
+  }
+
+  async findAllProduct() {
+    return this.productRepo.find({
+      where: { status: 'active' },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ], // nếu muốn show thêm info store
+    });
+  }
+  // product.service.ts
+  // async findBySlug(slug: string) {
+  //   const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
+  //  });
+  //   if (!product) throw new NotFoundException('Product not found');
+  //   return product;
+  // }
+
+  async findBySlug(slug: string): Promise<ProductResponseDto> {
+    const product = await this.productRepo
+      .createQueryBuilder('product')
+      .select([
+        'product.id',
+        'product.name',
+        'product.slug',
+        'product.short_description',
+        'product.base_price',
+        'product.status',
+      ])
+      .leftJoinAndSelect(
+        'product.media',
+        'media',
+        'media.is_primary = :isPrimary',
+        { isPrimary: true }
+      )
+      .leftJoinAndSelect('product.variants', 'variants')
+      .addSelect([
+        'variants.id',
+        'variants.variant_name',
+        'variants.price',
+        'variants.stock',
+      ])
+      .leftJoinAndSelect('product.brand', 'brand')
+      .addSelect(['brand.name'])
+      .leftJoinAndSelect('product.categories', 'categories')
+      .leftJoinAndSelect('categories.category', 'category')
+      .addSelect(['category.name'])
+      .leftJoinAndSelect(
+        'product.pricing_rules',
+        'pricing_rules',
+        'pricing_rules.ends_at > :now',
+        { now: new Date() }
+      )
+      .addSelect([
+        'pricing_rules.type',
+        'pricing_rules.min_quantity',
+        'pricing_rules.price',
+        'pricing_rules.starts_at',
+        'pricing_rules.ends_at',
+      ])
+      .leftJoinAndSelect('product.store', 'store')
+      .addSelect(['store.name', 'store.slug'])
+      .where('product.slug = :slug', { slug })
+      .getOne();
+
+    if (!product) throw new NotFoundException('Product not found');
+
+    // Map sang DTO
+    const response: ProductResponseDto = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      short_description: product.short_description,
+      base_price: product.base_price,
+      media: product.media.map((m): MediaDto => ({ url: m.url })),
+      variants: product.variants.map(
+        (v): VariantDto => ({
+          id: v.id,
+          variant_name: v.variant_name,
+          price: v.price,
+          stock: v.stock,
+        })
+      ),
+      brand: { name: product.brand.name },
+      categories: product.categories.map(
+        (c): CategoryDto => ({ name: c.category.name })
+      ),
+      pricing_rules: product.pricing_rules.map(
+        (pr): PricingRuleDto => ({
+          type: pr.type,
+          min_quantity: pr.min_quantity,
+          price: pr.price,
+        })
+      ),
+      store: { name: product.store.name, slug: product.store.slug },
+    };
+
+    return response;
+  }
+
+  async findAllByStoreId(storeId: number) {
     return this.productRepo.find({
       where: { store_id: storeId },
       relations: [
@@ -180,7 +326,69 @@ async findAllByStoreId(storeId: number) {
       ],
     });
   }
+  async searchProducts(query: string) {
+    if (!query) return [];
 
+    return this.productRepo.find({
+      where: [
+        { name: Like(`%${query}%`), status: 'active' },
+        { slug: Like(`%${query}%`), status: 'active' },
+        { description: Like(`%${query}%`), status: 'active' },
+      ],
+      relations: ['store', 'media', 'brand'],
+      take: 10,
+    });
+  }
+  async toggleProductStatus(productId: number, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['store'], // phải có để kiểm tra quyền
+    });
 
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('Bạn không có quyền chỉnh sửa sản phẩm này');
 
+    product.status = product.status === 'active' ? 'draft' : 'active';
+    return this.productRepo.save(product);
+  }
+
+  async countByStoreId(storeId: number): Promise<number> {
+    return this.productRepo.count({
+      where: {
+        store: { id: storeId }, // nếu Product có quan hệ ManyToOne với Store
+        status: 'active', // nếu chỉ muốn đếm sản phẩm đang active
+      },
+    });
+  }
+
+  async findSimilarProducts(productId: number): Promise<Product[]> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['productTags', 'productTags.tag'],
+    });
+
+    if (!product) throw new NotFoundException('Product not found');
+
+    const tagIds = product.productTags.map((pt) => pt.tag_id);
+
+    if (tagIds.length === 0) return [];
+
+    const similarProducts = await this.productRepo
+      .createQueryBuilder('p')
+      .innerJoin('product_tag', 'pt', 'pt.product_id = p.id')
+      .where('pt.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('p.id != :productId', { productId })
+      .andWhere('p.status = :status', { status: 'active' })
+      .leftJoinAndSelect('p.media', 'media', 'media.is_primary = :isPrimary', {
+        isPrimary: true,
+      })
+      .leftJoinAndSelect('p.brand', 'brand')
+      .leftJoinAndSelect('p.store', 'store')
+      .distinct(true)
+      .take(10) // Limit to 10 similar products
+      .getMany();
+
+    return similarProducts;
+  }
 }

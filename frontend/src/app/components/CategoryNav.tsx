@@ -1,6 +1,6 @@
-// src/components/CategoryNav.tsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchCategoriesAPI } from '../../service/category.service';
 
 export type Category = {
   id: string | number;
@@ -26,48 +26,39 @@ export default function CategoryNav({
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
- useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/categories', {
-        headers: { Authorization: `Bearer ${token}` },
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const rawData = await fetchCategoriesAPI();
 
-      });
+        if (!Array.isArray(rawData)) {
+          throw new Error('Dữ liệu danh mục không hợp lệ');
+        }
+        const parents = rawData.filter((it) => !it.parent_id);
+        const mapped: Category[] = parents.map((it) => ({
+          id: it.id,
+          name: it.name,
+          slug: it.slug || String(it.id),
+          iconUrl: it.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(it.name)}&background=random`,
+        }));
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        if (!cancelled) setCategories(mapped);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message || 'Không tải được danh mục');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
-      const json = await res.json();
-      const data = json?.data || [];
-
-      // Lọc chỉ lấy category cha
-      const parents = data.filter((it: any) => !it.parent_id);
-
-      const mapped: Category[] = parents.map((it: any) => ({
-        id: it.id,
-        name: it.name,
-        slug: it.slug || String(it.id), // ưu tiên slug, fallback id
-        iconUrl: it.image || 'https://via.placeholder.com/43x43?text=%3F',
-      }));
-
-      if (!cancelled) setCategories(mapped);
-    } catch (e: any) {
-      if (!cancelled) setError(e.message || 'Không tải được danh mục');
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  };
-
-  fetchCategories();
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
+    fetchCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const hasData = categories.length > 0;
 

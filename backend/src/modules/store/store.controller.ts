@@ -1,6 +1,20 @@
-
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Req, BadRequestException, ForbiddenException, ParseIntPipe } from '@nestjs/common';
-
+import {
+  Controller,
+  Get,
+  Query,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Req,
+  BadRequestException,
+  ParseIntPipe,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { StoreService } from './store.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -9,12 +23,21 @@ import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ProductService } from '../product/product.service';
+import { Store } from './store.entity';
+import { Repository } from 'typeorm';
 
 @ApiTags('stores')
 @ApiBearerAuth('access-token')
 @Controller('stores')
 export class StoreController {
-  constructor(private readonly storeService: StoreService) {}
+constructor(
+      private readonly productService: ProductService,
+      private readonly storeService: StoreService,
+      @InjectRepository(Store)
+    private readonly storeRepo: Repository<Store>,
+    ) {}  
+  
 
   @Get()
   @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -44,7 +67,10 @@ export class StoreController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy đầy đủ draft data của store' })
   async getDraftData(@Param('id') id: string, @Req() req: any) {
-    const draftData = await this.storeService.getFullDraftData(parseInt(id), req.user.userId);
+    const draftData = await this.storeService.getFullDraftData(
+      parseInt(id),
+      req.user.userId
+    );
     return {
       message: 'Draft data của store',
       data: draftData,
@@ -89,13 +115,12 @@ export class StoreController {
       message: 'Thống kê cửa hàng',
       data: stats,
     };
-  } 
- 
- @Post('register-seller')
+  }
+
+  @Post('register-seller')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Đăng ký làm người bán hàng' })
   async registerSeller(@Req() req: any, @Body() dto: RegisterSellerDto) {
-    
     const result = await this.storeService.registerSeller(req.user.userId, dto);
     return {
       message: result.message,
@@ -114,7 +139,6 @@ export class StoreController {
       data: store,
     };
   }
-
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -136,42 +160,125 @@ export class StoreController {
     return result;
   }
 
-    @Delete(':id')
-    @UseGuards(JwtAuthGuard, PermissionGuard)
-    @Permissions('delete_store')
-    @ApiOperation({ summary: 'Admin xóa store và toàn bộ dữ liệu liên quan' })
-    async remove(@Param('id') id: number) {
-      const result = await this.storeService.remove(id);
-      return result;
-    }
-
-  @Get('owner/:userId')
+  @Delete(':id')
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @Permissions('view_own_store') // for all store have owned
-  async getStoresByUserId(@Param('userId') userId: string, @Req() req: any) {
-    console.log('Request URL:', req.url);
-    console.log('userId:', userId);
-    console.log('req.user:', req.user);
-    const targetUserId = parseInt(userId, 10);
-    console.log('targetUserId:', targetUserId);
-    if (isNaN(targetUserId)) {
-      throw new BadRequestException('User ID không hợp lệ');
+  @Permissions('delete_store')
+  @ApiOperation({ summary: 'Admin xóa store và toàn bộ dữ liệu liên quan' })
+  async remove(@Param('id') id: number) {
+    const result = await this.storeService.remove(id);
+    return result;
+  }
+
+  // @Get('owner/:userId')
+  // @UseGuards(JwtAuthGuard, PermissionGuard)
+  // @Permissions('view_own_store') // for all store have owned
+  // async getStoresByUserId(@Param('userId') userId: string, @Req() req: any) {
+  //   console.log('Request URL:', req.url);
+  //   console.log('userId:', userId);
+  //   console.log('req.user:', req.user);
+  //   const targetUserId = parseInt(userId, 10);
+  //   console.log('targetUserId:', targetUserId);
+  //   if (isNaN(targetUserId)) {
+  //     throw new BadRequestException('User ID không hợp lệ');
+  //   }
+  //   const currentUserId = req.user?.userId;
+  //   console.log('currentUserId:', currentUserId);
+  //   if (!currentUserId || isNaN(currentUserId)) {
+  //     throw new BadRequestException('User ID không hợp lệ');
+  //   }
+  //   if (currentUserId !== targetUserId) {
+  //     throw new ForbiddenException(
+  //       'Bạn không có quyền xem cửa hàng của user khác'
+  //     );
+  //   }
+  //   const stores = await this.storeService.findStoresByUserId(targetUserId);
+  //   return {
+  //     message: 'Danh sách cửa hàng của user',
+  //     total: stores.length,
+  //     data: stores,
+  //   };
+  // }
+
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Lấy thông tin store theo slug' })
+  async findBySlug(@Param('slug') slug: string) {
+    const store = await this.storeService.findBySlug(slug);
+    if (!store) {
+      throw new BadRequestException('Store không tồn tại');
     }
-    const currentUserId = req.user?.userId;
-    console.log('currentUserId:', currentUserId);
-    if (!currentUserId || isNaN(currentUserId)) {
-      throw new BadRequestException('User ID không hợp lệ');
-    }
-    if (currentUserId !== targetUserId) {
-      throw new ForbiddenException(
-        'Bạn không có quyền xem cửa hàng của user khác'
-      );
-    }
-    const stores = await this.storeService.findStoresByUserId(targetUserId);
     return {
-      message: 'Danh sách cửa hàng của user',
-      total: stores.length,
-      data: stores,
+      message: 'Chi tiết cửa hàng theo slug',
+      data: store,
     };
   }
+
+  @Get('slug/:slug/all')
+@ApiOperation({ summary: 'Lấy tất cả sản phẩm của store theo slug' })
+async getStoreProducts(@Param('slug') slug: string,  @Query('category') categorySlug?: string,) {
+  const store = await this.storeService.findProductsBySlug(slug, categorySlug);
+  if (!store) {
+    throw new BadRequestException('Store không tồn tại');
+  }
+
+  // Nếu muốn chỉ lấy sản phẩm đang active
+  const products = store.products.filter(p => p.status === 'active');
+
+  return {
+    message: `Danh sách sản phẩm của store ${store.name}`,
+    total: products.length,
+    data: products,
+  };
+}
+
+
+@Get('slug/:slug/profile')
+@ApiOperation({ summary: 'Lấy profile cửa hàng theo slug' })
+async getStoreProfile(@Param('slug') slug: string) {
+  
+  const store = await this.storeService.findBySlug(slug);
+  if (!store) {
+    throw new BadRequestException('Store không tồn tại');
+  }
+  const productCount = await this.productService.countByStoreId(store.id);
+
+
+  // Chỉ trả về thông tin profile, bank, address, info, identification
+  const profileData = {
+    id: store.id,
+    name: store.name,
+    slug: store.slug,
+    description: store.description,
+    logo_url: store.logo_url,
+    email: store.email,
+    phone: store.phone,
+    status: store.status,
+    created_at: store.created_at,
+    updated_at: store.updated_at,
+    storeInformation: store.storeInformation,
+    storeIdentification: store.storeIdentification,
+    bankAccount: store.bankAccount,
+    address: store.address,
+    rating: store.rating, 
+    totalProducts: productCount,
+  };
+
+  return {
+    message: `Thông tin profile của store ${store.name}`,
+    data: profileData,
+  };
+}
+
+@Get('slug/:slug/categories')
+  async getStoreCategories(@Param('slug') slug: string) {
+    const store = await this.storeRepo.findOne({ where: { slug } });
+    if (!store) throw new NotFoundException('Store not found');
+
+    const categories = await this.storeService.findCategoriesByStoreWithCount(store.id);
+    return {
+      message: `Danh mục sản phẩm của store ${store.name}`,
+      total: categories.length,
+      data: categories,
+    };
+  }
+
 }

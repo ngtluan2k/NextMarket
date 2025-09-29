@@ -4,41 +4,57 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { existsSync, mkdirSync } from 'fs';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // chỉ cho phép field được định nghĩa trong DTO
-    forbidNonWhitelisted: true, // nếu có field lạ -> báo lỗi
-    transform: true, // tự động transform kiểu dữ liệu (string -> number)
-  }));
+  // Global validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const globalPrefix = '';
   app.setGlobalPrefix(globalPrefix);
 
-  // CORS cho FE
+  // đảm bảo folder uploads/products tồn tại
+  const uploadsDir = join(process.cwd(), 'uploads', 'products');
+  if (!existsSync(uploadsDir)) {
+    mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // serve static files
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
+
+  // CORS
   app.enableCors({
-    origin: 'http://localhost:4200',
+    origin: ['http://localhost:4200', 'http://localhost:3000'],
     credentials: true,
   });
 
-  // Swagger config
+  // Swagger
   const config = new DocumentBuilder()
     .setTitle('EveryMart API')
     .setDescription('API documentation for EveryMart')
     .setVersion('1.0')
     .addTag('users')
     .addTag('products')
-.addBearerAuth(
-    {
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      in: 'header',
-    },
-    'access-token', 
-  )    .build();
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        in: 'header',
+      },
+      'access-token',
+    )
+    .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

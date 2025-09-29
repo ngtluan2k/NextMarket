@@ -24,7 +24,7 @@ import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-request.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { Product } from '../product/product.entity';
-
+import { Category } from '../categories/category.entity';
 
 @Injectable()
 export class StoreService {
@@ -33,28 +33,38 @@ export class StoreService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Role) private roleRepo: Repository<Role>,
     @InjectRepository(UserRole) private userRoleRepo: Repository<UserRole>,
-    @InjectRepository(StoreLevel) private storeLevelRepo: Repository<StoreLevel>,
-    @InjectRepository(StoreBankAccount) private bankAccountRepo: Repository<StoreBankAccount>,
-    @InjectRepository(StoreAddress) private storeAddressRepo: Repository<StoreAddress>,
-    @InjectRepository(StoreIdentification) private storeIdentificationRepo: Repository<StoreIdentification>,
-    @InjectRepository(StoreInformation) private storeInformationRepo: Repository<StoreInformation>,
-    @InjectRepository(StoreInformationEmail) private storeEmailRepo: Repository<StoreInformationEmail>,
-    @InjectRepository(StoreDocument) private storeDocumentRepo: Repository<StoreDocument>,
-    @InjectRepository(StoreRating) private storeRatingRepo: Repository<StoreRating>,
-    @InjectRepository(StoreFollower) private storeFollowerRepo: Repository<StoreFollower>,
-    @InjectRepository(StoreUpgradeRequest) private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>,
-    @InjectRepository(Product) private productRepo: Repository<Product>,
-  ) { }
+    @InjectRepository(StoreLevel)
+    private storeLevelRepo: Repository<StoreLevel>,
+    @InjectRepository(StoreBankAccount)
+    private bankAccountRepo: Repository<StoreBankAccount>,
+    @InjectRepository(StoreAddress)
+    private storeAddressRepo: Repository<StoreAddress>,
+    @InjectRepository(StoreIdentification)
+    private storeIdentificationRepo: Repository<StoreIdentification>,
+    @InjectRepository(StoreInformation)
+    private storeInformationRepo: Repository<StoreInformation>,
+    @InjectRepository(StoreInformationEmail)
+    private storeEmailRepo: Repository<StoreInformationEmail>,
+    @InjectRepository(StoreDocument)
+    private storeDocumentRepo: Repository<StoreDocument>,
+    @InjectRepository(StoreRating)
+    private storeRatingRepo: Repository<StoreRating>,
+    @InjectRepository(StoreFollower)
+    private storeFollowerRepo: Repository<StoreFollower>,
+    @InjectRepository(StoreUpgradeRequest)
+    private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>,
+    @InjectRepository(Product) private productRepo: Repository<Product>
+  ) {}
 
   async findAll() {
     return this.storeRepo.find({
-      order: { created_at: 'DESC' }
+      order: { created_at: 'DESC' },
     });
   }
 
   async findOne(id: number) {
     const store = await this.storeRepo.findOne({
-      where: { id }
+      where: { id },
     });
     if (!store) throw new NotFoundException('Store not found');
     return store;
@@ -62,7 +72,7 @@ export class StoreService {
 
   async findByUserId(userId: number) {
     return this.storeRepo.findOne({
-      where: { user_id: userId }
+      where: { user_id: userId },
     });
   }
 
@@ -76,18 +86,18 @@ export class StoreService {
   //   return store;
   // }
 
-  async findStoresByUserId(userId: number): Promise<Store[]> {
-    if (!userId || isNaN(userId)) {
-      throw new BadRequestException('User ID không hợp lệ');
-    }
-    const stores = await this.storeRepo.find({
-      where: { user_id: userId },
-      relations: ['owner'],
-    });
-    if (!stores.length)
-      throw new NotFoundException('Không tìm thấy cửa hàng nào cho user này');
-    return stores;
-  }
+  // async findStoresByUserId(userId: number): Promise<Store[]> {
+  //   if (!userId || isNaN(userId)) {
+  //     throw new BadRequestException('User ID không hợp lệ');
+  //   }
+  //   const stores = await this.storeRepo.find({
+  //     where: { user_id: userId },
+  //     relations: ['owner'],
+  //   });
+  //   if (!stores.length)
+  //     throw new NotFoundException('Không tìm thấy cửa hàng nào cho user này');
+  //   return stores;
+  // }
 
   async create(userId: number, dto: CreateStoreDto) {
     const store = this.storeRepo.create({
@@ -181,12 +191,16 @@ export class StoreService {
 
     if (!user) return;
 
+    // 6. Gán role "seller" cho user (nếu chưa có)
     const sellerRole = await this.roleRepo.findOne({
-      where: { name: 'Store_Owner' },
+      where: { name: 'Seller' },
     });
 
     if (sellerRole) {
-      const hasSellerRole = user.roles?.some(ur => ur.role.name === 'Store_Owner');
+      const hasSellerRole = user.roles?.some(
+        (ur) => ur.role.name === 'Seller'
+      );
+      console.log('has seller role : ' + hasSellerRole);
 
       if (!hasSellerRole) {
         const userRole = this.userRoleRepo.create({
@@ -202,7 +216,11 @@ export class StoreService {
 
   // Update draft store với data từ các steps
 
-  async updateDraftStore(storeId: number, dto: RegisterSellerDto, userId: number) {
+  async updateDraftStore(
+    storeId: number,
+    dto: RegisterSellerDto,
+    userId: number
+  ) {
     const store = await this.storeRepo.findOne({ where: { id: storeId } });
     if (!store) {
       throw new NotFoundException('Store not found');
@@ -226,7 +244,12 @@ export class StoreService {
     await this.storeRepo.update(storeId, updateData);
 
     // Update comprehensive data nếu có (Step 2, 3)
-    if (dto.store_information || dto.store_identification || dto.bank_account || dto.store_address) {
+    if (
+      dto.store_information ||
+      dto.store_identification ||
+      dto.bank_account ||
+      dto.store_address
+    ) {
       await this.handleComprehensiveData(storeId, dto);
     }
 
@@ -235,13 +258,15 @@ export class StoreService {
       await this.assignSellerRole(userId);
     }
 
-    const updatedStore = await this.storeRepo.findOne({ where: { id: storeId } });
+    const updatedStore = await this.storeRepo.findOne({
+      where: { id: storeId },
+    });
 
     return {
       store: updatedStore,
       message: dto.is_draft
         ? 'Đã cập nhật nháp thành công! Bạn có thể tiếp tục chỉnh sửa sau.'
-        : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.'
+        : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.',
     };
   }
 
@@ -281,7 +306,8 @@ export class StoreService {
     const result = await this.remove(store.id);
     return {
       ...result,
-      message: 'Đã xóa cửa hàng của bạn và toàn bộ dữ liệu liên quan thành công'
+      message:
+        'Đã xóa cửa hàng của bạn và toàn bộ dữ liệu liên quan thành công',
     };
   }
 
@@ -294,7 +320,9 @@ export class StoreService {
 
 
     // Trước tiên, tìm tất cả store_information để xóa emails và documents
-    const storeInformations = await this.storeInformationRepo.find({ where: { store_id: id } });
+    const storeInformations = await this.storeInformationRepo.find({
+      where: { store_id: id },
+    });
     // Xóa emails và documents theo store_information_id
     for (const storeInfo of storeInformations) {
       await Promise.all([
@@ -322,13 +350,15 @@ export class StoreService {
     return {
       message: 'Xóa cửa hàng và toàn bộ dữ liệu liên quan thành công',
       deletedStoreId: id,
-      deletedRecords: totalDeletedRecords + 1 // +1 for the store itself
+      deletedRecords: totalDeletedRecords + 1, // +1 for the store itself
     };
   }
 
-
   // Helper method để xử lý comprehensive data
-  private async handleComprehensiveData(storeId: number, dto: RegisterSellerDto) {
+  private async handleComprehensiveData(
+    storeId: number,
+    dto: RegisterSellerDto
+  ) {
     // 1. Tạo hoặc update store information
     let storeInformation = null;
     if (dto.store_information) {
@@ -367,21 +397,19 @@ export class StoreService {
     // 2. Tạo hoặc update store information email
     if (dto.store_information_email && storeInformation) {
       const existingEmail = await this.storeEmailRepo.findOne({
-        where: { store_information_id: storeInformation.id }
+        where: { store_information_id: storeInformation.id },
       });
 
       if (existingEmail) {
         // Update existing
         await this.storeEmailRepo.update(existingEmail.id, {
           email: dto.store_information_email.email,
-
         });
       } else {
         // Create new
         const storeEmailInfo = this.storeEmailRepo.create({
           email: dto.store_information_email.email,
           store_information_id: storeInformation.id,
-
         });
         await this.storeEmailRepo.save(storeEmailInfo);
       }
@@ -389,9 +417,11 @@ export class StoreService {
 
     // 3. Tạo hoặc update store identification
     if (dto.store_identification) {
-      const existingIdentification = await this.storeIdentificationRepo.findOne({
-        where: { store_id: storeId }
-      });
+      const existingIdentification = await this.storeIdentificationRepo.findOne(
+        {
+          where: { store_id: storeId },
+        }
+      );
 
       if (existingIdentification) {
         // Update existing
@@ -417,7 +447,12 @@ export class StoreService {
     }
 
     // 3.5. Tạo hoặc update store documents (nếu truyền qua DTO)
-    if (dto.documents && Array.isArray(dto.documents) && dto.documents.length > 0 && storeInformation) {
+    if (
+      dto.documents &&
+      Array.isArray(dto.documents) &&
+      dto.documents.length > 0 &&
+      storeInformation
+    ) {
       for (const doc of dto.documents) {
         // Chiến lược: nếu đã có document cùng doc_type cho store_information_id thì update file_url, ngược lại tạo mới
         const existingDoc = await this.storeDocumentRepo.findOne({
@@ -451,7 +486,7 @@ export class StoreService {
     // 4. Tạo hoặc update bank account
     if (dto.bank_account) {
       const existingBankAccount = await this.bankAccountRepo.findOne({
-        where: { store_id: storeId }
+        where: { store_id: storeId },
       });
 
       if (existingBankAccount) {
@@ -478,7 +513,7 @@ export class StoreService {
     // 5. Tạo hoặc update store address
     if (dto.store_address) {
       const existingAddress = await this.storeAddressRepo.findOne({
-        where: { stores_id: storeId }
+        where: { stores_id: storeId },
       });
 
       if (existingAddress) {
@@ -525,7 +560,7 @@ export class StoreService {
   async getFullDraftData(storeId: number, userId: number) {
     // Verify ownership
     const store = await this.storeRepo.findOne({
-      where: { id: storeId, user_id: userId }
+      where: { id: storeId, user_id: userId },
     });
 
     if (!store) {
@@ -533,27 +568,28 @@ export class StoreService {
     }
 
     // Fetch tất cả related data
-    const [storeInformation, storeIdentification, bankAccount, storeAddress] = await Promise.all([
-      // Store Information
-      this.storeInformationRepo.findOne({
-        where: { store_id: storeId }
-      }),
+    const [storeInformation, storeIdentification, bankAccount, storeAddress] =
+      await Promise.all([
+        // Store Information
+        this.storeInformationRepo.findOne({
+          where: { store_id: storeId },
+        }),
 
-      // Store Identification  
-      this.storeIdentificationRepo.findOne({
-        where: { store_id: storeId }
-      }),
+        // Store Identification
+        this.storeIdentificationRepo.findOne({
+          where: { store_id: storeId },
+        }),
 
-      // Bank Account
-      this.bankAccountRepo.findOne({
-        where: { store_id: storeId }
-      }),
+        // Bank Account
+        this.bankAccountRepo.findOne({
+          where: { store_id: storeId },
+        }),
 
-      // Store Address
-      this.storeAddressRepo.findOne({
-        where: { stores_id: storeId } // Chú ý: entity này dùng stores_id
-      }),
-    ]);
+        // Store Address
+        this.storeAddressRepo.findOne({
+          where: { stores_id: storeId }, // Chú ý: entity này dùng stores_id
+        }),
+      ]);
 
     // Fetch data phụ thuộc vào store_information
     let storeEmail: StoreInformationEmail | null = null;
@@ -562,11 +598,11 @@ export class StoreService {
     if (storeInformation) {
       [storeEmail, documents] = await Promise.all([
         this.storeEmailRepo.findOne({
-          where: { store_information_id: storeInformation.id }
+          where: { store_information_id: storeInformation.id },
         }),
         this.storeDocumentRepo.find({
-          where: { store_information_id: storeInformation.id }
-        })
+          where: { store_information_id: storeInformation.id },
+        }),
       ]);
     }
 
@@ -628,27 +664,27 @@ export class StoreService {
     const store = await this.storeRepo.findOne({
       where: { id: storeId },
       relations: {
-        storeInformations: { emails: true, documents: true },
-        storeIdentifications: true,
+        storeInformation: { emails: true, documents: true },
+        storeIdentification: true,
         storeLevels: true,
-        bankAccounts: true,
-        addresses: true,
+        bankAccount: true,
+        address: true,
         followers: true,
-        ratings: true,
+        rating: true,
       },
     });
     if (!store) throw new NotFoundException('Store not found');
 
-    const info = store.storeInformations?.[0] ?? null;
-    const identification = store.storeIdentifications?.[0] ?? null;
+    const info = store.storeInformation?.[0] ?? null;
+    const identification = store.storeIdentification?.[0] ?? null;
     const level = store.storeLevels?.[0] ?? null;
-    const bank = store.bankAccounts?.[0] ?? null;
-    const address = store.addresses?.[0] ?? null;
+    const bank = store.bankAccount?.[0] ?? null;
+    const address = store.address?.[0] ?? null;
     const followers = store.followers?.length ?? 0;
 
-    const totalRatings = store.ratings?.length ?? 0;
+    const totalRatings = store.rating?.length ?? 0;
     const avgRating = totalRatings
-      ? store.ratings.reduce((s, r: any) => s + (r.stars ?? r['rating'] ?? 0), 0) / totalRatings
+      ? store.rating.reduce((s, r: any) => s + (r.stars ?? r['rating'] ?? 0), 0) / totalRatings
       : 0;
 
     return {
@@ -664,4 +700,83 @@ export class StoreService {
       followers,
     };
   }
+    
+  async findBySlug(slug: string): Promise<Store | null> {
+    if (!slug) {
+      throw new BadRequestException('Slug không hợp lệ');
+    }
+
+    const store = await this.storeRepo.findOne({
+      where: { slug },
+      relations: [
+        'storeInformation',
+    'storeIdentification',
+    'bankAccount',
+    'address', // ✅ đúng tên
+    'products',
+    'products.media',
+    'orders',
+    'follower',
+    'rating',
+      ], // join các entity liên quan nếu muốn trả luôn
+    });
+
+    if (!store) return null;
+    return store;
+  }
+
+  async findProductsBySlug(slug: string, categorySlug?: string): Promise<Store | null> {
+  if (!slug) throw new BadRequestException('Slug không hợp lệ');
+
+  const store = await this.storeRepo.findOne({
+    where: { slug },
+    relations: [
+      'products',
+      'products.media',
+      'products.categories',
+      'products.categories.category',
+    ],
+  });
+
+  if (!store) return null;
+
+  if (categorySlug) {
+    store.products = store.products.filter((p) =>
+      p.categories.some((pc) => pc.category.slug === categorySlug),
+    );
+  }
+
+  return store;
+}
+
+async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
+    const products = await this.productRepo.find({
+      where: { store: { id: storeId } },
+      relations: ['categories', 'categories.category'],
+    });
+
+    const countMap = new Map<number, { category: Category; count: number }>();
+
+    for (const product of products) {
+      for (const pc of product.categories) {
+        if (pc.category) {
+          const entry = countMap.get(pc.category.id);
+          if (entry) {
+            entry.count += 1;
+          } else {
+            countMap.set(pc.category.id, { category: pc.category, count: 1 });
+          }
+        }
+      }
+    }
+
+    return Array.from(countMap.values()).map(({ category, count }) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      count,
+    }));
+  }
+
+
 }

@@ -13,6 +13,9 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { JwtStrategy } from '../../common/auth/jwt.strategy';
 
+import { ShoppingCart } from '../cart/cart.entity';
+
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -22,6 +25,7 @@ import { JwtStrategy } from '../../common/auth/jwt.strategy';
       Permission,
       RolePermission,
       UserRole,
+      ShoppingCart,
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || '123', // nên đưa vào .env

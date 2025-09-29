@@ -17,6 +17,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { OrderItem } from '../order-items/order-item.entity';
+import { ProductTag } from '../product_tag/product_tag.entity';
 
 @Entity('products')
 export class Product {
@@ -82,4 +83,7 @@ export class Product {
   inventories!: Inventory[];
   @OneToMany(() => OrderItem, (item) => item.product)
   orderItems!: OrderItem[];
+
+  @OneToMany(() => ProductTag, (pt) => pt.product)
+  productTags!: ProductTag[];
 }

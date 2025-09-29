@@ -91,15 +91,39 @@ async findProductsBySlug(slug: string): Promise<Product[]> {
   const categoryIds = await this.getAllCategoryIds(category.id);
 
   const productCategories = await this.productCategoryRepo.find({
-    where: { category_id: In(categoryIds) },
+    where: { category_id: In(categoryIds),
+     product: { status: 'active' }
+     },
     relations: ['product', 'product.media', 'product.variants', 'product.brand'],
   });
 
+  // Lọc product null
+  const products = productCategories
+    .map(pc => pc.product)
+    .filter((p): p is Product => p != null);
+
   // Loại bỏ trùng lặp
-  const products = productCategories.map((pc) => pc.product);
   const unique = Array.from(new Map(products.map(p => [p.id, p])).values());
 
   return unique;
+}
+
+async findBrandsByCategorySlug(slug: string) {
+  const products = await this.findProductsBySlug(slug);
+
+  const uniqueBrandsMap = new Map<number, { id: number; name: string; logo_url?: string }>();
+
+  products.forEach((p) => {
+    if (p.brand && !uniqueBrandsMap.has(p.brand.id)) {
+      uniqueBrandsMap.set(p.brand.id, {
+        id: p.brand.id,
+        name: p.brand.name,
+        logo_url: p.brand.logo_url,
+      });
+    }
+  });
+
+  return Array.from(uniqueBrandsMap.values());
 }
 
 

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Store } from './store.entity';
 import { StoreFollower } from './../store-follower/store-follower.entity';
@@ -17,6 +17,7 @@ import { StoreController } from './store.controller';
 import { User } from '../user/user.entity';
 import { Role } from '../role/role.entity';
 import { UserRole } from '../user-role/user-role.entity';
+import { ProductModule } from '../product/product.module';
 import { Product } from '../product/product.entity';
 
 @Module({
@@ -37,8 +38,9 @@ import { Product } from '../product/product.entity';
       User,
       Role,
       UserRole,
-      Product,
-    ])
+      Product
+    ]),
+    forwardRef(() => ProductModule), // ✅ chỉ import module bằng forwardRef
   ],
   providers: [StoreService],
   controllers: [StoreController],

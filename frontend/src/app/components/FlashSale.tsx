@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type ProductRaw = {
   id: number;
@@ -30,13 +30,13 @@ type ProductFlashSaleProps = {
 };
 
 function formatVND(n: number) {
-  return new Intl.NumberFormat("vi-VN").format(n) + "đ";
+  return new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 }
 
 export default function ProductFlashSale({
-  title = "Flash Sale",
-  seeAllHref = "#",
-  className = "",
+  title = 'Flash Sale',
+  seeAllHref = '#',
+  className = '',
   skeletonCount = 8,
 }: ProductFlashSaleProps) {
   const [data, setData] = useState<ProductFlashSaleItem[]>([]);
@@ -50,23 +50,34 @@ export default function ProductFlashSale({
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:3000/products", {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:3000/products', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const json: ProductRaw[] = await res.json();
 
         const mapped: ProductFlashSaleItem[] = json.map((p) => {
-          const primaryMedia = p.media?.find((m) => m.is_primary) || p.media?.[0];
+          const primaryMedia =
+            p.media?.find((m) => m.is_primary) || p.media?.[0];
           const mainVariant = p.variants?.[0];
           return {
             id: p.id,
             slug: p.slug,
             name: p.name,
-            image: primaryMedia?.url || "",
+            image: primaryMedia?.url
+              ? primaryMedia.url.startsWith('http')
+                ? primaryMedia.url // đã là URL web
+                : `http://localhost:3000/${primaryMedia.url.replace(
+                    /^\/+/,
+                    ''
+                  )}` // đường dẫn local
+              : 'https://via.placeholder.com/220x220?text=No+Image',
+
             price: Number(mainVariant?.price || p.base_price || 0),
-            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            originalPrice: p.originalPrice
+              ? Number(p.originalPrice)
+              : undefined,
             brandName: p.brand?.name,
           };
         });
@@ -89,7 +100,7 @@ export default function ProductFlashSale({
     const el = trackRef.current;
     if (!el) return;
     const CARD = 176;
-    el.scrollBy({ left: dir * CARD * 3, behavior: "smooth" });
+    el.scrollBy({ left: dir * CARD * 3, behavior: 'smooth' });
   };
 
   const handleClick = (slug?: string) => {
@@ -98,7 +109,9 @@ export default function ProductFlashSale({
   };
 
   return (
-    <section className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}>
+    <section
+      className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-sm font-semibold">{title}</h2>
@@ -112,7 +125,7 @@ export default function ProductFlashSale({
         <div
           ref={trackRef}
           className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar px-2 pb-2"
-          style={{ scrollbarWidth: "none" }}
+          style={{ scrollbarWidth: 'none' }}
         >
           <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
 
@@ -138,7 +151,7 @@ export default function ProductFlashSale({
                   onClick={() => handleClick(p.slug)}
                 >
                   <div className="relative">
-                    {typeof discount === "number" && (
+                    {typeof discount === 'number' && (
                       <span className="absolute left-0 top-0 -translate-y-1.5 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-500 ring-1 ring-rose-100">
                         -{discount}%
                       </span>
@@ -155,11 +168,19 @@ export default function ProductFlashSale({
                   </div>
                   <h3 className="font-medium">{p.name}</h3>
                   <div className="mt-2 text-center">
-                    <div className="text-[13px] font-semibold text-rose-600">{formatVND(p.price)}</div>
+                    <div className="text-[13px] font-semibold text-rose-600">
+                      {formatVND(p.price)}
+                    </div>
                     {p.originalPrice && (
-                      <div className="text-[11px] text-slate-400 line-through">{formatVND(p.originalPrice)}</div>
+                      <div className="text-[11px] text-slate-400 line-through">
+                        {formatVND(p.originalPrice)}
+                      </div>
                     )}
-                    {p.brandName && <div className="text-[11px] text-slate-400">{p.brandName}</div>}
+                    {p.brandName && (
+                      <div className="text-[11px] text-slate-400">
+                        {p.brandName}
+                      </div>
+                    )}
                   </div>
 
                   <button className="mt-2 w-full rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/90">
@@ -179,7 +200,11 @@ export default function ProductFlashSale({
               className="absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
+                <path
+                  d="M15 18l-6-6 6-6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
               </svg>
             </button>
             <button

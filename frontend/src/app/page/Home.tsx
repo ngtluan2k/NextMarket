@@ -9,17 +9,10 @@ import ProductGridToday from '../components/ProductGridToday';
 import FeaturedBrands from '../components/FeaturedBrands';
 import Footer from '../components/Footer';
 import YouMayAlsoLike from '../components/YouMayAlsoLike';
-import { fetchBrandsAPI } from '../../service/brand.service';
 import { fetchCategoriesAPI, Category } from '../../service/category.service';
-
+import { fetchBrandsAPI } from '../../service/brand.service';
 
 type Slide = { imageUrl: string; alt?: string; href?: string };
-interface ToastMessage {
-  showMessage?: (
-    type: 'success' | 'error' | 'warning',
-    content: string
-  ) => void;
-}
 
 interface ToastMessage {
   showMessage?: (
@@ -190,7 +183,6 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
     })();
   }, []);
 
-
   return (
     <div className="min-h-screen bg-slate-100">
       <EveryMartHeader />
@@ -208,14 +200,21 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
               <BootstrapTwoUpCarousel slides={slidesState} interval={5000} />
             </div>
             <PromoShortcuts className="mt-4" />
-
-           <FeaturedBrands fetchBrands={fetchBrandsAPI} className="mt-4"   />
+            <FeaturedBrands
+              className="mt-4"
+              fetchBrands={async () => {
+                const brands = await fetchBrandsAPI();
+                return brands.map((b) => ({
+                  id: b.id,
+                  coverUrl: b.logo_url, // ưu tiên cover, nếu không có thì dùng logo
+                }));
+              }}
+            />{' '}
             <YouMayAlsoLike className="mt-6" />
             <FlashSale className="mt-4" />
             <ProductGridToday
               containerClassName="my-6"
               cardClassName="hover:bg-gray-50"
-              showMessage={showMessage}
             />
           </section>
         </div>

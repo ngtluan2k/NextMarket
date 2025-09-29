@@ -49,4 +49,4 @@ test-output
 /backend/src/config/.env
 
 .env
-query.txt
+.txt

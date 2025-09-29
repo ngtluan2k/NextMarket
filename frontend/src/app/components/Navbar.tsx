@@ -1,22 +1,31 @@
-
-import React, { useState } from "react";
+// src/components/EveryMartHeader.tsx
+import React, { useState, useEffect } from 'react';
 import {
-  Search, Home, Smile, ShoppingCart, MapPin, Store,
-  CreditCard, Receipt, BadgeDollarSign,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../hooks/useAuth";
+  Search,
+  Home,
+  Smile,
+  ShoppingCart,
+  Store,
+  CreditCard,
+  Receipt,
+  BadgeDollarSign,
+  MapPin,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import LoginModal, { LoginPayload } from './LoginModal';
+import AccountMenu from './AccountMenu';
+import debounce from 'lodash.debounce';
 
-import LoginModal, { LoginPayload } from "./LoginModal";
-import AccountMenu, { Me } from "./AccountMenu";
+
+
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
   searchPlaceholder?: string;
   searchButton?: string;
   home?: string;
-  account?: string;
   cart?: string;
   categories?: string[];
   deliveryPrefix?: string;
@@ -28,47 +37,87 @@ export type HeaderLabels = {
 };
 
 const DEFAULT_LABELS: Required<HeaderLabels> = {
-  logoSrc: "/logo.png",
-  brandTagline: "Gì Cũng Có ",
-  searchPlaceholder: "Mo hinh Anime gia re",
-  searchButton: "Tim kiem",
-  home: "Trang chu",
-  account: "Tài khoản",
-  cart: "Giỏ hàng",
-  categories: ["dien gia dung", "me va be", "dien thoai", "the thao", "lam dep"],
-  deliveryPrefix: "Giao đến:",
-  address: "H.Son Ha, TT.Di Lang, Quang Ngai",
-  qa1: "Ưu đãi thẻ, ví",
-  qa2: "Đóng tiền, nạp thẻ",
-  qa3: "Mua trước trả sau",
-  qa4: "Bán hàng cùng EveryMart",
+  logoSrc: '/logo.png',
+  brandTagline: 'Gì Cũng Có ',
+  searchPlaceholder: 'Mo hinh Anime gia re',
+  searchButton: 'Tìm kiếm',
+  home: 'Trang chủ',
+  cart: 'Giỏ hàng',
+  categories: [
+    'Điện gia dụng',
+    'Mẹ và bé',
+    'Điện thoại',
+    'Thể thao',
+    'Làm đẹp',
+  ],
+  deliveryPrefix: 'Giao đến:',
+  address: 'H.Sơn Hà, TT.Di Lăng, Quảng Ngãi',
+  qa1: 'Ưu đãi thẻ, ví',
+  qa2: 'Đóng tiền, nạp thẻ',
+  qa3: 'Mua trước trả sau',
+  qa4: 'Bán hàng cùng EveryMart',
 };
 
-export default function EveryMartHeader({
-  labels,
-  onLogin, // call API login ở ngoài nếu muốn
-}: {
-  labels?: HeaderLabels;
-  onLogin?: (payload: LoginPayload) => Promise<void> | void;
-}) { 
+export interface ProductSuggestion {
+  id: number;
+  name: string;
+  slug: string;
+  brand?: { name: string };
+  media?: { url: string; is_primary: boolean }[];
+}
+
+export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
+
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
-
   const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [openLogin, setOpenLogin] = useState(false);
-  
-  // Sử dụng custom hook để quản lý auth state
-  const { user, isAuthenticated, login, logout } = useAuth();
-
   const { cart } = useCart();
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = cart.length;
+
 
   const navigate = useNavigate();
+  const { me, login, logout } = useAuth();
+
+  const fetchSuggestions = async (q: string) => {
+    if (!q) {
+      setSuggestions([]);
+      return;
+    }
+    setLoadingSuggestions(true);
+    try {
+      const res = await fetch(
+        `http://localhost:3000/products/search?q=${encodeURIComponent(
+          q
+        )}&limit=5`
+      );
+      const json = await res.json();
+      setSuggestions(json.data || []);
+    } catch (err) {
+      console.error(err);
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  // Debounce 300ms
+  const debouncedFetch = debounce(fetchSuggestions, 300);
+
+  useEffect(() => {
+    debouncedFetch(query);
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [query]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("search:", query);
+    if (!query) return;
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+    setSuggestions([]);
   };
-
 
   return (
     <header className="w-full bg-white">
@@ -99,7 +148,7 @@ export default function EveryMartHeader({
           </a>
 
           {/* Search */}
-          <form onSubmit={onSubmit} className="w-full">
+          <form onSubmit={onSubmit} className="w-full relative">
             <div className="relative flex h-12 w-full items-center rounded-2xl border border-slate-300 bg-white focus-within:border-cyan-600">
               <Search className="pointer-events-none absolute left-3 h-5 w-5 text-slate-400" />
               <input
@@ -115,6 +164,53 @@ export default function EveryMartHeader({
               >
                 {L.searchButton}
               </button>
+
+              {/* Suggestions dropdown */}
+              {suggestions.length > 0 && (
+                <ul className="absolute top-full left-0 right-0 bg-white border border-slate-300 shadow-lg rounded-b-md z-50 max-h-60 overflow-auto">
+                  {suggestions.map((p) => (
+                    <li
+                      key={p.id}
+                      className="px-3 py-2 cursor-pointer hover:bg-slate-100 flex items-center gap-2"
+                      onClick={() => {
+                        navigate(`/products/slug/${p.slug}`);
+                        setQuery('');
+                        setSuggestions([]);
+                      }}
+                    >
+                      {p.media?.[0]?.url &&
+                        (() => {
+                          const rawUrl = p.media[0].url;
+                          const imageUrl = rawUrl.startsWith('http')
+                            ? rawUrl
+                            : `http://localhost:3000/${rawUrl.replace(
+                                /^\/+/,
+                                ''
+                              )}`;
+
+                          return (
+                            <img
+                              src={imageUrl}
+                              alt={p.name}
+                              className="h-6 w-6 object-cover rounded"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'https://via.placeholder.com/40x40?text=No+Img';
+                              }}
+                            />
+                          );
+                        })()}
+
+                      <span>{p.name}</span>
+                      {p.brand?.name && (
+                        <span className="text-xs text-slate-500">
+                          ({p.brand.name})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </form>
 
@@ -128,8 +224,8 @@ export default function EveryMartHeader({
             </a>
 
             {/* Tài khoản */}
-            {isAuthenticated && user ? (
-              <AccountMenu me={user as Me} onLogout={logout} className="px-0" />
+            {me ? (
+              <AccountMenu className="px-0" />
             ) : (
               <button
                 type="button"
@@ -139,13 +235,12 @@ export default function EveryMartHeader({
                 <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
                   <Smile className="h-5 w-5" />
                 </span>
-                <span className="hidden md:inline">{L.account}</span>
+                <span className="hidden md:inline">Đăng nhập</span>
               </button>
             )}
-            {/* Cart button SPA */}
             <button
               type="button"
-              onClick={() => navigate("/cart")}
+              onClick={() => navigate('/cart')}
               className="group relative flex items-center gap-2 px-3"
             >
               <span className="rounded-lg border border-slate-200 p-2 transition group-hover:border-cyan-600 group-hover:text-cyan-700">
@@ -161,14 +256,16 @@ export default function EveryMartHeader({
           </nav>
         </div>
 
-        {/* Row 2 */}
+        {/* Row 2: Categories */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center mt-[-20px] gap-4 pb-2">
           <div />
           <div className="w-full px-20 ml-8">
             <ul className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-normal text-slate-500 pl-20">
               {L.categories.map((item) => (
                 <li key={item}>
-                  <a href="#" className="no-underline hover:text-cyan-700">{item}</a>
+                  <a href="#" className="no-underline hover:text-cyan-700">
+                    {item}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -176,7 +273,12 @@ export default function EveryMartHeader({
           <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
             <MapPin className="h-4 w-4 text-slate-500" />
             <span>{L.deliveryPrefix}</span>
-            <a href="#" className="truncate max-w-[320px] font-medium underline">{L.address}</a>
+            <a
+              href="#"
+              className="truncate max-w-[320px] font-medium underline"
+            >
+              {L.address}
+            </a>
           </div>
         </div>
 
@@ -186,8 +288,10 @@ export default function EveryMartHeader({
       {/* Quick features */}
       <div className="mx-auto max-w-screen-2xl px-4">
         <div className="flex flex-wrap items-stretch gap-0 border-t border-slate-200 pt-2 text-sm text-slate-700 divide-x divide-slate-200">
-
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="#"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-amber-400 text-white">
               <CreditCard className="h-3.5 w-3.5" />
             </span>
@@ -195,7 +299,10 @@ export default function EveryMartHeader({
               {L.qa1}
             </span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="#"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-green-500 text-white">
               <Receipt className="h-3.5 w-3.5" />
             </span>
@@ -203,7 +310,10 @@ export default function EveryMartHeader({
               {L.qa2}
             </span>
           </a>
-          <a href="#" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="#"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500 text-white">
               <BadgeDollarSign className="h-3.5 w-3.5" />
             </span>
@@ -211,8 +321,10 @@ export default function EveryMartHeader({
               {L.qa3}
             </span>
           </a>
-
-          <a href="myStores" className="group flex items-center gap-2 px-3 py-2 self-stretch">
+          <a
+            href="myStores"
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500 text-white">
               <Store className="h-3.5 w-3.5" />
             </span>
@@ -223,11 +335,11 @@ export default function EveryMartHeader({
         </div>
       </div>
 
-      {/* Modal Đăng nhập */}
+      {/* Login Modal */}
       <LoginModal
         open={openLogin}
         onClose={() => setOpenLogin(false)}
-        onLogin={async (data) => {
+        onLogin={async (data: LoginPayload) => {
           try {
             const res = await fetch('http://localhost:3000/users/login', {
               method: 'POST',
@@ -236,9 +348,19 @@ export default function EveryMartHeader({
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
-            
-            // Sử dụng custom hook để login
-            login(json.data, json.access_token);
+
+            login(json.data, json.access_token); // vẫn lưu payload tạm
+            // 👉 gọi thêm /me để cập nhật đầy đủ thông tin
+            const profileRes = await fetch('http://localhost:3000/users/me', {
+              headers: {
+                Authorization: `Bearer ${json.access_token}`,
+              },
+            });
+            const profileJson = await profileRes.json();
+            if (profileRes.ok) {
+              login(profileJson.data, json.access_token); // update lại me = profile
+            }
+
             setOpenLogin(false);
           } catch (err: any) {
             alert(err.message);
