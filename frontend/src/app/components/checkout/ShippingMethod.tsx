@@ -1,5 +1,6 @@
 // src/components/checkout/ShippingMethod.tsx
 import React from "react";
+import { Product } from '../productDetail/product'; 
 import { Card, Radio, Tag, Typography, Image } from "antd";
 const { Text } = Typography;
 
@@ -10,6 +11,7 @@ export type CheckoutItem = {
   quantity: number;
   price: number | string;
   oldPrice?: number | string;
+  product?: Product;
 };
 
 export type ShippingMethodType = "economy" | "fast";

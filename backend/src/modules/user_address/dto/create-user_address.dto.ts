@@ -21,15 +21,15 @@ export class CreateUserAddressDto {
   city!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional() // Cho phép province là tùy chọn và có thể rỗng
   province?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional() // Cho phép country là tùy chọn và có thể rỗng
   country?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional() // Cho phép postalCode là tùy chọn và có thể rỗng
   postalCode?: string;
 
   @IsBoolean()

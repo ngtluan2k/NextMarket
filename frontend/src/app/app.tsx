@@ -34,6 +34,7 @@ import OrderDetail from './components/productDetail/OrderDetails';
 import CheckoutPayment from './page/CheckoutPayment';
 import OrderSuccess from './page/OrderSuccess';
 
+import UserAddress from './page/UserAddress';
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -64,18 +65,7 @@ const App: React.FC = () => {
           <Route path="/seller-dashboard" element={<SellerDashboard />} />
           <Route path="/catepage" element={<CategoryPage />} />
           <Route path="/add_product" element={<ProductForm />} />
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/order-detail" element={<OrderDetail />} />
-          <Route path="/test/home" element={<ProductList />} />
-
-          {/* Account Routes */}
-          <Route path="/account" element={<AccountLayout />}>
-            <Route index element={<Navigate to="profile" replace />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="orders" element={<OrdersPage />} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="returns" element={<ReturnsPage />} />
-          </Route>
+          <Route path="/user/address" element={<UserAddress />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />

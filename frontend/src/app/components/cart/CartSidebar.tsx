@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Typography, Button, Tag, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../../context/CartContext';
-import { api } from '../../../config/api';
+import { useCart, CartItem } from '../../context/CartContext';
+import { api } from '../../config/api';
 import { CheckoutItem } from '../../components/checkout/ShippingMethod';
+import { useAuth } from '../../context/AuthContext';
 
 const { Text } = Typography;
 
@@ -22,16 +23,7 @@ type UserAddress = {
   name?: string;
   phone?: string;
   tag?: string;
-};
-
-type CartItem = {
-  productId: number;
-  variantId?: number;
-  price: number;
-  quantity: number;
-  name?: string;
-  image?: string;
-  storeId?: number;
+  userId?: number;
 };
 
 type Props = {
@@ -59,18 +51,38 @@ export const CartSidebar: React.FC<Props> = ({
   userAddress,
   items = [],
   etaLabel,
-  onSubmit
+  onSubmit,
 }) => {
   const { cart } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
+  const { me } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
+    setLoading(true);
     try {
-      const userId = Number(localStorage.getItem('userId') || 1);
-      const storeId = cart[0]?.storeId || 1;
+      console.log('📋 Items received:', JSON.stringify(items, null, 2));
 
-      if (!userAddress || userAddress.id === 0) {
+      if (items.length === 0) {
+        message.error('Không có sản phẩm trong đơn hàng');
+        return;
+      }
+
+      if (!userAddress || !userAddress.id) {
         message.error('Vui lòng chọn địa chỉ giao hàng');
+        return;
+      }
+
+      const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+      if (!userId) {
+        message.error('Vui lòng đăng nhập để đặt hàng');
+        navigate('/login');
+        return;
+      }
+
+      if (userAddress.userId !== userId) {
+        message.error('Địa chỉ không thuộc về người dùng hiện tại.');
+        navigate('/user/address');
         return;
       }
 
@@ -79,29 +91,52 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      // 1. Tạo đơn hàng
+      const invalidItems = items.filter(
+        (item) => !item.id || isNaN(Number(item.id)) || Number(item.id) <= 0
+      );
+      if (invalidItems.length > 0) {
+        console.error(
+          '❌ Invalid items:',
+          JSON.stringify(invalidItems, null, 2)
+        );
+        message.error('Một số sản phẩm có ID không hợp lệ');
+        return;
+      }
+
+      const storeId = items[0]?.product?.store?.id || 1;
+      const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
+
       const orderPayload = {
         userId,
         storeId,
         addressId: Number(userAddress.id),
         totalAmount: Number(selectedTotal),
-        shippingFee: shippingMethod === 'economy' ? 0 : 22000,
+        shippingFee,
         discountTotal: 0,
-        items: cart.map((item) => ({
-          productId: Number(item.productId),
-          ...(item.variantId ? { variantId: Number(item.variantId) } : {}),
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-        })),
-        // Xóa shippingMethod và paymentMethod khỏi payload
+        items: items.map((item, index) => {
+          const productId = Number(item.id);
+          console.log("productId: "+item.id)
+          if (isNaN(productId) || productId <= 0) {
+            throw new Error(
+              `sản phẩm không hợp lệ tại vị trí  ${index}: ${item.product?.id}`
+            );
+          }
+          return {
+            productId,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            ...(item.product?.variants?.[0]?.id
+              ? { variantId: Number(item.product.variants[0].id) }
+              : {}),
+          };
+        }),
       };
 
-      console.log('📦 Tạo đơn hàng:', orderPayload);
+      console.log('📦 Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
       const orderRes = await api.post('/orders', orderPayload);
       const order = orderRes.data;
       console.log('📦 Đơn hàng đã được tạo:', order);
 
-      // 2. Tìm phương thức thanh toán được chọn
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
       );
@@ -113,16 +148,17 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      console.log('💳 Sử dụng phương thức thanh toán:', selectedMethod);
-
-      // 3. Tạo thanh toán
+      const orderUuid = order.uuid || String(order.id);
       const paymentPayload = {
-        orderUuid: order.uuid || order.id,
+        orderUuid,
         paymentMethodUuid: selectedMethod.uuid,
         amount: Number(selectedTotal),
       };
 
-      console.log('💳 Tạo thanh toán:', paymentPayload);
+      console.log(
+        '💳 Tạo thanh toán:',
+        JSON.stringify(paymentPayload, null, 2)
+      );
       const paymentRes = await api.post('/payments', paymentPayload);
       const { redirectUrl, payment } = paymentRes.data;
 
@@ -145,11 +181,15 @@ export const CartSidebar: React.FC<Props> = ({
         });
       }
     } catch (err: any) {
-      console.error(
-        '❌ Lỗi tạo đơn hàng/thanh toán:',
-        err.response?.data || err.message
-      );
-      message.error(err.response?.data?.message || 'Không thể tạo đơn hàng');
+      console.error('❌ Lỗi tạo đơn hàng/thanh toán:', {
+        status: err.status,
+        data: err.data,
+        message: err.message,
+        url: err.config?.url,
+      });
+      message.error(err.message || 'Không thể tạo đơn hàng');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,15 +197,17 @@ export const CartSidebar: React.FC<Props> = ({
     <div
       style={{ position: 'sticky', top: 24, maxWidth: 360, marginLeft: 'auto' }}
     >
-      {/* Địa chỉ giao hàng */}
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
           <Text strong>Giao tới</Text>
-          <Button type="link" size="small">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate('/user/address')}
+          >
             Thay đổi
           </Button>
         </div>
-
         {userAddress ? (
           <>
             <p>
@@ -178,11 +220,9 @@ export const CartSidebar: React.FC<Props> = ({
             {userAddress.tag && <Tag color="green">{userAddress.tag}</Tag>}
           </>
         ) : (
-          <Text type="secondary">Đang tải địa chỉ...</Text>
+          <Text type="secondary">Vui lòng chọn địa chỉ giao hàng</Text>
         )}
       </Card>
-
-      {/* Khuyến mãi */}
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
           <Text strong>Khuyến Mãi</Text>
@@ -230,14 +270,11 @@ export const CartSidebar: React.FC<Props> = ({
           Mua thêm để freeship 300k cho đơn này
         </Button>
       </Card>
-
-      {/* Tổng tiền */}
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Text>Tổng tiền hàng ({selectedCount})</Text>
           <Text>{selectedTotal.toLocaleString()}đ</Text>
         </div>
-
         <div
           style={{
             display: 'flex',
@@ -250,14 +287,14 @@ export const CartSidebar: React.FC<Props> = ({
             {selectedTotal.toLocaleString()}đ
           </Text>
         </div>
-
         <Button
           type="primary"
           block
           size="large"
           style={{ marginTop: 16, borderRadius: 6 }}
-          disabled={selectedCount === 0}
-          onClick={handleSubmit}
+          disabled={selectedCount === 0 || loading}
+          onClick={mode === 'checkout' ? handleSubmit : onSubmit}
+          loading={loading}
         >
           {submitLabel ??
             (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}

@@ -1,39 +1,52 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UserAddress } from './user_address.entity';
 import { CreateUserAddressDto } from './dto/create-user_address.dto';
 import { UpdateUserAddressDto } from './dto/update-user_address.dto';
-import { UserAddress } from './user_address.entity';
+
 
 @Injectable()
 export class UserAddressService {
   constructor(
     @InjectRepository(UserAddress)
-    private readonly userAddressRepo: Repository<UserAddress>,
+    private readonly userAddressRepository: Repository<UserAddress>,
   ) {}
 
-  async create(createUserAddressDto: CreateUserAddressDto) {
-    const newAddress = this.userAddressRepo.create(createUserAddressDto);
-    return await this.userAddressRepo.save(newAddress);
+  async create(createUserAddressDto: CreateUserAddressDto & { userId: number }) {
+    const address = this.userAddressRepository.create({
+      ...createUserAddressDto,
+      user: { id: createUserAddressDto.userId },
+    });
+    return this.userAddressRepository.save(address);
   }
 
-  async findAll() {
-    return await this.userAddressRepo.find();
+  async findAllByUserId(userId: number) {
+    return this.userAddressRepository.find({
+      where: { user: { id: userId } },
+    });
   }
 
-  async findOne(id: number) {
-    return await this.userAddressRepo.findOne({ where: { id } });
+  async findOne(id: number, userId: number) {
+    const address = await this.userAddressRepository.findOne({
+      where: { id, user: { id: userId } },
+    });
+    if (!address) {
+      throw new NotFoundException(`Address with ID ${id} not found for user ${userId}`);
+    }
+    return address;
   }
 
-  async update(id: number, updateUserAddressDto: UpdateUserAddressDto) {
-    await this.userAddressRepo.update(id, updateUserAddressDto);
-    return this.findOne(id);
+  async update(id: number, userId: number, updateUserAddressDto: UpdateUserAddressDto) {
+    const address = await this.findOne(id, userId); // Kiểm tra quyền sở hữu
+    return this.userAddressRepository.save({
+      ...address,
+      ...updateUserAddressDto,
+    });
   }
 
-  async remove(id: number) {
-    const toDelete = await this.findOne(id);
-    if (!toDelete) return null;
-    await this.userAddressRepo.delete(id);
-    return toDelete;
+  async remove(id: number, userId: number) {
+    const address = await this.findOne(id, userId); // Kiểm tra quyền sở hữu
+    return this.userAddressRepository.remove(address);
   }
 }

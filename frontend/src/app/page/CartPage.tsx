@@ -26,7 +26,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const navigate = useNavigate();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const allIds = useMemo(() => cart.map((i) => i.id), [cart]);  
+  const allIds = useMemo(() => cart.map((i) => i.id), [cart]);
 
   const allChecked = selectedIds.length === allIds.length && allIds.length > 0;
   const indeterminate =
@@ -36,7 +36,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
     if (selectedIds.length === 0) return;
 
     const items = cart
-      .filter((i) => selectedIds.includes(i.id)) 
+      .filter((i) => selectedIds.includes(i.id))
       .map((i) => ({
         id: i.id,
         product_id: i.product.id,
@@ -55,7 +55,9 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
     navigate('/checkout', { state: { items, subtotal: selectedTotal } });
   };
   const toggleAll = () => {
-    setSelectedIds((prev) => (prev.length === allIds.length ? [] : [...allIds]));
+    setSelectedIds((prev) =>
+      prev.length === allIds.length ? [] : [...allIds]
+    );
   };
 
   const toggleOne = (id: number) => {
@@ -67,7 +69,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const selectedTotal = useMemo(
     () =>
       cart
-        .filter((i) => selectedIds.includes(i.id))  
+        .filter((i) => selectedIds.includes(i.id))
         .reduce((sum, i) => sum + i.price * i.quantity, 0),
     [cart, selectedIds]
   );
@@ -125,6 +127,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                 selectedTotal={selectedTotal}
                 submitLabel={`Mua Hàng (${selectedIds.length})`}
                 onSubmit={handleGoCheckout}
+                
               />
             </Col>
           </Row>

@@ -60,6 +60,15 @@ export class Order {
   status!: OrderStatuses;
 
   @Column({
+    name: 'sub_total',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  subtotal?: number;
+
+  @Column({
     name: 'shipping_fee',
     type: 'decimal',
     precision: 12,

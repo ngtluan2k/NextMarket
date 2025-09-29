@@ -102,8 +102,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const addToCart = async (productId: number, quantity = 1, variantId?: number) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
-      message.warning('Vui lòng đăng nhập để thêm vào giỏ hàng');
-      return;
+      throw new Error('Vui lòng đăng nhập để thêm vào giỏ hàng');
     }
     try {
       const response = await fetch('http://localhost:3000/cart/add', {
@@ -116,10 +115,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         await loadCart();
+      }else{
+        throw new Error('Không thể thêm vào giỏ hàng');
       }
     } catch (error) {
-      message.warning('Không thể thêm vào giỏ hàng');
       console.error('Không thể thêm vào giỏ hàng:', error);
+     throw new Error('Không thể thêm vào giỏ hàng');
     }
   };
 

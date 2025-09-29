@@ -1,12 +1,17 @@
-// src/components/productDetail/BuyBox.tsx
+import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { Product } from '../productDetail/product';
-import { TIKI_RED, vnd } from '../productDetail/productDetail';
-import { useCart } from '../../context/CartContext';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { TIKI_RED } from '../productDetail/productDetail';
 import { useNavigate, useLocation } from 'react-router-dom';
-// import { API_ENDPOINTS } from "../../../config/api";
-// import LoginModal from '../LoginModal';
+import { useCart } from '../../context/CartContext';
+import LoginModal from '../LoginModal';
+
+export const vnd = (n?: number) =>
+  (n ?? 0).toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  });
 
 type CheckoutLocationState = {
   items?: Array<{
@@ -52,7 +57,7 @@ export default function BuyBox({
   const { addToCart } = useCart();
   const p = product ?? {};
   const location = useLocation();
-  // console.log('currentProduct: ' + JSON.stringify(product?.variants));
+
 
   const availability = useMemo(() => {
     const v = product?.variants?.find((v) => v.id === selectedVariantId);
@@ -70,7 +75,7 @@ export default function BuyBox({
       showLoginModal,
     });
     const token = localStorage.getItem('token');
-    console.log('🔑 Token:', token ? 'exists' : 'null');
+    console.log(' Token:', token ? 'exists' : 'null');
   }, [location.pathname, showLoginModal, product, quantity]);
 
   const handleBuyNow = async () => {
@@ -89,7 +94,7 @@ export default function BuyBox({
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('🔐 No token, saving buyNowData');
+      console.log('No token, saving buyNowData');
       const productData = {
         id: product.id,
         uuid: product.uuid,
@@ -112,7 +117,7 @@ export default function BuyBox({
       return;
     }
 
-    console.log(' Authenticated, preparing checkout state');
+    // console.log(' Authenticated, preparing checkout state');
 
     const checkoutState: CheckoutLocationState = {
       items: [
@@ -140,7 +145,6 @@ export default function BuyBox({
     };
 
     console.log('Navigating to /checkout with state:', checkoutState);
-    // onBuyNow?.({ product, quantity });
     navigate('/checkout', { state: checkoutState });
   };
 
@@ -244,17 +248,24 @@ export default function BuyBox({
   if (!product) return null;
 
   const handleAddToCart = async (product: Product, quantity: number) => {
+    setLoading(true);
+
     try {
-      console.log('showMessage : ' + JSON.stringify(showMessage));
-      await addToCart(Number(product.id), quantity, selectedVariantId ?? undefined);
+      await addToCart(
+        Number(product.id),
+        quantity,
+        selectedVariantId ?? undefined
+      );
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add to cart:', error);
       if (showMessage) {
-        showMessage('error', 'Thêm vào giỏ thất bại');
+        showMessage('error', error.message);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -265,130 +276,100 @@ export default function BuyBox({
   };
 
   return (
-    <aside
-      className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
-      style={{ width, minHeight, top: stickyTop }}
-    >
-      {/* Seller info */}
-      <div
-        className="flex items-center gap-2 cursor-pointer"
-        onClick={handleClickStore}
+    <>
+      <aside
+        className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
+        style={{ width, minHeight, top: stickyTop }}
       >
-        <img
-          src={product.store?.logo_url}
-          className="h-6 w-6 rounded-full"
-          alt={product.store?.name ?? 'Store'}
-        />
-        <div>
-          <div className="text-sm font-semibold">
-            {product.store?.name ?? 'Official Store'}
+        {/* Seller info */}
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={handleClickStore}
+        >
+          <img
+            src={product.store?.logo_url ?? 'https://via.placeholder.com/24'}
+            className="h-6 w-6 rounded-full"
+            alt={product.store?.name ?? 'Store'}
+          />
+          <div>
+            <div className="text-sm font-semibold">
+              {product.store?.name ?? 'Official Store'}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
+              {(product.rating ?? 0).toFixed(1)}
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-xs text-slate-500">
-            <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
-            {(product.rating ?? 0).toFixed(1)}
+        </div>
+
+        {/* Quantity */}
+        <div className="mt-5">
+          <div className="text-xs text-slate-500">Số lượng</div>
+          <div className="inline-flex items-center rounded-lg border border-slate-200">
+            <button
+              className="px-3 py-2 hover:bg-slate-50"
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            >
+              -
+            </button>
+            <div className="w-10 text-center text-sm">{quantity}</div>
+            <button
+              className="px-3 py-2 hover:bg-slate-50"
+              onClick={() => setQuantity(quantity + 1)}
+            >
+              +
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Quantity */}
-      <div className="mt-5">
-        <div className="text-xs text-slate-500">Số lượng</div>
-        <div className="inline-flex items-center rounded-lg border border-slate-200">
+        {/* Price */}
+        <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
+        <div className="text-[26px] font-bold">{vnd(totalPrice)}</div>
+
+        {/* Discount Info */}
+        {p.listPrice && p.listPrice > (p.price ?? 0) && (
+          <div className="mt-2 text-sm">
+            <span className="text-slate-400 line-through">
+              {vnd(p.listPrice * quantity)}
+            </span>
+            <span className="ml-2 text-red-600 font-medium">
+              Tiết kiệm {vnd((p.listPrice - (p.price ?? 0)) * quantity)}
+            </span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="mt-4 space-y-2">
           <button
-            className="px-3 py-2 hover:bg-slate-50"
-            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
+              !availability || loading
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:opacity-90'
+            }`}
+            style={{ background: TIKI_RED }}
+            onClick={handleBuyNow}
+            disabled={!availability || loading}
           >
-            -
+            {loading ? 'Đang xử lý...' : 'Mua ngay'}
           </button>
-          <div className="w-10 text-center text-sm">{quantity}</div>
           <button
-            className="px-3 py-2 hover:bg-slate-50"
-            onClick={() => setQuantity(Math.min(quantity + 1, maxQuantity))}
-            disabled={quantity >= maxQuantity}
+            className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
+            onClick={() => handleAddToCart(product, quantity)}
+            disabled={loading}
           >
-            +
+            Thêm vào giỏ
+          </button>
+
+          <button className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-700">
+            Mua trước trả sau
           </button>
         </div>
-      </div>
-
-      {/* Price Calculation */}
-      <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
-      <div className="text-[26px] font-bold text-red-600">
-        {vnd(totalPrice)}
-      </div>
-
-      {/* Discount Info */}
-      {p.listPrice && p.listPrice > (p.price ?? 0) && (
-        <div className="mt-2 text-sm">
-          <span className="text-slate-400 line-through">
-            {vnd(p.listPrice * quantity)}
-          </span>
-          <span className="ml-2 text-red-600 font-medium">
-            Tiết kiệm {vnd((p.listPrice - (p.price ?? 0)) * quantity)}
-          </span>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="mt-4 space-y-2">
-        <button
-          className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
-            !availability || loading
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:opacity-90'
-          }`}
-          style={{ background: TIKI_RED }}
-          onClick={handleBuyNow}
-          disabled={!availability || loading}
-        >
-          {loading ? 'Đang xử lý...' : 'Mua ngay'}
-        </button>
-
-        <button
-          className={`h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 transition-colors ${
-            !availability || loading
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:bg-slate-50'
-          }`}
-          onClick={() => handleAddToCart(product, quantity)}
-          disabled={!availability || loading}
-        >
-          {loading ? 'Đang xử lý...' : 'Thêm vào giỏ'}
-        </button>
-
-        <button
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          disabled={!availability}
-        >
-          Mua trước trả sau
-        </button>
-      </div>
-
-      {/* Availability Warning */}
-      {!availability && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600 font-medium">
-            Sản phẩm hiện đã hết hàng
-          </p>
-        </div>
-      )}
-
-      {/* Shipping Info */}
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center gap-2 text-sm text-blue-700">
-          <span className="font-medium"> Miễn phí vận chuyển</span>
-        </div>
-        <p className="text-xs text-blue-600 mt-1">
-          Cho đơn hàng từ ₫150,000 trong nội thành
-        </p>
-      </div>
-
-      {/* Debug info */}
-      <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-        <div>Modal State: {showLoginModal ? 'OPEN' : 'CLOSED'}</div>
-        <div>Has Token: {localStorage.getItem('token') ? 'YES' : 'NO'}</div>
-        <div>Product ID: {product?.id || 'None'}</div>
-      </div>
-    </aside>
+      </aside>
+      <LoginModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        title="Đăng nhập để mua ngay"
+      />
+    </>
   );
 }
