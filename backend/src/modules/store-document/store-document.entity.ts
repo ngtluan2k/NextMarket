@@ -28,7 +28,4 @@ export class StoreDocument {
 
   @Column({ type: 'datetime', nullable: true })
   verified_at!: Date | null;
-
-   @Column({ type: 'boolean', default: false })
-  is_draft!: boolean;
 }

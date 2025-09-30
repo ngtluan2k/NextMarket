@@ -116,7 +116,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       label: "Quản lý cửa hàng",
       children: [
         { key: "10-1", icon: dotIcon, label: "Danh sách cửa hàng" },
-        { key: "10-2", icon: dotIcon, label: "Thông tin cửa hàng" },
+        
       ],
     },
 

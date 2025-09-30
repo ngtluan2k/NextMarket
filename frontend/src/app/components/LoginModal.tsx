@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc'; // react-icons/google
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { requestRegisterOtp } from '../../service/auth.service';
 
 export type LoginPayload = {
   email: string;
@@ -76,16 +78,16 @@ export default function LoginModal({
   const greeting = me?.full_name
     ? `Xin chào, ${me.full_name}`
     : me?.email
-    ? `Xin chào, ${me.email}`
-    : title;
+      ? `Xin chào, ${me.email}`
+      : title;
 
   // login states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
-    const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
-
+  const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
+  const navigate = useNavigate();
 
   // register states
   const [reg, setReg] = useState<RegisterPayload>({
@@ -209,15 +211,12 @@ export default function LoginModal({
     setError(null);
     setSubmitting(true);
     try {
-      if (onRegister) await onRegister(reg);
-      else await callDefaultRegister(reg);
-
-      // after successful register, switch to login and prefill email
-      setMode('login');
-      setEmail(reg.email);
-      setPassword('');
+      await requestRegisterOtp(reg.email);
+      sessionStorage.setItem('pendingRegister', JSON.stringify(reg));
+      onClose(); // đóng modal
+      navigate(`/verify-otp?email=${encodeURIComponent(reg.email)}`);
     } catch (err: any) {
-      setError(err?.message ?? 'Đăng ký thất bại. Vui lòng thử lại.');
+      setError(err?.message ?? 'Gửi OTP thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -323,10 +322,9 @@ export default function LoginModal({
           <div className="mt-2 flex w-full rounded-xl bg-slate-100 p-1">
             <button
               className={`flex-1 rounded-lg  py-2 text-sm font-medium transition
-                ${
-                  mode === 'login'
-                    ? 'bg-white shadow text-sky-700'
-                    : 'text-slate-600 hover:text-slate-800'
+                ${mode === 'login'
+                  ? 'bg-white shadow text-sky-700'
+                  : 'text-slate-600 hover:text-slate-800'
                 }`}
               onClick={() => setMode('login')}
             >
@@ -334,10 +332,9 @@ export default function LoginModal({
             </button>
             <button
               className={`flex-1 rounded-lg  py-2 text-sm font-medium transition
-                ${
-                  mode === 'register'
-                    ? 'bg-white shadow text-sky-700'
-                    : 'text-slate-600 hover:text-slate-800'
+                ${mode === 'register'
+                  ? 'bg-white shadow text-sky-700'
+                  : 'text-slate-600 hover:text-slate-800'
                 }`}
               onClick={() => setMode('register')}
             >
@@ -480,11 +477,10 @@ export default function LoginModal({
                         onClick={() => setReg({ ...reg, gender: g.key })}
                         aria-pressed={active}
                         className={`h-9 rounded-full border px-4 text-sm transition
-                              ${
-                                active
-                                  ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
-                                  : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-                              }`}
+                              ${active
+                            ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
+                            : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                          }`}
                       >
                         {g.label}
                       </button>
@@ -627,9 +623,8 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
           type={type}
           autoComplete={autoComplete}
           className={`w-full rounded-xl bg-transparent  py-2.5 text-sm text-slate-900 outline-none
-                        ${iconLeft ? 'pl-10' : 'pl-3'} ${
-            rightSlot ? 'pr-10' : 'pr-3'
-          }`}
+                        ${iconLeft ? 'pl-10' : 'pl-3'} ${rightSlot ? 'pr-10' : 'pr-3'
+            }`}
         />
         {rightSlot && <span className="absolute right-2">{rightSlot}</span>}
       </div>

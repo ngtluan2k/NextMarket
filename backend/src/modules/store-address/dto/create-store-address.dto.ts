@@ -18,14 +18,19 @@ export class CreateStoreAddressDto {
   street!: string;
 
   @ApiProperty({ description: 'Thành phố' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  city!: string;
+  district?: string;
 
   @ApiProperty({ description: 'Tỉnh/Thành phố' })
   @IsNotEmpty()
   @IsString()
   province!: string;
+
+  @ApiPropertyOptional({ description: 'Phường/Xã' })
+  @IsOptional()
+  @IsString()
+  ward?: string;
 
   @ApiProperty({ description: 'Quốc gia' })
   @IsNotEmpty()
@@ -52,8 +57,4 @@ export class CreateStoreAddressDto {
   @IsBoolean()
   is_default?: boolean;
 
-  @ApiPropertyOptional({ description: 'Là bản nháp' })
-  @IsOptional()
-  @IsBoolean()
-  is_draft?: boolean;
 }

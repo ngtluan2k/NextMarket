@@ -34,6 +34,9 @@ export class UserAddress {
   @Column()
   province!: string;
 
+  @Column({ nullable: true })
+  ward!: string;
+
   @Column()
   country!: string;
 

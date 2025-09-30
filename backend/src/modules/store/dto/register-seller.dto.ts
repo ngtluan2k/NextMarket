@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, IsEmail, ValidateNested, IsArray, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsEmail, ValidateNested, IsArray, IsBoolean,IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateStoreInformationDto } from '../../store-information/dto/create-store-information.dto';
@@ -48,6 +48,10 @@ export class RegisterSellerDto {
   @IsOptional()
   @IsString()
   slug?: string;
+
+  @IsOptional()
+  @IsInt()
+  store_id?: number;
 
   @ApiPropertyOptional({ description: 'Mô tả cửa hàng' })
   @IsOptional()

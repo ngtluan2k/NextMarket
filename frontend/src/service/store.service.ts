@@ -30,7 +30,12 @@ class StoreService {
   return response.data.data; // object
 }
 
-
+async getFullStore(id: number) {
+    const res = await axios.get(`${API_BASE_URL}/stores/${id}/full`, {
+      headers: this.getAuthHeaders(),
+    });
+    return res.data.data; // { store, storeInformation, storeIdentification, ... }
+  }
 
 }
 

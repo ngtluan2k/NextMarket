@@ -18,6 +18,8 @@ import LoginModal, { LoginPayload } from './LoginModal';
 import AccountMenu from './AccountMenu';
 import debounce from 'lodash.debounce';
 
+
+
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -257,8 +259,10 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               </span>
               <span className="hidden md:inline">{L.home}</span>
             </a>
+
+            {/* Tài khoản */}
             {me ? (
-              <AccountMenu />
+              <AccountMenu className="px-0" />
             ) : (
               <button
                 type="button"

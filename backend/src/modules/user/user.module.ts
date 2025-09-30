@@ -14,6 +14,8 @@ import { UserController } from './user.controller';
 import { JwtStrategy } from '../../common/auth/jwt.strategy';
 
 import { ShoppingCart } from '../cart/cart.entity';
+import { OtpService } from '../../common/otp/otp.service';
+import { MailService } from '../../common/mail/mail.service';
 
 
 @Module({
@@ -32,7 +34,7 @@ import { ShoppingCart } from '../cart/cart.entity';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [UserService, JwtStrategy],
+  providers: [UserService, JwtStrategy,OtpService,MailService],
   controllers: [UserController],
   exports: [UserService],
 })
