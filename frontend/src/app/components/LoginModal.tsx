@@ -37,6 +37,7 @@ type LoginModalProps = {
   title?: string;
   sideImageUrl?: string;
   apiBase?: string; // default: http://localhost:3000
+  onSuccess?: () => void;
 };
 
 const defaultSide =
@@ -159,7 +160,7 @@ export default function LoginModal({
     if (data?.access_token) {
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.data));
-
+      localStorage.setItem('userId', data.data.id.toString());
       // fetch giỏ hàng riêng theo user
       const cartRes = await fetch(`${apiBase}/cart/me`, {
         headers: { Authorization: `Bearer ${data.access_token}` },

@@ -6,7 +6,7 @@ export const ProductForm: React.FC = () => {
     []
   );
   const [step, setStep] = useState(1);
-   const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
   interface ProductFormState {
     name: string;
     short_description?: string;
@@ -171,91 +171,97 @@ export const ProductForm: React.FC = () => {
     setForm({ ...form, media: newMedia });
   };
 
-const submitForm = async (isDraft: boolean) => {
-  try {
-    const token = localStorage.getItem("token");
+  const submitForm = async (isDraft: boolean) => {
+    try {
+      const token = localStorage.getItem('token');
 
-    // Nếu không chọn brand thì mặc định chọn "Khác"
-    if (!form.brandId) {
-      const otherBrand = brands.find((b) => b.name === "Khác");
-      setForm((prev) => ({
-        ...prev,
-        brandId: otherBrand ? otherBrand.id : -1,
-      }));
+      // Nếu không chọn brand thì mặc định chọn "Khác"
+      if (!form.brandId) {
+        const otherBrand = brands.find((b) => b.name === 'Khác');
+        setForm((prev) => ({
+          ...prev,
+          brandId: otherBrand ? otherBrand.id : -1,
+        }));
+      }
+
+      const url = isDraft
+        ? 'http://localhost:3000/products'
+        : 'http://localhost:3000/products/publish';
+
+      // Clone variants để thêm stock
+      const variantsWithStock = form.variants.map((v) => {
+        const totalStock = form.inventory
+          .filter((inv) => inv.variant_sku === v.sku)
+          .reduce((sum, inv) => sum + inv.quantity, 0);
+        return { ...v, stock: totalStock };
+      });
+
+      // Chuẩn bị formData
+      const formData = new FormData();
+      formData.append('name', String(form.name));
+      formData.append(
+        'short_description',
+        String(form.short_description || '')
+      );
+      formData.append('description', String(form.description || ''));
+      formData.append('base_price', Number(form.base_price).toString());
+      formData.append('brandId', Number(form.brandId).toString());
+      formData.append('categories', JSON.stringify(form.categories));
+      formData.append('variants', JSON.stringify(variantsWithStock));
+      formData.append('inventory', JSON.stringify(form.inventory));
+      formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
+      form.media.forEach((m) => m.file && formData.append('media', m.file));
+
+      // Gửi API
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to submit product');
+
+      alert(
+        isDraft ? 'Product saved as draft!' : 'Product published successfully!'
+      );
+    } catch (err: any) {
+      alert(err.message);
     }
+  };
 
-    const url = isDraft
-      ? "http://localhost:3000/products"
-      : "http://localhost:3000/products/publish";
+  // Validate form khi publish
+  const validateForm = (): string[] => {
+    const errors: string[] = [];
 
-    // Clone variants để thêm stock
-    const variantsWithStock = form.variants.map((v) => {
-      const totalStock = form.inventory
-        .filter((inv) => inv.variant_sku === v.sku)
-        .reduce((sum, inv) => sum + inv.quantity, 0);
-      return { ...v, stock: totalStock };
+    // required cho Publish
+    if (!form.name.trim()) errors.push('Product name is required');
+    if (!form.base_price || form.base_price <= 0)
+      errors.push('Base price must be greater than 0');
+    if (!form.brandId) errors.push('Brand is required');
+    if (form.categories.length === 0)
+      errors.push('At least one category is required');
+
+    // validate variants
+    form.variants.forEach((v, i) => {
+      if (!v.sku.trim()) errors.push(`Variant ${i + 1}: SKU is required`);
+      if (!v.variant_name.trim())
+        errors.push(`Variant ${i + 1}: Name is required`);
+      if (v.price <= 0) errors.push(`Variant ${i + 1}: Price must be > 0`);
     });
 
-    // Chuẩn bị formData
-    const formData = new FormData();
-    formData.append("name", String(form.name));
-    formData.append("short_description", String(form.short_description || ""));
-    formData.append("description", String(form.description || ""));
-    formData.append("base_price", Number(form.base_price).toString());
-    formData.append("brandId", Number(form.brandId).toString());
-    formData.append("categories", JSON.stringify(form.categories));
-    formData.append("variants", JSON.stringify(variantsWithStock));
-    formData.append("inventory", JSON.stringify(form.inventory));
-    formData.append("pricing_rules", JSON.stringify(form.pricing_rules));
-    form.media.forEach((m) => m.file && formData.append("media", m.file));
-
-    // Gửi API
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
+    // validate inventory
+    form.inventory.forEach((inv, i) => {
+      if (!inv.variant_sku.trim())
+        errors.push(`Inventory ${i + 1}: Variant SKU is required`);
+      if (!inv.location.trim())
+        errors.push(`Inventory ${i + 1}: Location is required`);
+      if (inv.quantity < 0)
+        errors.push(`Inventory ${i + 1}: Quantity must be >= 0`);
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to submit product");
-
-    alert(isDraft ? "Product saved as draft!" : "Product published successfully!");
-  } catch (err: any) {
-    alert(err.message);
-  }
-};
-
-// Validate form khi publish
-const validateForm = (): string[] => {
-  const errors: string[] = [];
-
-  // required cho Publish
-  if (!form.name.trim()) errors.push("Product name is required");
-  if (!form.base_price || form.base_price <= 0)
-    errors.push("Base price must be greater than 0");
-  if (!form.brandId) errors.push("Brand is required");
-  if (form.categories.length === 0)
-    errors.push("At least one category is required");
-
-  // validate variants
-  form.variants.forEach((v, i) => {
-    if (!v.sku.trim()) errors.push(`Variant ${i + 1}: SKU is required`);
-    if (!v.variant_name.trim()) errors.push(`Variant ${i + 1}: Name is required`);
-    if (v.price <= 0) errors.push(`Variant ${i + 1}: Price must be > 0`);
-  });
-
-  // validate inventory
-  form.inventory.forEach((inv, i) => {
-    if (!inv.variant_sku.trim())
-      errors.push(`Inventory ${i + 1}: Variant SKU is required`);
-    if (!inv.location.trim())
-      errors.push(`Inventory ${i + 1}: Location is required`);
-    if (inv.quantity < 0)
-      errors.push(`Inventory ${i + 1}: Quantity must be >= 0`);
-  });
-
-  return errors;
-};
+    return errors;
+  };
 
   // Step navigation
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 4));
@@ -399,8 +405,10 @@ const validateForm = (): string[] => {
                   type="checkbox"
                   checked={m.is_primary}
                   onChange={(e) => {
-                    const newMedia = [...form.media];
-                    newMedia[i].is_primary = e.target.checked;
+                    const newMedia = form.media.map((m, idx) => ({
+                      ...m,
+                      is_primary: idx === i ? e.target.checked : false, // chỉ ảnh hiện tại được tick
+                    }));
                     setForm({ ...form, media: newMedia });
                   }}
                   className="w-4 h-4"

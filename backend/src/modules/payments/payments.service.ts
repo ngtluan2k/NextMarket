@@ -187,10 +187,7 @@ export class PaymentsService {
         if (inv) {
           inv.quantity = (inv.quantity || 0) - item.quantity;
           inv.used_quantity = (inv.used_quantity || 0) + item.quantity;
-          inv.reserved_stock = (inv.reserved_stock || 0) - item.quantity;
-          if (inv.reserved_stock < 0) {
-            throw new BadRequestException('Reserved stock cannot be negative');
-          }
+          
           await manager.save(inv);
         }
       }

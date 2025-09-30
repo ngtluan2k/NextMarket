@@ -27,12 +27,13 @@ import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab
 import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
 import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
 import CheckoutPayment from "./page/CheckoutPayment";
-import OrderSuccess from "./page/OrderSuccess";
+import {OrderSuccess} from "./page/OrderSuccess";
 import FeaturedBrandsPage from "./components/FeaturedBrands";
 import BrandPage from "./page/BrandPage";
 import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
 
+import UserAddress from './page/UserAddress';
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
 }
@@ -65,6 +66,7 @@ const App: React.FC = () => {
           <Route path="/checkout" element={<CheckoutPayment />} />
           <Route path="/order/success" element={<OrderSuccess />} />
           <Route path="/add_product" element={<ProductForm />} />
+          <Route path="/user/address" element={<UserAddress />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />

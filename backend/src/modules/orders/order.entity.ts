@@ -60,6 +60,15 @@ export class Order {
   status!: OrderStatuses;
 
   @Column({
+    name: 'sub_total',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
+  subtotal?: number;
+
+  @Column({
     name: 'shipping_fee',
     type: 'decimal',
     precision: 12,
@@ -89,7 +98,7 @@ export class Order {
   @Column({ type: 'char', length: 3, default: 'VND' })
   currency!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp', })
   createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })

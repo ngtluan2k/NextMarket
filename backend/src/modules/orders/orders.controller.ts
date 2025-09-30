@@ -62,4 +62,8 @@ export class OrdersController {
   getRevenue() {
     return this.ordersService.getRevenue();
   }
+  @Get('payment/:paymentUuid')
+  async findByPaymentUuid(@Param('paymentUuid') paymentUuid: string) {
+    return this.ordersService.findByPaymentUuid(paymentUuid);
+  }
 }

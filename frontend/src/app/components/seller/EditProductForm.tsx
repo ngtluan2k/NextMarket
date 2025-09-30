@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { productService } from '../../../service/product.service';
-import type {Product}  from '../../page/Seller/tab/StoreInventory';
+import type { Product } from '../../page/Seller/tab/StoreInventory';
 interface EditProductFormProps {
   product: any; // dữ liệu sản phẩm cần sửa
   onClose: () => void; // đóng modal
@@ -10,7 +10,7 @@ interface EditProductFormProps {
 export const EditProductForm: React.FC<EditProductFormProps> = ({
   product,
   onClose,
-    onProductUpdated,
+  onProductUpdated,
 }) => {
   console.log('Props from parent:', { product, onClose });
   console.log(
@@ -272,73 +272,82 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   });
 
   // Khi submit, lọc bỏ các slot rỗng
-const handleSubmit = async (status: 'draft' | 'active') => {
-  try {
-    // --- Tách media cũ và media mới ---
-    const existingMedia = form.media.filter((m) => m.url && !m.file); // chỉ media đã có url
-    const newMedia = form.media.filter((m) => m.file); // media mới upload
+  const handleSubmit = async (status: 'draft' | 'active') => {
+    try {
+      // --- Tách media cũ và media mới ---
+      const existingMedia = form.media.filter((m) => m.url && !m.file); // chỉ media đã có url
+      const newMedia = form.media.filter((m) => m.file); // media mới upload
 
-    // --- Tạo FormData ---
-    const formData = new FormData();
-    formData.append('name', form.name);
-    formData.append('short_description', form.short_description || '');
-    formData.append('description', form.description || '');
-    formData.append('base_price', String(form.base_price));
-    formData.append('brandId', String(form.brandId));
-    formData.append('categories', JSON.stringify(form.categories));
-    formData.append('variants', JSON.stringify(variantsWithStock));
-    formData.append('inventory', JSON.stringify(form.inventory));
-    formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
-    formData.append('status', status);
+      
 
-    // --- Chỉ gửi media cũ trong media_meta ---
-    formData.append(
-      'media_meta',
-      JSON.stringify(
-        existingMedia.map((m, idx) => ({
-          id: (m as any).id || null,
-          url: m.url,
-          media_type: m.media_type,
-          is_primary: m.is_primary || false,
-          sort_order: m.sort_order || idx + 1,
-        }))
-      )
-    );
+      // --- Tạo FormData ---
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('short_description', form.short_description || '');
+      formData.append('description', form.description || '');
+      formData.append('base_price', String(form.base_price));
+      formData.append('brandId', String(form.brandId));
+      formData.append('categories', JSON.stringify(form.categories));
+      formData.append('variants', JSON.stringify(variantsWithStock));
+      formData.append('inventory', JSON.stringify(form.inventory));
+      formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
+      formData.append('status', status);
 
-    // --- Gửi media mới riêng ---
-    newMedia.forEach((m) => {
-      if (m.file) formData.append('media', m.file);
-    });
+      // --- Chỉ gửi media cũ trong media_meta ---
+      // media_meta gồm cả cũ + mới
+formData.append(
+  'media_meta',
+  JSON.stringify([
+    ...existingMedia.map((m, idx) => ({
+      id: m.id || null,
+      url: m.url,
+      media_type: m.media_type,
+      is_primary: m.is_primary || false,
+      sort_order: m.sort_order || idx + 1,
+    })),
+    ...newMedia.map((m, idx) => ({
+      id: null,
+      url: '',
+      media_type: m.media_type || 'image',
+      is_primary: m.is_primary || false, // quan trọng
+      sort_order: (existingMedia.length + idx + 1),
+    }))
+  ])
+);
 
-    // --- Gửi các media bị xóa nếu có ---
-    if (deletedMediaIds.length) {
-      formData.append('deleted_media_ids', JSON.stringify(deletedMediaIds));
+// gửi file riêng
+newMedia.forEach((m) => {
+  if (m.file) formData.append('media', m.file);
+});
+
+      // --- Gửi các media bị xóa nếu có ---
+      if (deletedMediaIds.length) {
+        formData.append('deleted_media_ids', JSON.stringify(deletedMediaIds));
+      }
+
+      // --- Gọi API update ---
+      const updatedApiProduct = await productService.updateProduct(
+        product.apiId,
+        formData
+      );
+
+      // --- Map dữ liệu mới sang Product để update state cha ---
+      const updatedProduct: Product = {
+        ...product,
+        ...form, // dữ liệu từ form
+        base_price: Number(form.base_price),
+        statusApi: status,
+      };
+
+      // --- Gọi callback nếu có để update state cha ---
+      onProductUpdated?.(updatedProduct);
+
+      alert('Product updated successfully!');
+      onClose();
+    } catch (err: any) {
+      alert(err.message || 'Update failed');
     }
-
-    // --- Gọi API update ---
-    const updatedApiProduct = await productService.updateProduct(
-      product.apiId,
-      formData
-    );
-
-    // --- Map dữ liệu mới sang Product để update state cha ---
-    const updatedProduct: Product = {
-      ...product,
-      ...form, // dữ liệu từ form
-      base_price: Number(form.base_price),
-      statusApi: status,
-    };
-
-    // --- Gọi callback nếu có để update state cha ---
-    onProductUpdated?.(updatedProduct);
-
-    alert('Product updated successfully!');
-    onClose();
-  } catch (err: any) {
-    alert(err.message || 'Update failed');
-  }
-};
-
+  };
 
   const submitForm = async (isDraft: boolean) => {
     const errors = !isDraft ? validateForm() : [];
@@ -498,8 +507,10 @@ const handleSubmit = async (status: 'draft' | 'active') => {
                   type="checkbox"
                   checked={m.is_primary || false}
                   onChange={(e) => {
-                    const newMedia = [...form.media];
-                    newMedia[i].is_primary = e.target.checked;
+                    const newMedia = form.media.map((media, idx) => ({
+                      ...media,
+                      is_primary: idx === i ? e.target.checked : false,
+                    }));
                     setForm({ ...form, media: newMedia });
                   }}
                   className="w-4 h-4"

@@ -2,40 +2,37 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Body,
-  Param,
-  Delete,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { VouchersService } from './vouchers.service';
-import { CreateVoucherDto } from './dto/create-vouchers.dto';
-import { UpdateVoucherDto } from './dto/update-vouchers.dto';
+import { ValidateVoucherDto } from './dto/validate-voucher.dto';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+
+@ApiTags('vouchers')
 @Controller('vouchers')
 export class VouchersController {
   constructor(private readonly vouchersService: VouchersService) {}
 
-  @Post()
-  create(@Body() dto: CreateVoucherDto) {
-    return this.vouchersService.create(dto);
+  @Get('active')
+  @ApiOperation({ summary: 'Lấy danh sách voucher đang hoạt động' })
+  @ApiResponse({ status: 200, description: 'Danh sách các voucher hoạt động' })
+  async getActiveVouchers(@Req() req: any) {
+    const userId = req.user?.userId;
+    return this.vouchersService.getActiveVouchers(userId);
   }
 
-  @Get()
-  findAll() {
-    return this.vouchersService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.vouchersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateVoucherDto) {
-    return this.vouchersService.update(+id, dto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.vouchersService.remove(+id);
+  @Post('validate')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Xác thực mã voucher' })
+  @ApiResponse({ status: 200, description: 'Kết quả xác thực voucher' })
+  async validateVoucher(@Body() validateVoucherDto: ValidateVoucherDto, @Req() req: any) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new Error('Người dùng chưa được xác thực');
+    }
+    return this.vouchersService.validateVoucher(validateVoucherDto, userId);
   }
 }

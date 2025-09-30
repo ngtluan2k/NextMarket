@@ -32,6 +32,7 @@ export class Inventory {
 
   @Column()
   quantity!: number;
+  
 
   @Column({ default: 0 })
   used_quantity!: number;

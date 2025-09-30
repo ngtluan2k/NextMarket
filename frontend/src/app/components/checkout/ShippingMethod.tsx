@@ -1,8 +1,9 @@
 // src/components/checkout/ShippingMethod.tsx
 import React from "react";
 import { Card, Radio, Tag, Typography, Image } from "antd";
-const { Text } = Typography;
+import { Product } from "../productDetail/product";
 
+const { Text } = Typography;
 export type CheckoutItem = {
   id: number;
   name: string;
@@ -12,6 +13,7 @@ export type CheckoutItem = {
   price: number | string;
   /** giá cũ (để gạch) nếu có – cũng có thể là string */
   oldPrice?: number | string;
+  product?: Product;
 };
 
 export type ShippingMethodType = "economy" | "fast";
