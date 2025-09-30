@@ -1,26 +1,40 @@
 import { message } from 'antd';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+interface Inventory {
+  id: number;
+  quantity: number;
+  location?: string;
+}
+
+interface Variant {
+  id: number;
+  variant_name: string;
+  price: number;
+  stock: number;
+  inventories?: Inventory[]; // kho nằm trong variant
+}
+
+interface Product {
+  id: number;
+  name: string;
+  base_price: number;
+  url: string;
+  media: { url: string; is_primary?: boolean } | { url: string; is_primary?: boolean }[];
+  status: 'draft' | 'deleted' | 'active';
+  store?: { id: number; name: string };
+  variants?: Variant[]; // variants nằm trong product
+}
+
 interface CartItem {
   id: number;
   productId: number;
   quantity: number;
   price: number;
-  product: {
-    id: number;
-    name: string;
-    base_price: number;
-    url: string;
-    media: { url: string; is_primary?: boolean }
-    status: 'draft' | 'deleted' | 'active';
-  };
-  variant?: {
-    id: number;
-    variant_name: string;
-    price: number;
-    stock: number;
-  };
+  product: Product;
+  variant?: Variant; // variant đang chọn
 }
+
 
 interface CartContextType {
   cart: CartItem[];

@@ -33,6 +33,7 @@ export const CartHeader: React.FC<Props> = ({
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
   const storeName = cart[0]?.product?.store?.name ?? 'Shop';
+  const selectedCartItems = cart.filter(item => selectedIds.includes(item.id));
 
   const handleRemoveFromCart = (
     productId: number,
@@ -46,6 +47,7 @@ export const CartHeader: React.FC<Props> = ({
       showMessage?.('error', `Failed to remove ${productName} from cart`);
     }
   };
+  
   const toImageUrl = (url?: string) => {
     if (!url) return '/default-product.png'; // fallback ảnh mặc định
     if (url.startsWith('http')) return url; // đã là full URL

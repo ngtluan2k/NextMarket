@@ -55,18 +55,18 @@ const CheckoutPayment: React.FC = () => {
       i.product.media?.find((m) => m.is_primary)?.url ??
       i.product.media?.[0]?.url ??
       '';
+
     return {
       id: i.id,
       name: i.product.name ?? 'Sản phẩm không xác định',
       image: primaryImage,
       quantity: i.quantity,
       price: i.price,
-      product: {
-        ...i.product,   // giữ nguyên cả store và các trường khác
-      },
+      product: i.product, // giữ nguyên cả variants
     };
   });
 }, [items]);
+
 
 
   useEffect(() => {
