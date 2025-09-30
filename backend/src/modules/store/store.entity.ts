@@ -8,7 +8,6 @@ import {
   UpdateDateColumn,
   CreateDateColumn,
   ManyToOne,
-
 } from 'typeorm';
 
 import { User } from '../user/user.entity';
@@ -22,7 +21,7 @@ import { StoreLevel } from '../store-level/store-level.entity';
 import { StoreAddress } from '../store-address/store-address.entity';
 import { StoreBankAccount } from '../store-bank-account/store-bank-account.entity';
 import { StoreFollower } from '../store-follower/store-follower.entity';
-
+import { Voucher } from '../vouchers/vouchers.entity';
 
 @Entity('stores')
 export class Store {
@@ -49,7 +48,7 @@ export class Store {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @Column({ type: 'varchar', length: 255, })
+  @Column({ type: 'varchar', length: 255 })
   logo_url!: string;
 
   @Column({ length: 100, nullable: true })
@@ -78,27 +77,40 @@ export class Store {
   products!: Product[]; // <-- thêm dòng này
 
   @OneToMany(() => Order, (order) => order.store, { cascade: true })
-  orders!: Order;
-  
-  // --- New inverse relations for eager loading with "relations"
-  @OneToMany(() => StoreInformation, (StoreInformation) => StoreInformation.store)
-  storeInformation !: StoreInformation[];
+  orders!: Order[];
 
-  @OneToMany(() => StoreIdentification, (StoreIdentification) => StoreIdentification.store)
-  storeIdentification !: StoreIdentification[];
+  // --- New inverse relations for eager loading with "relations"
+
+  @OneToMany(() => Voucher, (voucher) => voucher.store)
+  vouchers!: Voucher[];
+
+  @OneToMany(
+    () => StoreInformation,
+    (StoreInformation) => StoreInformation.store
+  )
+  storeInformation!: StoreInformation[];
+
+  @OneToMany(
+    () => StoreIdentification,
+    (StoreIdentification) => StoreIdentification.store
+  )
+  storeIdentification!: StoreIdentification[];
 
   @OneToMany(() => StoreLevel, (StoreLevel) => StoreLevel.store)
-  storeLevels !: StoreLevel[];
+  storeLevels!: StoreLevel[];
 
   @OneToMany(() => StoreAddress, (StoreAddress) => StoreAddress.store)
-  address !: StoreAddress[];
+  address!: StoreAddress[];
 
-  @OneToMany(() => StoreBankAccount, (StoreBankAccount) => StoreBankAccount.store)
-  bankAccount !: StoreBankAccount[];
+  @OneToMany(
+    () => StoreBankAccount,
+    (StoreBankAccount) => StoreBankAccount.store
+  )
+  bankAccount!: StoreBankAccount[];
 
   @OneToMany(() => StoreFollower, (StoreFollower) => StoreFollower.store)
-  followers !: StoreFollower[];
+  followers!: StoreFollower[];
 
   @OneToMany(() => StoreRating, (StoreRating) => StoreRating.store)
-  rating !: StoreRating[];
+  rating!: StoreRating[];
 }

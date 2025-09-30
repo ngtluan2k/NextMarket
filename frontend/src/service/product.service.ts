@@ -204,6 +204,8 @@ async updateAndPublishProduct(id: number, dto: FormData) {
 
 
 
+
+
 }
 
 export const productService = new ProductService();

@@ -26,7 +26,7 @@ export enum OrderStatuses {
   Shipped = 3,
   Delivered = 4,  
   Completed = 5,
-  Cancelled = 6,
+  cancelled = 6,
   Returned = 7,
 }
 

@@ -29,13 +29,14 @@ export class UserAddress {
   street!: string;
 
   @Column()
-  city!: string;
+  ward!: string;
+
+  @Column()
+  district!: string;
+
 
   @Column()
   province!: string;
-
-  @Column({ nullable: true })
-  ward!: string;
 
   @Column()
   country!: string;

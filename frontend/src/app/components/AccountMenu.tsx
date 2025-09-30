@@ -41,7 +41,7 @@ export default function AccountMenu({ className = "" }) {
             <User className="h-4 w-4 text-slate-500" />
             Thông tin tài khoản
           </a>
-          <a href="/orders" className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50">
+          <a href="account/orders" className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50">
             <Package className="h-4 w-4 text-slate-500" />
             Đơn hàng của tôi
           </a>

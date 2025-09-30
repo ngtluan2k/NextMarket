@@ -10,7 +10,7 @@ import { OrderItem } from '../order-items/order-item.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { Payment } from '../payments/payment.entity';
 import { VouchersModule } from '../vouchers/vouchers.module';
-
+import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -21,6 +21,7 @@ import { VouchersModule } from '../vouchers/vouchers.module';
       OrderItem,
       Inventory,
       Payment,
+      OrderStatusHistory,
     ]),
     VouchersModule,
   ],

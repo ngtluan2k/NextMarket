@@ -716,7 +716,7 @@ export class StoreService {
     'products',
     'products.media',
     'orders',
-    'follower',
+    'followers',
     'rating',
       ], // join các entity liên quan nếu muốn trả luôn
     });
