@@ -6,7 +6,7 @@ interface Step3IdentificationProps {
   formData: SellerFormData;
   onInputChange: (field: string, value: any) => void;
   onBankAccountChange: (field: string, value: any) => void;
-  onFileSelected: (side: 'front' | 'back', file: File) => void;
+  onFileSelected: (side: 'front' | 'back', file: File | null) => void;
   frontFile?: File | null;
   backFile?: File | null;
 }

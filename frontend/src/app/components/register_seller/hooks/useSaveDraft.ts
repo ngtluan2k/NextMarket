@@ -44,9 +44,7 @@ export const useSaveDraft = () => {
           district:
             (defaultAddress as any).district && String((defaultAddress as any).district).trim()
               ? (defaultAddress as any).district
-              : ((defaultAddress as any).ward && String((defaultAddress as any).ward).trim()
-                  ? (defaultAddress as any).ward
-                  : 'N/A'),
+              : null,
           ward: (defaultAddress as any).ward || '',
           province: defaultAddress.province,
           country: defaultAddress.country,

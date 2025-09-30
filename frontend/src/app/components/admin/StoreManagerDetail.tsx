@@ -155,7 +155,12 @@ const StoreManagerDetail: React.FC = () => {
                     <Descriptions.Item label="Người nhận">{storeAddress?.recipient_name || '-'}</Descriptions.Item>
                     <Descriptions.Item label="SĐT">{storeAddress?.phone || '-'}</Descriptions.Item>
                     <Descriptions.Item label="Đường">{storeAddress?.street || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="Quận/Huyện">{storeAddress?.city || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="Phường Xã">{storeAddress?.ward || '-'}</Descriptions.Item>
+                    {storeAddress?.district?.toString().trim() && (
+                        <Descriptions.Item label="Huyện/Xã">
+                            {storeAddress.district}
+                        </Descriptions.Item>
+                    )}
                     <Descriptions.Item label="Tỉnh/TP">{storeAddress?.province || '-'}</Descriptions.Item>
                     <Descriptions.Item label="Quốc gia">{storeAddress?.country || '-'}</Descriptions.Item>
                     <Descriptions.Item label="Mã bưu chính">{storeAddress?.postal_code || '-'}</Descriptions.Item>
@@ -190,7 +195,7 @@ const StoreManagerDetail: React.FC = () => {
                                     onError={(e) => {
                                         const el = e.currentTarget as HTMLImageElement;
                                         el.onerror = null;
-                                        el.src = toAbs('/uploads/documents/'+documents.file_url.split('/').pop());
+                                        el.src = toAbs('/uploads/documents/' + documents.file_url.split('/').pop());
                                     }}
                                 />
                             </div>
