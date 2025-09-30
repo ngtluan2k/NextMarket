@@ -1,20 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { productService } from '../../../service/product.service';
+import type { Product } from '../../page/Seller/tab/StoreInventory';
+interface EditProductFormProps {
+  product: any; // dữ liệu sản phẩm cần sửa
+  onClose: () => void; // đóng modal
+  onProductUpdated?: (updatedProduct: Product) => void;
+}
 
-export const ProductForm: React.FC = () => {
-  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>(
-    []
+export const EditProductForm: React.FC<EditProductFormProps> = ({
+  product,
+  onClose,
+  onProductUpdated,
+}) => {
+  console.log('Props from parent:', { product, onClose });
+  console.log(
+    'Inventory của variant đầu tiên:',
+    product.variants[0]?.inventories
   );
+
   const [step, setStep] = useState(1);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [deletedMediaIds, setDeletedMediaIds] = useState<number[]>([]);
+  const [addingMedia, setAddingMedia] = useState(false); // track user đang thêm media mới
+
   interface ProductFormState {
     name: string;
     short_description?: string;
     description?: string;
     base_price: number;
     brandId: number;
-    categories: number[];
+    categories: number[]; // lưu id
     media: {
+      id?: number;
       media_type: string;
       url: string;
       is_primary?: boolean;
@@ -22,6 +40,7 @@ export const ProductForm: React.FC = () => {
       file?: File;
     }[];
     variants: {
+      id?: number;
       sku: string;
       variant_name: string;
       price: number;
@@ -29,12 +48,18 @@ export const ProductForm: React.FC = () => {
       barcode?: string;
     }[];
     inventory: {
+      id?: number;
       variant_sku: string;
       variant_id?: number;
       product_id?: number;
       location: string;
       quantity: number;
-      used_quantity?: number;
+      inventories?: {
+        id?: number;
+        location: string;
+        quantity: number;
+        used_quantity?: number;
+      }[];
     }[];
     pricing_rules: {
       type: string;
@@ -51,7 +76,7 @@ export const ProductForm: React.FC = () => {
     short_description: '',
     description: '',
     base_price: 0,
-    brandId: 4,
+    brandId: 0,
     categories: [],
     media: [],
     variants: [],
@@ -59,38 +84,88 @@ export const ProductForm: React.FC = () => {
     pricing_rules: [],
   });
 
+  // Preload brands & categories
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://localhost:3000/brands', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) =>
-        setBrands(
-          (data.data || []).map((b: any) => ({
-            id: Number(b.id),
-            name: b.name,
-          }))
-        )
-      );
-    fetch('http://localhost:3000/categories', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) =>
-        setCategories(
-          (data.data || []).map((c: any) => ({
-            id: Number(c.id),
-            name: c.name,
-          }))
-        )
-      );
-  }, []);
 
+    const fetchData = async () => {
+      try {
+        const [brandsRes, categoriesRes] = await Promise.all([
+          fetch('http://localhost:3000/brands', {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then((res) => res.json()),
+          fetch('http://localhost:3000/categories', {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then((res) => res.json()),
+        ]);
+
+        const brandsData = brandsRes.data || [];
+        const categoriesData = categoriesRes.data || [];
+
+        setBrands(brandsData);
+        setCategories(categoriesData);
+
+        if (product) {
+          // Map variants + stock
+          const variantsWithStock = (product.variants || []).map((v: any) => {
+            const totalStock = (v.inventories || []).reduce(
+              (sum: number, inv: any) => sum + inv.quantity,
+              0
+            );
+            return { ...v, stock: totalStock };
+          });
+
+          // Map pricing rules
+          const pricingRules = (product.pricing_rules || []).map((pr: any) => ({
+            ...pr,
+            starts_at: pr.starts_at
+              ? new Date(pr.starts_at).toISOString().split('T')[0]
+              : '',
+            ends_at: pr.ends_at
+              ? new Date(pr.ends_at).toISOString().split('T')[0]
+              : '',
+          }));
+
+          // Flatten inventories from variants
+          const inventoryWithSKU = (product.variants || []).flatMap((v: any) =>
+            (v.inventories || []).map((inv: any) => ({
+              id: inv.id,
+              variant_sku: v.sku,
+              variant_id: v.id,
+              product_id: product.id,
+              location: inv.location,
+              quantity: inv.quantity,
+              used_quantity: inv.used_quantity || 0,
+            }))
+          );
+
+          const categoryIds = (product.categories || []).map((c: any) => c.id);
+
+          setForm({
+            name: product.name || '',
+            short_description: product.short_description || '',
+            description: product.description || '',
+            base_price: product.base_price || 0,
+            brandId: product.brandId || 0,
+            categories: categoryIds,
+            media: (product.media || []).filter(
+              (m: any) => m.url && m.url !== ''
+            ),
+            variants: variantsWithStock,
+            inventory: inventoryWithSKU,
+            pricing_rules: pricingRules,
+          });
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải brands hoặc categories:', err);
+      }
+    };
+
+    fetchData();
+  }, [product]);
+  // Handlers
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
     setForm((prev) => ({
@@ -121,6 +196,20 @@ export const ProductForm: React.FC = () => {
         },
       ],
     }));
+
+  // Xử lý thay đổi file
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const previewUrl = URL.createObjectURL(file);
+    const newMedia = [...form.media];
+    newMedia[index] = { ...newMedia[index], file, url: previewUrl };
+    setForm({ ...form, media: newMedia });
+  };
+
   const addVariant = () =>
     setForm((prev) => ({
       ...prev,
@@ -159,114 +248,120 @@ export const ProductForm: React.FC = () => {
       ],
     }));
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const previewUrl = URL.createObjectURL(file);
-    const newMedia = [...form.media];
-    newMedia[index] = { ...newMedia[index], file, url: previewUrl };
-    setForm({ ...form, media: newMedia });
-  };
-
-  const submitForm = async (isDraft: boolean) => {
-    try {
-      const token = localStorage.getItem('token');
-
-      // Nếu không chọn brand thì mặc định chọn "Khác"
-      if (!form.brandId) {
-        const otherBrand = brands.find((b) => b.name === 'Khác');
-        setForm((prev) => ({
-          ...prev,
-          brandId: otherBrand ? otherBrand.id : -1,
-        }));
-      }
-
-      const url = isDraft
-        ? 'http://localhost:3000/products'
-        : 'http://localhost:3000/products/publish';
-
-      // Clone variants để thêm stock
-      const variantsWithStock = form.variants.map((v) => {
-        const totalStock = form.inventory
-          .filter((inv) => inv.variant_sku === v.sku)
-          .reduce((sum, inv) => sum + inv.quantity, 0);
-        return { ...v, stock: totalStock };
-      });
-
-      // Chuẩn bị formData
-      const formData = new FormData();
-      formData.append('name', String(form.name));
-      formData.append(
-        'short_description',
-        String(form.short_description || '')
-      );
-      formData.append('description', String(form.description || ''));
-      formData.append('base_price', Number(form.base_price).toString());
-      formData.append('brandId', Number(form.brandId).toString());
-      formData.append('categories', JSON.stringify(form.categories));
-      formData.append('variants', JSON.stringify(variantsWithStock));
-      formData.append('inventory', JSON.stringify(form.inventory));
-      formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
-      form.media.forEach((m) => m.file && formData.append('media', m.file));
-
-      // Gửi API
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to submit product');
-
-      alert(
-        isDraft ? 'Product saved as draft!' : 'Product published successfully!'
-      );
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  // Validate form khi publish
   const validateForm = (): string[] => {
     const errors: string[] = [];
-
-    // required cho Publish
     if (!form.name.trim()) errors.push('Product name is required');
     if (!form.base_price || form.base_price <= 0)
-      errors.push('Base price must be greater than 0');
+      errors.push('Base price must be > 0');
     if (!form.brandId) errors.push('Brand is required');
-    if (form.categories.length === 0)
+    if (!form.categories.length)
       errors.push('At least one category is required');
-
-    // validate variants
     form.variants.forEach((v, i) => {
       if (!v.sku.trim()) errors.push(`Variant ${i + 1}: SKU is required`);
       if (!v.variant_name.trim())
         errors.push(`Variant ${i + 1}: Name is required`);
       if (v.price <= 0) errors.push(`Variant ${i + 1}: Price must be > 0`);
     });
-
-    // validate inventory
-    form.inventory.forEach((inv, i) => {
-      if (!inv.variant_sku.trim())
-        errors.push(`Inventory ${i + 1}: Variant SKU is required`);
-      if (!inv.location.trim())
-        errors.push(`Inventory ${i + 1}: Location is required`);
-      if (inv.quantity < 0)
-        errors.push(`Inventory ${i + 1}: Quantity must be >= 0`);
-    });
-
     return errors;
   };
+  const variantsWithStock = form.variants.map((v) => {
+    const totalStock = form.inventory
+      .filter((inv) => inv.variant_sku === v.sku)
+      .reduce((sum, inv) => sum + inv.quantity, 0);
+    return { ...v, stock: totalStock };
+  });
 
-  // Step navigation
+  // Khi submit, lọc bỏ các slot rỗng
+  const handleSubmit = async (status: 'draft' | 'active') => {
+    try {
+      // --- Tách media cũ và media mới ---
+      const existingMedia = form.media.filter((m) => m.url && !m.file); // chỉ media đã có url
+      const newMedia = form.media.filter((m) => m.file); // media mới upload
+
+      
+
+      // --- Tạo FormData ---
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('short_description', form.short_description || '');
+      formData.append('description', form.description || '');
+      formData.append('base_price', String(form.base_price));
+      formData.append('brandId', String(form.brandId));
+      formData.append('categories', JSON.stringify(form.categories));
+      formData.append('variants', JSON.stringify(variantsWithStock));
+      formData.append('inventory', JSON.stringify(form.inventory));
+      formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
+      formData.append('status', status);
+
+      // --- Chỉ gửi media cũ trong media_meta ---
+      // media_meta gồm cả cũ + mới
+formData.append(
+  'media_meta',
+  JSON.stringify([
+    ...existingMedia.map((m, idx) => ({
+      id: m.id || null,
+      url: m.url,
+      media_type: m.media_type,
+      is_primary: m.is_primary || false,
+      sort_order: m.sort_order || idx + 1,
+    })),
+    ...newMedia.map((m, idx) => ({
+      id: null,
+      url: '',
+      media_type: m.media_type || 'image',
+      is_primary: m.is_primary || false, // quan trọng
+      sort_order: (existingMedia.length + idx + 1),
+    }))
+  ])
+);
+
+// gửi file riêng
+newMedia.forEach((m) => {
+  if (m.file) formData.append('media', m.file);
+});
+
+      // --- Gửi các media bị xóa nếu có ---
+      if (deletedMediaIds.length) {
+        formData.append('deleted_media_ids', JSON.stringify(deletedMediaIds));
+      }
+
+      // --- Gọi API update ---
+      const updatedApiProduct = await productService.updateProduct(
+        product.apiId,
+        formData
+      );
+
+      // --- Map dữ liệu mới sang Product để update state cha ---
+      const updatedProduct: Product = {
+        ...product,
+        ...form, // dữ liệu từ form
+        base_price: Number(form.base_price),
+        statusApi: status,
+      };
+
+      // --- Gọi callback nếu có để update state cha ---
+      onProductUpdated?.(updatedProduct);
+
+      alert('Product updated successfully!');
+      onClose();
+    } catch (err: any) {
+      alert(err.message || 'Update failed');
+    }
+  };
+
+  const submitForm = async (isDraft: boolean) => {
+    const errors = !isDraft ? validateForm() : [];
+    if (errors.length) {
+      alert('Please fix the following errors:\n' + errors.join('\n'));
+      return;
+    }
+
+    const status = isDraft ? 'draft' : 'active';
+    await handleSubmit(status); // truyền status đúng
+  };
+
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 4));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
-
   return (
     <form
       onSubmit={(e) => {
@@ -279,8 +374,8 @@ export const ProductForm: React.FC = () => {
         submitForm(false); // Publish
       }}
     >
-      {' '}
-      <h2 className="text-2xl font-bold text-center mb-6">Create Product</h2>
+      <h2 className="text-2xl font-bold text-center mb-6">Edit Product</h2>
+
       {/* Step Indicators */}
       <div className="flex justify-between mb-6">
         {[1, 2, 3, 4].map((s) => (
@@ -294,6 +389,7 @@ export const ProductForm: React.FC = () => {
           </div>
         ))}
       </div>
+
       {/* Step Content */}
       {step === 1 && (
         <section className="space-y-4">
@@ -366,15 +462,14 @@ export const ProductForm: React.FC = () => {
             <div className="md:col-span-2">
               <label className="block font-medium mb-1">Categories</label>
               <div className="flex flex-wrap gap-3">
-                {categories.map((c) => (
-                  <label key={c.id} className="flex items-center gap-1">
+                {categories.map((cat) => (
+                  <label key={cat.id}>
                     <input
                       type="checkbox"
-                      checked={form.categories.includes(c.id)}
-                      onChange={() => handleCategoryChange(c.id)}
-                      className="w-4 h-4"
-                    />{' '}
-                    {c.name}
+                      checked={form.categories.includes(cat.id)}
+                      onChange={() => handleCategoryChange(cat.id)}
+                    />
+                    {cat.name}
                   </label>
                 ))}
               </div>
@@ -382,40 +477,69 @@ export const ProductForm: React.FC = () => {
           </div>
         </section>
       )}
+
       {step === 2 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Media</h3>
+
           {form.media.map((m, i) => (
             <div key={i} className="flex items-center gap-4">
+              {/* Input file */}
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleFileChange(e, i)}
                 className="flex-1"
               />
+
+              {/* Preview image */}
               {m.url && (
                 <img
                   src={m.url}
                   className="w-20 h-20 object-cover rounded-md"
                 />
               )}
+
+              {/* Primary checkbox */}
               <label className="flex items-center gap-1">
                 Primary
                 <input
                   type="checkbox"
-                  checked={m.is_primary}
+                  checked={m.is_primary || false}
                   onChange={(e) => {
-                    const newMedia = form.media.map((m, idx) => ({
-                      ...m,
-                      is_primary: idx === i ? e.target.checked : false, // chỉ ảnh hiện tại được tick
+                    const newMedia = form.media.map((media, idx) => ({
+                      ...media,
+                      is_primary: idx === i ? e.target.checked : false,
                     }));
                     setForm({ ...form, media: newMedia });
                   }}
                   className="w-4 h-4"
                 />
               </label>
+
+              {/* Delete button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const removed = form.media[i];
+
+                  // Nếu media cũ (có id), thêm vào deletedMediaIds
+                  if (removed.id) {
+                    setDeletedMediaIds((prev) => [...prev, Number(removed.id)]);
+                  }
+
+                  // Xóa media khỏi form
+                  const newMedia = form.media.filter((_, idx) => idx !== i);
+                  setForm({ ...form, media: newMedia });
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded-md"
+              >
+                Delete
+              </button>
             </div>
           ))}
+
+          {/* Add Media button */}
           <button
             type="button"
             onClick={addMedia}
@@ -425,6 +549,7 @@ export const ProductForm: React.FC = () => {
           </button>
         </section>
       )}
+
       {step === 3 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Variants & Inventory</h3>
@@ -542,6 +667,7 @@ export const ProductForm: React.FC = () => {
           </button>
         </section>
       )}
+
       {step === 4 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Pricing Rules</h3>
@@ -620,6 +746,7 @@ export const ProductForm: React.FC = () => {
           </button>
         </section>
       )}
+
       {/* Navigation Buttons */}
       <div className="flex justify-between mt-6 gap-2">
         {step > 1 && (
@@ -651,7 +778,7 @@ export const ProductForm: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => submitForm(true)} // Save Draft, bỏ qua validate
+              onClick={() => handleSubmit('draft')} // Save Draft
               className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
             >
               Save Draft

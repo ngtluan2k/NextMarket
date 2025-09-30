@@ -79,6 +79,43 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
 
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    if (token && user && !me) {
+      // Nếu có token và user trong localStorage nhưng me chưa có
+      try {
+        const userData = JSON.parse(user);
+        // Gọi API /users/me để xác nhận token hợp lệ
+        fetch('http://localhost:3000/users/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.data) {
+              login(json.data, token); // Cập nhật me trong context
+            } else {
+              // Token không hợp lệ, xóa localStorage
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              logout(); // Đặt me về null
+            }
+          })
+          .catch(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            logout();
+          });
+      } catch (err) {
+        console.error('Error parsing user data:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        logout();
+      }
+    }
+  }, [me, login, logout]);
 
   const fetchSuggestions = async (q: string) => {
     if (!q) {

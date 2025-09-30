@@ -22,7 +22,7 @@ export default function ProductSpecs({
       { label: "Thương hiệu", value: product.brand?.name ?? "—" },
       {
         label: "Danh mục",
-        value: product.categories?.map((c: any) => c.category?.name).join(", ") ?? "—",
+        value: product.categories?.map((c: any) => c.name).join(", ") ?? "—"
       },
       // thêm specs khác nếu muốn
     ];

@@ -16,7 +16,7 @@ export class VnpayStrategy implements PaymentStrategy {
     private paymentRepo: Repository<Payment>,
   ) {}
 
-  async createPayment(order: any, paymentMethod: any, dto: CreatePaymentDto) {
+  async createPayment(order: any, paymentMethod: any) {
     if (order.status === 1) throw new Error('Đơn hàng đã thanh toán');
 
     const payment = this.paymentRepo.create({
@@ -31,13 +31,13 @@ export class VnpayStrategy implements PaymentStrategy {
 
     const redirectUrl = await this.buildVnPayUrl(savedPayment, paymentMethod.config || {});
 
-    return { payment: savedPayment, redirectUrl, paymentUuid: savedPayment.uuid };
+    return { payment: savedPayment, redirectUrl, paymentUuid: savedPayment.uuid, orderUuid: order.uuid, };
   }
 
-  public async handleCallback(payload: any): Promise<any> {
+  public async handleCallback(payload: any, rawQuery?: string): Promise<any> {
     this.logger.debug('VNPay callback payload: ' + JSON.stringify(payload));
 
-    if (!this.verifySignature(payload)) {
+    if (!this.verifySignatureFromQuery(payload, rawQuery)) {
       this.logger.error('Invalid VNPay signature');
       throw new Error('Invalid signature');
     }
@@ -65,21 +65,12 @@ export class VnpayStrategy implements PaymentStrategy {
       const vnp_SecureHash = payload.vnp_SecureHash;
       if (!vnp_SecureHash) return false;
 
-      // Xử lý params - chuyển array về string và decode URL nếu cần
+      // Xử lý params - chuyển array về string
       const params: Record<string, string> = {};
       Object.keys(payload).forEach((key) => {
         if (key !== 'vnp_SecureHash' && key !== 'vnp_SecureHashType') {
-          // Nếu là array (từ querystring.parse), lấy phần tử đầu tiên
           let value = Array.isArray(payload[key]) ? payload[key][0] : payload[key];
           value = String(value);
-          
-          // Decode URL encoding cho các giá trị (đặc biệt là vnp_OrderInfo)
-          try {
-            value = decodeURIComponent(value);
-          } catch (e) {
-            // Nếu decode lỗi, giữ nguyên giá trị
-          }
-          
           params[key] = value;
         }
       });
@@ -94,6 +85,99 @@ export class VnpayStrategy implements PaymentStrategy {
       const computedSignature = hmac.update(signData, 'utf-8').digest('hex');
       
       console.log('computedSignature =', computedSignature);
+
+      return computedSignature.toLowerCase() === String(vnp_SecureHash).toLowerCase();
+    } catch (err) {
+      this.logger.error(`Signature verification error: ${err instanceof Error ? err.message : String(err)}`);
+      return false;
+    }
+  }
+
+  public verifySignatureFromQuery(payload: any, rawQuery?: string): boolean {
+    try {
+      const vnp_HashSecret = process.env.VNPAY_SECRET_KEY!;
+      const vnp_SecureHash = payload.vnp_SecureHash;
+      if (!vnp_SecureHash) return false;
+
+      let signData = '';
+
+      if (rawQuery) {
+        // Xử lý raw query string mà không decode
+        const params = new URLSearchParams('?' + rawQuery);
+        
+        // Loại bỏ vnp_SecureHash và vnp_SecureHashType
+        params.delete('vnp_SecureHash');
+        params.delete('vnp_SecureHashType');
+        
+        // Tạo object từ params (giữ nguyên encoding)
+        const paramsObject: Record<string, string> = {};
+        
+        // Parse manual để giữ nguyên encoding
+        const paramPairs = rawQuery.split('&');
+        for (const pair of paramPairs) {
+          const [key, value] = pair.split('=');
+          if (key && key !== 'vnp_SecureHash' && key !== 'vnp_SecureHashType') {
+            paramsObject[key] = value || '';
+          }
+        }
+        
+        // Sắp xếp và tạo sign data
+        const sortedParams = this.sortObject(paramsObject);
+        signData = this.buildSignData(sortedParams);
+        
+        console.log('Method 1 - Raw encoding signData =', signData);
+        
+        const hmac1 = crypto.createHmac('sha512', vnp_HashSecret);
+        const computedSignature1 = hmac1.update(signData, 'utf-8').digest('hex');
+        console.log('Method 1 computedSignature =', computedSignature1);
+        
+        if (computedSignature1.toLowerCase() === String(vnp_SecureHash).toLowerCase()) {
+          return true;
+        }
+        
+        // Thử cách 2: decode URL encoding
+        const decodedParamsObject: Record<string, string> = {};
+        for (const [key, value] of Object.entries(paramsObject)) {
+          try {
+            decodedParamsObject[key] = decodeURIComponent(value);
+          } catch (e) {
+            decodedParamsObject[key] = value;
+          }
+        }
+        
+        const sortedDecodedParams = this.sortObject(decodedParamsObject);
+        const signData2 = this.buildSignData(sortedDecodedParams);
+        
+        console.log('Method 2 - Decoded signData =', signData2);
+        
+        const hmac2 = crypto.createHmac('sha512', vnp_HashSecret);
+        const computedSignature2 = hmac2.update(signData2, 'utf-8').digest('hex');
+        console.log('Method 2 computedSignature =', computedSignature2);
+        
+        return computedSignature2.toLowerCase() === String(vnp_SecureHash).toLowerCase();
+        
+      } else {
+        // Fallback - xử lý từ payload object
+        const params: Record<string, string> = {};
+        Object.keys(payload).forEach((key) => {
+          if (key !== 'vnp_SecureHash' && key !== 'vnp_SecureHashType') {
+            let value = Array.isArray(payload[key]) ? payload[key][0] : payload[key];
+            value = String(value);
+            params[key] = value;
+          }
+        });
+
+        const sortedParams = this.sortObject(params);
+        signData = this.buildSignData(sortedParams);
+      }
+      
+      console.log('Final signData =', signData);
+      console.log('VNPay vnp_SecureHash =', vnp_SecureHash);
+      
+      const hmac = crypto.createHmac('sha512', vnp_HashSecret);
+      const computedSignature = hmac.update(signData, 'utf-8').digest('hex');
+      
+      console.log('Final computedSignature =', computedSignature);
 
       return computedSignature.toLowerCase() === String(vnp_SecureHash).toLowerCase();
     } catch (err) {
