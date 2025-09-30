@@ -17,7 +17,6 @@ import NotificationsPage from './page/account/NotificationsPage';
 import ReturnsPage from './page/account/ReturnsPage';
 import OrdersPage from './page/account/OrdersPage';
 import ProfilePage from './page/account/ProfilePage';
-import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from './components/AddProduct';
 import AddressBook from './components/account/AddressBook';
@@ -30,7 +29,6 @@ import FeaturedBrandsPage from './components/FeaturedBrands';
 import BrandPage from './page/BrandPage';
 import SearchPage from './page/SearchPage';
 import CartPage from './page/CartPage';
-import OrderDetail from './components/productDetail/OrderDetails';
 import CheckoutPayment from './page/CheckoutPayment';
 import OrderSuccess from './page/OrderSuccess';
 

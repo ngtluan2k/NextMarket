@@ -1,3 +1,5 @@
+import { StoreInfo } from "./product";
+
 export interface CartItem {
   id: number;
   quantity: number;
@@ -5,10 +7,11 @@ export interface CartItem {
   product: {
     id: number;
     name: string;
-    basePrice: number; 
+    basePrice: number;
     url: string;
-    media: { url: string; is_primary?: boolean }
+    media: { url: string; is_primary?: boolean };
     status: 'draft' | 'deleted' | 'active';
+    store?: StoreInfo;
   };
   variant?: {
     id: number;

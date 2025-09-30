@@ -87,6 +87,7 @@ export const CartSidebar: React.FC<Props> = ({
         shippingFee,
         discountTotal: 0,
         items: items.map((item, index) => {
+          console.log('Items received: ', JSON.stringify(items, null, 2));
           const productId = Number(item.product?.id); 
           console.log("productId: "+ Number(item.product?.id)); 
           if (isNaN(productId) || productId <= 0) {
@@ -96,7 +97,6 @@ export const CartSidebar: React.FC<Props> = ({
           }         
            console.log("cho xin 5 chục: "+ JSON.stringify(items)); 
            const variantId = item.product?.variants?.[0].id;
-           console.log("cho xin 5 chục: "+ JSON.stringify(variantId)); 
 
           return {
             productId,
@@ -163,6 +163,7 @@ export const CartSidebar: React.FC<Props> = ({
         message: err.message,
         url: err.config?.url,
       });
+      console.log(err)
       message.error(err.message || 'Không thể tạo đơn hàng');
     } finally {
       setLoading(false);

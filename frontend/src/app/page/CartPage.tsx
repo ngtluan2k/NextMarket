@@ -39,19 +39,22 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
       .filter((i) => selectedIds.includes(i.id))
       .map((i) => ({
         id: i.id,
-        product_id: i.product.id,
         price: i.price,
         quantity: i.quantity,
         product: {
+          id: i.product.id,
           name: i.product.name,
           media: i.product.media,
+          store: i.product.store,
+          listPrice: i.product.basePrice,
           url:
             (Array.isArray(i.product.media)
               ? i.product.media[0]?.url
               : i.product.media?.url) || i.product.url,
         },
+        variant: i.variant,
       }));
-
+    console.log("cartPage data: " +JSON.stringify(items));
     navigate('/checkout', { state: { items, subtotal: selectedTotal } });
   };
   const toggleAll = () => {
@@ -127,7 +130,6 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                 selectedTotal={selectedTotal}
                 submitLabel={`Mua Hàng (${selectedIds.length})`}
                 onSubmit={handleGoCheckout}
-                
               />
             </Col>
           </Row>
