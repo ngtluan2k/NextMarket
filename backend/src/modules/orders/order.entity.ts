@@ -24,7 +24,7 @@ export enum OrderStatuses {
   Confirmed = 1,
   Processing = 2,
   Shipped = 3,
-  Delivered = 4,
+  Delivered = 4,  
   Completed = 5,
   Cancelled = 6,
   Returned = 7,
@@ -98,7 +98,7 @@ export class Order {
   @Column({ type: 'char', length: 3, default: 'VND' })
   currency!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp', })
   createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })

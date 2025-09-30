@@ -34,6 +34,7 @@ export class CartService {
         'items.variant',
         'items.product.media',
         'items.product.pricing_rules',
+        'items.product.store',
       ],
     });
     if (!cart) {
@@ -109,43 +110,52 @@ export class CartService {
       });
     }
 
-    cartItem.price = this.calculatePriceWithRulesForItem(product, variant, cartItem.quantity);
+    cartItem.price = this.calculatePriceWithRulesForItem(
+      product,
+      variant,
+      cartItem.quantity
+    );
 
     return this.cartItemRepository.save(cartItem);
   }
 
   async getCart(userId: number): Promise<any> {
     const cart = await this.getOrCreateCart(userId);
-    
+
     // Tối ưu response: Chỉ return fields cần thiết, chỉ lấy media của variant đã add
     const optimizedItems = cart.items.map((item) => {
-      const calculatedPrice = this.calculatePriceWithRules(item);
-      
-      return {
-        id: item.id,
-        uuid: item.uuid,
-        product_id: item.product_id,
-        variant_id: item.variant_id,
-        quantity: item.quantity,
-        price: calculatedPrice,
-        added_at: item.added_at,
-        product: {
-          id: item.product.id,
-          name: item.product.name,
-          slug: item.product.slug,
-          short_description: item.product.short_description,
-          base_price: item.product.base_price,
-          media: item.product.media.filter(
-            (media) => media.is_primary && (!item.variant_id || media.id === item.variant_id)
-          ), // Chỉ lấy media của variant_id tương ứng hoặc media chính nếu không có variant
-        },
-        variant: item.variant ? {
-          id: item.variant.id,
-          variant_name: item.variant.variant_name,
-          price: item.variant.price,
-          stock: item.variant.stock,
-        } : null,
-      };
+  const calculatedPrice = this.calculatePriceWithRules(item);
+
+  return {
+    id: item.id,
+    uuid: item.uuid,
+    product_id: item.product_id,
+    variant_id: item.variant_id,
+    quantity: item.quantity,
+    price: calculatedPrice,
+    added_at: item.added_at,
+    product: {
+      id: item.product.id,
+      name: item.product.name,
+      slug: item.product.slug,
+      short_description: item.product.short_description,
+      base_price: item.product.base_price,
+      store: item.product.store ? {
+        id: item.product.store.id,
+        name: item.product.store.name
+      } : null,
+      media: item.product.media.length > 0 
+  ? item.product.media.filter((m) => m.is_primary)
+  : []  // hoặc bạn có thể thêm media mặc định
+,
+    },
+    variant: item.variant ? {
+      id: item.variant.id,
+      variant_name: item.variant.variant_name,
+      price: item.variant.price,
+      stock: item.variant.stock,
+    } : null,
+  };
     });
 
     return {
@@ -158,7 +168,11 @@ export class CartService {
     };
   }
 
-  async removeFromCart(userId: number, productId: number, variantId?: number): Promise<void> {
+  async removeFromCart(
+    userId: number,
+    productId: number,
+    variantId?: number
+  ): Promise<void> {
     const cart = await this.getOrCreateCart(userId);
     const result = await this.cartItemRepository.delete({
       cart_id: cart.id,
@@ -204,7 +218,11 @@ export class CartService {
       }
     }
     cartItem.quantity = quantity;
-    cartItem.price = this.calculatePriceWithRulesForItem(cartItem.product, cartItem.variant, quantity);
+    cartItem.price = this.calculatePriceWithRulesForItem(
+      cartItem.product,
+      cartItem.variant,
+      quantity
+    );
     return this.cartItemRepository.save(cartItem);
   }
 
@@ -244,7 +262,11 @@ export class CartService {
     return currentPrice;
   }
 
-  private calculatePriceWithRulesForItem(product: Product, variant: Variant | null, quantity: number): number {
+  private calculatePriceWithRulesForItem(
+    product: Product,
+    variant: Variant | null,
+    quantity: number
+  ): number {
     let currentPrice = variant
       ? Number(variant.price)
       : Number(product.base_price);

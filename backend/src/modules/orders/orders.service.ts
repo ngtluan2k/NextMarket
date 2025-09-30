@@ -129,7 +129,6 @@ export class OrdersService {
         throw new BadRequestException(`Không đủ hàng cho sản phẩm ${item.productId}`);
       }
 
-      inventory.reserved_stock = (inventory.reserved_stock ?? 0) + item.quantity;
       await manager.save(inventory);
 
       const orderItem = manager.create(OrderItem, {

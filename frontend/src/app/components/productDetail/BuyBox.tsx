@@ -103,6 +103,8 @@ export default function BuyBox({
 
   const handleBuyNow = async () => {
     console.log('🛒 BuyNow clicked', { productId: product?.id, quantity });
+    console.log('💾 Product store info:', product?.store);
+    console.log('🛒 BuyNow clicked', { productId: product?.id, quantity });
     if (!product?.id || !product?.name) {
       console.error('❌ Invalid product data', product);
       message.error('Thông tin sản phẩm không hợp lệ');
@@ -128,6 +130,7 @@ export default function BuyBox({
           base_price: product.base_price,
           listPrice: product.listPrice,
           media: product.media,
+
           store: product.store,
           rating: product.rating,
           reviewsCount: product.reviewsCount,
@@ -152,24 +155,22 @@ export default function BuyBox({
             product_id: Number(product.id),
             price: unitPrice,
             quantity,
+            variantId: selectedVariantId ?? undefined, 
             product: {
-              id: Number(product.id),
-              name: product.name,
-              slug: product.slug,
-              price: unitPrice,
-              base_price: product.base_price,
-              listPrice: product.listPrice,
-              media: product.media,
-              store: product.store,
-              rating: product.rating,
-              reviewsCount: product.reviewsCount,
+              ...product,
+              variants: selectedVariantId
+                ? [{ id: selectedVariantId, price: unitPrice }]
+                : [],
             },
           },
         ],
         subtotal: unitPrice * quantity,
       };
 
-      console.log('🧭 Navigating to /checkout with state:', JSON.stringify(checkoutState, null, 2));
+      console.log(
+        '🧭 Navigating to /checkout with state:',
+        JSON.stringify(checkoutState, null, 2)
+      );
       onBuyNow?.({ product, qty: quantity });
       navigate('/checkout', { state: checkoutState });
     } catch (err: any) {

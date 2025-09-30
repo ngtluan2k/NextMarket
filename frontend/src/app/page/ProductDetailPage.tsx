@@ -90,7 +90,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
     const currentVariantId = selectedVariantId ?? undefined;
     const cartItem = cart.find(
       (item) =>
-        item.product_id === product.id &&
+        item.productId === product.id &&
         (item.variant
           ? item.variant.id === currentVariantId
           : currentVariantId === undefined)

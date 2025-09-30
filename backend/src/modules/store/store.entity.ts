@@ -20,6 +20,7 @@ import { StoreLevel } from '../store-level/store-level.entity';
 import { StoreAddress } from '../store-address/store-address.entity';
 import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreBankAccount } from '../store-bank-account/store-bank-account.entity';
+import { Voucher } from '../vouchers/vouchers.entity';
 @Entity('stores')
 export class Store {
   @PrimaryGeneratedColumn()
@@ -97,4 +98,6 @@ export class Store {
   @OneToMany(() => StoreRating, (StoreRating) => StoreRating.store)
   rating !: StoreRating[];
 
+  @OneToMany(() => Voucher, (voucher) => voucher.store)
+  vouchers!: Voucher[];
 }

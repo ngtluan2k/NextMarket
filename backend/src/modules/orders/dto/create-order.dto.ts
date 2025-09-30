@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsArray, ValidateNested, IsOptional} from 'class-validator';
+import { IsNumber, IsString, IsArray, ValidateNested, IsOptional, IsInt} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
@@ -17,13 +17,16 @@ class OrderItemDto {
 }
 
 export class CreateOrderDto {
-  @IsNumber()
+  @IsInt()
+  @Type(() => Number)
   userId!: number;
 
-  @IsNumber()
+  @IsInt()
+  @Type(() => Number)
   storeId!: number;
 
-  @IsNumber()
+  @IsInt()
+  @Type(() => Number)
   addressId!: number;
 
   @IsOptional()

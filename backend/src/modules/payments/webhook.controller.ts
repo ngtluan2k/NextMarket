@@ -1,9 +1,16 @@
-import { Controller, Get, Req, BadRequestException, Logger, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Req,
+  BadRequestException,
+  Logger,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { VnpayStrategy } from './strategies/vnpay.strategy';
 import * as Express from 'express';
 import * as querystring from 'querystring';
-import * as url from 'url';
 
 @Controller('payments/webhook')
 export class PaymentsWebhookController {
@@ -15,46 +22,65 @@ export class PaymentsWebhookController {
   ) {}
 
   @Get('vnpay/callback')
-  async vnpayCallback(@Req() req: Express.Request) {
+  async vnpayCallback(
+    @Req() req: Express.Request,
+    @Res() res: Express.Response,
+  ) {
     try {
-      // Lấy raw query string (không decode tự động)
       const rawQuery = req.url.split('?')[1] || '';
-      const params = querystring.parse(rawQuery, '&', '=', { decodeURIComponent: (str) => str });
+      const params = querystring.parse(rawQuery);
+      this.logger.debug(
+        'VNPay GET callback received: ' + JSON.stringify(params),
+      );
 
-      this.logger.debug('VNPay GET callback received: ' + JSON.stringify(params));
+      const result = await this.vnpayStrategy.handleCallback(params, rawQuery);
 
-      // Xử lý callback với VNPay strategy
-      const result = await this.vnpayStrategy.handleCallback(params);
-
-      // Lấy transaction ID
       const providerTransactionId = Array.isArray(params.vnp_TransactionNo)
         ? params.vnp_TransactionNo[0]
         : (params.vnp_TransactionNo as string) || '';
 
-      // Xử lý callback qua service
-      return this.paymentsService.handleProviderCallback({
+      await this.paymentsService.handleProviderCallback({
         paymentUuid: result.paymentUuid,
         providerTransactionId,
         success: params.vnp_ResponseCode === '00',
         rawPayload: params,
       });
+
+      // FE domain (sửa lại cho đúng, ví dụ React chạy ở port 4200)
+      const feBaseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+      const redirectUrl = `${feBaseUrl}/order-success?paymentUuid=${
+        result.paymentUuid
+      }&responseCode=${params.vnp_ResponseCode}&message=${encodeURIComponent(
+        result.message,
+      )}`;
+
+      return res.redirect(redirectUrl);
     } catch (err) {
       this.logger.error(err instanceof Error ? err.message : String(err));
-      throw new BadRequestException(err instanceof Error ? err.message : 'Invalid callback');
+
+      const feBaseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+      const redirectUrl = `${feBaseUrl}/order-success?responseCode=error&message=${encodeURIComponent(
+        err instanceof Error ? err.message : 'Invalid callback',
+      )}`;
+
+      return res.redirect(redirectUrl);
     }
   }
 
   @Post('provider')
   async providerNotify(@Req() req: Express.Request) {
     const body = req.body;
-    this.logger.debug('Provider POST callback received: ' + JSON.stringify(body));
+    this.logger.debug(
+      'Provider POST callback received: ' + JSON.stringify(body),
+    );
 
     if (body.vnp_TxnRef) {
       if (!this.vnpayStrategy.verifySignature(body)) {
         throw new BadRequestException('Invalid VNPay signature');
       }
 
-      // Ép kiểu providerTransactionId về string
       const providerTransactionId = Array.isArray(body.vnp_TransactionNo)
         ? body.vnp_TransactionNo[0]
         : body.vnp_TransactionNo || '';

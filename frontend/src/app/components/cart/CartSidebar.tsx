@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, Typography, Button, Tag, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
@@ -47,6 +47,7 @@ type Props = {
   userAddress?: UserAddress | null;
   items?: CheckoutItem[];
   etaLabel?: string;
+  onSubmit?: () => void;
 };
 
 export const CartSidebar: React.FC<Props> = ({
@@ -65,17 +66,13 @@ export const CartSidebar: React.FC<Props> = ({
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
-  const storeId = items[0]?.store?.id;
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
       console.log('📋 Items received:', JSON.stringify(items, null, 2));
 
-      if (!storeId || storeId <= 0) {
-      message.error('Không thể xác định cửa hàng. Vui lòng kiểm tra giỏ hàng.');
-      return;
-    }
-      
+      // Kiểm tra dữ liệu đầu vào
       if (items.length === 0) {
         message.error('Không có sản phẩm trong đơn hàng');
         return;
@@ -113,10 +110,18 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-    
+      const storeId = items[0]?.product?.store?.id;
+      if (!storeId) {
+        console.error('❌ Store ID missing for product', items[0]);
+        message.error('Không tìm thấy thông tin cửa hàng');
+        return;
+      }
 
+      console.log('Store in first item:', items[0]?.product?.store);
+      console.log('StoreId being sent:', storeId);
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
+      // Tạo payload cho đơn hàng
       const orderPayload = {
         userId,
         storeId,
@@ -133,9 +138,7 @@ export const CartSidebar: React.FC<Props> = ({
             productId,
             quantity: Number(item.quantity),
             price: Number(item.price),
-            ...(item.product?.variants?.[0]?.id
-              ? { variantId: Number(item.product.variants[0].id) }
-              : {}),
+            ...(item.variantId ? { variantId: Number(item.variantId) } : {}),
           };
         }),
       };
@@ -167,40 +170,55 @@ export const CartSidebar: React.FC<Props> = ({
 
       console.log('💳 Kết quả thanh toán:', paymentRes.data);
 
+      // Chuẩn bị dữ liệu cho trang OrderSuccess
+      const successState = {
+        orderCode: order.uuid || order.id,
+        total: selectedTotal,
+        paymentMethodLabel: selectedMethod.name,
+        etaLabel,
+        items,
+        status: selectedMethod.type === 'cod' ? 'success' : (payment?.status ?? 'success'),
+      };
+
+      console.log('Navigating to OrderSuccess with state:', successState);
+
       if (redirectUrl) {
         console.log('🔗 Chuyển hướng đến:', redirectUrl);
         window.location.href = redirectUrl;
       } else {
-        navigate('/order/success', {
-          state: {
-            orderCode: order.uuid || order.id,
-            total: selectedTotal,
-            paymentMethodLabel: selectedMethod.name,
-            etaLabel,
-            items,
-          },
+        navigate('/order-success', {
+          state: successState,
           replace: true,
         });
       }
     } catch (err: any) {
       console.error('❌ Lỗi tạo đơn hàng/thanh toán:', {
-        status: err.status,
-        data: err.data,
+        status: err.response?.status,
+        data: err.response?.data,
+        headers: err.response?.headers,
         message: err.message,
         url: err.config?.url,
       });
-      message.error(err.message || 'Không thể tạo đơn hàng');
+      message.error(
+        err.response?.data?.message || err.message || 'Không thể tạo đơn hàng'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ position: 'sticky', top: 24, maxWidth: 360, marginLeft: 'auto' }}>
+    <div
+      style={{ position: 'sticky', top: 24, maxWidth: 360, marginLeft: 'auto' }}
+    >
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
           <Text strong>Giao tới</Text>
-          <Button type="link" size="small" onClick={() => navigate('/user/address')}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate('/user/address')}
+          >
             Thay đổi
           </Button>
         </div>
@@ -292,7 +310,8 @@ export const CartSidebar: React.FC<Props> = ({
           onClick={handleSubmit}
           loading={loading}
         >
-          {submitLabel ?? (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}
+          {submitLabel ??
+            (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}
         </Button>
       </Card>
     </div>
