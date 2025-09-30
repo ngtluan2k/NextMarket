@@ -52,6 +52,9 @@ export class ProductResponseDto {
   @ApiProperty({ description: 'Product ID' })
   id?: number;
 
+  @ApiProperty({ description: 'Store ID' })
+  store_id?: number;
+  
   @ApiProperty({ description: 'Product name' })
   name?: string;
 

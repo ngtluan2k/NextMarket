@@ -55,16 +55,38 @@ const CheckoutPayment: React.FC = () => {
         i.product.media?.find((m) => m.is_primary)?.url ??
         i.product.media?.[0]?.url ??
         '';
-      return {
-        id: i.id,
-        name: i.product.name ?? 'Sản phẩm không xác định',
-        image: primaryImage,
-        quantity: i.quantity,
-        price: i.price,
-      };
+       return {
+      id: i.id,
+      product_id: i.product_id,
+      name: i.product.name ?? 'Sản phẩm không xác định',
+      image: primaryImage,
+      quantity: i.quantity,
+      price: i.price,
+      product: {
+        ...i.product,
+      },
+    };
     });
   }, [items]);
-
+useEffect(() => {
+  console.log("🔍 === DEBUG STORE ID TRACING ===");
+  console.log("1. Full location.state:", location.state);
+  console.log("2. Raw items array:", items);
+  
+  if (items && items.length > 0) {
+    items.forEach((item, index) => {
+      console.log(`--- Item ${index} ---`);
+      console.log("Item object:", item);
+      console.log("Product object:", item.product);
+      console.log("Store in product:", item.product?.store);
+      console.log("Store ID:", item.product?.store?.id);
+      console.log("Product has store_id:", (item.product as any)?.store_id);
+      console.log("All product keys:", Object.keys(item.product || {}));
+    });
+  } else {
+    console.log("❌ No items in cart");
+  }
+}, [items]);
   useEffect(() => {
     if (items.length === 0) {
       message.warning('Giỏ hàng trống! Vui lòng thêm sản phẩm.');
@@ -256,6 +278,7 @@ const CheckoutPayment: React.FC = () => {
               userAddress={userAddress}
               items={checkoutItems}
               etaLabel={etaLabel}
+              
             />
           </Col>
         </Row>

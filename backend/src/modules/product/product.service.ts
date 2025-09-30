@@ -241,6 +241,7 @@ export class ProductService {
         'product.short_description',
         'product.base_price',
         'product.status',
+        'product.store_id',
       ])
       .leftJoinAndSelect(
         'product.media',
@@ -274,7 +275,7 @@ export class ProductService {
         'pricing_rules.ends_at',
       ])
       .leftJoinAndSelect('product.store', 'store')
-      .addSelect(['store.name', 'store.slug'])
+      .addSelect(['store.id', 'store.name', 'store.slug'])
       .where('product.slug = :slug', { slug })
       .getOne();
 
@@ -287,6 +288,7 @@ export class ProductService {
       slug: product.slug,
       short_description: product.short_description,
       base_price: product.base_price,
+      store_id: product.store_id,
       media: product.media.map((m): MediaDto => ({ url: m.url })),
       variants: product.variants.map(
         (v): VariantDto => ({

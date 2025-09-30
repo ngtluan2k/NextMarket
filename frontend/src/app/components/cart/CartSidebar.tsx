@@ -65,12 +65,17 @@ export const CartSidebar: React.FC<Props> = ({
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
-
+  const storeId = items[0]?.store?.id;
   const handleSubmit = async () => {
     setLoading(true);
     try {
       console.log('📋 Items received:', JSON.stringify(items, null, 2));
 
+      if (!storeId || storeId <= 0) {
+      message.error('Không thể xác định cửa hàng. Vui lòng kiểm tra giỏ hàng.');
+      return;
+    }
+      
       if (items.length === 0) {
         message.error('Không có sản phẩm trong đơn hàng');
         return;
@@ -108,7 +113,8 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      const storeId = items[0]?.product?.store?.id || 1;
+    
+
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
       const orderPayload = {

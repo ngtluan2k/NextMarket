@@ -13,6 +13,7 @@ export type CheckoutItem = {
   /** giá cũ (để gạch) nếu có – cũng có thể là string */
   oldPrice?: number | string;
   product?: Product;
+  store?: { id: number; name: string };
 };
 
 export type ShippingMethodType = "economy" | "fast";
