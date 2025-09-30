@@ -24,7 +24,7 @@ export enum OrderStatuses {
   Confirmed = 1,
   Processing = 2,
   Shipped = 3,
-  Delivered = 4,
+  Delivered = 4,  
   Completed = 5,
   Cancelled = 6,
   Returned = 7,
