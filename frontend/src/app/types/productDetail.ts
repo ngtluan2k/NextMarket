@@ -16,3 +16,4 @@ export const PRODUCT_DETAIL_LAYOUT = {
   buyBoxMinHeight: 480,
   buyBoxStickyTop: 24, // px
 };
+

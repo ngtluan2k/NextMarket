@@ -1,4 +1,3 @@
-// src/components/cart/CartHeader.tsx
 import React from 'react';
 import { Checkbox, Image, Button, Typography } from 'antd';
 import { DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
@@ -30,6 +29,7 @@ export const CartHeader: React.FC<Props> = ({
   showMessage,
 }) => {
   const { cart, updateQuantity, removeFromCart } = useCart();
+  // console.log("selected id : " + selectedIds)
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
   const shopName =

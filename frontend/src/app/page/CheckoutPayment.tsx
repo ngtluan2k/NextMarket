@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Row, Col, Typography, message, Spin, Button } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Thêm useAuth
-import { api } from '../config/api';
+import { api } from '../api/api';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { CartSidebar } from '../components/cart/CartSidebar';
@@ -16,21 +16,11 @@ import PaymentMethods, {
   PaymentMethodResponse,
   SavedCard,
 } from '../components/checkout/PaymentMethods';
-import { Product } from '../components/productDetail/product';
 import LoginModal from '../components/LoginModal'; // Thêm LoginModal
+import { CheckoutLocationState } from '../types/buyBox';
 
 const { Title } = Typography;
 
-type CheckoutLocationState = {
-  items?: Array<{
-    id: number;
-    product_id: number;
-    price: number | string;
-    quantity: number;
-    product: Product;
-  }>;
-  subtotal?: number | string;
-};
 
 const CheckoutPayment: React.FC = () => {
   const navigate = useNavigate();
@@ -61,6 +51,8 @@ const CheckoutPayment: React.FC = () => {
         image: primaryImage,
         quantity: i.quantity,
         price: i.price,
+        product: i.product, 
+        variant: i.variant,
       };
     });
   }, [items]);

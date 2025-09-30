@@ -67,8 +67,8 @@ export class ProductService {
         description: dto.description,
         base_price: dto.base_price,
         status,
-        store_id: store.id, // dùng store_id chứ không dùng store: { id: ... }
-        brand_id: dto.brandId, // dùng brand_id
+        store_id: store.id, 
+        brand_id: dto.brandId,
       });
       await manager.save(product);
 
@@ -260,16 +260,10 @@ export class ProductService {
         'media',
         'variants',
         'pricing_rules',
-      ], // nếu muốn show thêm info store
+      ], 
     });
   }
-  // product.service.ts
-  // async findBySlug(slug: string) {
-  //   const product = await this.productRepo.findOne({ where: { slug }, relations: ['media','variants','brand','categories','pricing_rules','store']
-  //  });
-  //   if (!product) throw new NotFoundException('Product not found');
-  //   return product;
-  // }
+
 
   async findBySlug(slug: string): Promise<ProductResponseDto> {
     const product = await this.productRepo
@@ -314,7 +308,7 @@ export class ProductService {
         'pricing_rules.ends_at',
       ])
       .leftJoinAndSelect('product.store', 'store')
-      .addSelect(['store.name', 'store.slug'])
+      .addSelect(['store.id', 'store.name', 'store.slug'])
       .where('product.slug = :slug', { slug })
       .getOne();
 
@@ -347,7 +341,7 @@ export class ProductService {
           price: pr.price,
         })
       ),
-      store: { name: product.store.name, slug: product.store.slug },
+      store: { id: product.store.id, name: product.store.name, slug: product.store.slug },
     };
 
     return response;

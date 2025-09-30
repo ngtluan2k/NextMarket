@@ -1,28 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
-import { Product } from '../productDetail/product';
-import { TIKI_RED } from '../productDetail/productDetail';
+import { vnd, TIKI_RED} from "../../types/productDetail";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import LoginModal from '../LoginModal';
-
-export const vnd = (n?: number) =>
-  (n ?? 0).toLocaleString('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  });
-
-type CheckoutLocationState = {
-  items?: Array<{
-    id: number;
-    product_id: number;
-    price: number | string;
-    quantity: number;
-    product: Product;
-  }>;
-  subtotal?: number | string;
-};
+import { Product } from '../../types/product';
+import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 
 export default function BuyBox({
   product,
@@ -47,7 +30,7 @@ export default function BuyBox({
   width?: number;
   minHeight?: number;
   stickyTop?: number;
-  onBuyNow?: (p: { product?: Product; qty: number }) => void;
+  onBuyNow?: (p: { product?: LightProduct; qty: number }) => void;
   showMessage?: (
     type: 'success' | 'error' | 'warning',
     content: string
@@ -58,17 +41,18 @@ export default function BuyBox({
   const p = product ?? {};
   const location = useLocation();
 
-
   const availability = useMemo(() => {
     const v = product?.variants?.find((v) => v.id === selectedVariantId);
     return (v?.stock ?? 0) > 0;
   }, [product, selectedVariantId]);
 
+  const v = product?.variants?.find((v) => v.id === selectedVariantId);
+
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
-    console.log('🔄 BuyBox mounted/updated', {
+    console.log('BuyBox mounted/updated', {
       productId: product?.id,
       productName: product?.name,
       location: location.pathname,
@@ -79,7 +63,13 @@ export default function BuyBox({
   }, [location.pathname, showLoginModal, product, quantity]);
 
   const handleBuyNow = async () => {
-    console.log(' BuyNow clicked', { productId: product?.id, quantity });
+    console.log(' BuyNow clicked', {
+      productId: product?.id,
+      quantity,
+      variantId: selectedVariantId,
+    });
+    console.log('product to buy: ' + JSON.stringify(product));
+
     if (!product?.id) {
       console.error('Invalid product data', product);
       alert('Thông tin sản phẩm không hợp lệ');
@@ -95,131 +85,54 @@ export default function BuyBox({
     const token = localStorage.getItem('token');
     if (!token) {
       console.log('No token, saving buyNowData');
-      const productData = {
-        id: product.id,
-        uuid: product.uuid,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        base_price: product.base_price,
-        listPrice: product.listPrice,
-        media: product.media,
-        store: product.store,
-        rating: product.rating,
-        reviewsCount: product.reviewsCount,
-      };
       localStorage.setItem(
         'buyNowData',
-        JSON.stringify({ product: productData, quantity })
+        JSON.stringify({ product: p, quantity, variantId: selectedVariantId })
       );
       localStorage.setItem('returnUrl', location.pathname);
       setShowLoginModal(true);
       return;
     }
 
-    // console.log(' Authenticated, preparing checkout state');
-
     const checkoutState: CheckoutLocationState = {
       items: [
         {
           id: product.id,
           product_id: product.id,
-          price: Number(product.price),
+          price: calculatedPrice,
           quantity: quantity,
           product: {
             id: product.id,
-            uuid: product.uuid,
             name: product.name,
-            slug: product.slug,
-            price: product.price,
-            base_price: product.base_price,
-            listPrice: product.listPrice,
-            media: product.media,
+            media: (() => {
+              if (selectedVariantId && product.variants && product.media) {
+                const variantIndex = product.variants.findIndex(
+                  (v) => v.id === selectedVariantId
+                );
+                if (variantIndex >= 0 && product.media[variantIndex]) {
+                  return [product.media[variantIndex]];
+                }
+              }
+              return product.media
+                ? product.media.filter((m) => m.is_primary).length > 0
+                  ? product.media.filter((m) => m.is_primary)
+                  : [product.media[0]]
+                : [];
+            })(),
             store: product.store,
             rating: product.rating,
             reviewsCount: product.reviewsCount,
           },
+          variant: v,
         },
       ],
-      subtotal: (product.price ?? 0) * quantity,
+      subtotal: calculatedPrice * quantity,
     };
 
+    console.log(JSON.stringify(checkoutState));
     console.log('Navigating to /checkout with state:', checkoutState);
     navigate('/checkout', { state: checkoutState });
   };
-
-  // const handleLoginSuccess = async (payload: {
-  //   email: string;
-  //   password: string;
-  // }) => {
-  //   console.log('🔐 Login success called', { payload });
-  //   try {
-  //     const response = await fetch('http://localhost:3000/users/login', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify(payload),
-  //     });
-  //     const data = await response.json();
-  //     if (!response.ok) throw new Error(data?.message || 'Đăng nhập thất bại');
-
-  //     localStorage.setItem('token', data.access_token);
-  //     localStorage.setItem('user', JSON.stringify(data.data));
-  //     window.dispatchEvent(new CustomEvent('userLogin'));
-
-  //     const cartRes = await fetch('http://localhost:3000/cart/me', {
-  //       headers: { Authorization: `Bearer ${data.access_token}` },
-  //     });
-  //     const cartJson = await cartRes.json();
-  //     localStorage.setItem('cart', JSON.stringify(cartJson));
-
-  //     const buyNowData = localStorage.getItem('buyNowData');
-  //     const returnUrl = localStorage.getItem('returnUrl') || '/';
-  //     console.log('📋 Post-login:', { buyNowData, returnUrl });
-
-  //     if (buyNowData) {
-  //       const { product: savedProduct, quantity: savedQuantity } =
-  //         JSON.parse(buyNowData);
-  //       const checkoutState: CheckoutLocationState = {
-  //         items: [
-  //           {
-  //             id: savedProduct.id,
-  //             product_id: savedProduct.id,
-  //             price: savedProduct.price,
-  //             quantity: savedQuantity,
-  //             product: {
-  //               id: savedProduct.id,
-  //               uuid: savedProduct.uuid,
-  //               name: savedProduct.name,
-  //               slug: savedProduct.slug,
-  //               price: savedProduct.price,
-  //               base_price: savedProduct.base_price,
-  //               listPrice: savedProduct.listPrice,
-  //               media: savedProduct.media,
-  //               store: savedProduct.store,
-  //               rating: savedProduct.rating,
-  //               reviewsCount: savedProduct.reviewsCount,
-  //             },
-  //           },
-  //         ],
-  //         subtotal: (savedProduct.price ?? 0) * savedQuantity,
-  //       };
-
-  //       console.log('🧭 Navigating to /checkout post-login', checkoutState);
-  //       navigate('/checkout', { state: checkoutState });
-  //     } else {
-  //       console.log('📍 No buyNowData, navigating to', returnUrl);
-  //       localStorage.removeItem('returnUrl');
-  //       navigate(returnUrl);
-  //     }
-
-  //     setShowLoginModal(false);
-  //   } catch (error: any) {
-  //     console.error('❌ Login error:', error);
-  //     localStorage.removeItem('buyNowData');
-  //     localStorage.removeItem('returnUrl');
-  //     alert(error?.message ?? 'Đăng nhập thất bại. Vui lòng thử lại.');
-  //   }
-  // };
 
   // --- tính giá dựa trên variant + pricing_rules ---
   const unitPrice = useMemo(() => {

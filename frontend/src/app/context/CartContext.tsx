@@ -1,26 +1,5 @@
-import { message } from 'antd';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-export interface CartItem {
-  id: number;
-  quantity: number;
-  price: number;
-  product: {
-    id: number;
-    name: string;
-    basePrice: number; 
-    url: string;
-    media: { url: string; is_primary?: boolean }
-    status: 'draft' | 'deleted' | 'active';
-  };
-  variant?: {
-    id: number;
-    variant_name: string;
-    price: number;
-    stock: number;
-  };
-}
-
+import { CartItem } from '../types/cart';
 interface CartContextType {
   cart: CartItem[];
   addToCart: (productId: number, quantity?: number, variantId?: number) => Promise<void>;
@@ -44,7 +23,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
-  // NEW: Track token state to react to changes
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
 
   const loadCart = async () => {
@@ -71,13 +49,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       setCart([]);
     }
   };
-
-  // NEW: Load cart when token changes (handles login/logout)
   useEffect(() => {
     loadCart();
   }, [token]);
 
-  // NEW: Listen for cross-tab storage changes
+ 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'token') {
@@ -88,7 +64,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // NEW: Poll localStorage for same-tab changes (every 1 second)
   useEffect(() => {
     const interval = setInterval(() => {
       const currentToken = localStorage.getItem('token');
@@ -178,8 +153,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const clearCart = () => {
     setCart([]);
   };
-
-  // REMOVED: Original useEffect on mount, now handled by token changes
 
   return (
     <CartContext.Provider

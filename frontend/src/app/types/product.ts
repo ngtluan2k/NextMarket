@@ -57,12 +57,16 @@ export type Product = {
   sellerName?: string;
 };
 
-export type CardItem = {
-  id?: number;
-  name?: string;
-  image?: string;
-  price?: number;
-  listPrice?: number;
+export type LikeItem = {
+  id: number | string;
+  name: string;
+  imageUrl: string;
+  href?: string;
+  slug?: string;
+  price?: number | string;
+  oldPrice?: number | string;
+  percentOff?: number | string;
   rating?: number;
-  variantId?: number;
+  ratingCount?: number;
+  deliveryText?: string;
 };

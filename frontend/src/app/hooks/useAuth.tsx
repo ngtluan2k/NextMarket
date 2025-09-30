@@ -68,7 +68,7 @@ export const useAuth = () => {
     window.location.reload();
   };
 
-  const isAuthenticated = !!user;
+  const isAuthenticated = !user;
 
   return {
     user,

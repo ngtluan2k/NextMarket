@@ -19,6 +19,7 @@ export class OrdersController {
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
+    console.log("at server:  " +JSON.stringify(createOrderDto))
     return this.ordersService.create(createOrderDto);
   }
 

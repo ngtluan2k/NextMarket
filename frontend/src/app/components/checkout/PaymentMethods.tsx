@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Radio, Button, Tag } from 'antd';
+import { PaymentMethodResponse, PaymentMethodType, SavedCard } from '../../types/payment';
 import {
   CreditCardOutlined,
   MobileOutlined,
@@ -9,24 +10,6 @@ import {
   DollarOutlined,
 } from '@ant-design/icons';
 
-export type PaymentMethodType = string;
-
-export type SavedCard = {
-  id: string | number;
-  brand: string;
-  last4: string;
-  exp: string;
-};
-
-export type PaymentMethodResponse = {
-  id: number;
-  uuid: string;
-  name: string;
-  type: string;
-  config: Record<string, any>;
-  enabled: boolean;
-  createdAt: string;
-};
 
 type Props = {
   selected: PaymentMethodType;
@@ -35,7 +18,7 @@ type Props = {
   savedCards?: SavedCard[];
 };
 
-// Map icon cho từng loại
+
 const getPaymentIcon = (type: string) => {
   switch (type) {
     case 'cod':
@@ -62,7 +45,7 @@ const PaymentMethods: React.FC<Props> = ({
   savedCards = [],
 }) => {
 
-  console.log(methods)
+  // console.log(methods)
   return (
     <Card
       title="Chọn hình thức thanh toán"

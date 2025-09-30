@@ -3,11 +3,8 @@ import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
-import { PRODUCT_DETAIL_LAYOUT as L } from '../components/productDetail/productDetail';
-import SimilarProducts from '../components/productDetail/SimilarProducts';
+import { PRODUCT_DETAIL_LAYOUT as L } from '../types/productDetail';
 import ProductDescription from '../components/productDetail/ProductDescription';
-import ProductReviews from '../components/productDetail/ProductReviews';
-import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
 import { useCart } from '../context/CartContext';
@@ -18,7 +15,7 @@ import {
   Shipping,
   ComboStrip,
 } from '../components/productDetail';
-import { VariantInfo } from '../components/productDetail/product';
+import { VariantInfo } from "../types/product"
 
 interface Props {
   showMessage?: (
@@ -40,7 +37,6 @@ const MemoizedGallery = React.memo(Gallery);
 const MemoizedInfo = React.memo(Info);
 const MemoizedShipping = React.memo(Shipping);
 const MemoizedComboStrip = React.memo(ComboStrip);
-const MemoizedSimilarProducts = React.memo(SimilarProducts);
 const MemoizedProductSpecs = React.memo(ProductSpecs);
 const MemoizedProductDescription = React.memo(ProductDescription);
 const MemoizedBuyBox = React.memo(BuyBox);
@@ -51,6 +47,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
+
+  console.log("product in product detail page: "+JSON.stringify(product));
+
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {

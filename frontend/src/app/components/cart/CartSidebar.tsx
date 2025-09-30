@@ -1,31 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Typography, Button, Tag, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useCart, CartItem } from '../../context/CartContext';
-import { api } from '../../config/api';
-import { CheckoutItem } from '../../components/checkout/ShippingMethod';
+import { useCart } from '../../context/CartContext';
+import { api } from '../../api/api';
+import { CheckoutItem } from '../../types/checkout';
 import { useAuth } from '../../context/AuthContext';
+import { PaymentMethodResponse } from '../../types/payment';
+import { UserAddress } from '../../types/user';
+import { CartItem } from '../../types/cart';
 
 const { Text } = Typography;
-
-type PaymentMethodResponse = {
-  id: number;
-  uuid: string;
-  type: string;
-  name: string;
-  enabled: boolean;
-  config?: any;
-};
-
-type UserAddress = {
-  id: number;
-  fullAddress: string;
-  name?: string;
-  phone?: string;
-  tag?: string;
-  userId?: number;
-};
-
 type Props = {
   selectedTotal: number;
   selectedCount: number;
@@ -57,11 +41,11 @@ export const CartSidebar: React.FC<Props> = ({
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
-
+  
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      console.log('📋 Items received:', JSON.stringify(items, null, 2));
+      console.log(' Items received: ', JSON.stringify(items, null, 2));
 
       if (items.length === 0) {
         message.error('Không có sản phẩm trong đơn hàng');
@@ -91,19 +75,8 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      const invalidItems = items.filter(
-        (item) => !item.id || isNaN(Number(item.id)) || Number(item.id) <= 0
-      );
-      if (invalidItems.length > 0) {
-        console.error(
-          '❌ Invalid items:',
-          JSON.stringify(invalidItems, null, 2)
-        );
-        message.error('Một số sản phẩm có ID không hợp lệ');
-        return;
-      }
-
-      const storeId = items[0]?.product?.store?.id || 1;
+      const storeId = items[0]?.product?.store?.id || 1;  
+      
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
       const orderPayload = {
@@ -114,28 +87,31 @@ export const CartSidebar: React.FC<Props> = ({
         shippingFee,
         discountTotal: 0,
         items: items.map((item, index) => {
-          const productId = Number(item.id);
-          console.log("productId: "+item.id)
+          const productId = Number(item.product?.id); 
+          console.log("productId: "+ Number(item.product?.id)); 
           if (isNaN(productId) || productId <= 0) {
             throw new Error(
               `sản phẩm không hợp lệ tại vị trí  ${index}: ${item.product?.id}`
             );
-          }
+          }         
+           console.log("cho xin 5 chục: "+ JSON.stringify(items)); 
+           const variantId = item.product?.variants?.[0].id;
+           console.log("cho xin 5 chục: "+ JSON.stringify(variantId)); 
+
           return {
             productId,
+            variantId: item.product?.variants?.[0].id,
             quantity: Number(item.quantity),
             price: Number(item.price),
-            ...(item.product?.variants?.[0]?.id
-              ? { variantId: Number(item.product.variants[0].id) }
-              : {}),
+            ...(item.variant?.id && { variantId: Number(item.variant.id) }),
           };
         }),
       };
 
-      console.log('📦 Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
+      console.log(' Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
       const orderRes = await api.post('/orders', orderPayload);
       const order = orderRes.data;
-      console.log('📦 Đơn hàng đã được tạo:', order);
+      console.log(' Đơn hàng đã được tạo:', order);
 
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
@@ -181,7 +157,7 @@ export const CartSidebar: React.FC<Props> = ({
         });
       }
     } catch (err: any) {
-      console.error('❌ Lỗi tạo đơn hàng/thanh toán:', {
+      console.error('Lỗi tạo đơn hàng/thanh toán:', {
         status: err.status,
         data: err.data,
         message: err.message,

@@ -1,15 +1,8 @@
 import React, { useMemo } from 'react';
 import Stars from '../productDetail/Stars';
-import { TIKI_RED } from '../productDetail/productDetail';
+import { TIKI_RED, vnd } from '../../types/productDetail';
 import { useNavigate } from 'react-router-dom';
-import { VariantInfo } from './product';
-
-const vnd = (n?: number | string) =>
-  Number(n ?? 0).toLocaleString('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 5,
-  });
+import { VariantInfo } from '../../types/product';
 
 export default function Info({
   product,

@@ -1,26 +1,14 @@
-// src/components/checkout/ShippingMethod.tsx
-import React from "react";
-import { Product } from '../productDetail/product'; 
-import { Card, Radio, Tag, Typography, Image } from "antd";
+import React from 'react';
+import { Card, Radio, Tag, Typography, Image } from 'antd';
+import { CheckoutItem } from '../../types/checkout';
 const { Text } = Typography;
 
-export type CheckoutItem = {
-  id: number;
-  name: string;
-  image?: string;
-  quantity: number;
-  price: number | string;
-  oldPrice?: number | string;
-  product?: Product;
-};
-
-export type ShippingMethodType = "economy" | "fast";
+export type ShippingMethodType = 'economy' | 'fast';
 
 type Props = {
   items: CheckoutItem[];
   selected: ShippingMethodType;
   onChange: (m: ShippingMethodType) => void;
-
   etaLabel?: string;
   storeName?: string;
   saving?: number | null;
@@ -31,18 +19,18 @@ type Props = {
   badgeLabel?: string;
 };
 
-/** Convert mọi loại value về number an toàn */
+
 const toNum = (v: number | string | null | undefined): number | null => {
   if (v === null || v === undefined) return null;
   const n =
-    typeof v === "string" ? Number(v.replace(/[^\d.-]/g, "")) : Number(v);
+    typeof v === 'string' ? Number(v.replace(/[^\d.-]/g, '')) : Number(v);
   return Number.isFinite(n) ? n : null;
 };
 
-/** Format VND */
+
 const fmt = (v?: number | string | null): string => {
   const n = toNum(v);
-  return n === null ? "" : `${n.toLocaleString("vi-VN")} đ`;
+  return n === null ? '' : `${n.toLocaleString('vi-VN')} đ`;
 };
 
 export const ShippingMethod: React.FC<Props> = ({
@@ -54,34 +42,34 @@ export const ShippingMethod: React.FC<Props> = ({
   saving,
   shippingFee,
   shippingFeeOld,
-  methodLabel = "Giao tiết kiệm",
-  badgeLabel = "GIAO TIẾT KIỆM",
+  methodLabel = 'Giao tiết kiệm',
+  badgeLabel = 'GIAO TIẾT KIỆM',
 }) => {
+  console.log('in shipping method: ' + JSON.stringify(items))
   return (
     <Card title="Chọn hình thức giao hàng" bodyStyle={{ paddingTop: 12 }}>
-      {/* Chọn loại giao hàng */}
       <Radio.Group
         value={selected}
         onChange={(e) => onChange(e.target.value as ShippingMethodType)}
-        style={{ width: "100%" }}
+        style={{ width: '100%' }}
       >
         <Card
           size="small"
           style={{
             marginBottom: 12,
             border:
-              selected === "economy"
-                ? "1px solid #1677ff"
-                : "1px solid #f0f0f0",
+              selected === 'economy'
+                ? '1px solid #1677ff'
+                : '1px solid #f0f0f0',
             background:
-              selected === "economy" ? "rgba(22,119,255,0.06)" : "transparent",
+              selected === 'economy' ? 'rgba(22,119,255,0.06)' : 'transparent',
           }}
           bodyStyle={{ padding: 12 }}
         >
           <div className="flex items-center gap-8">
             <Radio value="economy">{methodLabel}</Radio>
-            {typeof saving === "number" && saving > 0 && (
-              <Text style={{ color: "#52c41a" }}>
+            {typeof saving === 'number' && saving > 0 && (
+              <Text style={{ color: '#52c41a' }}>
                 -{Math.round(saving / 1000)}K
               </Text>
             )}
@@ -90,16 +78,24 @@ export const ShippingMethod: React.FC<Props> = ({
       </Radio.Group>
 
       {/* Thông tin ETA + sản phẩm + phí ship */}
-      <Card size="small" type="inner" style={{ marginTop: 8 }} bodyStyle={{ padding: 12 }}>
+      <Card
+        size="small"
+        type="inner"
+        style={{ marginTop: 8 }}
+        bodyStyle={{ padding: 12 }}
+      >
         {/* ETA */}
         {etaLabel && (
-          <div className="flex items-center gap-2 mb-10" style={{ fontWeight: 500 }}>
-            📦 <span style={{ color: "#1677ff" }}>{etaLabel}</span>
+          <div
+            className="flex items-center gap-2 mb-10"
+            style={{ fontWeight: 500 }}
+          >
+            📦 <span style={{ color: '#1677ff' }}>{etaLabel}</span>
           </div>
         )}
 
         <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12 }}
+          style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 12 }}
         >
           {/* Trái: danh sách sản phẩm */}
           <div>
@@ -109,27 +105,27 @@ export const ShippingMethod: React.FC<Props> = ({
               </Text>
             )}
 
-            {items.map((it) => {
+            {items.map((it, index) => {
               const p = toNum(it.price);
               const op = toNum(it.oldPrice);
 
               return (
                 <div
-                  key={it.id}
+                  key={index}
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "56px 1fr auto",
+                    display: 'grid',
+                    gridTemplateColumns: '56px 1fr auto',
                     gap: 12,
                     marginTop: 12,
-                    alignItems: "center",
+                    alignItems: 'center',
                   }}
                 >
                   <Image
-                    src={it.image || ""}
+                    src={it.image || ''}
                     alt={it.name}
                     width={56}
                     height={56}
-                    style={{ borderRadius: 8, objectFit: "cover" }}
+                    style={{ borderRadius: 8, objectFit: 'cover' }}
                     preview={false}
                     fallback="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56'/>"
                   />
@@ -143,17 +139,17 @@ export const ShippingMethod: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div style={{ minWidth: 110, textAlign: "right" }}>
+                  <div style={{ minWidth: 110, textAlign: 'right' }}>
                     {op !== null && p !== null && op > p && (
                       <Text
                         delete
                         type="secondary"
-                        style={{ display: "block", fontSize: 12 }}
+                        style={{ display: 'block', fontSize: 12 }}
                       >
                         {fmt(op)}
                       </Text>
                     )}
-                    <Text strong style={{ color: "#cf1322", fontSize: 16 }}>
+                    <Text strong style={{ color: '#cf1322', fontSize: 16 }}>
                       {fmt(p)}
                     </Text>
                   </div>
@@ -164,11 +160,15 @@ export const ShippingMethod: React.FC<Props> = ({
 
           {/* Phải: phí ship + cửa hàng */}
           <div className="flex flex-col gap-2">
-            {(toNum(shippingFee) !== null || toNum(shippingFeeOld) !== null) && (
+            {(toNum(shippingFee) !== null ||
+              toNum(shippingFeeOld) !== null) && (
               <div className="flex items-center gap-10">
-                {toNum(shippingFeeOld) !== null && toNum(shippingFeeOld)! > 0 && (
-                  <Text delete type="secondary">{fmt(shippingFeeOld)}</Text>
-                )}
+                {toNum(shippingFeeOld) !== null &&
+                  toNum(shippingFeeOld)! > 0 && (
+                    <Text delete type="secondary">
+                      {fmt(shippingFeeOld)}
+                    </Text>
+                  )}
 
                 {toNum(shippingFee) === 0 ? (
                   <Tag color="green">MIỄN PHÍ</Tag>
@@ -183,10 +183,10 @@ export const ShippingMethod: React.FC<Props> = ({
             {storeName && (
               <div
                 style={{
-                  background: "#f5f5f5",
-                  border: "1px solid #eee",
+                  background: '#f5f5f5',
+                  border: '1px solid #eee',
                   borderRadius: 8,
-                  padding: "8px 12px",
+                  padding: '8px 12px',
                 }}
               >
                 <div className="flex items-center gap-10">
@@ -204,10 +204,10 @@ export const ShippingMethod: React.FC<Props> = ({
         {/* Link mã shop */}
         <div
           className="flex items-center gap-2 mt-12"
-          style={{ color: "#1677ff", cursor: "pointer" }}
+          style={{ color: '#1677ff', cursor: 'pointer' }}
         >
           🧾 Thêm mã khuyến mãi của Shop
-          <div style={{ marginLeft: "auto", color: "#999" }}>›</div>
+          <div style={{ marginLeft: 'auto', color: '#999' }}>›</div>
         </div>
       </Card>
     </Card>
