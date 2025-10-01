@@ -22,7 +22,7 @@ export class OrdersController {
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
-    console.log("at server:  " +JSON.stringify(createOrderDto))
+    console.log('at server:  ' + JSON.stringify(createOrderDto));
     return this.ordersService.create(createOrderDto);
   }
 
@@ -58,7 +58,12 @@ export class OrdersController {
     @Req() req: any // hoặc @User() nếu bạn có decorator lấy user từ JWT
   ) {
     const user = { ...req.user, id: req.user.sub };
-    return this.ordersService.changeStatus(id, OrderStatuses[status], user, note);
+    return this.ordersService.changeStatus(
+      id,
+      OrderStatuses[status],
+      user,
+      note
+    );
   }
 
   @Get('user/:userId')
@@ -73,5 +78,9 @@ export class OrdersController {
   @Get('payment/:paymentUuid')
   async findByPaymentUuid(@Param('paymentUuid') paymentUuid: string) {
     return this.ordersService.findByPaymentUuid(paymentUuid);
+  }
+  @Get('store/:storeId')
+  async getOrdersByStore(@Param('storeId') storeId: number) {
+    return this.ordersService.findByStore(storeId);
   }
 }

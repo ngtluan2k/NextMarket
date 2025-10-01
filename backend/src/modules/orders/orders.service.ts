@@ -248,6 +248,11 @@ export class OrdersService {
     if (isCustomer && status !== OrderStatuses.cancelled) {
       throw new BadRequestException('Khách hàng chỉ có thể hủy đơn');
     }
+    if (order.status !== OrderStatuses.Pending) {
+      throw new BadRequestException(
+        'Khách hàng chỉ có thể hủy đơn khi đơn hàng đang chờ'
+      );
+    }
 
     if (!isCustomer && !isStore) {
       throw new BadRequestException('Bạn không có quyền thay đổi đơn hàng này');
@@ -334,5 +339,21 @@ export class OrdersService {
         discount: usage.voucher.discount_value,
       })),
     };
+  }
+  async findByStore(storeId: number): Promise<Order[]> {
+    return this.ordersRepository.find({
+      where: { store: { id: storeId } },
+      relations: [
+        'user',
+        'userAddress',
+        'orderItem',
+        'orderItem.product',
+        'orderItem.variant',
+        'voucherUsages',
+        'voucherUsages.voucher',
+        'payment',
+      ],
+      order: { id: 'DESC' }, // sắp xếp đơn mới nhất trước
+    });
   }
 }

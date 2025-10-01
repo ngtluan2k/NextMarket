@@ -17,6 +17,7 @@ type OrderTab =
   | 'processing'
   | 'shipping'
   | 'delivered'
+  | 'completed'
   | 'cancelled'
   | 'returned';
 
@@ -32,6 +33,8 @@ function mapStatus(status: number): OrderTab {
       return 'shipping'; // Shipped
     case 4:
       return 'delivered'; // Delivered
+    case 5:
+      return 'completed'; // Delivered
     case 6:
       return 'cancelled'; // Cancelled
     case 7:
@@ -65,9 +68,11 @@ const TABS: { key: OrderTab; label: string }[] = [
   { key: 'processing', label: 'Đang xử lý' },
   { key: 'shipping', label: 'Đang vận chuyển' },
   { key: 'delivered', label: 'Đã giao' },
+  { key: 'completed', label: 'Hoàn thành' },
   { key: 'cancelled', label: 'Đã huỷ' },
   { key: 'returned', label: 'Đã trả/Hoàn' },
 ];
+
 const getUserIdFromStorage = (): number | null => {
   const raw = localStorage.getItem('user');
   if (!raw) return null;
@@ -209,6 +214,13 @@ export default function OrdersPage() {
           <span className={`${base} bg-emerald-50 text-emerald-700`}>
             <CheckCircle className="h-3 w-3" />
             Đã giao
+          </span>
+        );
+      case 'completed':
+        return (
+          <span className={`${base} bg-emerald-50 text-emerald-700`}>
+            <CheckCircle className="h-3 w-3" />
+            Hoàn thành
           </span>
         );
       case 'cancelled':

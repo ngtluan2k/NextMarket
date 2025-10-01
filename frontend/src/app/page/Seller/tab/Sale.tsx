@@ -1,6 +1,6 @@
-"use client"
-import type React from "react"
-import { useState } from "react"
+'use client';
+import type React from 'react';
+import { useState } from 'react';
 import {
   Layout,
   Card,
@@ -20,7 +20,7 @@ import {
   Row,
   Col,
   message,
-} from "antd"
+} from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -33,325 +33,458 @@ import {
   RiseOutlined,
   CalendarOutlined,
   ExportOutlined,
-} from "@ant-design/icons"
-import type { ColumnsType } from "antd/es/table"
-import dayjs from "dayjs"
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
+import 'dayjs/locale/vi'; // import locale
+dayjs.locale('vi'); // set global locale
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+const { Content } = Layout;
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
-const { Content } = Layout
-const { Title, Text } = Typography
-const { RangePicker } = DatePicker
-
-interface Sale {
-  key: string
-  id: string
-  orderNumber: string
-  customer: string
-  customerEmail: string
-  products: string[]
-  quantity: number
-  totalAmount: number
-  status: "Hoàn Thành" | "Đang Chờ" | "Hủy" | "Hoàn Tiền"
-  paymentMethod: "Thẻ Tín Dụng" | "PayPal" | "Chuyển Khoản Ngân Hàng" | "Tiền Mặt"
-  saleDate: string
-  notes?: string
+interface ProductItem {
+  id: number;
+  quantity: number;
+  subtotal: string;
+  product: {
+    id: number;
+    name: string;
+    base_price: string;
+    brand_id: number;
+    description: string;
+    short_description: string;
+    slug: string;
+    status: string;
+    store_id: number;
+    updated_at: string;
+    created_at: string;
+    uuid: string;
+  };
+  variant?: {
+    id: number;
+    sku: string;
+    price: string;
+    stock: number;
+    variant_name: string;
+    barcode: string;
+    created_at?: string;
+    updated_at?: string;
+    uuid: string;
+  };
+  discount: string;
+  price: string;
+  uuid: string;
+}
+interface Payment {
+  id: number;
+  amount: string;
+  createdAt: string;
+  paidAt?: string | null;
+  provider?: string | null;
+  rawPayload?: string | null;
+  status: string; // '0', '1', '2', '3'
+  transactionId?: string | null;
+  uuid: string;
 }
 
-// Mock data for sales
-const mockSales: Sale[] = [
-  {
-    key: "1",
-    id: "SAL001",
-    orderNumber: "ORD-2025-001",
-    customer: "Nguyễn Văn An",
-    customerEmail: "an.nguyen@email.com",
-    products: ["Áo thun Nike", "Giày Adidas"],
-    quantity: 3,
-    totalAmount: 3000000,
-    status: "Hoàn Thành",
-    paymentMethod: "Thẻ Tín Dụng",
-    saleDate: "2025-01-15",
-    notes: "Yêu cầu giao hàng nhanh",
-  },
-  {
-    key: "2",
-    id: "SAL002",
-    orderNumber: "ORD-2025-002",
-    customer: "Trần Thị Bình",
-    customerEmail: "binh.tran@email.com",
-    products: ["Quần Jeans", "Áo sơ mi cotton"],
-    quantity: 2,
-    totalAmount: 2000000,
-    status: "Đang Chờ",
-    paymentMethod: "PayPal",
-    saleDate: "2025-01-14",
-  },
-  {
-    key: "3",
-    id: "SAL003",
-    orderNumber: "ORD-2025-003",
-    customer: "Lê Văn Cường",
-    customerEmail: "cuong.le@email.com",
-    products: ["Giày New Balance 327"],
-    quantity: 1,
-    totalAmount: 1200000,
-    status: "Hoàn Thành",
-    paymentMethod: "Thẻ Tín Dụng",
-    saleDate: "2025-01-13",
-  },
-  {
-    key: "4",
-    id: "SAL004",
-    orderNumber: "ORD-2025-004",
-    customer: "Phạm Thị Duyên",
-    customerEmail: "duyen.pham@email.com",
-    products: ["Váy mùa hè", "Sandal"],
-    quantity: 2,
-    totalAmount: 1700000,
-    status: "Hủy",
-    paymentMethod: "Chuyển Khoản Ngân Hàng",
-    saleDate: "2025-01-12",
-    notes: "Khách hàng yêu cầu hủy",
-  },
-]
+interface Sale {
+  id: number;
+  orderNumber: string; // nếu API không có, bạn có thể tự sinh dạng ORD-xxx
+  orderItem: ProductItem[];
+  totalAmount: string;
+  subtotal: string;
+  discountTotal: string;
+  shippingFee: string;
+  status: string; // '0', '1', ... hoặc map sang 'Hoàn Thành', 'Đang Chờ'...
+  createdAt: string;
+  updatedAt: string;
+  currency: string;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    password: string;
+    status: string;
+    code: string | null;
+    uuid: string;
+    created_at: string;
+    updated_at?: string | null;
+  };
+  userAddress?: {
+    id: number;
+    recipientName: string;
+    phone: string;
+    country: string;
+    province: string;
+    district: string | null;
+    ward: string;
+    street: string;
+    postalCode: string | null;
+    isDefault: boolean;
+    createdAt?: string | null;
+    uuid: string;
+    user_id: number;
+  };
+  payment?: Payment[];
+  paymentMethod?: string;
+  notes?: string;
+}
+
+const orderStatusMap: Record<number, string> = {
+  0: 'Đang Chờ Xác Nhận',
+  1: 'Đã Xác Nhận',
+  2: 'Đang Xử Lý',
+  3: 'Đã Giao Hàng',
+  4: 'Shipper Đã Giao',
+  5: 'Hoàn Thành',
+  6: 'Đã Hủy',
+  7: 'Trả Hàng',
+};
+function getStatusColor(status: string | number): string {
+  switch (Number(status)) {
+    case 0:
+      return 'orange'; // Pending
+    case 1:
+      return 'blue'; // Confirmed
+    case 2:
+      return 'cyan'; // Processing
+    case 3:
+      return 'purple'; // Shipped
+    case 4:
+      return 'green'; // Delivered
+    case 5:
+      return 'green'; // Completed
+    case 6:
+      return 'red'; // Cancelled
+    case 7:
+      return 'magenta'; // Returned
+    default:
+      return 'default';
+  }
+}
+export const getPaymentStatusText = (status: number | string) => {
+  switch (status) {
+    case 0:
+      return 'Chưa thanh toán';
+    case 1:
+      return 'Đã thanh toán';
+    case 2:
+      return 'Thất bại';
+    case 3:
+      return 'Hoàn tiền';
+    default:
+      return 'Không rõ';
+  }
+};
+
+export const getPaymentStatusColor = (status: number | string) => {
+  switch (status) {
+    case 0:
+      return 'orange'; // Pending
+    case 1:
+      return 'green'; // Completed
+    case 2:
+      return 'red'; // Failed
+    case 3:
+      return 'purple'; // Refunded
+    default:
+      return 'default';
+  }
+};
+
+// Hoặc hàm
+function getStatusText(status: number | string): string {
+  return orderStatusMap[Number(status)] || 'Không Xác Định';
+}
 
 export default function Sale() {
-  const [sales, setSales] = useState<Sale[]>(mockSales)
-  const [loading, setLoading] = useState(false)
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [editingSale, setEditingSale] = useState<Sale | null>(null)
-  const [searchText, setSearchText] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [paymentFilter, setPaymentFilter] = useState<string>("all")
-  const [form] = Form.useForm()
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    null
+  );
+
+  const [form] = Form.useForm();
+  const generateOrderNumber = (id: number) =>
+    `ORD-${String(id).padStart(3, '0')}`;
+  const { sales, loading, error } = useMyStoreOrders();
+  console.log('Sales from API:', sales);
+
+  const safeLower = (val?: string) => (val || '').toLowerCase();
 
   // Filter sales based on search and filters
   const filteredSales = sales.filter((sale) => {
+    const customerName =
+      sale.user?.userAddress?.recipientName || sale.user?.username || '';
     const matchesSearch =
-      sale.customer.toLowerCase().includes(searchText.toLowerCase()) ||
-      sale.orderNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      sale.customerEmail.toLowerCase().includes(searchText.toLowerCase())
-    const matchesStatus = statusFilter === "all" || sale.status === statusFilter
-    const matchesPayment = paymentFilter === "all" || sale.paymentMethod === paymentFilter
+      customerName.toLowerCase().includes(searchText.toLowerCase()) ||
+      sale.id.toString().includes(searchText.toLowerCase()) ||
+      sale.user?.email?.toLowerCase().includes(searchText.toLowerCase());
 
-    return matchesSearch && matchesStatus && matchesPayment
-  })
+    const matchesStatus =
+      statusFilter === 'all' || sale.status === statusFilter;
+    const matchesPayment =
+      paymentFilter === 'all' ||
+      (sale.payment &&
+        sale.payment[0] &&
+        sale.payment[0].status === paymentFilter);
+
+    const matchesDate =
+      !dateRange ||
+      (dayjs(sale.createdAt).isSameOrAfter(dateRange[0], 'day') &&
+        dayjs(sale.createdAt).isSameOrBefore(dateRange[1], 'day'));
+    return matchesDate && matchesSearch && matchesStatus && matchesPayment;
+  });
 
   // Calculate statistics
-  const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0)
-  const completedSales = sales.filter((sale) => sale.status === "Hoàn Thành").length
-  const pendingSales = sales.filter((sale) => sale.status === "Đang Chờ").length
-  const totalOrders = sales.length
+  const totalSales = sales.reduce(
+    (sum, sale) => sum + Number(sale.totalAmount || 0),
+    0
+  );
+  const completedSales = sales.filter(
+    (sale) => sale.status === '5'
+  ).length;
+  const pendingSales = sales.filter((sale) => sale.status === '0').length;
+  const totalOrders = sales.length;
 
   const handleAddSale = () => {
-    setEditingSale(null)
-    form.resetFields()
-    setIsModalVisible(true)
-  }
+    setEditingSale(null);
+    form.resetFields();
+    setIsModalVisible(true);
+  };
 
   const handleEditSale = (sale: Sale) => {
-    setEditingSale(sale)
+    setEditingSale(sale);
     form.setFieldsValue({
       ...sale,
-      saleDate: dayjs(sale.saleDate),
-      products: sale.products,
-    })
-    setIsModalVisible(true)
-  }
+      saleDate: dayjs(sale.createdAt),
+      products: sale.orderItem,
+    });
+    setIsModalVisible(true);
+  };
 
-  const handleDeleteSale = (saleId: string) => {
-    Modal.confirm({
-      title: "Xóa Đơn Hàng",
-      content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
-      okText: "Xóa",
-      okType: "danger",
-      onOk: () => {
-        setSales(sales.filter((sale) => sale.id !== saleId))
-        message.success("Xóa đơn hàng thành công")
-      },
-    })
-  }
+  // const handleDeleteSale = (saleId: string) => {
+  //   Modal.confirm({
+  //     title: "Xóa Đơn Hàng",
+  //     content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
+  //     okText: "Xóa",
+  //     okType: "danger",
+  //     onOk: () => {
+  //       setSales(sales.filter((sale) => sale.id !== saleId))
+  //       message.success("Xóa đơn hàng thành công")
+  //     },
+  //   })
+  // }
 
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields()
+  // const handleModalOk = async () => {
+  //   try {
+  //     const values = await form.validateFields()
 
-      if (editingSale) {
-        // Update existing sale
-        setSales(
-          sales.map((sale) =>
-            sale.id === editingSale.id
-              ? {
-                  ...sale,
-                  ...values,
-                  saleDate: values.saleDate.format("YYYY-MM-DD"),
-                }
-              : sale,
-          ),
-        )
-        message.success("Cập nhật đơn hàng thành công")
-      } else {
-        // Add new sale
-        const newSale: Sale = {
-          ...values,
-          key: `${sales.length + 1}`,
-          id: `SAL${String(sales.length + 1).padStart(3, "0")}`,
-          orderNumber: `ORD-2025-${String(sales.length + 1).padStart(3, "0")}`,
-          saleDate: values.saleDate.format("YYYY-MM-DD"),
-        }
-        setSales([...sales, newSale])
-        message.success("Tạo đơn hàng thành công")
-      }
+  //     if (editingSale) {
+  //       // Update existing sale
+  //       setSales(
+  //         sales.map((sale) =>
+  //           sale.id === editingSale.id
+  //             ? {
+  //                 ...sale,
+  //                 ...values,
+  //                 saleDate: values.saleDate.format("YYYY-MM-DD"),
+  //               }
+  //             : sale,
+  //         ),
+  //       )
+  //       message.success("Cập nhật đơn hàng thành công")
+  //     } else {
+  //       // Add new sale
+  //       const newSale: Sale = {
+  //         ...values,
+  //         key: `${sales.length + 1}`,
+  //         id: `SAL${String(sales.length + 1).padStart(3, "0")}`,
+  //         orderNumber: `ORD-2025-${String(sales.length + 1).padStart(3, "0")}`,
+  //         saleDate: values.saleDate.format("YYYY-MM-DD"),
+  //       }
+  //       setSales([...sales, newSale])
+  //       message.success("Tạo đơn hàng thành công")
+  //     }
 
-      setIsModalVisible(false)
-      form.resetFields()
-    } catch (error) {
-      message.error("Không thể lưu đơn hàng")
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Hoàn Thành":
-        return "green"
-      case "Đang Chờ":
-        return "orange"
-      case "Hủy":
-        return "red"
-      case "Hoàn Tiền":
-        return "purple"
-      default:
-        return "default"
-    }
-  }
+  //     setIsModalVisible(false)
+  //     form.resetFields()
+  //   } catch (error) {
+  //     message.error("Không thể lưu đơn hàng")
+  //   }
+  // }
 
   const columns: ColumnsType<Sale> = [
     {
-      title: "Mã Đơn Hàng",
-      dataIndex: "orderNumber",
-      key: "orderNumber",
+      title: 'Mã Đơn Hàng',
+      dataIndex: 'orderNumber',
+      key: 'orderNumber',
       render: (text: string, record: Sale) => (
         <div>
           <div className="font-medium text-gray-900">{text}</div>
           <div className="text-sm text-gray-500">{record.id}</div>
         </div>
       ),
-      sorter: (a, b) => a.orderNumber.localeCompare(b.orderNumber),
+      sorter: (a, b) => {
+        const numA = a.id;
+        const numB = b.id;
+        return numA - numB;
+      },
     },
     {
-      title: "Khách Hàng",
-      dataIndex: "customer",
-      key: "customer",
-      render: (text: string, record: Sale) => (
+      title: 'Khách Hàng',
+      dataIndex: 'user',
+      key: 'customer',
+      render: (user) => (
         <div>
-          <div className="font-medium text-gray-900">{text}</div>
-          <div className="text-sm text-gray-500">{record.customerEmail}</div>
+          <div className="font-medium text-gray-900">
+            {user.userAddress?.recipientName || user.username}
+          </div>
+          <div className="text-sm text-gray-500">{user.email}</div>
         </div>
       ),
-      sorter: (a, b) => a.customer.localeCompare(b.customer),
+      sorter: (a, b) => a.user.username.localeCompare(b.user.username),
     },
     {
-      title: "Sản Phẩm",
-      dataIndex: "products",
-      key: "products",
-      render: (products: string[]) => (
+      title: 'Sản Phẩm',
+      dataIndex: 'orderItem',
+      key: 'products',
+      render: (items: ProductItem[]) => (
         <div className="max-w-xs">
-          {products.slice(0, 2).map((product, index) => (
-            <Tag key={index} className="mb-1">
-              {product}
-            </Tag>
-          ))}
-          {products.length > 2 && <Tag className="mb-1">+{products.length - 2} sản phẩm</Tag>}
+          {(Array.isArray(items) ? items : [])
+            .slice(0, 2)
+            .map((item, index) => (
+              <Tag key={index} className="mb-1">
+                {item.product?.name}
+                {item.variant ? ` (${item.variant.variant_name})` : ''}
+              </Tag>
+            ))}
+          {Array.isArray(items) && items.length > 2 && (
+            <Tag className="mb-1">+{items.length - 2} sản phẩm</Tag>
+          )}
         </div>
       ),
     },
     {
-      title: "Số Lượng",
-      dataIndex: "quantity",
-      key: "quantity",
-      sorter: (a, b) => a.quantity - b.quantity,
+      title: 'Số Lượng',
+      dataIndex: 'orderItem',
+      key: 'quantity',
+      sorter: (a, b) =>
+        (Array.isArray(a.orderItem) ? a.orderItem : []).reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        ) -
+        (Array.isArray(b.orderItem) ? b.orderItem : []).reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        ),
+      render: (orderItem: ProductItem[]) =>
+        (Array.isArray(orderItem) ? orderItem : []).reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        ),
     },
     {
-      title: "Tổng Tiền",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
-      render: (amount: number) => <span className="font-medium text-gray-900">₫{amount.toLocaleString('vi-VN')}</span>,
-      sorter: (a, b) => a.totalAmount - b.totalAmount,
-    },
-    {
-      title: "Trạng Thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)} className="border-0">
-          {status}
-        </Tag>
+      title: 'Tổng Tiền',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
+      render: (amount: string) => (
+        <span className="font-medium text-gray-900">
+          ₫{parseFloat(amount).toLocaleString('vi-VN')}
+        </span>
       ),
-      filters: [
-        { text: "Hoàn Thành", value: "Hoàn Thành" },
-        { text: "Đang Chờ", value: "Đang Chờ" },
-        { text: "Hủy", value: "Hủy" },
-        { text: "Hoàn Tiền", value: "Hoàn Tiền" },
-      ],
-      onFilter: (value, record) => record.status === value,
+      sorter: (a, b) => parseFloat(a.totalAmount) - parseFloat(b.totalAmount),
+    },
+
+    {
+      title: 'Trạng Thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: number | string) => (
+        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
+      ),
+      filters: Object.entries(orderStatusMap).map(([key, value]) => ({
+        text: value,
+        value: key,
+      })),
+      onFilter: (value, record) => Number(record.status) === Number(value),
     },
     {
-      title: "Thanh Toán",
-      dataIndex: "paymentMethod",
-      key: "paymentMethod",
-      render: (method: string) => <span className="text-gray-600">{method}</span>,
+      title: 'Trạng Thái Thanh Toán',
+      dataIndex: 'payment',
+      key: 'paymentStatus',
+      render: (payments: Payment[] | undefined) => {
+        const payment = payments?.[0];
+        if (!payment) return <Tag>Chưa Thanh Toán</Tag>;
+        const statusNum = Number(payment.status);
+        return (
+          <Tag color={getPaymentStatusColor(statusNum)}>
+            {getPaymentStatusText(statusNum)}
+          </Tag>
+        );
+      },
+    },
+
+    {
+      title: 'Ngày Bán',
+      dataIndex: 'createdAt',
+      key: 'saleDate',
+      render: (date: string) => dayjs(date).format('DD MMM, YYYY'),
+      sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
     {
-      title: "Ngày Bán",
-      dataIndex: "saleDate",
-      key: "saleDate",
-      render: (date: string) => dayjs(date).format("DD MMM, YYYY"),
-      sorter: (a, b) => dayjs(a.saleDate).unix() - dayjs(b.saleDate).unix(),
-    },
-    {
-      title: "Hành Động",
-      key: "actions",
+      title: 'Hành Động',
+      key: 'actions',
       render: (_, record: Sale) => (
         <Dropdown
           menu={{
             items: [
               {
-                key: "view",
+                key: 'view',
                 icon: <EyeOutlined />,
-                label: "Xem Chi Tiết",
+                label: 'Xem Chi Tiết',
               },
               {
-                key: "edit",
+                key: 'edit',
                 icon: <EditOutlined />,
-                label: "Chỉnh Sửa Đơn Hàng",
+                label: 'Chỉnh Sửa Đơn Hàng',
                 onClick: () => handleEditSale(record),
               },
               {
-                type: "divider",
+                type: 'divider',
               },
               {
-                key: "delete",
+                key: 'delete',
                 icon: <DeleteOutlined />,
-                label: "Xóa",
+                label: 'Xóa',
                 danger: true,
-                onClick: () => handleDeleteSale(record.id),
+                // onClick: () => handleDeleteSale(record.id),
               },
             ],
           }}
-          trigger={["click"]}
+          trigger={['click']}
         >
           <Button type="text" icon={<MoreOutlined />} />
         </Dropdown>
       ),
     },
-  ]
+  ];
 
   const rowSelection = {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[]) => {
-      setSelectedRowKeys(newSelectedRowKeys)
+      setSelectedRowKeys(newSelectedRowKeys);
     },
-  }
+  };
 
   return (
     <Layout>
@@ -362,7 +495,9 @@ export default function Sale() {
             <Title level={2} className="!mb-1 !text-gray-900">
               Quản Lý Bán Hàng
             </Title>
-            <Text className="text-gray-500">Theo dõi và quản lý tất cả giao dịch bán hàng của bạn</Text>
+            <Text className="text-gray-500">
+              Theo dõi và quản lý tất cả giao dịch bán hàng của bạn
+            </Text>
           </div>
           <Space>
             <Button icon={<ExportOutlined />}>Xuất Dữ Liệu</Button>
@@ -384,9 +519,10 @@ export default function Sale() {
               <Statistic
                 title="Tổng Doanh Thu"
                 value={totalSales}
-                precision={0}
+                precision={0} // số nguyên
                 prefix={<DollarOutlined className="text-cyan-500" />}
                 suffix="₫"
+                valueStyle={{ color: '#1890ff' }}
               />
             </Card>
           </Col>
@@ -411,7 +547,7 @@ export default function Sale() {
           <Col xs={24} sm={12} lg={6}>
             <Card className="border-l-4 border-l-orange-500">
               <Statistic
-                title="Đang Chờ"
+                title="Đang Chờ Xác Nhận"
                 value={pendingSales}
                 prefix={<CalendarOutlined className="text-orange-500" />}
               />
@@ -423,12 +559,21 @@ export default function Sale() {
         <Card className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Space wrap>
-              <Select placeholder="Trạng Thái" style={{ width: 120 }} value={statusFilter} onChange={setStatusFilter}>
+              <Select
+                placeholder="Trạng Thái"
+                style={{ width: 120 }}
+                value={statusFilter}
+                onChange={setStatusFilter}
+              >
                 <Select.Option value="all">Tất Cả Trạng Thái</Select.Option>
-                <Select.Option value="Hoàn Thành">Hoàn Thành</Select.Option>
-                <Select.Option value="Đang Chờ">Đang Chờ</Select.Option>
-                <Select.Option value="Hủy">Hủy</Select.Option>
-                <Select.Option value="Hoàn Tiền">Hoàn Tiền</Select.Option>
+                <Select.Option value="0">Đang Chờ Xác Nhận</Select.Option>
+                <Select.Option value="1">Đã Xác Nhận</Select.Option>
+                <Select.Option value="2">Đang Xử Lí</Select.Option>
+                <Select.Option value="3">Đã Giao Hàng</Select.Option>
+                <Select.Option value="4">Shipper Đã Giao</Select.Option>
+                <Select.Option value="5">Hoàn Thành</Select.Option>
+                <Select.Option value="6">Đã Hủy</Select.Option>
+                <Select.Option value="7">Trả Hàng</Select.Option>
               </Select>
               <Select
                 placeholder="Phương Thức Thanh Toán"
@@ -437,12 +582,17 @@ export default function Sale() {
                 onChange={setPaymentFilter}
               >
                 <Select.Option value="all">Tất Cả Thanh Toán</Select.Option>
-                <Select.Option value="Thẻ Tín Dụng">Thẻ Tín Dụng</Select.Option>
-                <Select.Option value="PayPal">PayPal</Select.Option>
-                <Select.Option value="Chuyển Khoản Ngân Hàng">Chuyển Khoản Ngân Hàng</Select.Option>
-                <Select.Option value="Tiền Mặt">Tiền Mặt</Select.Option>
+                <Select.Option value="0">Chưa thanh toán</Select.Option>
+                <Select.Option value="1">Đã thanh toán</Select.Option>
+                <Select.Option value="2">Thất bại</Select.Option>
+                <Select.Option value="3">Hoàn tiền</Select.Option>
               </Select>
-              <RangePicker />
+              <RangePicker
+                value={dateRange as any}
+                onChange={(dates) =>
+                  setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)
+                }
+              />
             </Space>
             <Input
               placeholder="Tìm kiếm đơn hàng, khách hàng..."
@@ -454,7 +604,9 @@ export default function Sale() {
             />
             {selectedRowKeys.length > 0 && (
               <Space>
-                <Text className="text-gray-600">Đã chọn {selectedRowKeys.length}</Text>
+                <Text className="text-gray-600">
+                  Đã chọn {selectedRowKeys.length}
+                </Text>
                 <Button size="small">Xuất Hàng Loạt</Button>
                 <Button size="small" danger>
                   Xóa Hàng Loạt
@@ -476,7 +628,8 @@ export default function Sale() {
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} trên tổng số ${total} đơn hàng`,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} trên tổng số ${total} đơn hàng`,
             }}
             scroll={{ x: 1200 }}
             className="custom-table"
@@ -485,13 +638,13 @@ export default function Sale() {
 
         {/* Add/Edit Sale Modal */}
         <Modal
-          title={editingSale ? "Chỉnh Sửa Đơn Hàng" : "Thêm Đơn Hàng Mới"}
+          title={editingSale ? 'Chỉnh Sửa Đơn Hàng' : 'Thêm Đơn Hàng Mới'}
           open={isModalVisible}
-          onOk={handleModalOk}
+          // onOk={handleModalOk}
           onCancel={() => setIsModalVisible(false)}
           width={800}
-          okText={editingSale ? "Cập Nhật Đơn Hàng" : "Thêm Đơn Hàng"}
-          okButtonProps={{ className: "bg-cyan-500 border-cyan-500" }}
+          okText={editingSale ? 'Cập Nhật Đơn Hàng' : 'Thêm Đơn Hàng'}
+          okButtonProps={{ className: 'bg-cyan-500 border-cyan-500' }}
         >
           <Form form={form} layout="vertical" className="mt-4">
             <Row gutter={16}>
@@ -499,7 +652,9 @@ export default function Sale() {
                 <Form.Item
                   name="customer"
                   label="Tên Khách Hàng"
-                  rules={[{ required: true, message: "Vui lòng nhập tên khách hàng" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập tên khách hàng' },
+                  ]}
                 >
                   <Input placeholder="Nhập tên khách hàng" />
                 </Form.Item>
@@ -509,8 +664,11 @@ export default function Sale() {
                   name="customerEmail"
                   label="Email Khách Hàng"
                   rules={[
-                    { required: true, message: "Vui lòng nhập email khách hàng" },
-                    { type: "email", message: "Vui lòng nhập email hợp lệ" },
+                    {
+                      required: true,
+                      message: 'Vui lòng nhập email khách hàng',
+                    },
+                    { type: 'email', message: 'Vui lòng nhập email hợp lệ' },
                   ]}
                 >
                   <Input placeholder="Nhập email khách hàng" />
@@ -523,16 +681,24 @@ export default function Sale() {
                 <Form.Item
                   name="products"
                   label="Sản Phẩm"
-                  rules={[{ required: true, message: "Vui lòng chọn sản phẩm" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn sản phẩm' },
+                  ]}
                 >
-                  <Select mode="tags" placeholder="Chọn hoặc thêm sản phẩm" className="w-full" />
+                  <Select
+                    mode="tags"
+                    placeholder="Chọn hoặc thêm sản phẩm"
+                    className="w-full"
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
                   name="quantity"
                   label="Tổng Số Lượng"
-                  rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập số lượng' },
+                  ]}
                 >
                   <InputNumber min={1} placeholder="0" className="w-full" />
                 </Form.Item>
@@ -544,18 +710,35 @@ export default function Sale() {
                 <Form.Item
                   name="totalAmount"
                   label="Tổng Tiền (₫)"
-                  rules={[{ required: true, message: "Vui lòng nhập tổng tiền" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập tổng tiền' },
+                  ]}
                 >
-                  <InputNumber min={0} step={1000} placeholder="0" className="w-full" />
+                  <InputNumber
+                    min={0}
+                    step={1000}
+                    placeholder="0"
+                    className="w-full"
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="status" label="Trạng Thái" rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}>
+                <Form.Item
+                  name="status"
+                  label="Trạng Thái"
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn trạng thái' },
+                  ]}
+                >
                   <Select placeholder="Chọn trạng thái">
-                    <Select.Option value="Hoàn Thành">Hoàn Thành</Select.Option>
-                    <Select.Option value="Đang Chờ">Đang Chờ</Select.Option>
-                    <Select.Option value="Hủy">Hủy</Select.Option>
-                    <Select.Option value="Hoàn Tiền">Hoàn Tiền</Select.Option>
+                    <Select.Option value="0">Đang Chờ Xác Nhận</Select.Option>
+                    <Select.Option value="1">Đã Xác Nhận</Select.Option>
+                    <Select.Option value="2">Đang Xử Lí</Select.Option>
+                    <Select.Option value="3">Đã Giao Hàng</Select.Option>
+                    <Select.Option value="4">Shipper Đã Giao</Select.Option>
+                    <Select.Option value="5">Hoàn Thành</Select.Option>
+                    <Select.Option value="6">Đã Hủy</Select.Option>
+                    <Select.Option value="7">Trả Hàng</Select.Option>
                   </Select>
                 </Form.Item>
               </Col>
@@ -566,12 +749,21 @@ export default function Sale() {
                 <Form.Item
                   name="paymentMethod"
                   label="Phương Thức Thanh Toán"
-                  rules={[{ required: true, message: "Vui lòng chọn phương thức thanh toán" }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Vui lòng chọn phương thức thanh toán',
+                    },
+                  ]}
                 >
                   <Select placeholder="Chọn phương thức thanh toán">
-                    <Select.Option value="Thẻ Tín Dụng">Thẻ Tín Dụng</Select.Option>
+                    <Select.Option value="Thẻ Tín Dụng">
+                      Thẻ Tín Dụng
+                    </Select.Option>
                     <Select.Option value="PayPal">PayPal</Select.Option>
-                    <Select.Option value="Chuyển Khoản Ngân Hàng">Chuyển Khoản Ngân Hàng</Select.Option>
+                    <Select.Option value="Chuyển Khoản Ngân Hàng">
+                      Chuyển Khoản Ngân Hàng
+                    </Select.Option>
                     <Select.Option value="Tiền Mặt">Tiền Mặt</Select.Option>
                   </Select>
                 </Form.Item>
@@ -580,7 +772,9 @@ export default function Sale() {
                 <Form.Item
                   name="saleDate"
                   label="Ngày Bán"
-                  rules={[{ required: true, message: "Vui lòng chọn ngày bán" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn ngày bán' },
+                  ]}
                 >
                   <DatePicker className="w-full" />
                 </Form.Item>
@@ -594,5 +788,5 @@ export default function Sale() {
         </Modal>
       </Content>
     </Layout>
-  )
+  );
 }
