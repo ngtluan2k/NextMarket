@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SellerFormData, defaultSellerFormData } from '../types';
+import { SellerFormData, defaultSellerFormData } from '../../types/sellerType';
 import CCCDUpload from './CCCDUpload';
 
 export const SellerRegistration: React.FC = () => {

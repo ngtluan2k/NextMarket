@@ -1,63 +1,65 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Row, Col, Typography, message, Spin } from 'antd';
+import { Row, Col, Typography, message, Spin, Button } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { api } from '../../config/api';
-
+import { useAuth } from '../context/AuthContext'; // Thêm useAuth
+import { api } from '../api/api';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { CartSidebar } from '../components/cart/CartSidebar';
 import {
   ShippingMethod,
   ShippingMethodType,
-  CheckoutItem,
 } from '../components/checkout/ShippingMethod';
-import PaymentMethods, {
+import PaymentMethods from '../components/checkout/PaymentMethods';
+import {
   PaymentMethodType,
   PaymentMethodResponse,
   SavedCard,
-} from '../components/checkout/PaymentMethods';
-import { Product } from '../components/productDetail/product';
+} from '../types/payment';
+import LoginModal from '../components/LoginModal'; // Thêm LoginModal
+import { CheckoutLocationState } from '../types/buyBox';
+import { CheckoutItem } from '../types/checkout';
 
 const { Title } = Typography;
-
-type CheckoutLocationState = {
-  items?: Array<{
-    id: number;
-    product_id: number;
-    price: number | string;
-    quantity: number;
-    product: Product;
-  }>;
-  subtotal?: number | string;
-};
 
 const CheckoutPayment: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { me } = useAuth(); // Sử dụng useAuth để lấy thông tin người dùng
   const state = (location.state ?? {
     items: [],
     subtotal: 0,
   }) as CheckoutLocationState;
 
+  const [showLoginModal, setShowLoginModal] = useState(false); 
   const items = state.items ?? [];
   const subtotalNum =
     typeof state.subtotal === 'string'
       ? Number(state.subtotal)
       : state.subtotal ?? 0;
 
-  // Map dữ liệu cho ShippingMethod
   const checkoutItems: CheckoutItem[] = useMemo(() => {
     return items.map((i) => {
       const primaryImage =
         i.product.media?.find((m) => m.is_primary)?.url ??
         i.product.media?.[0]?.url ??
         '';
+      const variant =
+        i.variant && i.variant.id && i.variant.variant_name && i.variant.price
+          ? {
+              id: i.variant.id,
+              variant_name: i.variant.variant_name,
+              price: i.variant.price,
+            }
+          : undefined;
       return {
         id: i.id,
         name: i.product.name ?? 'Sản phẩm không xác định',
         image: primaryImage,
         quantity: i.quantity,
         price: i.price,
+        product: i.product,
+        variant,
       };
     });
   }, [items]);
@@ -84,7 +86,9 @@ const CheckoutPayment: React.FC = () => {
 
   // Payment
   const [method, setMethod] = useState<PaymentMethodType>('cod');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>(
+    []
+  );
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [userAddress, setUserAddress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -98,29 +102,41 @@ const CheckoutPayment: React.FC = () => {
     [items]
   );
 
-  // Lấy dữ liệu từ API
   useEffect(() => {
-    const userId = parseInt(localStorage.getItem('userId') || '1');
+   
+    const token = localStorage.getItem('token');
+    const userId = me?.id || parseInt(localStorage.getItem('userId') || '0');
+
+    if (!token || userId === 0) {
+      // Lưu trạng thái checkout và hiển thị modal đăng nhập
+      console.log('🔐 No token or userId, saving checkout state');
+      localStorage.setItem(
+        'checkoutData',
+        JSON.stringify({ items, subtotal: subtotalNum })
+      );
+      localStorage.setItem('returnUrl', location.pathname);
+      setShowLoginModal(true);
+      setLoading(false);
+      return;
+    }
 
     const fetchAllPaymentMethods = async () => {
       try {
-        const response = await api.get<PaymentMethodResponse[]>('/payment-methods');
-
+        const response = await api.get<PaymentMethodResponse[]>(
+          '/payment-methods'
+        );
         const systemMethods: PaymentMethodResponse[] = [];
         const userCards: SavedCard[] = [];
 
         response.data.forEach((pm) => {
           if (!pm.enabled) return;
-
-          if (pm.type === 'user_card') {
-            if (pm.config?.userId === userId) {
-              userCards.push({
-                id: pm.id,
-                brand: pm.config.brand || 'Unknown',
-                last4: pm.config.last4 || '****',
-                exp: pm.config.exp || 'N/A',
-              });
-            }
+          if (pm.type === 'user_card' && pm.config?.userId === userId) {
+            userCards.push({
+              id: pm.id,
+              brand: pm.config.brand || 'Unknown',
+              last4: pm.config.last4 || '****',
+              exp: pm.config.exp || 'N/A',
+            });
           } else {
             systemMethods.push(pm);
           }
@@ -128,8 +144,6 @@ const CheckoutPayment: React.FC = () => {
 
         setPaymentMethods(systemMethods);
         setSavedCards(userCards);
-
-        // Chọn phương thức mặc định
         if (systemMethods.length > 0) {
           setMethod(
             systemMethods.find((m) => m.type === 'cod')?.type ||
@@ -145,19 +159,23 @@ const CheckoutPayment: React.FC = () => {
 
     const fetchUserAddress = async () => {
       try {
-        const response = await api.get('/user-address');
-        const addresses = (response.data || []).filter(
-          (a: any) => a.user_id === userId
-        );
+        const response = await api.get(`/users/${userId}/addresses`);
+        const addresses = response.data || [];
         if (addresses.length > 0) {
-          const addr = addresses.find((a: any) => a.isDefault) || addresses[0];
+          const addr = addresses.find((a: any) => a.isDefault);
           setUserAddress({
             id: addr.id,
             fullAddress: `${addr.street}, ${addr.city}, ${addr.province}, ${addr.country}`,
             name: addr.recipientName,
             phone: addr.phone,
             tag: addr.isDefault ? 'Mặc định' : undefined,
+            userId, // Thêm userId để kiểm tra trong CartSidebar
           });
+        } else {
+          message.warning(
+            'Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ.'
+          );
+          navigate('/user/address');
         }
       } catch (error) {
         console.error('❌ Lỗi tải địa chỉ:', error);
@@ -168,13 +186,37 @@ const CheckoutPayment: React.FC = () => {
     Promise.all([fetchAllPaymentMethods(), fetchUserAddress()]).finally(() =>
       setLoading(false)
     );
-  }, []);
+  }, [navigate, me]);
+
+  // Xử lý sau khi đăng nhập thành công
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false);
+    // Khôi phục checkout state từ localStorage
+    const checkoutData = localStorage.getItem('checkoutData');
+    if (checkoutData) {
+      const parsedData = JSON.parse(checkoutData);
+      navigate('/checkout', { state: parsedData });
+      localStorage.removeItem('checkoutData');
+      localStorage.removeItem('returnUrl');
+    }
+  };
 
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size="large" />
         <div style={{ marginTop: 16 }}>Đang tải thông tin thanh toán...</div>
+      </div>
+    );
+  }
+
+  if (!userAddress) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div>Không có địa chỉ giao hàng.</div>
+        <Button type="primary" onClick={() => navigate('/user/address')}>
+          Thêm địa chỉ mới
+        </Button>
       </div>
     );
   }
@@ -198,7 +240,6 @@ const CheckoutPayment: React.FC = () => {
               saving={0}
               shippingFee={shippingFee}
             />
-
             <div style={{ marginTop: 12 }}>
               <PaymentMethods
                 selected={method}
@@ -208,24 +249,29 @@ const CheckoutPayment: React.FC = () => {
               />
             </div>
           </Col>
-
           <Col flex="320px">
             <CartSidebar
               mode="checkout"
               selectedTotal={total}
               selectedCount={selectedCount}
               submitLabel="Đặt hàng"
-              selectedPaymentMethod={method} // Truyền phương thức thanh toán được chọn
-              paymentMethods={paymentMethods} // Truyền danh sách phương thức thanh toán
-              shippingMethod={shippingMethod} // Truyền phương thức vận chuyển
-              userAddress={userAddress} // Truyền địa chỉ người dùng
-              items={checkoutItems} // Truyền danh sách sản phẩm
-              etaLabel={etaLabel} // Truyền nhãn ETA
+              selectedPaymentMethod={method}
+              paymentMethods={paymentMethods}
+              shippingMethod={shippingMethod}
+              userAddress={userAddress}
+              items={checkoutItems}
+              etaLabel={etaLabel}
             />
           </Col>
         </Row>
       </main>
       <Footer />
+      <LoginModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        title="Đăng nhập để tiếp tục thanh toán"
+        onSuccess={handleLoginSuccess} // Xử lý sau khi đăng nhập thành công
+      />
     </div>
   );
 };

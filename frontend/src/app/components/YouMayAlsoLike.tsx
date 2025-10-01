@@ -1,20 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-/* ==== Types ==== */
-export type LikeItem = {
-  id: number | string;
-  name: string;
-  imageUrl: string;
-  href?: string;
-  slug?: string;
-  price?: number | string;
-  oldPrice?: number | string;
-  percentOff?: number | string;
-  rating?: number;
-  ratingCount?: number;
-  deliveryText?: string;
-};
+import { LikeItem } from "../types/product";
 
 type Props = {
   title?: string;

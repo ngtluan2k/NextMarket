@@ -1,14 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Stars from '../productDetail/Stars';
-import { TIKI_RED } from '../productDetail/productDetail';
+import { TIKI_RED, vnd } from '../../types/productDetail';
 import { useNavigate } from 'react-router-dom';
-
-const vnd = (n?: number | string) =>
-  Number(n ?? 0).toLocaleString('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 5,
-  });
+import { VariantInfo } from '../../types/product';
 
 export default function Info({
   product,
@@ -17,15 +11,26 @@ export default function Info({
   quantity,
   setQuantity,
   calculatedPrice,
+  maxQuantity,
 }: {
   product?: any;
-  selectedVariantId: number | null; // CHANGED: Allow null
+  selectedVariantId: number | null; 
   setSelectedVariantId: (id: number) => void;
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
+  maxQuantity: number;
 }) {
   const navigate = useNavigate();
+
+  const stock = useMemo(() => {
+    const v = product?.variants?.find(
+      (v: VariantInfo) => v.id === selectedVariantId
+    );
+    return v?.stock ?? 0;
+  }, [product, selectedVariantId]);
+
+  const maxQty = Math.min(stock, maxQuantity);
 
   const listPrice = Number(product?.listPrice ?? product?.base_price ?? 0);
   const discount =
@@ -107,7 +112,7 @@ export default function Info({
                   : 'border-gray-300'
               }`}
               onClick={() => setSelectedVariantId(v.id)}
-              disabled={selectedVariantId === null} // NEW: Disable if no variant selected
+              disabled={selectedVariantId === null}
             >
               {v.variant_name} ({vnd(v.price)})
             </button>
@@ -116,17 +121,23 @@ export default function Info({
       )}
 
       {/* Chọn số lượng */}
+
       <div className="mt-2 flex items-center gap-2">
         <span>Số lượng:</span>
         <input
           type="number"
           min={1}
+          max={maxQty || 1}
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           className="border px-2 py-1 rounded w-20"
         />
+      {quantity === maxQty && maxQty > 0 && (
+        <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">
+          Đã đạt tối đa
+        </span>
+      )}
       </div>
-
       {/* Bảng giá sỉ */}
       {product.pricing_rules?.length > 0 && (
         <div className="mt-2 text-sm text-slate-500">

@@ -26,7 +26,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const navigate = useNavigate();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const allIds = useMemo(() => cart.map((i) => i.id), [cart]);  
+  const allIds = useMemo(() => cart.map((i) => i.id), [cart]);
 
   const allChecked = selectedIds.length === allIds.length && allIds.length > 0;
   const indeterminate =
@@ -36,26 +36,31 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
     if (selectedIds.length === 0) return;
 
     const items = cart
-      .filter((i) => selectedIds.includes(i.id)) 
+      .filter((i) => selectedIds.includes(i.id))
       .map((i) => ({
         id: i.id,
-        product_id: i.product_id,
         price: i.price,
         quantity: i.quantity,
         product: {
+          id: i.product.id,
           name: i.product.name,
           media: i.product.media,
+          store: i.product.store,
+          listPrice: i.product.basePrice,
           url:
             (Array.isArray(i.product.media)
               ? i.product.media[0]?.url
               : i.product.media?.url) || i.product.url,
         },
+        variant: i.variant,
       }));
-
+    console.log("cartPage data: " +JSON.stringify(items));
     navigate('/checkout', { state: { items, subtotal: selectedTotal } });
   };
   const toggleAll = () => {
-    setSelectedIds((prev) => (prev.length === allIds.length ? [] : [...allIds]));
+    setSelectedIds((prev) =>
+      prev.length === allIds.length ? [] : [...allIds]
+    );
   };
 
   const toggleOne = (id: number) => {
@@ -67,7 +72,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const selectedTotal = useMemo(
     () =>
       cart
-        .filter((i) => selectedIds.includes(i.id))  
+        .filter((i) => selectedIds.includes(i.id))
         .reduce((sum, i) => sum + i.price * i.quantity, 0),
     [cart, selectedIds]
   );

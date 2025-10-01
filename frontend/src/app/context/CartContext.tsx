@@ -1,28 +1,5 @@
-import { message } from 'antd';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-export interface CartItem {
-  id: number;
-  productId: number;  
-  variantId?: number;  
-  quantity: number;
-  price: number;
-  product: {
-    id: number;
-    name: string;
-    basePrice: number; 
-    url: string;
-    media: { url: string; is_primary?: boolean }
-    status: 'draft' | 'deleted' | 'active';
-  };
-  variant?: {
-    id: number;
-    variant_name: string;
-    price: number;
-    stock: number;
-  };
-}
-
+import { CartItem } from '../types/cart';
 interface CartContextType {
   cart: CartItem[];
   addToCart: (productId: number, quantity?: number, variantId?: number) => Promise<void>;
@@ -46,7 +23,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
-  // NEW: Track token state to react to changes
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
 
   const loadCart = async () => {
@@ -73,13 +49,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       setCart([]);
     }
   };
-
-  // NEW: Load cart when token changes (handles login/logout)
   useEffect(() => {
     loadCart();
   }, [token]);
 
-  // NEW: Listen for cross-tab storage changes
+ 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'token') {
@@ -90,7 +64,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // NEW: Poll localStorage for same-tab changes (every 1 second)
   useEffect(() => {
     const interval = setInterval(() => {
       const currentToken = localStorage.getItem('token');
@@ -104,8 +77,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const addToCart = async (productId: number, quantity = 1, variantId?: number) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
-      message.warning('Vui lòng đăng nhập để thêm vào giỏ hàng');
-      return;
+      throw new Error('Vui lòng đăng nhập để thêm vào giỏ hàng');
     }
     try {
       const response = await fetch('http://localhost:3000/cart/add', {
@@ -118,10 +90,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         await loadCart();
+      }else{
+        throw new Error('Không thể thêm vào giỏ hàng');
       }
     } catch (error) {
-      message.warning('Không thể thêm vào giỏ hàng');
       console.error('Không thể thêm vào giỏ hàng:', error);
+     throw new Error('Không thể thêm vào giỏ hàng');
     }
   };
 
@@ -179,8 +153,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const clearCart = () => {
     setCart([]);
   };
-
-  // REMOVED: Original useEffect on mount, now handled by token changes
 
   return (
     <CartContext.Provider

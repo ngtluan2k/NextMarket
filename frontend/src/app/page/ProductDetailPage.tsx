@@ -3,11 +3,8 @@ import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
-import { PRODUCT_DETAIL_LAYOUT as L } from '../components/productDetail/productDetail';
-import SimilarProducts from '../components/productDetail/SimilarProducts';
+import { PRODUCT_DETAIL_LAYOUT as L } from '../types/productDetail';
 import ProductDescription from '../components/productDetail/ProductDescription';
-import ProductReviews from '../components/productDetail/ProductReviews';
-import ExploreMore from '../components/productDetail/ExploreMore';
 import ProductSpecs from '../components/productDetail/ProductSpecs';
 import BuyBox from '../components/productDetail/BuyBox';
 import { useCart } from '../context/CartContext';
@@ -18,6 +15,7 @@ import {
   Shipping,
   ComboStrip,
 } from '../components/productDetail';
+import { VariantInfo } from "../types/product"
 
 interface Props {
   showMessage?: (
@@ -35,12 +33,10 @@ const LazyExploreMore = lazy(
   () => import('../components/productDetail/ExploreMore')
 );
 
-// Memoize static or infrequently changing components to prevent unnecessary re-renders
 const MemoizedGallery = React.memo(Gallery);
 const MemoizedInfo = React.memo(Info);
 const MemoizedShipping = React.memo(Shipping);
 const MemoizedComboStrip = React.memo(ComboStrip);
-const MemoizedSimilarProducts = React.memo(SimilarProducts);
 const MemoizedProductSpecs = React.memo(ProductSpecs);
 const MemoizedProductDescription = React.memo(ProductDescription);
 const MemoizedBuyBox = React.memo(BuyBox);
@@ -51,28 +47,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
-  useEffect(() => {
-    if (product) {
-      console.log('🔍 Debug cấu trúc product:', {
-        coId: !!product.id,
-        coUuid: !!product.uuid,
-        coPrice: !!product.price,
-        coBasePrice: !!product.base_price,
-        coName: !!product.name,
-        productDay: product,
-      });
-    }
-  }, [product]);
 
-  // Giải pháp thay thế: Chuyển đổi dữ liệu product trước khi truyền vào BuyBox
-  const transformedProduct = product
-    ? {
-        ...product,
-        id: product.id || product.uuid,
-        price: product.price || product.base_price, // Đây là điểm quan trọng!
-        name: product.name || product.title,
-      }
-    : undefined;
+  console.log("product in product detail page: "+JSON.stringify(product));
+
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
@@ -81,18 +58,25 @@ export default function ProductDetailPage({ showMessage }: Props) {
     }
   );
 
-  // Save selected variant to localStorage when it changes
+  const stock = useMemo(() => {
+    const v = product?.variants?.find(
+      (v: VariantInfo) => v.id === selectedVariantId
+    );
+    return v?.stock ?? 0;
+  }, [product, selectedVariantId]);
+
+  useEffect(() => {
+    if (quantity > stock) setQuantity(stock || 1);
+  }, [stock, quantity]);
+
   useEffect(() => {
     if (selectedVariantId !== null) {
       localStorage.setItem(`lastVariant_${slug}`, selectedVariantId.toString());
     }
   }, [selectedVariantId, slug]);
 
-  // Initialize or update variant and quantity based on product and cart data
   useEffect(() => {
     if (!product) return;
-
-    // Only update variant if not set or invalid for current product
     if (
       selectedVariantId === null ||
       !product.variants?.some((v: any) => v.id === selectedVariantId)
@@ -107,19 +91,17 @@ export default function ProductDetailPage({ showMessage }: Props) {
       }
     }
 
-    // Update quantity from cart if available for current product and variant
     const currentVariantId = selectedVariantId ?? undefined;
     const cartItem = cart.find(
       (item) =>
-        item.productId === product.id &&
+        item.product.id === product.id &&
         (item.variant
           ? item.variant.id === currentVariantId
           : currentVariantId === undefined)
     );
     setQuantity(cartItem ? cartItem.quantity : 1);
-  }, [product, cart]); // Removed selectedVariantId from deps to prevent feedback loop
+  }, [product, cart]);
 
-  // Calculate price based on variant and pricing rules
   const { calculatedPrice, totalPrice } = useMemo(() => {
     if (!product) return { calculatedPrice: 0, totalPrice: 0 };
 
@@ -150,7 +132,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
     };
   }, [product, selectedVariantId, quantity]);
 
-  // Compute gallery data (images and variant map) only when product changes
   const galleryData = useMemo(() => {
     if (!product || !product.variants) {
       return {
@@ -180,13 +161,12 @@ export default function ProductDetailPage({ showMessage }: Props) {
         };
   }, [product]);
 
-  // Conditional rendering during loading to avoid layout shifts
   if (loading && !product) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <EveryMartHeader />
         <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
-          <Spin tip="Loading product details..." />
+          <Spin>Loading product details...</Spin>
         </main>
         <Footer />
       </div>
@@ -204,7 +184,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
             ['--right' as any]: `${L.rightWidth}px`,
           }}
         >
-          {/* Critical components */}
           <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
             <MemoizedGallery
               images={galleryData.images}
@@ -225,10 +204,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
               quantity={quantity}
               setQuantity={setQuantity}
               calculatedPrice={calculatedPrice}
+              maxQuantity={stock}
             />
             <MemoizedShipping />
             <MemoizedComboStrip items={combos} />
-            {/* Lazy-loaded components with fallback */}
             <Suspense fallback={<div>Loading similar products...</div>}>
               <LazySimilarProducts productId={product.id} />
             </Suspense>
@@ -248,6 +227,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 product={product}
                 selectedVariantId={selectedVariantId}
                 quantity={quantity}
+                maxQuantity={stock}
                 setQuantity={setQuantity}
                 calculatedPrice={calculatedPrice}
                 totalPrice={totalPrice}
@@ -255,29 +235,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 minHeight={L.buyBoxMinHeight}
                 showMessage={showMessage}
               />
-              {/* </section> */}
-
-              {/* PHẢI: span 2 hàng + TỰ KÉO GIÃN = cha cao bằng cả phần Reviews */}
-              <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
-                <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
-                  {product && (
-                    <BuyBox
-                      product={transformedProduct}
-                      width={L.rightWidth}
-                      minHeight={L.buyBoxMinHeight}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* REVIEWS: hàng 2, chiếm 2 cột (trái+giữa) */}
-              <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-                <ProductReviews />
-              </div>
-
-              <div className="lg:col-span-3 mt-2">
-                <ExploreMore />
-              </div>
             </div>
             <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <Suspense fallback={<div>Loading reviews...</div>}>

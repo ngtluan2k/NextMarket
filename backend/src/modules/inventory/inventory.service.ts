@@ -151,7 +151,7 @@ export class InventoryService {
       if (dto.used_quantity !== undefined)
         inventory.used_quantity = dto.used_quantity;
 
-      inventory.updated_at = new Date();
+      inventory.updatedAt = new Date();
 
       return await this.repo.save(inventory);
     } catch (error) {

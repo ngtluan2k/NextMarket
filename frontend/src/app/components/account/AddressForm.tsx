@@ -1,19 +1,7 @@
 // src/components/account/AddressForm.tsx
 import React, { useEffect, useState } from "react";
 import { getProvinces, getDistricts, getWards, Province, District, Ward } from "../../../service/vnLocation";
-
-export type AddressFormValues = {
-  fullName: string;
-  company?: string;
-  phone: string;
-  provinceCode?: number; province?: string;
-  districtCode?: number;  district?: string;
-  wardCode?: number;      ward?: string;
-  addressLine: string;
-  note?: string;
-  kind: "home" | "company";
-  isDefault?: boolean;
-};
+import { AddressFormValues } from "../../types/user";
 
 type Size = "xs" | "sm" | "md";
 

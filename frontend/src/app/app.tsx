@@ -1,48 +1,46 @@
-"use client"
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { message } from "antd";
+'use client';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { message } from 'antd';
 
-import { AdminDashboard } from "./components/admin/AdminDashboard";
-import { CartProvider } from "./context/CartContext";
-import { AuthProvider } from "./context/AuthContext";
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 
-import Home from "./page/Home";
-import CategoryPage from "./page/CategoryPage";
-import AccountLayout from "./page/account/AccountLayout";
+import Home from './page/Home';
+import CategoryPage from './page/CategoryPage';
+import AccountLayout from './page/account/AccountLayout';
 import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
-import {SellerDashboard }from './components/register_seller/SellerDashboard';
-import ProductDetailPage from "./page/ProductDetailPage";
-import NotificationsPage from "./page/account/NotificationsPage";
-import ReturnsPage from "./page/account/ReturnsPage";
-import OrdersPage from "./page/account/OrdersPage";
-import ProfilePage from "./page/account/ProfilePage";
-import ProductList from './components/ProductList';
+import { SellerDashboard } from './components/register_seller/SellerDashboard';
+import ProductDetailPage from './page/ProductDetailPage';
+import NotificationsPage from './page/account/NotificationsPage';
+import ReturnsPage from './page/account/ReturnsPage';
+import OrdersPage from './page/account/OrdersPage';
+import ProfilePage from './page/account/ProfilePage';
 import SellerMainLayout from './page/Seller/MainLayout';
-import { ProductForm } from "./components/AddProduct";
-import AddressBook from "./components/account/AddressBook";
-import AddressCreatePage from "./page/account/AddressCreatePage";
-import StoreLayout from "./page/StoreLayout";
-import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
-import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
-import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
-import FeaturedBrandsPage from "./components/FeaturedBrands";
-import BrandPage from "./page/BrandPage";
-import SearchPage from "./page/SearchPage";
-import CartPage from "./page/CartPage";
-import OrderDetail from "./components/productDetail/OrderDetails";
-import CheckoutPayment from "./page/CheckoutPayment";
-import OrderSuccess from "./page/OrderSuccess";
+import { ProductForm } from './components/AddProduct';
+import AddressBook from './components/account/AddressBook';
+import AddressCreatePage from './page/account/AddressCreatePage';
+import StoreLayout from './page/StoreLayout';
+import StoreAllProductsTab from './components/store/storetab/StoreAllProductsTab';
+import StoreHomeTab from './components/store/storetab/StoreHomeTab';
+import StoreProfileTab from './components/store/storetab/StoreProfileTab';
+import FeaturedBrandsPage from './components/FeaturedBrands';
+import BrandPage from './page/BrandPage';
+import SearchPage from './page/SearchPage';
+import CartPage from './page/CartPage';
+import CheckoutPayment from './page/CheckoutPayment';
+import OrderSuccess from './page/OrderSuccess';
 
+import UserAddress from './page/UserAddress';
 interface CartProps {
-  showMessage: (type: "success" | "error" | "warning", content: string) => void;
+  showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
-
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
 
-  const showMessage: CartProps["showMessage"] = (type, content) => {
+  const showMessage: CartProps['showMessage'] = (type, content) => {
     const localizedContent = {
       success: content,
       error: `Lỗi: ${content}`,
@@ -53,30 +51,19 @@ const App: React.FC = () => {
   };
 
   return (
-    <CartProvider>
-      {contextHolder}
-      <Routes>
-        {/* <Route path="/login" element={<AuthForm />} /> */}
-        <Route path="*" element={<Navigate to="/" />} />
-        <Route path="/" element={<Home />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/seller-registration" element={<SellerRegistration />} />
-        <Route path="/seller-dashboard" element={<SellerDashboard />} />
-        <Route path='/catepage' element={<CategoryPage/>}/>
-        <Route path="/add_product" element={<ProductForm />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
-        <Route path="/order-detail" element={<OrderDetail />} />
-        <Route path="/test/home" element={<ProductList />} />
-        
-        {/* Account Routes */}
-        <Route path="/account" element={<AccountLayout />}>
-          <Route index element={<Navigate to="profile" replace />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="returns" element={<ReturnsPage />} />
-        </Route>
+    <AuthProvider>
+      <CartProvider>
+        {contextHolder}
+        <Routes>
+          {/* <Route path="/login" element={<AuthForm />} /> */}
+          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/seller-registration" element={<SellerRegistration />} />
+          <Route path="/seller-dashboard" element={<SellerDashboard />} />
+          <Route path="/catepage" element={<CategoryPage />} />
+          <Route path="/add_product" element={<ProductForm />} />
+          <Route path="/user/address" element={<UserAddress />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -93,15 +80,21 @@ const App: React.FC = () => {
             <Route path="orders" element={<OrdersPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="returns" element={<ReturnsPage />} />
-            <Route path="addresses" element={<AddressBook />} />      
-            <Route path="addresses/create" element={<AddressCreatePage />} /> 
+            <Route path="addresses" element={<AddressBook />} />
+            <Route path="addresses/create" element={<AddressCreatePage />} />
           </Route>
 
           {/* Store Routes */}
           <Route path="/stores/slug/:slug" element={<StoreLayout />}>
             <Route index element={<StoreHomeTab />} />
-            <Route path="/stores/slug/:slug/all" element={<StoreAllProductsTab />} />
-            <Route path="/stores/slug/:slug/profile" element={<StoreProfileTab />} /> 
+            <Route
+              path="/stores/slug/:slug/all"
+              element={<StoreAllProductsTab />}
+            />
+            <Route
+              path="/stores/slug/:slug/profile"
+              element={<StoreProfileTab />}
+            />
           </Route>
 
           {/* Brands */}
@@ -113,20 +106,27 @@ const App: React.FC = () => {
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Route path="/checkout" element={<CheckoutPayment />} /> 
-        <Route path="/order/success" element={<OrderSuccess />} />
+          <Route path="/checkout" element={<CheckoutPayment />} />
+          <Route path="/order/success" element={<OrderSuccess />} />
+          <Route
+            path="/cart"
+            element={<CartPage showMessage={showMessage} />}
+          />
 
-        {/* Catch-all Route */}
-                <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/seller-registration" element={<SellerRegistration />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/products/slug/:slug" element={<ProductDetailPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-    </CartProvider>
-    
+          {/* Catch-all Route */}
+          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/seller-registration" element={<SellerRegistration />} />
+          <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route
+            path="/products/slug/:slug"
+            element={<ProductDetailPage showMessage={showMessage} />}
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </CartProvider>
+    </AuthProvider>
   );
 };
 

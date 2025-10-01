@@ -23,16 +23,14 @@ export default function Gallery({
   const list = images ?? [];
   const [idx, setIdx] = useState(0);
 
-  // Sync gallery index with selected variant
   useEffect(() => {
     if (selectedVariantId !== null && variantMap && variantMap[selectedVariantId] !== undefined) {
       setIdx(variantMap[selectedVariantId]);
     } else if (list.length > 0) {
-      setIdx(0); // Default to first image if no variant selected or no mapping
+      setIdx(0); 
     }
   }, [selectedVariantId, variantMap, list]);
 
-  // Hàm xử lý URL ảnh
   const resolveUrl = (u: string) =>
     u.startsWith("http")
       ? u
@@ -68,7 +66,6 @@ export default function Gallery({
       <div className="mt-3 grid grid-cols-4 gap-3">
         {list.map((u, i) => {
           const imageUrl = resolveUrl(u);
-          // Find the variant ID for this image index
           const variantId = Object.keys(variantMap || {}).find(
             (key) => variantMap![Number(key)] === i
           );
