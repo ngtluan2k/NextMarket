@@ -41,7 +41,7 @@ export const CartSidebar: React.FC<Props> = ({
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
-  
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
@@ -75,8 +75,8 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      const storeId = items[0]?.product?.store?.id || 1;  
-      
+      const storeId = items[0]?.product?.store?.id || 1;
+
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
       const orderPayload = {
@@ -88,15 +88,15 @@ export const CartSidebar: React.FC<Props> = ({
         discountTotal: 0,
         items: items.map((item, index) => {
           console.log('Items received: ', JSON.stringify(items, null, 2));
-          const productId = Number(item.product?.id); 
-          console.log("productId: "+ Number(item.product?.id)); 
+          const productId = Number(item.product?.id);
+          console.log('productId: ' + Number(item.product?.id));
           if (isNaN(productId) || productId <= 0) {
             throw new Error(
               `sản phẩm không hợp lệ tại vị trí  ${index}: ${item.product?.id}`
             );
-          }         
-           console.log("cho xin 5 chục: "+ JSON.stringify(items)); 
-           const variantId = item.product?.variants?.[0].id;
+          }
+          console.log('cho xin 5 chục: ' + JSON.stringify(items));
+          const variantId = item.product?.variants?.[0].id;
 
           return {
             productId,
@@ -152,6 +152,7 @@ export const CartSidebar: React.FC<Props> = ({
             paymentMethodLabel: selectedMethod.name,
             etaLabel,
             items,
+            status: payment?.status ?? 'success',
           },
           replace: true,
         });
@@ -163,7 +164,7 @@ export const CartSidebar: React.FC<Props> = ({
         message: err.message,
         url: err.config?.url,
       });
-      console.log(err)
+      console.log(err);
       message.error(err.message || 'Không thể tạo đơn hàng');
     } finally {
       setLoading(false);

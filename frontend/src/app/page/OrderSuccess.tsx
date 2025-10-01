@@ -12,9 +12,10 @@ const OrderSuccess: React.FC = () => {
     paymentMethodLabel: string;
     etaLabel?: string;
     items: any[];
-    status?: string; // "success" | "0" | "1"
+    status: string; // "success" | "0" | "1"
   };
 
+  console.log(state.status)
   if (!state) {
     return (
       <Result
@@ -29,7 +30,7 @@ const OrderSuccess: React.FC = () => {
     );
   }
 
-const isSuccess = String(state.status) === "success" || String(state.status) === "1";
+const isSuccess = String(state.status) === "success" || String(state.status) === "0";
 
 
   return (
