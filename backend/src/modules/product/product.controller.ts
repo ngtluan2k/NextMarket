@@ -238,4 +238,100 @@ export class ProductController {
       data: products,
     };
   }
+
+  @Put(':id')
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(
+  FilesInterceptor('media', 10, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = './uploads/products';
+        if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  }),
+)
+async updateDraft(
+  @Param('id') id: number,
+  @UploadedFiles() files: Express.Multer.File[],
+  @Body() dto: any,
+  @Req() req: any,
+) {
+  // --- Parse JSON từ FormData và chuẩn hóa thành array ---
+  dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
+  dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
+  dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
+  dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
+  dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
+
+  // --- Merge media_meta + files mới ---
+  dto.media = dto.media_meta.map((m: any) => ({
+    ...m,
+    url: m.url ? m.url.replace(/^https?:\/\/[^/]+/, '') : '', // chuyển URL cũ thành relative
+  }));
+
+  if (files?.length) {
+    files.forEach((file) => {
+      dto.media.push({
+        file_name: file.filename,
+        media_type: 'image',
+        is_primary: false,
+        url: `/uploads/products/${file.filename}`,
+        sort_order: dto.media.length + 1,
+      });
+    });
+  }
+
+  // --- Gọi service update ---
+  const userId = req.user.sub;
+  return this.productService.updateProduct(id, dto, userId);
+}
+
+
+@Put(':id/publish')
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(
+  FilesInterceptor('media', 10, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = './uploads/products';
+        if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  })
+)
+async updateAndPublish(
+  @Param('id') id: number,
+  @UploadedFiles() files: Express.Multer.File[],
+  @Body() dto: any,
+  @Req() req: any
+) {
+  // Parse JSON từ FormData
+  if (dto.variants) dto.variants = JSON.parse(dto.variants);
+  if (dto.inventory) dto.inventory = JSON.parse(dto.inventory);
+  if (dto.pricing_rules) dto.pricing_rules = JSON.parse(dto.pricing_rules);
+  if (dto.categories) dto.categories = JSON.parse(dto.categories);
+
+  if (files?.length) {
+    dto.media = files.map((file, index) => ({
+      file_name: file.filename,
+      media_type: 'image',
+      is_primary: index === 0,
+      url: `/uploads/products/${file.filename}`,
+    }));
+  }
+
+  const userId = req.user.sub;
+  return this.productService.updateAndPublishProduct(id, dto, userId);
+}
 }

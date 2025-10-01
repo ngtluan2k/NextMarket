@@ -134,29 +134,7 @@ export default function BuyBox({
     navigate('/checkout', { state: checkoutState });
   };
 
-  // --- tính giá dựa trên variant + pricing_rules ---
-  const unitPrice = useMemo(() => {
-    if (!product) return 0;
-
-    let currentPrice = calculatedPrice;
-    const rules: { min_qty: number; price: number }[] = (
-      product.pricing_rules ?? []
-    ).map((r: any) => ({
-      min_qty: r.min_quantity,
-      price: Number(r.price),
-    }));
-
-    if (rules.length > 0) {
-      const matched = rules
-        .filter((r) => quantity >= r.min_qty)
-        .sort((a, b) => b.min_qty - a.min_qty)[0];
-      if (matched) currentPrice = matched.price;
-    }
-
-    return currentPrice;
-  }, [product, calculatedPrice, quantity]);
-
-  const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
+  const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
 
   if (!product) return null;
 
