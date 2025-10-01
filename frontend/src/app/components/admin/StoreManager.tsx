@@ -4,11 +4,13 @@ import type { ColumnsType } from "antd/es/table";
 import axios from "axios";
 import { DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { storeService } from "../../../service/store.service";
 
 interface Store {
   id: number;
   uuid: string;
   name: string;
+  status: string;
   description?: string;
   created_at: string;
 }
@@ -28,17 +30,11 @@ const StoreManager: React.FC = () => {
   const fetchStores = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token"); // token từ login
-      const res = await axios.get("http://localhost:3000/stores", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setStores(res.data.data || []);
+      const data = await storeService.getStores(true); // admin xem cả soft-deleted
+      setStores(data || []);
     } catch (err: any) {
       console.error("Lỗi fetch stores:", err);
-      message.error(err.response?.data?.message || "Không lấy được danh sách cửa hàng");
+      message.error(err?.response?.data?.message || "Không lấy được danh sách cửa hàng");
     } finally {
       setLoading(false);
     }
@@ -102,10 +98,29 @@ const StoreManager: React.FC = () => {
       title: "Tên cửa hàng",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record) => (
-        <a onClick={() => openDetail(record)}>{text || "(Chưa đặt tên)"}</a>
-      ),
+      render: (text: string) => (text || "(Chưa đặt tên)"), 
     },
+
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (text: string) => {
+        switch (text) {
+          case "active":
+            return <span style={{ color: "green" }}>Hoạt động</span>;
+          case "inactive":
+            return <span style={{ color: "gray" }}>Chưa hoạt động</span>;
+          case "suspended":
+            return <span style={{ color: "orange" }}>Bị tạm ngưng</span>;
+          case "closed":
+            return <span style={{ color: "red" }}>Đã đóng</span>;
+          default:
+            return text || "-";
+        }
+      },
+    },
+
     {
       title: "Mô tả",
       dataIndex: "description",
@@ -154,45 +169,7 @@ const StoreManager: React.FC = () => {
             dataSource={stores}
             columns={columns}
             pagination={{ pageSize: 10 }}
-            onRow={(record) => ({
-              onClick: () => openDetail(record),
-              style: { cursor: "pointer" },
-            })}
           />
-
-          <Drawer
-            width={520}
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            title={selected ? `Thông tin cửa hàng ${selected.name}` : "Thông tin cửa hàng"}
-            destroyOnClose
-          >
-            {detailLoading ? (
-              <div className="flex justify-center items-center py-10">
-                <Spin size="large" />
-              </div>
-            ) : detail ? (
-              <Descriptions bordered column={1} size="middle">
-                <Descriptions.Item label="ID">{detail.id}</Descriptions.Item>
-                <Descriptions.Item label="Tên">{detail.name || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Mô tả">{detail.description || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Email">{detail.email || "-"}</Descriptions.Item>
-                <Descriptions.Item label="SĐT">{detail.phone || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Slug">{detail.slug || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">{detail.status || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Ngày tạo">
-                  {detail.created_at ? new Date(detail.created_at).toLocaleString() : "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Cập nhật">
-                  {detail.updated_at ? new Date(detail.updated_at).toLocaleString() : "-"}
-                </Descriptions.Item>
-
-
-              </Descriptions>
-            ) : (
-              <div>Không có dữ liệu cửa hàng</div>
-            )}
-          </Drawer>
         </>
       )}
     </Card>

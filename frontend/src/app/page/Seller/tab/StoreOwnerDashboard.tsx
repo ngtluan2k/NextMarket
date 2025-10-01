@@ -19,7 +19,7 @@ export default function StoreOwnerDashboard() {
       content: (
         <div>
           <p>
-            Bạn có chắc chắn muốn <strong>XÓA VĨNH VIỄN</strong> cửa hàng này?
+            Bạn có chắc chắn muốn xóa cửa hàng này?
           </p>
           
         </div>

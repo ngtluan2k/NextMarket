@@ -19,6 +19,13 @@ import { Role } from '../role/role.entity';
 import { UserRole } from '../user-role/user-role.entity';
 import { ProductModule } from '../product/product.module';
 import { Product } from '../product/product.entity';
+import { Inventory } from '../inventory/inventory.entity';
+import { Variant } from '../variant/variant.entity';
+import { ProductMedia } from '../product_media/product_media.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { ProductCategory } from '../product_category/product_category.entity';
+import { ProductTag } from '../product_tag/product_tag.entity';
+import { Tag } from '../tag/tag.entity';
 
 @Module({
   imports: [
@@ -38,7 +45,14 @@ import { Product } from '../product/product.entity';
       User,
       Role,
       UserRole,
-      Product
+      Product,
+      Inventory,
+      Variant,
+      ProductMedia,
+      PricingRules,
+      ProductCategory,
+      ProductTag,
+      Tag,
     ]),
     forwardRef(() => ProductModule), // ✅ chỉ import module bằng forwardRef
   ],

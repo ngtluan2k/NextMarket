@@ -6,7 +6,7 @@ type OtpRecord = { code: string; expiresAt: number; attempts: number };
 @Injectable()
 export class OtpService {
   private store = new Map<string, OtpRecord>();
-  private ttlMs = 10 * 60 * 1000; // 10 phút
+  private ttlMs = 2 * 60 * 1000; // 2 phút
   private maxAttempts = 5;
 
   generate(email: string): string {
