@@ -1,4 +1,3 @@
-// src/components/cart/CartHeader.tsx
 import React from 'react';
 import { Checkbox, Image, Button, Typography } from 'antd';
 import { DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
@@ -30,18 +29,16 @@ export const CartHeader: React.FC<Props> = ({
   showMessage,
 }) => {
   const { cart, updateQuantity, removeFromCart } = useCart();
+  // console.log("selected id : " + selectedIds)
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
   const storeName = cart[0]?.product?.store?.name ?? 'Shop';
   const selectedCartItems = cart.filter(item => selectedIds.includes(item.id));
 
-  const handleRemoveFromCart = (
-    productId: number,
-    productName: string,
-    variantId?: number
-  ) => {
+  const handleRemoveFromCart = async (productId: number, productName: string, variantId?: number) => {
     try {
-      removeFromCart(productId, variantId);
+      console.log(productId)
+      await removeFromCart(productId, variantId);
       showMessage?.('success', `Removed ${productName} from cart successfully`);
     } catch (error) {
       showMessage?.('error', `Failed to remove ${productName} from cart`);
@@ -193,7 +190,7 @@ export const CartHeader: React.FC<Props> = ({
                   className="px-2"
                   onClick={() =>
                     updateQuantity(
-                      item.productId,
+                      item.id,
                       Math.max(1, item.quantity - 1),
                       item.variant?.id
                     )
@@ -210,11 +207,7 @@ export const CartHeader: React.FC<Props> = ({
                 <button
                   className="px-2"
                   onClick={() =>
-                    updateQuantity(
-                      item.productId,
-                      item.quantity + 1,
-                      item.variant?.id
-                    )
+                    updateQuantity(item.product.id, item.quantity + 1, item.variant?.id)
                   }
                 >
                   +
@@ -234,11 +227,7 @@ export const CartHeader: React.FC<Props> = ({
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() =>
-                  handleRemoveFromCart(
-                     item.product?.id,
-                    item.product.name,
-                    item.variant?.id
-                  )
+                  handleRemoveFromCart(item.product.id, item.product.name, item.variant?.id)
                 }
               />
             </div>

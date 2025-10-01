@@ -33,7 +33,7 @@ export class VouchersService {
     }
 
     // Nếu là store owner, bắt buộc phải chỉ định store_id và kiểm tra ownership
-    if (role === 'store_owner') {
+    if (role === 'Seller') {
       if (!createVoucherDto.applicable_store_ids || createVoucherDto.applicable_store_ids.length !== 1) {
         throw new BadRequestException('Store owner chỉ có thể tạo voucher cho một store của mình');
       }
@@ -45,7 +45,7 @@ export class VouchersService {
       ...createVoucherDto,
       start_date: new Date(createVoucherDto.start_date),
       end_date: new Date(createVoucherDto.end_date),
-      store: role === 'store_owner' ? { id: createVoucherDto.applicable_store_ids![0] } : undefined,
+      store: role === 'Seller' ? { id: createVoucherDto.applicable_store_ids![0] } : undefined,
     });
     return await this.vouchersRepository.save(voucher);
   }

@@ -2,13 +2,21 @@ import React from 'react';
 import { Button, message, Space } from 'antd';
 
 interface MessageNotiProps {
-  onAction?: (showMessage: (type: 'success' | 'error' | 'warning', content: string) => void) => void;
+  onAction?: (
+    showMessage: (
+      type: 'success' | 'error' | 'warning',
+      content: string
+    ) => void
+  ) => void;
 }
 
 const MessageNoti: React.FC<MessageNotiProps> = ({ onAction }) => {
   const [messageApi, contextHolder] = message.useMessage();
 
-  const showMessage = (type: 'success' | 'error' | 'warning', content: string) => {
+  const showMessage = (
+    type: 'success' | 'error' | 'warning',
+    content: string
+  ) => {
     messageApi.open({
       type,
       content,
@@ -31,6 +39,8 @@ const MessageNoti: React.FC<MessageNotiProps> = ({ onAction }) => {
     }
   };
 
+  console.log('dat da o day hehehe');
+  
   return (
     <>
       {contextHolder}

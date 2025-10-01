@@ -28,7 +28,7 @@ import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab
 import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
 import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
 import CheckoutPayment from "./page/CheckoutPayment";
-import {OrderSuccess} from "./page/OrderSuccess";
+import OrderSuccess from "./page/OrderSuccess";
 import FeaturedBrandsPage from "./components/FeaturedBrands";
 import BrandPage from "./page/BrandPage";
 import SearchPage from "./page/SearchPage";

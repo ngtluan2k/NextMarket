@@ -2,18 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { getCategoryBySlug } from "../../service/category.service";
-
-interface Category {
-  slug: string;
-  name: string;
-}
-
-export interface Crumb {
-  label: string;
-  to?: string;
-  current?: boolean;
-  name?: string; // giữ luôn name để Breadcrumb click về đúng
-}
+import { Category, Crumb } from "../types/categories";
 
 export function useCategoryBreadcrumbs(category?: Category): Crumb[] {
   const { slug } = useParams<{ slug: string }>();

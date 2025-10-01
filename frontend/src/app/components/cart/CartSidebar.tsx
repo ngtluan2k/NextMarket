@@ -2,40 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Card, Typography, Button, Tag, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
-import { api } from '../../config/api';
-import { CheckoutItem } from '../../components/checkout/ShippingMethod';
+import { api } from '../../api/api';
+import { CheckoutItem } from '../../types/checkout';
 import { useAuth } from '../../context/AuthContext';
+import { PaymentMethodResponse } from '../../types/payment';
+import { UserAddress } from '../../types/user';
+import { CartItem } from '../../types/cart';
 
 const { Text } = Typography;
-
-type PaymentMethodResponse = {
-  id: number;
-  uuid: string;
-  type: string;
-  name: string;
-  enabled: boolean;
-  config?: any;
-};
-
-type UserAddress = {
-  id: number;
-  fullAddress: string;
-  name?: string;
-  phone?: string;
-  tag?: string;
-  userId?: number;
-};
-
-type CartItem = {
-  productId: number;
-  variantId?: number;
-  price: number;
-  quantity: number;
-  name?: string;
-  image?: string;
-  storeId?: number;
-};
-
 type Props = {
   selectedTotal: number;
   selectedCount: number;
@@ -61,19 +35,25 @@ export const CartSidebar: React.FC<Props> = ({
   userAddress,
   items = [],
   etaLabel,
+  onSubmit,
 }) => {
   const { cart } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (fromCart = false) => {
+  const handleSubmit = async () => {
     setLoading(true);
     try {
-      console.log('📋 Items received:', JSON.stringify(items, null, 2));
+      console.log(' Items received: ', JSON.stringify(items, null, 2));
 
       if (items.length === 0) {
         message.error('Không có sản phẩm trong đơn hàng');
+        return;
+      }
+
+      if (!userAddress || !userAddress.id) {
+        message.error('Vui lòng chọn địa chỉ giao hàng');
         return;
       }
 
@@ -84,82 +64,54 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      // Chỉ kiểm tra địa chỉ nếu không phải từ CartPage
-      if (!userAddress?.id) {
-        message.error('Vui lòng chọn địa chỉ giao hàng');
-        return;
-      }
-
-      if (userAddress?.userId !== userId) {
+      if (userAddress.userId !== userId) {
         message.error('Địa chỉ không thuộc về người dùng hiện tại.');
         navigate('/user/address');
         return;
       }
+
       if (paymentMethods.length === 0 || !selectedPaymentMethod) {
         message.error('Vui lòng chọn phương thức thanh toán');
         return;
       }
 
-      const invalidItems = items.filter(
-        (item) => !item.id || isNaN(Number(item.id)) || Number(item.id) <= 0
-      );
-      if (invalidItems.length > 0) {
-        console.error(
-          '❌ Invalid items:',
-          JSON.stringify(invalidItems, null, 2)
-        );
-        message.error('Một số sản phẩm có ID không hợp lệ');
-        return;
-      }
+      const storeId = items[0]?.product?.store?.id || 1;
 
-      const storeId = items[0]?.product?.store?.id;
-      if (!storeId) {
-        console.error('❌ Store ID missing for product', items[0]);
-        return;
-      }
-
-      console.log('Store in first item:', items[0]?.product?.store);
-      console.log('StoreId being sent:', storeId);
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
       const orderPayload = {
         userId,
         storeId,
-        addressId: Number(userAddress?.id) || 0,
+        addressId: Number(userAddress.id),
         totalAmount: Number(selectedTotal),
         shippingFee,
         discountTotal: 0,
         items: items.map((item, index) => {
+          console.log('Items received: ', JSON.stringify(items, null, 2));
           const productId = Number(item.product?.id);
-          const quantity = Number(item.quantity);
-
-          if (!productId || productId <= 0) {
+          console.log('productId: ' + Number(item.product?.id));
+          if (isNaN(productId) || productId <= 0) {
             throw new Error(
-              `Invalid productId at index ${index}: ${item.product?.id}`
+              `sản phẩm không hợp lệ tại vị trí  ${index}: ${item.product?.id}`
             );
           }
-
-          if (!quantity || quantity <= 0) {
-            throw new Error(
-              `Invalid quantity at index ${index}: ${item.quantity}`
-            );
-          }
+          console.log('cho xin 5 chục: ' + JSON.stringify(items));
+          const variantId = item.product?.variants?.[0].id;
 
           return {
             productId,
-            quantity,
+            variantId: item.product?.variants?.[0].id,
+            quantity: Number(item.quantity),
             price: Number(item.price),
-            ...(item.product?.variants?.[0]?.id
-              ? { variantId: Number(item.product.variants[0].id) }
-              : {}),
+            ...(item.variant?.id && { variantId: Number(item.variant.id) }),
           };
         }),
       };
 
-      console.log('📦 Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
+      console.log(' Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
       const orderRes = await api.post('/orders', orderPayload);
       const order = orderRes.data;
-      console.log('📦 Đơn hàng đã được tạo:', order);
+      console.log(' Đơn hàng đã được tạo:', order);
 
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
@@ -192,6 +144,7 @@ export const CartSidebar: React.FC<Props> = ({
         console.log('🔗 Chuyển hướng đến:', redirectUrl);
         window.location.href = redirectUrl;
       } else {
+        console.log('✅ Không cần chuyển hướng, chuyển đến trang thành công');
         navigate('/order/success', {
           state: {
             orderCode: order.uuid || order.id,
@@ -205,20 +158,14 @@ export const CartSidebar: React.FC<Props> = ({
         });
       }
     } catch (err: any) {
-      if (err.response) {
-        console.error('❌ Lỗi tạo đơn hàng/thanh toán:', {
-          status: err.response.status,
-          data: err.response.data,
-          headers: err.response.headers,
-          message: err.message,
-          url: err.config?.url,
-        });
-      } else {
-        console.error('❌ Lỗi không xác định:', err);
-      }
-      message.error(
-        err.response?.data?.message || err.message || 'Không thể tạo đơn hàng'
-      );
+      console.error('Lỗi tạo đơn hàng/thanh toán:', {
+        status: err.status,
+        data: err.data,
+        message: err.message,
+        url: err.config?.url,
+      });
+      console.log(err);
+      message.error(err.message || 'Không thể tạo đơn hàng');
     } finally {
       setLoading(false);
     }
@@ -251,10 +198,9 @@ export const CartSidebar: React.FC<Props> = ({
             {userAddress.tag && <Tag color="green">{userAddress.tag}</Tag>}
           </>
         ) : (
-          <Text type="secondary">Đang lấy địa chỉ...</Text>
+          <Text type="secondary">Vui lòng chọn địa chỉ giao hàng</Text>
         )}
       </Card>
-
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
           <Text strong>Khuyến Mãi</Text>
@@ -319,34 +265,18 @@ export const CartSidebar: React.FC<Props> = ({
             {selectedTotal.toLocaleString()}đ
           </Text>
         </div>
-        {mode === 'cart' ? (
-          <Button
-            type="primary"
-            block
-            size="large"
-            style={{ marginTop: 16, borderRadius: 6 }}
-            disabled={selectedCount === 0 || loading}
-            onClick={() =>
-              navigate('/checkout', {
-                state: { items, subtotal: selectedTotal },
-              })
-            }
-          >
-            Mua Hàng ({selectedCount})
-          </Button>
-        ) : (
-          <Button
-            type="primary"
-            block
-            size="large"
-            style={{ marginTop: 16, borderRadius: 6 }}
-            disabled={selectedCount === 0 || loading}
-            onClick={() => handleSubmit()} // gọi API tạo đơn
-            loading={loading}
-          >
-            Đặt hàng
-          </Button>
-        )}
+        <Button
+          type="primary"
+          block
+          size="large"
+          style={{ marginTop: 16, borderRadius: 6 }}
+          disabled={selectedCount === 0 || loading}
+          onClick={mode === 'checkout' ? handleSubmit : onSubmit}
+          loading={loading}
+        >
+          {submitLabel ??
+            (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}
+        </Button>
       </Card>
     </div>
   );

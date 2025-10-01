@@ -42,8 +42,6 @@ import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affi
 import { ProvincesModule } from './provinces/provinces.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
-
-
 @Module({
   imports: [
     // Đọc file .env
@@ -120,8 +118,6 @@ import { PaymentTransactionsModule } from './modules/payment-transactions/paymen
     AuthModule,
     PaymentMethodsModule,
     PaymentTransactionsModule,
-    
-
   ],
 })
 export class AppModule { }

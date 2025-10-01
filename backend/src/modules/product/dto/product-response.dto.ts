@@ -61,8 +61,8 @@ export class PricingRuleDto {
 }
 
 export class StoreDto {
-  @ApiProperty({ description: 'Store id' })
-  id?: number;  // ✅ thêm id
+  @ApiProperty({ description: 'Store ID' })
+  id?: number;
 
   @ApiProperty({ description: 'Store name' })
   name?: string;

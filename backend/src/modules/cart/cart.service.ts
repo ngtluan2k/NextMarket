@@ -31,8 +31,7 @@ export class CartService {
       relations: [
         'items',
         'items.product',
-        'items.product.variants',
-        'items.product.variants.inventories',
+        'items.variant',
         'items.product.media',
         'items.product.pricing_rules',
         'items.product.store',
@@ -123,23 +122,48 @@ export class CartService {
   async getCart(userId: number): Promise<any> {
     const cart = await this.getOrCreateCart(userId);
 
-    // Tối ưu response: Chỉ return fields cần thiết, chỉ lấy media của variant đã add
-const optimizedItems = cart.items.map((item) => {
-  const calculatedPrice = this.calculatePriceWithRules(item);
+    const optimizedItems = cart.items.map((item) => {
+      const calculatedPrice = this.calculatePriceWithRules(item);
 
-  return {
-    id: item.id,
-    uuid: item.uuid,
-    product_id: item.product_id,
-    variant_id: item.variant_id,
-    quantity: item.quantity,
-    price: calculatedPrice,
-    added_at: item.added_at,
-    // 🔹 Trả nguyên cục product luôn
-    product: item.product,
-    variant: item.variant ?? null,
-  };
-});
+      return {
+        id: item.id,
+        uuid: item.uuid,
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        quantity: item.quantity,
+        price: calculatedPrice,
+        added_at: item.added_at,
+        product: {
+          id: item.product.id,
+          name: item.product.name,
+          slug: item.product.slug,
+          short_description: item.product.short_description,
+          base_price: item.product.base_price,
+          store: item.product.store
+            ? {
+                id: item.product.store.id,
+                name: item.product.store.name,
+                slug: item.product.store.slug,
+                logo_url: item.product.store.logo_url,
+                email: item.product.store.email,
+              }
+            : null,
+          media: item.product.media.filter(
+            (media) =>
+              media.is_primary &&
+              (!item.variant_id || media.id === item.variant_id)
+          ),
+        },
+        variant: item.variant
+          ? {
+              id: item.variant.id,
+              variant_name: item.variant.variant_name,
+              price: item.variant.price,
+              stock: item.variant.stock,
+            }
+          : null,
+      };
+    });
 
     return {
       id: cart.id,
@@ -151,30 +175,21 @@ const optimizedItems = cart.items.map((item) => {
     };
   }
 
-async removeFromCart(
-  userId: number,
-  productId: number,
-  variantId?: number
-): Promise<void> {
-  const cart = await this.getOrCreateCart(userId);
-
-  // Tạo điều kiện xóa linh hoạt
-  const whereCondition: any = {
-    cart_id: cart.id,
-    product_id: productId,
-  };
-
-  if (variantId !== undefined) {
-    whereCondition.variant_id = variantId;
+  async removeFromCart(
+    userId: number,
+    productId: number,
+    variantId?: number
+  ): Promise<void> {
+    const cart = await this.getOrCreateCart(userId);
+    const result = await this.cartItemRepository.delete({
+      cart_id: cart.id,
+      product_id: productId,
+      variant_id: variantId ?? undefined,
+    });
+    if (result.affected === 0) {
+      throw new NotFoundException('Mục giỏ hàng không tìm thấy');
+    }
   }
-
-  const result = await this.cartItemRepository.delete(whereCondition);
-
-  if (result.affected === 0) {
-    throw new NotFoundException('Mục giỏ hàng không tìm thấy');
-  }
-}
-
 
   async updateQuantity(
     userId: number,

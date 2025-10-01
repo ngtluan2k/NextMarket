@@ -62,6 +62,7 @@ export class ProductController {
     return this.productService.findOne(id, userId);
   }
 
+
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FilesInterceptor('media', 10, {
@@ -99,6 +100,8 @@ export class ProductController {
         media_type: 'image',
         is_primary: index === 0,
         url: `/uploads/products/${file.filename}`,
+                sort_order: index + 1,
+
       }));
     }
 
@@ -165,8 +168,11 @@ export class ProductController {
         media_type: 'image',
         is_primary: index === 0,
         url: `/uploads/products/${file.filename}`,
+                sort_order: index + 1,
+
       }));
     }
+    
 
     const userId = req.user.sub;
     return this.productService.publishProduct(dto, userId);
@@ -257,7 +263,12 @@ async updateDraft(
   dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
   dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
   dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
-
+  if (Array.isArray(dto.inventory) && Array.isArray(dto.variants)) {
+  dto.variants = dto.variants.map((v: any) => ({
+    ...v,
+    inventories: dto.inventory.filter((inv: any) => inv.variant_id === v.id),
+  }));
+}
   // --- Merge media_meta + files mới ---
   dto.media = dto.media_meta.map((m: any) => ({
     ...m,

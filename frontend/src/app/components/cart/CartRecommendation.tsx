@@ -1,14 +1,8 @@
 import React from "react";
 import { Card, Typography, Button, Image } from "antd";
+import { Product } from "../../types/product";
 
 const { Title, Text } = Typography;
-
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  img: string;
-}
 
 interface CartRecommendationProps {
   products?: Product[];
@@ -27,25 +21,25 @@ export const CartRecommendation: React.FC<CartRecommendationProps> = ({
         <Text type="secondary">Chưa có sản phẩm gợi ý</Text>
       ) : (
         <div style={{ display: "flex", gap: 16, overflowX: "auto" }}>
-          {products.map((sp) => (
-            <Card key={sp.id} style={{ minWidth: 160, textAlign: "center" }}>
+          {products.map((p) => (
+            <Card key={p.id} style={{ minWidth: 160, textAlign: "center" }}>
               <Image
-                src={sp.img}
+                // src={p.media.}
                 width={120}
                 height={120}
                 preview={false}
                 style={{ borderRadius: 6, objectFit: "cover" }}
               />
-              <Text>{sp.name}</Text>
+              <Text>{p.name}</Text>
               <br />
               <Text strong style={{ color: "red" }}>
-                {sp.price.toLocaleString()}đ
+                {p.listPrice}đ
               </Text>
               <Button
                 type="primary"
                 size="small"
                 style={{ marginTop: 8 }}
-                onClick={() => onAddToCart?.(sp)}
+                onClick={() => onAddToCart?.(p)}
               >
                 Thêm vào giỏ
               </Button>

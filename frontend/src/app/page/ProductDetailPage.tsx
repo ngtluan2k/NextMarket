@@ -3,21 +3,19 @@ import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
-import { PRODUCT_DETAIL_LAYOUT as L } from '../components/productDetail/productDetail';
+import { PRODUCT_DETAIL_LAYOUT as L } from '../types/productDetail';
+import ProductDescription from '../components/productDetail/ProductDescription';
+import ProductSpecs from '../components/productDetail/ProductSpecs';
+import BuyBox from '../components/productDetail/BuyBox';
+import { useCart } from '../context/CartContext';
+import { Spin } from 'antd';
 import {
   Gallery,
   Info,
   Shipping,
   ComboStrip,
 } from '../components/productDetail';
-import SimilarProducts from '../components/productDetail/SimilarProducts';
-import ProductDescription from '../components/productDetail/ProductDescription';
-import ProductReviews from '../components/productDetail/ProductReviews';
-import ExploreMore from '../components/productDetail/ExploreMore';
-import ProductSpecs from '../components/productDetail/ProductSpecs';
-import BuyBox from '../components/productDetail/BuyBox';
-import { useCart } from '../context/CartContext';
-import { Spin } from 'antd';
+import { VariantInfo } from "../types/product"
 
 interface Props {
   showMessage?: (
@@ -35,12 +33,10 @@ const LazyExploreMore = lazy(
   () => import('../components/productDetail/ExploreMore')
 );
 
-// Memoize static or infrequently changing components to prevent unnecessary re-renders
 const MemoizedGallery = React.memo(Gallery);
 const MemoizedInfo = React.memo(Info);
 const MemoizedShipping = React.memo(Shipping);
 const MemoizedComboStrip = React.memo(ComboStrip);
-const MemoizedSimilarProducts = React.memo(SimilarProducts);
 const MemoizedProductSpecs = React.memo(ProductSpecs);
 const MemoizedProductDescription = React.memo(ProductDescription);
 const MemoizedBuyBox = React.memo(BuyBox);
@@ -52,7 +48,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
-  // Initialize selected variant from localStorage (only on first render)
+  console.log("product in product detail page: "+JSON.stringify(product));
+
+
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
       const stored = localStorage.getItem(`lastVariant_${slug}`);
@@ -60,18 +58,25 @@ export default function ProductDetailPage({ showMessage }: Props) {
     }
   );
 
-  // Save selected variant to localStorage when it changes
+  const stock = useMemo(() => {
+    const v = product?.variants?.find(
+      (v: VariantInfo) => v.id === selectedVariantId
+    );
+    return v?.stock ?? 0;
+  }, [product, selectedVariantId]);
+
+  useEffect(() => {
+    if (quantity > stock) setQuantity(stock || 1);
+  }, [stock, quantity]);
+
   useEffect(() => {
     if (selectedVariantId !== null) {
       localStorage.setItem(`lastVariant_${slug}`, selectedVariantId.toString());
     }
   }, [selectedVariantId, slug]);
 
-  // Initialize or update variant and quantity based on product and cart data
   useEffect(() => {
     if (!product) return;
-
-    // Only update variant if not set or invalid for current product
     if (
       selectedVariantId === null ||
       !product.variants?.some((v: any) => v.id === selectedVariantId)
@@ -86,19 +91,17 @@ export default function ProductDetailPage({ showMessage }: Props) {
       }
     }
 
-    // Update quantity from cart if available for current product and variant
     const currentVariantId = selectedVariantId ?? undefined;
     const cartItem = cart.find(
       (item) =>
-        item.productId === product.id &&
+        item.product.id === product.id &&
         (item.variant
           ? item.variant.id === currentVariantId
           : currentVariantId === undefined)
     );
     setQuantity(cartItem ? cartItem.quantity : 1);
-  }, [product, cart]); // Removed selectedVariantId from deps to prevent feedback loop
+  }, [product, cart]);
 
-  // Calculate price based on variant and pricing rules
   const { calculatedPrice, totalPrice } = useMemo(() => {
     if (!product) return { calculatedPrice: 0, totalPrice: 0 };
 
@@ -112,14 +115,18 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
-      .filter((r: any) => {
-        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
-        const end = r.ends_at
-          ? new Date(r.ends_at)
-          : new Date(8640000000000000);
-        return quantity >= r.min_quantity && now >= start && now <= end;
-      })
-      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+  .filter((r: any) => {
+    const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
+    const end = r.ends_at ? new Date(r.ends_at) : null;
+
+    return (
+      quantity >= r.min_quantity &&
+      now >= start &&
+      (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
+    );
+  })
+  .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 
@@ -129,7 +136,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
     };
   }, [product, selectedVariantId, quantity]);
 
-  // Compute gallery data (images and variant map) only when product changes
   const galleryData = useMemo(() => {
     if (!product || !product.variants) {
       return {
@@ -159,18 +165,18 @@ export default function ProductDetailPage({ showMessage }: Props) {
         };
   }, [product]);
 
-  // Conditional rendering during loading to avoid layout shifts
   if (loading && !product) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <EveryMartHeader />
         <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
-          <Spin tip="Loading product details..."/>
+          <Spin>Loading product details...</Spin>
         </main>
         <Footer />
       </div>
     );
   }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <EveryMartHeader />
@@ -182,7 +188,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
             ['--right' as any]: `${L.rightWidth}px`,
           }}
         >
-          {/* Critical components */}
           <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
             <MemoizedGallery
               images={galleryData.images}
@@ -203,12 +208,12 @@ export default function ProductDetailPage({ showMessage }: Props) {
               quantity={quantity}
               setQuantity={setQuantity}
               calculatedPrice={calculatedPrice}
+              maxQuantity={stock}
             />
             <MemoizedShipping />
             <MemoizedComboStrip items={combos} />
-            {/* Lazy-loaded components with fallback */}
             <Suspense fallback={<div>Loading similar products...</div>}>
-             <LazySimilarProducts productId={product.id} />
+              <LazySimilarProducts productId={product.id} />
             </Suspense>
             <Suspense fallback={<div>Loading specs...</div>}>
               <MemoizedProductSpecs product={product} loading={loading} />
@@ -226,6 +231,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 product={product}
                 selectedVariantId={selectedVariantId}
                 quantity={quantity}
+                maxQuantity={stock}
                 setQuantity={setQuantity}
                 calculatedPrice={calculatedPrice}
                 totalPrice={totalPrice}
@@ -234,16 +240,16 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 showMessage={showMessage}
               />
             </div>
-          </div>
-          <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-            <Suspense fallback={<div>Loading reviews...</div>}>
-              <LazyProductReviews />
-            </Suspense>
-          </div>
-          <div className="lg:col-span-3 mt-2">
-            <Suspense fallback={<div>Loading more products...</div>}>
-              <LazyExploreMore />
-            </Suspense>
+            <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
+              <Suspense fallback={<div>Loading reviews...</div>}>
+                <LazyProductReviews />
+              </Suspense>
+            </div>
+            <div className="lg:col-span-3 mt-2">
+              <Suspense fallback={<div>Loading more products...</div>}>
+                <LazyExploreMore />
+              </Suspense>
+            </div>
           </div>
         </div>
       </main>

@@ -5,7 +5,7 @@ import { Image as ImageIcon } from "lucide-react";
 const vnd = (n?: number) =>
   (n ?? 0).toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
 
-export default function ComboStrip({ items }: { items?: CardItem[] }) {
+export default function ComboStrip({ items }: any) {
   const list = items ?? [];
   return (
     <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">

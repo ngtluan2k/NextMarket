@@ -1,4 +1,3 @@
-// src/pages/CartPage.tsx
 import React, { Suspense, useMemo, useState } from 'react';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -9,9 +8,8 @@ import { CartRecommendation } from '../components/cart/CartRecommendation';
 import { CartSidebar } from '../components/cart/CartSidebar';
 
 import { Row, Col, Typography, Button, Spin } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useCart } from '../context/CartContext';
-import { CheckoutItem } from '../components/checkout/ShippingMethod';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
@@ -24,6 +22,7 @@ interface CartProps {
 
 const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const { cart } = useCart();
+  console.log('Cart contents:', cart);
   const navigate = useNavigate();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -33,40 +32,31 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const indeterminate =
     selectedIds.length > 0 && selectedIds.length < allIds.length;
 
-  const selectedCartItems = cart.filter((item) =>
-    selectedIds.includes(item.id)
-  );
+  const handleGoCheckout = () => {
+    if (selectedIds.length === 0) return;
 
-  // 🔹 Tạo checkout items với variant + inventory
-const selectedCheckoutItems: CheckoutItem[] = selectedCartItems.map((item) => ({
-  id: item.id,
-  name: item.product.name,
-  image: Array.isArray(item.product.media)
-    ? item.product.media[0]?.url ?? ''
-    : item.product.media?.url ?? '',
-  quantity: item.quantity,
-  price: item.price,
-  product: {
-    ...item.product,
-    media: Array.isArray(item.product.media)
-      ? item.product.media
-      : item.product.media
-      ? [item.product.media]
-      : [],
-  },
-}));
-
-
-
-  const selectedTotal = useMemo(
-    () =>
-      selectedCartItems.reduce(
-        (sum, i) => sum + Number(i.price) * Number(i.quantity),
-        0
-      ),
-    [selectedCartItems]
-  );
-
+    const items = cart
+      .filter((i) => selectedIds.includes(i.id))
+      .map((i) => ({
+        id: i.id,
+        price: i.price,
+        quantity: i.quantity,
+        product: {
+          id: i.product.id,
+          name: i.product.name,
+          media: i.product.media,
+          store: i.product.store,
+          listPrice: i.product.basePrice,
+          url:
+            (Array.isArray(i.product.media)
+              ? i.product.media[0]?.url
+              : i.product.media?.url) || i.product.url,
+        },
+        variant: i.variant,
+      }));
+    console.log("cartPage data: " +JSON.stringify(items));
+    navigate('/checkout', { state: { items, subtotal: selectedTotal } });
+  };
   const toggleAll = () => {
     setSelectedIds((prev) =>
       prev.length === allIds.length ? [] : [...allIds]
@@ -79,27 +69,20 @@ const selectedCheckoutItems: CheckoutItem[] = selectedCartItems.map((item) => ({
     );
   };
 
-  const handleGoCheckout = () => {
-    if (selectedIds.length === 0) return;
-
-const checkoutState = {
-  items: selectedCheckoutItems,
-  subtotal: selectedCheckoutItems.reduce(
-    (sum, i) => sum + Number(i.price) * Number(i.quantity),
-    0
-  ),
-  fromCart: true,
-};
-
-navigate('/checkout', { state: checkoutState });
-
-  };
+  const selectedTotal = useMemo(
+    () =>
+      cart
+        .filter((i) => selectedIds.includes(i.id))
+        .reduce((sum, i) => sum + i.price * i.quantity, 0),
+    [cart, selectedIds]
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <EveryMartHeader />
 
       <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
+        {/* Tiêu đề trang */}
         <Title level={3} style={{ marginBottom: 16 }}>
           GIỎ HÀNG
         </Title>
@@ -110,7 +93,6 @@ navigate('/checkout', { state: checkoutState });
         >
           Trở về
         </Button>
-
         {cart.length === 0 ? (
           <div>
             <CartHeader
@@ -147,8 +129,7 @@ navigate('/checkout', { state: checkoutState });
                 selectedCount={selectedIds.length}
                 selectedTotal={selectedTotal}
                 submitLabel={`Mua Hàng (${selectedIds.length})`}
-                items={selectedCheckoutItems} // ✅ items đã có variant + inventory
-                onSubmit={handleGoCheckout} // khi bấm button -> checkout
+                onSubmit={handleGoCheckout}
               />
             </Col>
           </Row>

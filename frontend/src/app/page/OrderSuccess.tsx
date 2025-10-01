@@ -3,7 +3,7 @@ import { Typography, Card, Button, Result } from "antd";
 
 const { Text } = Typography;
 
-export const OrderSuccess: React.FC = () => {
+const OrderSuccess: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as {
@@ -12,9 +12,10 @@ export const OrderSuccess: React.FC = () => {
     paymentMethodLabel: string;
     etaLabel?: string;
     items: any[];
-    status?: string; // "success" | "0" | "1"
+    status: string; // "success" | "0" | "1"
   };
 
+  console.log(state.status)
   if (!state) {
     return (
       <Result
@@ -29,7 +30,7 @@ export const OrderSuccess: React.FC = () => {
     );
   }
 
-const isSuccess = String(state.status) === "success" || String(state.status) === "1";
+const isSuccess = String(state.status) === "success" || String(state.status) === "0";
 
 
   return (
@@ -62,3 +63,4 @@ const isSuccess = String(state.status) === "success" || String(state.status) ===
     />
   );
 };
+export default OrderSuccess
