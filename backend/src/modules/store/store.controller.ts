@@ -10,6 +10,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  ParseIntPipe,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -94,6 +95,15 @@ constructor(
     return {
       message: 'Chi tiết cửa hàng',
       data: store,
+    };
+  }
+  @Get(':id/full')
+  @ApiOperation({ summary: 'Lấy đầy đủ thông tin cửa hàng và các dữ liệu liên quan' })
+  async getFull(@Param('id') id: number) {
+    const data = await this.storeService.getFullData(id);
+    return {
+      message: 'Chi tiết đầy đủ cửa hàng',
+      data,
     };
   }
 

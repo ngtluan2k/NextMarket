@@ -7,6 +7,7 @@ import {
   OneToOne,
   UpdateDateColumn,
   CreateDateColumn,
+  ManyToOne,
 } from 'typeorm';
 
 import { User } from '../user/user.entity';
@@ -18,9 +19,10 @@ import { StoreInformation } from '../store-information/store-information.entity'
 import { StoreIdentification } from '../store-identification/store-identification.entity';
 import { StoreLevel } from '../store-level/store-level.entity';
 import { StoreAddress } from '../store-address/store-address.entity';
-import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreBankAccount } from '../store-bank-account/store-bank-account.entity';
+import { StoreFollower } from '../store-follower/store-follower.entity';
 import { Voucher } from '../vouchers/vouchers.entity';
+
 @Entity('stores')
 export class Store {
   @PrimaryGeneratedColumn()
@@ -46,7 +48,7 @@ export class Store {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @Column({ type: 'varchar', length: 255, })
+  @Column({ type: 'varchar', length: 255 })
   logo_url!: string;
 
   @Column({ length: 100, nullable: true })
@@ -65,39 +67,50 @@ export class Store {
   @Column({ type: 'boolean', default: false })
   is_draft!: boolean;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP'})
+  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @Column({ type: 'datetime',  default: () => 'CURRENT_TIMESTAMP',  onUpdate: 'CURRENT_TIMESTAMP' })
+  @UpdateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
   @OneToMany(() => Product, (product) => product.store)
   products!: Product[]; // <-- thêm dòng này
 
-  @OneToMany(() => Order,(order) => order.store, {cascade: true})
-  orders!:Order[];
+  @OneToMany(() => Order, (order) => order.store, { cascade: true })
+  orders!: Order[];
 
-  @OneToMany(() => StoreInformation, (StoreInformation) => StoreInformation.store)
-  storeInformation !: StoreInformation[];
-
-  @OneToMany(() => StoreIdentification, (StoreIdentification) => StoreIdentification.store)
-  storeIdentification !: StoreIdentification[];
-
-  @OneToMany(() => StoreLevel, (StoreLevel) => StoreLevel.store)
-  storeLevel !: StoreLevel[];
-
-  @OneToMany(() => StoreAddress, (StoreAddress) => StoreAddress.store)
-  address !: StoreAddress[];
-
-  @OneToMany(() => StoreBankAccount, (StoreBankAccount) => StoreBankAccount.store)
-  bankAccount !: StoreBankAccount[];
-
-  @OneToMany(() => StoreFollower, (StoreFollower) => StoreFollower.store)
-  follower !: StoreFollower[];
-
-  @OneToMany(() => StoreRating, (StoreRating) => StoreRating.store)
-  rating !: StoreRating[];
+  // --- New inverse relations for eager loading with "relations"
 
   @OneToMany(() => Voucher, (voucher) => voucher.store)
   vouchers!: Voucher[];
+
+  @OneToMany(
+    () => StoreInformation,
+    (StoreInformation) => StoreInformation.store
+  )
+  storeInformation!: StoreInformation[];
+
+  @OneToMany(
+    () => StoreIdentification,
+    (StoreIdentification) => StoreIdentification.store
+  )
+  storeIdentification!: StoreIdentification[];
+
+  @OneToMany(() => StoreLevel, (StoreLevel) => StoreLevel.store)
+  storeLevels!: StoreLevel[];
+
+  @OneToMany(() => StoreAddress, (StoreAddress) => StoreAddress.store)
+  address!: StoreAddress[];
+
+  @OneToMany(
+    () => StoreBankAccount,
+    (StoreBankAccount) => StoreBankAccount.store
+  )
+  bankAccount!: StoreBankAccount[];
+
+  @OneToMany(() => StoreFollower, (StoreFollower) => StoreFollower.store)
+  followers!: StoreFollower[];
+
+  @OneToMany(() => StoreRating, (StoreRating) => StoreRating.store)
+  rating!: StoreRating[];
 }

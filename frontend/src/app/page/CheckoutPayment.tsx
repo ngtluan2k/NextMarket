@@ -2,36 +2,25 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Row, Col, Typography, message, Spin, Button } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Thêm useAuth
-import { api } from '../config/api';
+import { api } from '../api/api';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { CartSidebar } from '../components/cart/CartSidebar';
 import {
   ShippingMethod,
   ShippingMethodType,
-  CheckoutItem,
 } from '../components/checkout/ShippingMethod';
-import PaymentMethods, {
+import PaymentMethods from '../components/checkout/PaymentMethods';
+import {
   PaymentMethodType,
   PaymentMethodResponse,
   SavedCard,
-} from '../components/checkout/PaymentMethods';
-import { Product } from '../components/productDetail/product';
+} from '../types/payment';
 import LoginModal from '../components/LoginModal'; // Thêm LoginModal
+import { CheckoutLocationState } from '../types/buyBox';
+import { CheckoutItem } from '../types/checkout';
 
 const { Title } = Typography;
-
-type CheckoutLocationState = {
-  items?: Array<{
-    id: number;
-    product_id: number;
-    price: number | string;
-    quantity: number;
-    product: Product;
-    variantId?:number;
-  }>;
-  subtotal?: number | string;
-};
 
 const CheckoutPayment: React.FC = () => {
   const navigate = useNavigate();
@@ -42,34 +31,38 @@ const CheckoutPayment: React.FC = () => {
     subtotal: 0,
   }) as CheckoutLocationState;
 
-  const [showLoginModal, setShowLoginModal] = useState(false); // Trạng thái cho modal đăng nhập
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const items = state.items ?? [];
   const subtotalNum =
     typeof state.subtotal === 'string'
       ? Number(state.subtotal)
       : state.subtotal ?? 0;
 
-  // Map dữ liệu cho ShippingMethod
   const checkoutItems: CheckoutItem[] = useMemo(() => {
-  return items.map((i) => {
-    const primaryImage =
-      i.product.media?.find((m) => m.is_primary)?.url ??
-      i.product.media?.[0]?.url ??
-      '';
-    return {
-      id: i.id,
-      name: i.product.name ?? 'Sản phẩm không xác định',
-      image: primaryImage,
-      quantity: i.quantity,
-      price: i.price,
-      product: {
-        ...i.product,   // giữ nguyên cả store và các trường khác
-      },
-      variantId: i.variantId,
-    };
-  });
-}, [items]);
-
+    return items.map((i) => {
+      const primaryImage =
+        i.product.media?.find((m) => m.is_primary)?.url ??
+        i.product.media?.[0]?.url ??
+        '';
+      const variant =
+        i.variant && i.variant.id && i.variant.variant_name && i.variant.price
+          ? {
+              id: i.variant.id,
+              variant_name: i.variant.variant_name,
+              price: i.variant.price,
+            }
+          : undefined;
+      return {
+        id: i.id,
+        name: i.product.name ?? 'Sản phẩm không xác định',
+        image: primaryImage,
+        quantity: i.quantity,
+        price: i.price,
+        product: i.product,
+        variant,
+      };
+    });
+  }, [items]);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -79,7 +72,8 @@ const CheckoutPayment: React.FC = () => {
   }, [items, navigate]);
 
   // Shipping
-  const [shippingMethod, setShippingMethod] = useState<ShippingMethodType>('economy');
+  const [shippingMethod, setShippingMethod] =
+    useState<ShippingMethodType>('economy');
   const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
   const etaDate = new Date(
     Date.now() + (shippingMethod === 'economy' ? 3 : 1) * 24 * 60 * 60 * 1000
@@ -92,7 +86,9 @@ const CheckoutPayment: React.FC = () => {
 
   // Payment
   const [method, setMethod] = useState<PaymentMethodType>('cod');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>(
+    []
+  );
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [userAddress, setUserAddress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -106,9 +102,7 @@ const CheckoutPayment: React.FC = () => {
     [items]
   );
 
-  // Lấy dữ liệu từ API
   useEffect(() => {
-    // Kiểm tra trạng thái đăng nhập
     const token = localStorage.getItem('token');
     const userId = me?.id || parseInt(localStorage.getItem('userId') || '0');
 
@@ -127,7 +121,9 @@ const CheckoutPayment: React.FC = () => {
 
     const fetchAllPaymentMethods = async () => {
       try {
-        const response = await api.get<PaymentMethodResponse[]>('/payment-methods');
+        const response = await api.get<PaymentMethodResponse[]>(
+          '/payment-methods'
+        );
         const systemMethods: PaymentMethodResponse[] = [];
         const userCards: SavedCard[] = [];
 
@@ -168,14 +164,24 @@ const CheckoutPayment: React.FC = () => {
           const addr = addresses.find((a: any) => a.isDefault);
           setUserAddress({
             id: addr.id,
-            fullAddress: `${addr.street}, ${addr.city}, ${addr.province}, ${addr.country}`,
+            fullAddress: [
+              addr.street,
+              addr.ward,
+              addr.district,
+              addr.province,
+              addr.country,
+            ]
+              .filter(Boolean)
+              .join(', '), 
             name: addr.recipientName,
             phone: addr.phone,
             tag: addr.isDefault ? 'Mặc định' : undefined,
-            userId, // Thêm userId để kiểm tra trong CartSidebar
+            userId,
           });
         } else {
-          message.warning('Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ.');
+          message.warning(
+            'Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ.'
+          );
           navigate('/user/address');
         }
       } catch (error) {
@@ -262,7 +268,6 @@ const CheckoutPayment: React.FC = () => {
               userAddress={userAddress}
               items={checkoutItems}
               etaLabel={etaLabel}
-              
             />
           </Col>
         </Row>

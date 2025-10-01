@@ -10,7 +10,7 @@ import { AuthProvider } from "./context/AuthContext";
 import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
 import AccountLayout from "./page/account/AccountLayout";
-import { SellerRegistration } from './components/register_seller/SellerRegistrastion';
+import { SellerRegistration } from "./components/register_seller/SellerRegistration";
 import {SellerDashboard }from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
 import NotificationsPage from "./page/account/NotificationsPage";
@@ -20,6 +20,7 @@ import ProfilePage from "./page/account/ProfilePage";
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from "./components/AddProduct";
+import StoreManagerDetail from "./components/admin/StoreManagerDetail";
 import AddressBook from "./components/account/AddressBook";
 import AddressCreatePage from "./page/account/AddressCreatePage";
 import StoreLayout from "./page/StoreLayout";
@@ -32,6 +33,8 @@ import FeaturedBrandsPage from "./components/FeaturedBrands";
 import BrandPage from "./page/BrandPage";
 import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
+import OtpVerifyPage from "./page/OtpVerify";
+
 
 import UserAddress from './page/UserAddress';
 interface CartProps {
@@ -94,7 +97,17 @@ const App: React.FC = () => {
             <Route path="/stores/slug/:slug/profile" element={<StoreProfileTab />} /> 
           </Route>
 
-          {/* Brands */}
+        {/* Catch-all Route */}
+        {/* <Route path="/" element={<Home />} /> */}
+        {/* <Route path="/home" element={<Home />} /> */}
+        {/* <Route path="/seller-registration" element={<SellerRegistration />} /> */}
+        {/* <Route path="/category/:slug" element={<CategoryPage />} /> */}
+        {/* <Route path="/admin" element={<AdminDashboard />} /> */}
+        {/* <Route path="/products/slug/:slug" element={<ProductDetailPage />} /> */}
+        {/* <Route path="/cart" element={<Cart showMessage={showMessage} />} /> */}
+        {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
+        <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
+        {/* Brands */}
           <Route path="/brands" element={<FeaturedBrandsPage />} />
           <Route path="/brands/:brandId" element={<BrandPage />} />
 
@@ -103,8 +116,9 @@ const App: React.FC = () => {
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </CartProvider>
+          <Route path="/verify-otp" element={<OtpVerifyPage />} />
+      </Routes>
+    </CartProvider>
     </AuthProvider>
   );
 };

@@ -270,15 +270,32 @@ async updateProduct(id: number, dto: any, userId: number) {
     }
 
     // --- Update inventories riêng ---
-    if (Array.isArray(inventories)) {
-      for (const invDto of inventories) {
-        if (invDto.id) {
-          await this.inventoryRepo.update(invDto.id, { ...invDto });
-        } else {
-          await this.inventoryRepo.save({ ...invDto, variant: { id: variant.id } });
-        }
-      }
+if (Array.isArray(inventories)) {
+  for (const invDto of inventories) {
+    if (invDto.id) {
+      // Update inventory đã có
+      await this.inventoryRepo.update(invDto.id, { 
+        location: invDto.location,
+        quantity: invDto.quantity,
+        used_quantity: invDto.used_quantity,
+        variant: { id: variant.id },
+        product: { id },   // thêm product vào cho chắc chắn
+      });
+    } else {
+      // Thêm inventory mới
+      await this.inventoryRepo.save({ 
+        location: invDto.location,
+        quantity: invDto.quantity,
+        used_quantity: invDto.used_quantity,
+        variant: { id: variant.id },
+        product: { id },   // BẮT BUỘC
+      });
     }
+  }
+}
+
+
+
   }
 }
 

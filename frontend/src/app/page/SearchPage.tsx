@@ -5,7 +5,7 @@ import { Product } from '../../service/product.service';
 import EveryMartHeader from '../components/Navbar';
 import Breadcrumb from '../components/Breadcrumb';
 import { useSearchBreadcrumbs } from '../hooks/useSearchBreadcrumbs';
-import { vnd } from '../components/productDetail/BuyBox';
+// import { vnd } from '../components/productDetail/BuyBox';
 
 // --- ProductCard riêng cho SearchPage ---
 const SearchProductCard: React.FC<{
@@ -40,7 +40,7 @@ const SearchProductCard: React.FC<{
       <p className="text-xs text-slate-500">{brandName}</p>
       {product.base_price != null && (
         <p className="mt-1 text-sm font-semibold">
-          {vnd(product.base_price as number)}
+          {/* {vnd(product.base_price as number)} */}
         </p>
       )}
     </div>

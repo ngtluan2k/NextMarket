@@ -1,17 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
-import { Product } from '../productDetail/product';
-import { TIKI_RED } from '../productDetail/productDetail';
+import { vnd, TIKI_RED} from "../../types/productDetail";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import LoginModal from '../LoginModal';
-import { message } from 'antd';
-export const vnd = (n?: number) =>
-  (n ?? 0).toLocaleString('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  });
+import { Product } from '../../types/product';
+import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 
 export default function BuyBox({
   product,
@@ -19,6 +13,7 @@ export default function BuyBox({
   quantity,
   setQuantity,
   calculatedPrice,
+  maxQuantity,
   width,
   minHeight,
   stickyTop,
@@ -30,10 +25,12 @@ export default function BuyBox({
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
+  maxQuantity: number;
+  totalPrice: number;
   width?: number;
   minHeight?: number;
   stickyTop?: number;
-  onBuyNow?: (p: { product?: Product; qty: number }) => void;
+  onBuyNow?: (p: { product?: LightProduct; qty: number }) => void;
   showMessage?: (
     type: 'success' | 'error' | 'warning',
     content: string
@@ -41,42 +38,115 @@ export default function BuyBox({
 }) {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [loading, setLoading] = useState(false);
-  const [availability, setAvailability] = useState({
-    isAvailable: true,
-    stock: 999,
-  });
+  const p = product ?? {};
   const location = useLocation();
+
+  const availability = useMemo(() => {
+    const v = product?.variants?.find((v) => v.id === selectedVariantId);
+    return (v?.stock ?? 0) > 0;
+  }, [product, selectedVariantId]);
+
+  const v = product?.variants?.find((v) => v.id === selectedVariantId);
+
+  const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const p = product ?? {};
+  useEffect(() => {
+    console.log('BuyBox mounted/updated', {
+      productId: product?.id,
+      productName: product?.name,
+      location: location.pathname,
+      showLoginModal,
+    });
+    const token = localStorage.getItem('token');
+    console.log(' Token:', token ? 'exists' : 'null');
+  }, [location.pathname, showLoginModal, product, quantity]);
 
-  const unitPrice = useMemo(() => {
-    if (!product) return 0;
-    let currentPrice = calculatedPrice;
-    const rules: { min_qty: number; price: number }[] = (
-      product.pricing_rules ?? []
-    ).map((r: any) => ({
-      min_qty: r.min_quantity,
-      price: Number(r.price),
-    }));
-    if (rules.length > 0) {
-      const matched = rules
-        .filter((r) => quantity >= r.min_qty)
-        .sort((a, b) => b.min_qty - a.min_qty)[0];
-      if (matched) currentPrice = matched.price;
+  const handleBuyNow = async () => {
+    console.log(' BuyNow clicked', {
+      productId: product?.id,
+      quantity,
+      variantId: selectedVariantId,
+    });
+    console.log('product to buy: ' + JSON.stringify(product));
+
+    if (!product?.id) {
+      console.error('Invalid product data', product);
+      alert('Thông tin sản phẩm không hợp lệ');
+      return;
     }
-    return currentPrice;
-  }, [product, calculatedPrice, quantity]);
 
-  const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
+    if (!availability) {
+      console.error('Sản phẩm hiện không đủ số lượng');
+      alert('Sản phẩm hiện không đủ số lượng');
+      return;
+    }
 
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('No token, saving buyNowData');
+      localStorage.setItem(
+        'buyNowData',
+        JSON.stringify({ product: p, quantity, variantId: selectedVariantId })
+      );
+      localStorage.setItem('returnUrl', location.pathname);
+      setShowLoginModal(true);
+      return;
+    }
+
+    const checkoutState: CheckoutLocationState = {
+      items: [
+        {
+          id: product.id,
+          product_id: product.id,
+          price: calculatedPrice,
+          quantity: quantity,
+          product: {
+            id: product.id,
+            name: product.name,
+            media: (() => {
+              if (selectedVariantId && product.variants && product.media) {
+                const variantIndex = product.variants.findIndex(
+                  (v) => v.id === selectedVariantId
+                );
+                if (variantIndex >= 0 && product.media[variantIndex]) {
+                  return [product.media[variantIndex]];
+                }
+              }
+              return product.media
+                ? product.media.filter((m) => m.is_primary).length > 0
+                  ? product.media.filter((m) => m.is_primary)
+                  : [product.media[0]]
+                : [];
+            })(),
+            store: product.store,
+            rating: product.rating,
+            reviewsCount: product.reviewsCount,
+          },
+          variant: v,
+        },
+      ],
+      subtotal: calculatedPrice * quantity,
+    };
+
+    console.log(JSON.stringify(checkoutState));
+    console.log('Navigating to /checkout with state:', checkoutState);
+    navigate('/checkout', { state: checkoutState });
+  };
+
+  // --- tính giá dựa trên variant + pricing_rules ---
+
+
+  const totalPrice = useMemo(
+    () => calculatedPrice * quantity,
+    [calculatedPrice, quantity]
+  );
   if (!product) return null;
 
   const handleAddToCart = async (product: Product, quantity: number) => {
     setLoading(true);
+
     try {
-      console.log('Adding to cart:', product.name, 'Quantity:', quantity);
       await addToCart(
         Number(product.id),
         quantity,
@@ -85,10 +155,10 @@ export default function BuyBox({
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add to cart:', error);
       if (showMessage) {
-        showMessage('error', 'Thêm vào giỏ thất bại');
+        showMessage('error', error.message);
       }
     } finally {
       setLoading(false);
@@ -98,86 +168,6 @@ export default function BuyBox({
   const handleClickStore = () => {
     if (product.store?.slug) {
       navigate(`/stores/slug/${product.store.slug}`);
-    }
-  };
-
-  const handleBuyNow = async () => {
-    console.log('🛒 BuyNow clicked', { productId: product?.id, quantity });
-    console.log('💾 Product store info:', product?.store);
-    console.log('🛒 BuyNow clicked', { productId: product?.id, quantity });
-    if (!product?.id || !product?.name) {
-      console.error('❌ Invalid product data', product);
-      message.error('Thông tin sản phẩm không hợp lệ');
-      return;
-    }
-
-    if (!availability.isAvailable) {
-      console.error('❌ Product not available', { stock: availability.stock });
-      message.error('Sản phẩm hiện không đủ số lượng');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('🔐 No token, saving buyNowData');
-        const productData = {
-          id: product.id,
-          name: product.name,
-          slug: product.slug,
-          price: unitPrice,
-          base_price: product.base_price,
-          listPrice: product.listPrice,
-          media: product.media,
-
-          store: product.store,
-          rating: product.rating,
-          reviewsCount: product.reviewsCount,
-        };
-        localStorage.setItem(
-          'buyNowData',
-          JSON.stringify({ product: productData, qty: quantity })
-        );
-        localStorage.setItem('returnUrl', location.pathname);
-        setShowLoginModal(true);
-        return;
-      }
-
-      // THÊM: Đồng bộ với cart
-      await handleAddToCart(product, quantity);
-
-      console.log('✅ Authenticated, preparing checkout state');
-      const checkoutState = {
-        items: [
-          {
-            id: Number(product.id),
-            product_id: Number(product.id),
-            price: unitPrice,
-            quantity,
-            variantId: selectedVariantId ?? undefined, 
-            product: {
-              ...product,
-              variants: selectedVariantId
-                ? [{ id: selectedVariantId, price: unitPrice }]
-                : [],
-            },
-          },
-        ],
-        subtotal: unitPrice * quantity,
-      };
-
-      console.log(
-        '🧭 Navigating to /checkout with state:',
-        JSON.stringify(checkoutState, null, 2)
-      );
-      onBuyNow?.({ product, qty: quantity });
-      navigate('/checkout', { state: checkoutState });
-    } catch (err: any) {
-      console.error('❌ Error in handleBuyNow:', err);
-      message.error('Không thể thực hiện mua ngay');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -232,23 +222,35 @@ export default function BuyBox({
         <div className="mt-4 text-sm text-slate-600">Tạm tính</div>
         <div className="text-[26px] font-bold">{vnd(totalPrice)}</div>
 
+        {/* Discount Info */}
+        {p.listPrice && p.listPrice > (p.price ?? 0) && (
+          <div className="mt-2 text-sm">
+            <span className="text-slate-400 line-through">
+              {vnd(p.listPrice * quantity)}
+            </span>
+            <span className="ml-2 text-red-600 font-medium">
+              Tiết kiệm {vnd((p.listPrice - (p.price ?? 0)) * quantity)}
+            </span>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="mt-4 space-y-2">
           <button
             className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
-              !availability.isAvailable || loading
+              !availability || loading
                 ? 'opacity-50 cursor-not-allowed'
                 : 'hover:opacity-90'
             }`}
             style={{ background: TIKI_RED }}
             onClick={handleBuyNow}
-            disabled={!availability.isAvailable || loading}
+            disabled={!availability || loading}
           >
             {loading ? 'Đang xử lý...' : 'Mua ngay'}
           </button>
           <button
             className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-            onClick={() => handleAddToCart(p as Product, quantity)}
+            onClick={() => handleAddToCart(product, quantity)}
             disabled={loading}
           >
             Thêm vào giỏ

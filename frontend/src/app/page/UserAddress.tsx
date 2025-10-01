@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, message } from 'antd';
-import { api } from '../config/api';
+import { Form, Input, Button, Checkbox, message } from 'antd';
+import { api } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 
 const UserAddress: React.FC = () => {
@@ -20,19 +20,18 @@ const UserAddress: React.FC = () => {
         return;
       }
 
-      // Tạo payload và loại bỏ các trường rỗng
       const payload = {
         user_id: userId,
         recipientName: values.name?.trim(),
         phone: values.phone?.trim(),
         street: values.street?.trim(),
         city: values.city?.trim(),
-        province: values.province?.trim() || undefined, // Chuyển chuỗi rỗng thành undefined
-        country: values.country?.trim() || undefined,   // Chuyển chuỗi rỗng thành undefined
-        isDefault: true,
+        province: values.province?.trim() || undefined,
+        country: values.country?.trim() || undefined,
+        isDefault: values.isDefault || false,
       };
 
-      console.log('Sending payload:', payload); // Log để debug
+      console.log('Sending payload:', payload);
 
       await api.post(`/users/${userId}/addresses`, payload);
 
@@ -40,7 +39,6 @@ const UserAddress: React.FC = () => {
       navigate(-1);
     } catch (error: any) {
       console.error('❌ Lỗi lưu địa chỉ:', error);
-      console.error('Response data:', error.response?.data); // Log chi tiết lỗi từ server
       message.error(error.response?.data?.message || 'Không thể lưu địa chỉ. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -63,11 +61,14 @@ const UserAddress: React.FC = () => {
         <Form.Item name="city" label="Thành phố" rules={[{ required: true, message: 'Vui lòng nhập thành phố' }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="province" label="Tỉnh/Thành" rules={[{ required: true, message: 'Vui lòng nhập tỉnh/thành' }]}>
+        <Form.Item name="province" label="Tỉnh/Thành">
           <Input />
         </Form.Item>
-        <Form.Item name="country" label="Quốc gia" rules={[{ required: true, message: 'Vui lòng nhập quốc gia' }]}>
+        <Form.Item name="country" label="Quốc gia">
           <Input />
+        </Form.Item>
+        <Form.Item name="isDefault" valuePropName="checked">
+          <Checkbox>Đặt làm địa chỉ mặc định</Checkbox>
         </Form.Item>
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading}>
