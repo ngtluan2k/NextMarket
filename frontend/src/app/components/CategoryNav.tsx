@@ -39,11 +39,17 @@ export default function CategoryNav({
           throw new Error('Dữ liệu danh mục không hợp lệ');
         }
         const parents = rawData.filter((it) => !it.parent_id);
-        const mapped: Category[] = parents.map((it) => ({
+        const toImageUrl = (url?: string) => {
+          if (!url) return 'https://via.placeholder.com/43x43?text=%3F';
+          if (url.startsWith('http')) return url;
+          return `http://localhost:3000${url}`;
+        };
+
+        const mapped: Category[] = parents.map((it: any) => ({
           id: it.id,
           name: it.name,
           slug: it.slug || String(it.id),
-          iconUrl: it.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(it.name)}&background=random`,
+          iconUrl: toImageUrl(it.image),
         }));
 
         if (!cancelled) setCategories(mapped);

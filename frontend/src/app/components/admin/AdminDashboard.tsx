@@ -127,7 +127,7 @@ export const AdminDashboard: React.FC = () => {
         );
       case '10-1': // Xem danh sách cửa hàng
         return <StoreManager />;
-      case '10-2': // Xem thông tin cửa hàng
+      case '10-2': 
         return (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}

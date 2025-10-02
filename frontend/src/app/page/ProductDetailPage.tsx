@@ -115,14 +115,18 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
-      .filter((r: any) => {
-        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
-        const end = r.ends_at
-          ? new Date(r.ends_at)
-          : new Date(8640000000000000);
-        return quantity >= r.min_quantity && now >= start && now <= end;
-      })
-      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+  .filter((r: any) => {
+    const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
+    const end = r.ends_at ? new Date(r.ends_at) : null;
+
+    return (
+      quantity >= r.min_quantity &&
+      now >= start &&
+      (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
+    );
+  })
+  .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 

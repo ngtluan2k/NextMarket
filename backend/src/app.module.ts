@@ -39,6 +39,7 @@ import { OrderShipmentsModule } from './modules/order-shipments/order-shipments.
 import { ShippingLabelsModule } from './modules/shipping-labels/shipping-labels.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affiliate-commissions.module';
+import { ProvincesModule } from './provinces/provinces.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
 @Module({
@@ -113,6 +114,7 @@ import { PaymentTransactionsModule } from './modules/payment-transactions/paymen
     ShippingLabelsModule,
     ShipmentsModule,
     AffiliateCommissionsModule,
+    ProvincesModule,
     AuthModule,
     PaymentMethodsModule,
     PaymentTransactionsModule,

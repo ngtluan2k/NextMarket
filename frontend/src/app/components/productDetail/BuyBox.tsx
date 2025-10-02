@@ -134,8 +134,12 @@ export default function BuyBox({
     navigate('/checkout', { state: checkoutState });
   };
 
-  const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
+  
 
+  const totalPrice = useMemo(
+    () => calculatedPrice * quantity,
+    [calculatedPrice, quantity]
+  );
   if (!product) return null;
 
   const handleAddToCart = async (product: Product, quantity: number) => {

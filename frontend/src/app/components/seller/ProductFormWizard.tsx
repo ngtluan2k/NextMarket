@@ -55,7 +55,7 @@ export const ProductForm: React.FC = () => {
     short_description: '',
     description: '',
     base_price: 0,
-    brandId: 0,
+    brandId: 4,
     categories: [],
     media: [],
     variants: [],
@@ -340,9 +340,13 @@ const onSmallPicked = (e: React.ChangeEvent<HTMLInputElement>, i: number) => {
        noValidate
       onSubmit={(e) => {
         e.preventDefault();
+        const errors = validateForm();
+        if (errors.length > 0) {
+          alert('Please fix the following errors:\n' + errors.join('\n'));
+          return;
+        }
         submitForm(false); // Publish
       }}
-      className="max-w-5xl mx-auto p-6 space-y-6 bg-white shadow-md rounded-md"
     >
       {' '}
       <h2 className="text-2xl font-bold text-center mb-6">Create Product</h2>
@@ -1184,7 +1188,7 @@ const onSmallPicked = (e: React.ChangeEvent<HTMLInputElement>, i: number) => {
 
             <button
               type="button"
-              onClick={() => submitForm(true)} // Save Draft
+              onClick={() => submitForm(true)} // Save Draft, bỏ qua validate
               className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
             >
               Save Draft

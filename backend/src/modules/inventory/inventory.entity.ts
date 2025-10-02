@@ -33,8 +33,6 @@ export class Inventory {
   @Column()
   quantity!: number;
   
-  @Column({ type: 'int', default: 0 })
-  reserved_stock!: number;
 
   @Column({ default: 0 })
   used_quantity!: number;

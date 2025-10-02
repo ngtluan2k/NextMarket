@@ -162,7 +162,7 @@ export default function ProductFlashSale({
                       className="mx-auto block h-[110px] w-[110px] rounded-lg object-cover"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src =
-                          'https://via.placeholder.com/110?text=%20';
+                          "";
                       }}
                     />
                   </div>

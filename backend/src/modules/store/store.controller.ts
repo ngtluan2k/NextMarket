@@ -10,6 +10,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  ParseIntPipe,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -30,20 +31,20 @@ import { Repository } from 'typeorm';
 @ApiBearerAuth('access-token')
 @Controller('stores')
 export class StoreController {
-constructor(
-      private readonly productService: ProductService,
-      private readonly storeService: StoreService,
-      @InjectRepository(Store)
+  constructor(
+    private readonly productService: ProductService,
+    private readonly storeService: StoreService,
+    @InjectRepository(Store)
     private readonly storeRepo: Repository<Store>,
-    ) {}  
-  
+  ) { }
+
 
   @Get()
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permissions('view_store')
   @ApiOperation({ summary: 'Lấy danh sách tất cả stores' })
-  async findAll() {
-    const stores = await this.storeService.findAll();
+  async findAll(@Query('includeDeleted') includeDeleted?: string ) {
+    const stores = await this.storeService.findAll(includeDeleted === 'true');
     return {
       message: 'Danh sách cửa hàng',
       total: stores.length,
@@ -51,11 +52,14 @@ constructor(
     };
   }
 
-  @Get('my-store')
+   @Get('my-store')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy store của tôi' })
-  async getMyStore(@Req() req: any) {
-    const store = await this.storeService.findByUserId(req.user.userId);
+  async getMyStore(@Req() req: any, @Query('includeDeleted') includeDeleted?: string) {
+    const store = await this.storeService.findByUserId(
+      req.user.userId,
+      includeDeleted === 'true'
+    );
     return {
       message: store ? 'Thông tin store của bạn' : 'Bạn chưa có store',
       data: store,
@@ -94,6 +98,15 @@ constructor(
     return {
       message: 'Chi tiết cửa hàng',
       data: store,
+    };
+  }
+  @Get(':id/full')
+  @ApiOperation({ summary: 'Lấy đầy đủ thông tin cửa hàng và các dữ liệu liên quan' })
+  async getFull(@Param('id') id: number) {
+    const data = await this.storeService.getFullData(id);
+    return {
+      message: 'Chi tiết đầy đủ cửa hàng',
+      data,
     };
   }
 
@@ -203,62 +216,62 @@ constructor(
   }
 
   @Get('slug/:slug/all')
-@ApiOperation({ summary: 'Lấy tất cả sản phẩm của store theo slug' })
-async getStoreProducts(@Param('slug') slug: string,  @Query('category') categorySlug?: string,) {
-  const store = await this.storeService.findProductsBySlug(slug, categorySlug);
-  if (!store) {
-    throw new BadRequestException('Store không tồn tại');
+  @ApiOperation({ summary: 'Lấy tất cả sản phẩm của store theo slug' })
+  async getStoreProducts(@Param('slug') slug: string, @Query('category') categorySlug?: string,) {
+    const store = await this.storeService.findProductsBySlug(slug, categorySlug);
+    if (!store) {
+      throw new BadRequestException('Store không tồn tại');
+    }
+
+    // Nếu muốn chỉ lấy sản phẩm đang active
+    const products = store.products.filter(p => p.status === 'active');
+
+    return {
+      message: `Danh sách sản phẩm của store ${store.name}`,
+      total: products.length,
+      data: products,
+    };
   }
 
-  // Nếu muốn chỉ lấy sản phẩm đang active
-  const products = store.products.filter(p => p.status === 'active');
 
-  return {
-    message: `Danh sách sản phẩm của store ${store.name}`,
-    total: products.length,
-    data: products,
-  };
-}
+  @Get('slug/:slug/profile')
+  @ApiOperation({ summary: 'Lấy profile cửa hàng theo slug' })
+  async getStoreProfile(@Param('slug') slug: string) {
+
+    const store = await this.storeService.findBySlug(slug);
+    if (!store) {
+      throw new BadRequestException('Store không tồn tại');
+    }
+    const productCount = await this.productService.countByStoreId(store.id);
 
 
-@Get('slug/:slug/profile')
-@ApiOperation({ summary: 'Lấy profile cửa hàng theo slug' })
-async getStoreProfile(@Param('slug') slug: string) {
-  
-  const store = await this.storeService.findBySlug(slug);
-  if (!store) {
-    throw new BadRequestException('Store không tồn tại');
+    // Chỉ trả về thông tin profile, bank, address, info, identification
+    const profileData = {
+      id: store.id,
+      name: store.name,
+      slug: store.slug,
+      description: store.description,
+      logo_url: store.logo_url,
+      email: store.email,
+      phone: store.phone,
+      status: store.status,
+      created_at: store.created_at,
+      updated_at: store.updated_at,
+      storeInformation: store.storeInformation,
+      storeIdentification: store.storeIdentification,
+      bankAccount: store.bankAccount,
+      address: store.address,
+      rating: store.rating,
+      totalProducts: productCount,
+    };
+
+    return {
+      message: `Thông tin profile của store ${store.name}`,
+      data: profileData,
+    };
   }
-  const productCount = await this.productService.countByStoreId(store.id);
 
-
-  // Chỉ trả về thông tin profile, bank, address, info, identification
-  const profileData = {
-    id: store.id,
-    name: store.name,
-    slug: store.slug,
-    description: store.description,
-    logo_url: store.logo_url,
-    email: store.email,
-    phone: store.phone,
-    status: store.status,
-    created_at: store.created_at,
-    updated_at: store.updated_at,
-    storeInformation: store.storeInformation,
-    storeIdentification: store.storeIdentification,
-    bankAccount: store.bankAccount,
-    address: store.address,
-    rating: store.rating, 
-    totalProducts: productCount,
-  };
-
-  return {
-    message: `Thông tin profile của store ${store.name}`,
-    data: profileData,
-  };
-}
-
-@Get('slug/:slug/categories')
+  @Get('slug/:slug/categories')
   async getStoreCategories(@Param('slug') slug: string) {
     const store = await this.storeRepo.findOne({ where: { slug } });
     if (!store) throw new NotFoundException('Store not found');
@@ -269,6 +282,15 @@ async getStoreProfile(@Param('slug') slug: string) {
       total: categories.length,
       data: categories,
     };
+  }
+
+  @Put(':id/restore')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('restore_store') 
+  @ApiOperation({ summary: 'Admin khôi phục store đã xóa mềm' })
+  async restore(@Param('id') id: number) {
+    const result = await this.storeService.restore(id);
+    return result;
   }
 
 }

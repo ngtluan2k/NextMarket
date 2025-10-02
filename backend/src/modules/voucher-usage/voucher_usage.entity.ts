@@ -6,6 +6,7 @@ import {
   ManyToOne,
   Generated,
   CreateDateColumn,
+  JoinColumn
 } from 'typeorm';
 import { Voucher } from '../vouchers/vouchers.entity';
 import { User } from '../user/user.entity';
@@ -21,12 +22,15 @@ export class VoucherUsage {
   uuid!: string;
 
   @ManyToOne(() => Voucher, (voucher) => voucher.usages, { nullable: false })
+  @JoinColumn({ name: 'voucher_id' })   // 👈 fix chỗ này
   voucher!: Voucher;
 
   @ManyToOne(() => User, (user) => user.voucherUsages, { nullable: false })
+  @JoinColumn({ name: 'user_id' })      // 👈 fix chỗ này
   user!: User;
 
   @ManyToOne(() => Order, (order) => order.voucherUsages, { nullable: false })
+  @JoinColumn({ name: 'order_id' })     // 👈 fix chỗ này
   order!: Order;
 
   @CreateDateColumn({ name: 'used_at', type: 'timestamp' })

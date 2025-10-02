@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 const { Header } = Layout;
 
 export default function SellerHeader() {
-  const [username, setUsername] = useState<string>('');
+  const [full_name, setFullname] = useState<string>('');
   const [avatar, setUseravatar] = useState<string>('');
   useEffect(() => {
     const userDataString = localStorage.getItem('user');
@@ -19,8 +19,8 @@ export default function SellerHeader() {
       try {
         const userData = JSON.parse(userDataString);
         console.log(userData);
-        if (userData.username) {
-          setUsername(userData.username);
+        if (userData.full_name) {
+          setFullname(userData.full_name);
         }
         if(!userData.avatar){
           setUseravatar('https://api.dicebear.com/7.x/miniavs/svg?seed=1');
@@ -46,7 +46,7 @@ export default function SellerHeader() {
           <BellOutlined className="text-xl text-gray-600 cursor-pointer" />
         </Badge>
         <div className="flex items-center gap-2">
-          <span className="text-gray-600">Xin chào, {username}!</span>
+          <span className="text-gray-600">Xin chào, {full_name}!</span>
           <Avatar src={avatar} size={32} />
         </div>
       </div>

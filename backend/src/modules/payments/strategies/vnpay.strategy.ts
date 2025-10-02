@@ -16,7 +16,7 @@ export class VnpayStrategy implements PaymentStrategy {
     private paymentRepo: Repository<Payment>,
   ) {}
 
-  async createPayment(order: any, paymentMethod: any, dto: CreatePaymentDto) {
+  async createPayment(order: any, paymentMethod: any) {
     if (order.status === 1) throw new Error('Đơn hàng đã thanh toán');
 
     const payment = this.paymentRepo.create({
@@ -31,7 +31,7 @@ export class VnpayStrategy implements PaymentStrategy {
 
     const redirectUrl = await this.buildVnPayUrl(savedPayment, paymentMethod.config || {});
 
-    return { payment: savedPayment, redirectUrl, paymentUuid: savedPayment.uuid };
+    return { payment: savedPayment, redirectUrl, paymentUuid: savedPayment.uuid, orderUuid: order.uuid, };
   }
 
   public async handleCallback(payload: any, rawQuery?: string): Promise<any> {
