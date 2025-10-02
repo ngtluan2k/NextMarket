@@ -25,13 +25,13 @@ export class BrandController {
    return this.service.list(q)
   }
 
-  @Get(':id')
-//   @Permissions('view_brand')
-   async detail( @Param('id') id:number){
-    const data= await this.service.detail(id)
-    return{ data}
+//   @Get(':id')
+// //   @Permissions('view_brand')
+//    async detail( @Param('id') id:number){
+//     const data= await this.service.detail(id)
+//     return{ data}
 
-    }
+//     }
 
     @Post()
 @UseGuards(JwtAuthGuard, PermissionGuard)

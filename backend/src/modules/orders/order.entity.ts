@@ -20,14 +20,14 @@ import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
 
 export enum OrderStatuses {
-  Pending = 0,
-  Confirmed = 1,
-  Processing = 2,
-  Shipped = 3,
-  Delivered = 4,  
-  Completed = 5,
+  pending = 0,
+  confirmed = 1,
+  processing = 2,
+  shipped = 3,
+  delivered = 4,  
+  completed = 5,
   cancelled = 6,
-  Returned = 7,
+  returned = 7,
 }
 
 @Entity('orders')
@@ -55,7 +55,7 @@ export class Order {
 
   @Column({
     type: 'tinyint',
-    default: OrderStatuses.Pending,
+    default: OrderStatuses.pending,
   })
   status!: OrderStatuses;
 

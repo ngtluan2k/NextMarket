@@ -100,7 +100,7 @@ export class OrdersService {
       }
 
       const order = manager.create(Order, {
-        status: OrderStatuses.Pending,
+        status: OrderStatuses.pending,
         subtotal,
         shippingFee: createOrderDto.shippingFee ?? 0,
         discountTotal,
@@ -206,6 +206,7 @@ export class OrdersService {
         'userAddress',
         'orderItem',
         'orderItem.product',
+        'orderItem.product.media',
         'orderItem.variant',
         'voucherUsages',
         'voucherUsages.voucher',
@@ -231,27 +232,62 @@ export class OrdersService {
 
   async changeStatus(
     id: number,
-    status: OrderStatuses,
+    status: string, // 👈 nhận string
     user: User,
     note?: string
   ): Promise<Order> {
     const order = await this.findOne(id);
+    console.log('--- DEBUG store ---');
+    console.log('order.status (number):', order.status);
+    console.log('OrderStatuses.pending:', OrderStatuses.pending);
+    console.log('order.store.user_id:', order.store?.user_id);
+    console.log('current user.id:', user.id);
 
-    if (order.status === OrderStatuses.cancelled) {
-      throw new BadRequestException('Không thể cập nhật đơn hàng đã bị hủy');
+    const statusMap: Record<string, OrderStatuses> = {
+      pending: OrderStatuses.pending,
+      confirmed: OrderStatuses.confirmed,
+      processing: OrderStatuses.processing,
+      shipped: OrderStatuses.shipped,
+      delivered: OrderStatuses.delivered,
+      completed: OrderStatuses.completed,
+      cancelled: OrderStatuses.cancelled,
+      returned: OrderStatuses.returned,
+    };
+
+    const newStatus = statusMap[status];
+    if (newStatus === undefined) {
+      throw new BadRequestException('Trạng thái không hợp lệ');
     }
 
-    // Phân quyền cơ bản
+    // check quyền y chang bạn đang làm
     const isCustomer = Number(user.id) === order.user.id;
-    const isStore = Number(user.id) === order.store.id;
+    const isStore = Number(user.id) === order.store.user_id;
 
-    if (isCustomer && status !== OrderStatuses.cancelled) {
-      throw new BadRequestException('Khách hàng chỉ có thể hủy đơn');
+    if (isCustomer) {
+      if (Number(order.status) !== OrderStatuses.pending) {
+        throw new BadRequestException('Khách hàng chỉ có thể hủy đơn');
+      }
+      if (Number(order.status) !== OrderStatuses.pending) {
+        throw new BadRequestException(
+          'Khách hàng chỉ có thể hủy đơn khi đơn hàng đang chờ'
+        );
+      }
     }
-    if (order.status !== OrderStatuses.Pending) {
-      throw new BadRequestException(
-        'Khách hàng chỉ có thể hủy đơn khi đơn hàng đang chờ'
-      );
+
+    if (isStore) {
+      if (Number(order.status) !== OrderStatuses.pending) {
+        throw new BadRequestException(
+          'Cửa hàng chỉ có thể xác nhận đơn đang chờ'
+        );
+      }
+      // store chỉ cho phép confirm hoặc cancel
+      if (
+        ![OrderStatuses.confirmed, OrderStatuses.cancelled].includes(newStatus)
+      ) {
+        throw new BadRequestException(
+          'Cửa hàng không thể đổi sang trạng thái này'
+        );
+      }
     }
 
     if (!isCustomer && !isStore) {
@@ -259,14 +295,14 @@ export class OrdersService {
     }
 
     const oldStatus = order.status;
-    order.status = status;
+    order.status = newStatus;
     const updatedOrder = await this.ordersRepository.save(order);
 
-    // Lưu lịch sử status
+    // Lưu lịch sử
     const history = new OrderStatusHistory();
     history.order = updatedOrder;
     history.oldStatus = oldStatus as unknown as historyStatus;
-    history.newStatus = status as unknown as historyStatus;
+    history.newStatus = newStatus as unknown as historyStatus;
     history.changedBy = user;
     history.note = note ?? '';
     await this.orderStatusHistoryRepository.save(history);
@@ -283,6 +319,7 @@ export class OrdersService {
         'voucherUsages',
         'voucherUsages.voucher',
       ],
+      order: { id: 'DESC' },
     });
   }
 
@@ -290,7 +327,7 @@ export class OrdersService {
     const { sum } = await this.ordersRepository
       .createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'sum')
-      .where('order.status = :status', { status: OrderStatuses.Completed })
+      .where('order.status = :status', { status: OrderStatuses.completed })
       .getRawOne();
 
     return Number(sum) || 0;

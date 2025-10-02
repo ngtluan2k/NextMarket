@@ -227,7 +227,7 @@ export default function OrdersPage() {
         return (
           <span className={`${base} bg-rose-50 text-rose-700`}>
             <XCircle className="h-3 w-3" />
-            Đã huỷ
+            Đã hủy
           </span>
         );
       default:
@@ -401,7 +401,7 @@ export default function OrdersPage() {
                         )}
 
                         {/* Nút Hủy đơn */}
-                        {['pending', 'confirmed'].includes(o.status) && (
+                        {['pending'].includes(o.status) && (
                           <button
                             onClick={() => setCancelModalOrderId(Number(o.id))}
                             className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
@@ -434,9 +434,14 @@ export default function OrdersPage() {
               token={localStorage.getItem('token') || ''}
               onClose={() => setCancelModalOrderId(null)}
               onCancelled={() => {
-                setCancelModalOrderId(null);
-                setPage(1); // reset page
-                setSubmittedQ((s) => s); // trigger useEffect load lại dữ liệu
+                setOrders((prev) =>
+                  prev.map((o) =>
+                    o.id === String(cancelModalOrderId)
+                      ? { ...o, status: 'cancelled' } // cập nhật trạng thái hủy
+                      : o
+                  )
+                );
+                setCancelModalOrderId(null); // đóng modal
               }}
             />
           )}
