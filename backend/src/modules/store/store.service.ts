@@ -25,6 +25,14 @@ import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-requ
 import { v4 as uuidv4 } from 'uuid';
 import { Product } from '../product/product.entity';
 import { Category } from '../categories/category.entity';
+import { ProductCategory } from '../product_category/product_category.entity';
+import { Variant } from '../variant/variant.entity';
+import { ProductTag } from '../product_tag/product_tag.entity';
+import { Inventory } from '../inventory/inventory.entity';
+import { ProductMedia } from '../product_media/product_media.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+
+
 
 @Injectable()
 export class StoreService {
@@ -53,26 +61,37 @@ export class StoreService {
     private storeFollowerRepo: Repository<StoreFollower>,
     @InjectRepository(StoreUpgradeRequest)
     private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>,
-    @InjectRepository(Product) private productRepo: Repository<Product>
-  ) {}
+    @InjectRepository(Product) private productRepo: Repository<Product>,
+    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
+    @InjectRepository(Variant) private variantRepo: Repository<Variant>,
+    @InjectRepository(ProductMedia) private productMediaRepo: Repository<ProductMedia>,
+    @InjectRepository(PricingRules) private pricingRulesRepo: Repository<PricingRules>,
+    @InjectRepository(ProductCategory) private productCategoryRepo: Repository<ProductCategory>,
+    @InjectRepository(ProductTag) private productTagRepo: Repository<ProductTag>,
+   
+    
+  ) { }
 
-  async findAll() {
+  async findAll(includeDeleted = false) {
+    const where: any = {};
+    if (!includeDeleted) where.is_deleted = false;
     return this.storeRepo.find({
+      where,
       order: { created_at: 'DESC' },
     });
   }
 
   async findOne(id: number) {
     const store = await this.storeRepo.findOne({
-      where: { id },
+      where: { id, is_deleted: false },
     });
     if (!store) throw new NotFoundException('Store not found');
     return store;
   }
 
-  async findByUserId(userId: number) {
+  async findByUserId(userId: number, includeDeleted = false) {
     return this.storeRepo.findOne({
-      where: { user_id: userId },
+      where: includeDeleted ? { user_id: userId } : { user_id: userId, is_deleted: false },
     });
   }
 
@@ -117,15 +136,37 @@ export class StoreService {
       if (!target) {
         throw new BadRequestException('Store không tồn tại hoặc không thuộc user');
       }
+      if (target.is_deleted) {
+        throw new BadRequestException('Store này đã bị xóa . Vui lòng liên hệ admin để khôi phục hoặc đợi 30 ngày.');
+      }
       return await this.updateDraftStore(target.id, dto, userId);
     }
 
     // 1) Không có store_id: kiểm tra store hiện có theo user
-    const existing = await this.storeRepo.findOne({ where: { user_id: userId } });
+    const existing = await this.storeRepo.findOne({ where: { user_id: userId, is_deleted: false } });
 
     // 1.a) Đã có store (draft/final) → luôn UPDATE record đó (đảm bảo 1 user chỉ có 1 store)
     if (existing) {
       return await this.updateDraftStore(existing.id, dto, userId);
+    }
+
+    // 1.b) Đã có store bị xóa mềm → chặn tạo lại trong 30 ngày
+    const existingDeleted = await this.storeRepo.findOne({
+      where: { user_id: userId, is_deleted: true },
+    });
+    if (existingDeleted) {
+      if (existingDeleted.deleted_at) {
+        const msSinceDelete = Date.now() - new Date(existingDeleted.deleted_at).getTime();
+        const daysSinceDelete = Math.floor(msSinceDelete / (1000 * 60 * 60 * 24));
+        const waitDays = 30 - daysSinceDelete;
+        if (waitDays > 0) {
+          throw new BadRequestException(`Bạn đã xóa cửa hàng trước đó. Vui lòng đợi thêm ${waitDays} ngày để tạo lại.`);
+        }
+        // quá 30 ngày → cho phép tạo mới (không đụng record cũ)
+      } else {
+        // không có mốc thời gian xóa → an toàn: chặn tạo mới
+        throw new BadRequestException('Bạn đã xóa cửa hàng trước đó. Vui lòng liên hệ admin hoặc chờ đủ thời gian để tạo lại.');
+      }
     }
 
     // 2) Chưa có store nào → tạo mới (đây là trường hợp duy nhất INSERT)
@@ -151,6 +192,8 @@ export class StoreService {
       user_id: userId,
       status: dto.is_draft ? 'inactive' : 'active',
       is_draft: dto.is_draft ?? false,
+      is_deleted: false,          // đảm bảo store mới không ở trạng thái xóa mềm
+      deleted_at: null,           // yêu cầu đã có cột deleted_at
     });
 
     try {
@@ -273,7 +316,7 @@ export class StoreService {
   // Kiểm tra user có phải seller không
   async isUserSeller(userId: number): Promise<boolean> {
     const store = await this.storeRepo.findOne({
-      where: { user_id: userId },
+      where: { user_id: userId, is_deleted: false },
     });
     return !!store;
   }
@@ -297,60 +340,159 @@ export class StoreService {
     return this.storeRepo.save(store);
   }
 
+
+  private async fineOneIncludedDeleted(id: number) {
+    const store = await this.storeRepo.findOne({ where: { id } });
+    if (!store) throw new NotFoundException('Store not found');
+    return store;
+
+  }
+
   async deleteMyStore(userId: number) {
     const store = await this.findByUserId(userId);
     if (!store) {
       throw new NotFoundException('Bạn chưa có cửa hàng để xóa');
     }
 
-    const result = await this.remove(store.id);
+    store.is_deleted = true;
+    store.status = 'closed';
+    store.deleted_at = new Date(); // <-- set mốc xóa mềm
+    await this.storeRepo.save(store);
+
     return {
-      ...result,
-      message:
-        'Đã xóa cửa hàng của bạn và toàn bộ dữ liệu liên quan thành công',
-    };
+      message: 'Đã xóa mềm cửa hàng thành công',
+      deletedStoreId: store.id,
+      deletedRecords: 0,
+    }
+  }
+
+  private async orderItemsHardDeleteByProductIds(ids: number[]) {
+    await this.storeRepo.manager
+      .createQueryBuilder()
+      .delete()
+      .from('order_items')
+      .where('product_id IN (:...ids)', { ids })
+      .execute();
   }
 
   async remove(id: number) {
-    const store = await this.findOne(id);
+    const store = await this.fineOneIncludedDeleted(id);
 
-    // 0. Xóa tất cả sản phẩm liên quan store
-    await this.productRepo.delete({ store: { id } });
+    // Lấy tất cả product_id thuộc store
+    const products = await this.productRepo.find({
+      where: { store: { id } },
+      select: ['id'],
+    });
+    const productIds = products.map((p) => p.id);
 
+    // Xóa dữ liệu con theo product_id (tránh lỗi FK)
+    if (productIds.length > 0) {
+      // order_items
+      await this.orderItemsHardDeleteByProductIds(productIds);
+      // inventory
+      await this.inventoryRepo
+        .createQueryBuilder()
+        .delete()
+        .from('inventory')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // product_media
+      await this.productMediaRepo
+        .createQueryBuilder()
+        .delete()
+        .from('product_media')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // pricing_rules
+      await this.pricingRulesRepo
+        .createQueryBuilder()
+        .delete()
+        .from('pricing_rules')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // product_category
+      await this.productCategoryRepo
+        .createQueryBuilder()
+        .delete()
+        .from('product_category')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // product_tag
+      await this.productTagRepo
+        .createQueryBuilder()
+        .delete()
+        .from('product_tag')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // variants (đặt sau inventory/order_items)
+      await this.variantRepo
+        .createQueryBuilder()
+        .delete()
+        .from('variants')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+    }
+    // Xóa tất cả products của store
+    await this.productRepo
+      .createQueryBuilder()
+      .delete()
+      .from('products')
+      .where('store_id = :id', { id })
+      .execute();
 
-
-    // Trước tiên, tìm tất cả store_information để xóa emails và documents
+    // Xóa bảng phụ thuộc store_information (emails, documents) trước
     const storeInformations = await this.storeInformationRepo.find({
       where: { store_id: id },
     });
-    // Xóa emails và documents theo store_information_id
     for (const storeInfo of storeInformations) {
       await Promise.all([
         this.storeEmailRepo.delete({ store_information_id: storeInfo.id }),
         this.storeDocumentRepo.delete({ store_information_id: storeInfo.id }),
       ]);
     }
-    // Xóa tất cả dữ liệu liên quan còn lại
+
+    // Xóa các dữ liệu liên quan khác theo store_id
     const deletedResults = await Promise.all([
       this.storeInformationRepo.delete({ store_id: id }),
       this.storeIdentificationRepo.delete({ store_id: id }),
       this.bankAccountRepo.delete({ store_id: id }),
-      this.storeAddressRepo.delete({ stores_id: id }), // Chú ý: stores_id
+      this.storeAddressRepo.delete({ stores_id: id }),
       this.storeLevelRepo.delete({ store_id: id }),
       this.storeRatingRepo.delete({ store_id: id }),
       this.storeFollowerRepo.delete({ store_id: id }),
       this.storeUpgradeRequestRepo.delete({ store_id: id }),
     ]);
 
-    // Cuối cùng xóa store
+    // Xóa store
     await this.storeRepo.remove(store);
 
-    const totalDeletedRecords = deletedResults.reduce((sum, result) => sum + (result.affected || 0), 0);
-
+    const totalDeletedRecords = deletedResults.reduce((sum, r) => sum + (r.affected || 0), 0);
     return {
       message: 'Xóa cửa hàng và toàn bộ dữ liệu liên quan thành công',
       deletedStoreId: id,
-      deletedRecords: totalDeletedRecords + 1, // +1 for the store itself
+      deletedRecords: totalDeletedRecords + 1,
+    };
+  }
+  async restore(id: number) {
+    // Chỉ khôi phục các store đang bị soft-delete
+    const store = await this.storeRepo.findOne({
+      where: { id, is_deleted: true },
+    });
+    if (!store) {
+      throw new NotFoundException('Store không tồn tại hoặc không bị xóa mềm');
+    }
+
+    store.is_deleted = false;
+    // Tùy chính sách: đưa về 'inactive' để admin/seller kích hoạt lại
+    if (store.status === 'closed') {
+      store.status = 'active';
+    }
+
+    await this.storeRepo.save(store);
+
+    return {
+      message: 'Khôi phục cửa hàng thành công',
+      restoredStoreId: id,
     };
   }
 
@@ -560,7 +702,7 @@ export class StoreService {
   async getFullDraftData(storeId: number, userId: number) {
     // Verify ownership
     const store = await this.storeRepo.findOne({
-      where: { id: storeId, user_id: userId },
+      where: { id: storeId, user_id: userId, is_deleted: false },
     });
 
     if (!store) {
@@ -662,7 +804,7 @@ export class StoreService {
 
   async getFullData(storeId: number) {
     const store = await this.storeRepo.findOne({
-      where: { id: storeId },
+      where: { id: storeId, is_deleted: false },
       relations: {
         storeInformation: { emails: true, documents: true },
         storeIdentification: true,
@@ -700,25 +842,25 @@ export class StoreService {
       followers,
     };
   }
-    
+
   async findBySlug(slug: string): Promise<Store | null> {
     if (!slug) {
       throw new BadRequestException('Slug không hợp lệ');
     }
 
     const store = await this.storeRepo.findOne({
-      where: { slug },
+      where: { slug, is_deleted: false },
       relations: [
         'storeInformation',
     'storeIdentification',
     'bankAccount',
-    'address', // ✅ đúng tên
+    'address', 
     'products',
     'products.media',
     'orders',
     'followers',
     'rating',
-      ], // join các entity liên quan nếu muốn trả luôn
+      ],
     });
 
     if (!store) return null;
@@ -726,30 +868,30 @@ export class StoreService {
   }
 
   async findProductsBySlug(slug: string, categorySlug?: string): Promise<Store | null> {
-  if (!slug) throw new BadRequestException('Slug không hợp lệ');
+    if (!slug) throw new BadRequestException('Slug không hợp lệ');
 
-  const store = await this.storeRepo.findOne({
-    where: { slug },
-    relations: [
-      'products',
-      'products.media',
-      'products.categories',
-      'products.categories.category',
-    ],
-  });
+    const store = await this.storeRepo.findOne({
+      where: { slug, is_deleted: false },
+      relations: [
+        'products',
+        'products.media',
+        'products.categories',
+        'products.categories.category',
+      ],
+    });
 
-  if (!store) return null;
+    if (!store) return null;
 
-  if (categorySlug) {
-    store.products = store.products.filter((p) =>
-      p.categories.some((pc) => pc.category.slug === categorySlug),
-    );
+    if (categorySlug) {
+      store.products = store.products.filter((p) =>
+        p.categories.some((pc) => pc.category.slug === categorySlug),
+      );
+    }
+
+    return store;
   }
 
-  return store;
-}
-
-async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
+  async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
     const products = await this.productRepo.find({
       where: { store: { id: storeId } },
       relations: ['categories', 'categories.category'],
@@ -777,6 +919,8 @@ async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; nam
       count,
     }));
   }
+
+  
 
 
 }

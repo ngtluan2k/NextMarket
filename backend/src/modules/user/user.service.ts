@@ -195,7 +195,7 @@ export class UserService {
     await this.mailService.send(
       email,
       'Mã xác thực đăng ký EveryMart',
-      `<p>Mã OTP của bạn là: <b style="font-size:18px">${code}</b></p><p>Hiệu lực trong 10 phút.</p>`
+      `<p>Mã OTP của bạn là: <b style="font-size:18px">${code}</b></p><p>Hiệu lực trong 2 phút.</p>`
     );
   }
 
