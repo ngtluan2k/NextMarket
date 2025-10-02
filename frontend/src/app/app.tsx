@@ -33,6 +33,8 @@ import CheckoutPayment from './page/CheckoutPayment';
 import OrderSuccess from './page/OrderSuccess';
 
 import UserAddress from './page/UserAddress';
+import ShopXuPage from './components/account/ShopXuPage';
+
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -82,6 +84,8 @@ const App: React.FC = () => {
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />
             <Route path="addresses/create" element={<AddressCreatePage />} />
+            <Route path="shop-xu" element={<ShopXuPage />} />
+            
           </Route>
 
           {/* Store Routes */}
