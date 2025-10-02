@@ -33,6 +33,13 @@ import CheckoutPayment from './page/CheckoutPayment';
 import OrderSuccess from './page/OrderSuccess';
 
 import UserAddress from './page/UserAddress';
+import Affilate from './page/affilate/page';
+import AffiliateDashboard from './page/affilate/dashboard/page';
+import AffiliateRegister from './page/affilate/register/AffiliateRegister';
+import AffiliateResourcePage from './page/affilate/resources/page';
+import AffiliateSupportPage from './page/affilate/support/page';
+import AffiliateLinksPage from './page/affilate/links/page';
+
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -124,7 +131,18 @@ const App: React.FC = () => {
             element={<ProductDetailPage showMessage={showMessage} />}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
+
+          {/* affilate */}
+          <Route path="/user/affiliate" element={<Affilate />} />
+
+          <Route path="/user/affiliate/dashboard" element={<AffiliateDashboard />} />
+          <Route path="/user/affiliate/register" element={<AffiliateRegister />} />
+          <Route path="/user/affiliate/resources" element={<AffiliateResourcePage />} />
+          <Route path="/user/affiliate/support" element={<AffiliateSupportPage />} />
+          <Route path="/user/affiliate/links" element={<AffiliateLinksPage />} />
+
         </Routes>
+       
       </CartProvider>
     </AuthProvider>
   );

@@ -1,6 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/mapped-types';
 import { CreateAffiliateCommissionDto } from './create-affiliate-commission.dto';
 
-export class UpdateAffiliateCommissionDto extends PartialType(
-  CreateAffiliateCommissionDto
-) {}
+export class UpdateAffiliateCommissionDto extends PartialType(CreateAffiliateCommissionDto) {}

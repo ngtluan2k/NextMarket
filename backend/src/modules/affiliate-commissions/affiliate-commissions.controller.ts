@@ -1,52 +1,34 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { AffiliateCommissionsService } from './affiliate-commissions.service';
 import { CreateAffiliateCommissionDto } from './dto/create-affiliate-commission.dto';
 import { UpdateAffiliateCommissionDto } from './dto/update-affiliate-commission.dto';
 
 @Controller('affiliate-commissions')
 export class AffiliateCommissionsController {
-  constructor(
-    private readonly affiliateCommissionsService: AffiliateCommissionsService
-  ) {}
+  constructor(private readonly service: AffiliateCommissionsService) {}
 
   @Post()
-  create(@Body() createAffiliateCommissionDto: CreateAffiliateCommissionDto) {
-    return this.affiliateCommissionsService.create(
-      createAffiliateCommissionDto
-    );
+  create(@Body() createDto: CreateAffiliateCommissionDto) {
+    return this.service.create(createDto);
   }
 
   @Get()
   findAll() {
-    return this.affiliateCommissionsService.findAll();
+    return this.service.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.affiliateCommissionsService.findOne(+id);
+    return this.service.findOne(+id);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateAffiliateCommissionDto: UpdateAffiliateCommissionDto
-  ) {
-    return this.affiliateCommissionsService.update(
-      +id,
-      updateAffiliateCommissionDto
-    );
+  update(@Param('id') id: string, @Body() updateDto: UpdateAffiliateCommissionDto) {
+    return this.service.update(+id, updateDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.affiliateCommissionsService.remove(+id);
+    return this.service.remove(+id);
   }
 }
