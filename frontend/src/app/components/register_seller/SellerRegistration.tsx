@@ -1,894 +1,308 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SellerFormData, defaultSellerFormData } from '../../types/sellerType';
-import CCCDUpload from './CCCDUpload';
+import { SellerFormData, defaultSellerFormData } from '../types';
+import { useSellerRegistration } from './hooks/useSellerRegistration';
+import { useAddressManagement } from './hooks/useAddressManagement';
+import { useEmailManagement } from './hooks/useEmailManagement';
+import { useUnsavedChanges } from './hooks/useUnsavedChanges';
+import { useFileUpload } from './hooks/useFileUpload';
+import { useSaveDraft } from './hooks/useSaveDraft';
+
+// Components
+import Step1BasicInfo from './components/Step1BasicInfo';
+import Step2BusinessInfo from './components/Step2BusinessInfo';
+import Step3Identification from './components/Step3Identification';
+import Step4Confirmation from './components/Step4Confirmation';
+import AddressModal from './components/AddressModal';
+import EmailModal from './components/EmailModal';
+import SaveBeforeExitModal from './components/SaveBeforeExitModal';
+import UnsavedChangesBanner from './components/UnsavedChangesBanner';
+import StepProgress from './components/StepProgress';
+import StepNavigation from './components/StepNavigation';
+
+// Utils
+import { validateStep1, validateStep2, validateStep3 } from './utils/validation';
 
 export const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
 
-  const [formData, setFormData] = useState<SellerFormData>(
-    defaultSellerFormData
+  // Core form state
+  const {
+    currentStep,
+    setCurrentStep,
+    formData,
+    setFormData,
+    loading,
+    setLoading,
+    message,
+    setMessage,
+    messageType,
+    setMessageType,
+    storeId,
+    setStoreId,
+    setStoreInformationId,
+    steps,
+    handleInputChange,
+    handleBasicChange,
+    nextStep,
+    prevStep,
+    clearSavedData,
+  } = useSellerRegistration();
+
+  // Address state
+  const {
+    addresses,
+    setAddresses,
+    showAddressModal,
+    setShowAddressModal,
+    editingAddress,
+    setEditingAddress,
+    addressFormData,
+    setAddressFormData,
+    handleAddressInputChange,
+    handleAddAddress,
+    handleSetDefaultAddress,
+    handleEditAddress,
+    handleDeleteAddress,
+  } = useAddressManagement();
+
+  // Email state
+  const {
+    emails,
+    setEmails,
+    showEmailModal,
+    setShowEmailModal,
+    editingEmail,
+    setEditingEmail,
+    emailFormData,
+    setEmailFormData,
+    handleEmailInputChange,
+    handleAddEmail,
+    handleSetDefaultEmail,
+    handleEditEmail,
+    handleDeleteEmail,
+  } = useEmailManagement();
+
+  // Unsaved changes
+  const { hasUnsavedChanges, markAsSaved } = useUnsavedChanges(
+    formData,
+    currentStep,
+    addresses,
+    emails
   );
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'info' | 'error' | 'warning'>('info');
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [showSelectAddressModal, setShowSelectAddressModal] = useState(false);
-  const [addresses, setAddresses] = useState<any[]>([]);
-  const [editingAddress, setEditingAddress] = useState<any>(null);
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showSelectEmailModal, setShowSelectEmailModal] = useState(false);
-  const [editingEmail, setEditingEmail] = useState<any>(null);
-  const [storeInformationId, setStoreInformationId] = useState<number | null>(null);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
-  const [businessLicenseUrl, setBusinessLicenseUrl] = useState<string>('');
-  const [storeId, setStoreId] = useState<number | null>(null);
 
+  // Save-before-exit modal
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [pendingExit, setPendingExit] = useState(false);
+  
+  // File upload hook
+  const {
+    selectedDocFile,
+    setSelectedDocFile,
+    cccdFrontFile,
+    setCccdFrontFile,
+    cccdBackFile,
+    setCccdBackFile,
+    uploadBusinessLicense,
+    uploadCCCD,
+    clearAllFiles,
+  } = useFileUpload();
 
-  // Keys cho localStorage
-  const FORM_DATA_KEY = 'seller_registration_form_data';
-  const CURRENT_STEP_KEY = 'seller_registration_current_step';
-  const ADDRESSES_KEY = 'seller_registration_addresses';
-
-  const steps = [
-    { id: 1, title: 'Thông tin Shop', description: '' },
-    { id: 2, title: 'Thông tin thuế', description: '' },
-    { id: 3, title: 'Thông tin định danh', description: '' },
-    { id: 4, title: 'Hoàn tất', description: '' },
-  ];
-
-  // Load data từ localStorage và server khi component mount
+  // Save draft hook
+  const { loading: saveLoading, saveDraft } = useSaveDraft();
+  
+  // Init: load local + server draft
   useEffect(() => {
     const loadSavedData = async () => {
       try {
-        // 1. Load từ localStorage trước (dữ liệu user đang nhập)
-        const savedFormData = localStorage.getItem(FORM_DATA_KEY);
-        const savedStep = localStorage.getItem(CURRENT_STEP_KEY);
-        const savedAddresses = localStorage.getItem(ADDRESSES_KEY);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          // No token, start fresh
+          setFormData(defaultSellerFormData);
+          setCurrentStep(1);
+          return;
+        }
+
+        // Check if user has existing store draft
+        const res = await fetch('http://localhost:3000/stores/my-store', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data?.id) {
+            // Load server draft first
+            await loadFullDraftData(data.data.id, null, false);
+            return;
+          }
+        }
+
+        // No server draft, check localStorage
+        const savedFormData = localStorage.getItem('seller_registration_form_data');
+        const savedStep = localStorage.getItem('seller_registration_current_step');
+        const savedAddresses = localStorage.getItem('seller_registration_addresses');
 
         if (savedFormData) {
-          const parsedData = JSON.parse(savedFormData);
-          setFormData({ ...defaultSellerFormData, ...parsedData });
+          const parsed = JSON.parse(savedFormData);
+          setFormData({ ...defaultSellerFormData, ...parsed });
           setMessage('📝 Đã tải thông tin đã lưu từ phiên trước');
           setMessageType('info');
+        } else {
+          setFormData(defaultSellerFormData);
         }
-
+        
         if (savedStep) {
           setCurrentStep(parseInt(savedStep));
+        } else {
+          setCurrentStep(1);
         }
-
+        
         if (savedAddresses) {
           setAddresses(JSON.parse(savedAddresses));
         }
 
-        // 2. Kiểm tra xem có store draft trên server không
-        const token = localStorage.getItem('token');
-        if (token) {
-          const res = await fetch('http://localhost:3000/stores/my-store', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const store = data.data;
-
-            if (store) {
-              // Nếu không muốn đè thông báo đang hiển thị, có thể truyền true để ẩn message info
-              await loadFullDraftData(store.id, savedFormData, true);
-            }
-          }
-        }
       } catch (error) {
         console.error('Error loading saved data:', error);
-        // Nếu có lỗi, clear localStorage để tránh conflict
         clearSavedData();
+        setFormData(defaultSellerFormData);
+        setCurrentStep(1);
       }
     };
-
     loadSavedData();
   }, []);
-  useEffect(() => {
-    // Ưu tiên URL đã có trong form (do bạn vừa upload đẩy vào)
-    const fromForm =
-      (formData.documents || []).find(d => d?.doc_type === 'BUSINESS_LICENSE' && d?.file_url)?.file_url;
 
-    if (fromForm) {
-      setBusinessLicenseUrl(fromForm);
-      return;
-    }
-
-    // Nếu chưa có trong form, thử lấy từ danh sách documents fetch được
-    const fromServer =
-      (documents || []).find((d: any) => d?.doc_type === 'BUSINESS_LICENSE' && d?.file_url)?.file_url;
-
-    if (fromServer) setBusinessLicenseUrl(fromServer);
-  }, [formData.documents, documents]);
-  // Auto-save form data mỗi khi có thay đổi
-  useEffect(() => {
-    try {
-      localStorage.setItem(FORM_DATA_KEY, JSON.stringify(formData));
-    } catch (error) {
-      console.error('Error saving form data:', error);
-    }
-  }, [formData]);
-
-  // Auto-save current step
-  useEffect(() => {
-    try {
-      localStorage.setItem(CURRENT_STEP_KEY, currentStep.toString());
-    } catch (error) {
-      console.error('Error saving current step:', error);
-    }
-  }, [currentStep]);
-
-  // Auto-save addresses
-  useEffect(() => {
-    try {
-      localStorage.setItem(ADDRESSES_KEY, JSON.stringify(addresses));
-    } catch (error) {
-      console.error('Error saving addresses:', error);
-    }
-  }, [addresses]);
-
-  // Load đầy đủ draft data từ server
-  // Helper nhận diện file ảnh
-  const isImageFile = (f: File | null) => !!f && /^image\//.test(f.type);
-
-  // Preview ảnh giấy phép (local URL khi vừa chọn file)
-  useEffect(() => {
-    let tmpUrl: string | null = null;
-    if (selectedDocFile && isImageFile(selectedDocFile)) {
-      tmpUrl = URL.createObjectURL(selectedDocFile);
-      setBusinessLicenseUrl(tmpUrl); // hiện preview ngay khi chọn file
-    }
-    return () => {
-      if (tmpUrl) URL.revokeObjectURL(tmpUrl);
-    };
-  }, [selectedDocFile]);
+  // Load full draft from server
   const loadFullDraftData = async (
-    storeId: number,
+    sid: number,
     savedFormData: string | null,
     suppressMessage = false
   ) => {
     try {
-      const token = localStorage.getItem('token');
-      // Prevent multiple concurrent calls
-      if (loading) {
-        console.log('🔄 Already loading draft data, skipping...');
-        return;
-      }
+      if (loading) return;
       setLoading(true);
-      // Fetch draft data từ endpoint mới
-      console.log(`🔍 Fetching draft data for store ${storeId}...`);
-      const response = await fetch(`http://localhost:3000/stores/${storeId}/draft-data`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3000/stores/${sid}/draft-data`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+      if (!response.ok) return;
 
-      console.log('📡 Response status:', response.status);
+      const result = await response.json();
+      const draft = result.data;
 
-      if (response.ok) {
-        const result = await response.json();
-        const draftData = result.data; // Extract data từ response
-        console.log('📊 Full response:', result);
-        console.log('📊 Draft data từ server:', draftData);
-        // Map draft data về SellerFormData format
-        const mappedFormData: SellerFormData = {
-          // Basic store info - fix "undefined" name issue
-          name:
-            draftData.store?.name && draftData.store.name !== 'undefined'
-              ? draftData.store.name
-              : '',
-          description: draftData.store?.description || '',
-          email: draftData.store?.email || '',
-          phone: draftData.store?.phone || '',
+      const mapped: SellerFormData = {
+        name: draft.store?.name && draft.store.name !== 'undefined' ? draft.store.name : '',
+        description: draft.store?.description || '',
+        email: draft.store?.email || '',
+        phone: draft.store?.phone || '',
+        store_information: {
+          type: draft.storeInformation?.type || 'individual',
+          name: draft.storeInformation?.name || '',
+          addresses: draft.storeInformation?.addresses || '',
+          tax_code: draft.storeInformation?.tax_code || '',
+        },
+        store_identification: {
+          type: draft.storeIdentification?.type || 'CCCD',
+          full_name: draft.storeIdentification?.full_name || '',
+          img_front: draft.storeIdentification?.img_front || '',
+          img_back: draft.storeIdentification?.img_back || '',
+        },
+        bank_account: {
+          bank_name: draft.bankAccount?.bank_name || '',
+          account_number: draft.bankAccount?.account_number || '',
+          account_holder: draft.bankAccount?.account_holder || '',
+          is_default: draft.bankAccount?.is_default ?? true,
+        },
+        store_address: {
+          recipient_name: draft.storeAddress?.recipient_name || '',
+          phone: draft.storeAddress?.phone || '',
+          street: draft.storeAddress?.street || '',
+          city: (draft.storeAddress as any)?.district || draft.storeAddress?.city || '',
+          province: draft.storeAddress?.province || '',
+          country: draft.storeAddress?.country || 'Vietnam',
+          postal_code: draft.storeAddress?.postal_code || '',
+          type: draft.storeAddress?.type || 'pickup',
+          detail: draft.storeAddress?.detail || '',
+          is_default: draft.storeAddress?.is_default ?? true,
+        },
+        store_information_email: {
+          email: draft.storeEmail?.email || '',
+        },
+        documents: draft.documents || [],
+      };
 
-          // Store Information
-          store_information: {
-            type: draftData.storeInformation?.type || 'individual',
-            name: draftData.storeInformation?.name || '',
-            addresses: draftData.storeInformation?.addresses || '',
-            tax_code: draftData.storeInformation?.tax_code || '',
-          },
+      setStoreInformationId(draft.storeInformation?.id ?? null);
+      setStoreId(draft.store?.id ?? null);
 
-          // Store Identification
-          store_identification: {
-            type: draftData.storeIdentification?.type || 'CCCD',
-            full_name: draftData.storeIdentification?.full_name || '',
-            img_front: draftData.storeIdentification?.img_front || '',
-            img_back: draftData.storeIdentification?.img_back || '',
-          },
-
-          // Bank Account
-          bank_account: {
-            bank_name: draftData.bankAccount?.bank_name || '',
-            account_number: draftData.bankAccount?.account_number || '',
-            account_holder: draftData.bankAccount?.account_holder || '',
-            is_default: draftData.bankAccount?.is_default ?? true,
-          },
-
-          // Store Address
-          store_address: {
-            recipient_name: draftData.storeAddress?.recipient_name || '',
-            phone: draftData.storeAddress?.phone || '',
-            street: draftData.storeAddress?.street || '',
-            city: draftData.storeAddress?.city || '',
-            province: draftData.storeAddress?.province || '',
-            country: draftData.storeAddress?.country || 'Vietnam',
-            postal_code: draftData.storeAddress?.postal_code || '',
-            type: draftData.storeAddress?.type || 'pickup',
-            detail: draftData.storeAddress?.detail || '',
-            is_default: draftData.storeAddress?.is_default ?? true,
-          },
-
-          // Store Email
-          store_information_email: {
-            email: draftData.storeEmail?.email || '',
-          },
-
-          // Documents
-          documents: draftData.documents || [],
-        };
-
-        console.log('🔄 Mapped form data:', mappedFormData);
-        const storeInfoId = draftData.storeInformation?.id ?? null;
-        setStoreInformationId(storeInfoId);
-        setStoreId(draftData.store?.id ?? null);
-
-        // Hydrate emails UI state from server draft
-        if (draftData.storeEmail?.email) {
-          const emailItem = {
-            id: draftData.storeEmail.id || Date.now(),
-            email: draftData.storeEmail.email,
+      if (draft.storeEmail?.email) {
+        setEmails([
+          {
+            id: draft.storeEmail.id || Date.now(),
+            email: draft.storeEmail.email,
             is_default: true,
             description: '',
-          };
-          setEmails([emailItem]);
-        }
-
-        if (storeInfoId) {
-          console.log(`📄 Fetching documents for storeInformationId ${storeInfoId}...`);
-          await fetchDocuments(storeInfoId);
-        }
-
-        // Set addresses nếu có
-        if (draftData.storeAddress) {
-          const addressData = {
-            id: draftData.storeAddress.id || Date.now(),
-            recipient_name: draftData.storeAddress.recipient_name || '',
-            phone: draftData.storeAddress.phone || '',
-            street: draftData.storeAddress.street || '',
-            city: draftData.storeAddress.city || '',
-            province: draftData.storeAddress.province || '',
-            country: draftData.storeAddress.country || 'Vietnam',
-            postal_code: draftData.storeAddress.postal_code || '',
-            type: draftData.storeAddress.type || 'pickup',
-            detail: draftData.storeAddress.detail || '',
-            is_default: true,
-          };
-          setAddresses([addressData]);
-        }
-
-        // Merge với localStorage data nếu có (ưu tiên data có value)
-        if (!savedFormData) {
-          console.log('🔄 Setting form data từ server:', mappedFormData);
-          setFormData(mappedFormData);
-          console.log('✅ Form data đã được set từ server');
-        } else {
-          const localData = JSON.parse(savedFormData);
-
-          // Smart merge: Chỉ dùng localStorage nếu có data thật sự
-          const hasLocalData =
-            localData.name || localData.phone || localData.email;
-
-          if (hasLocalData) {
-            const mergedData = {
-              ...mappedFormData,
-              ...localData,
-            };
-            console.log('🔄 Merging server + localStorage:', {
-              mappedFormData,
-              localData,
-              mergedData,
-            });
-            setFormData(mergedData);
-            console.log('✅ Form data đã được merged');
-          } else {
-            console.log(
-              '🔄 localStorage trống, dùng server data:',
-              mappedFormData
-            );
-            setFormData(mappedFormData);
-            console.log(
-              '✅ Form data đã được set từ server (localStorage empty)'
-            );
-          }
-        }
-
-        // Success message
-        if (!suppressMessage) {
-          setMessage('📝 Đã tải đầy đủ thông tin bản nháp từ server!');
-          setMessageType('info');
-        }
-
-        // Determine current step based on data completeness
-        let step = 1;
-        if (mappedFormData.name && mappedFormData.phone) step = 2;
-        if (mappedFormData.store_information.name) step = 3;
-
-        if (mappedFormData.store_identification.full_name && mappedFormData.bank_account.bank_name) step = 4;
-        if (!savedFormData) {
-          setCurrentStep(step);
-        }
-
-        if (!suppressMessage) {
-          setMessage('📝 Đã tải đầy đủ thông tin bản nháp từ server!');
-          setMessageType('info');
-        }
-      } else {
-        const errorData = await response.text();
-        console.error('❌ API Error:', response.status, errorData);
-        setMessage(`⚠️ Lỗi API: ${response.status}`);
-        setMessageType('error');
+          },
+        ]);
       }
-    } catch (error) {
-      console.error('❌ Network/Parse error:', error);
-      setMessage('⚠️ Không thể tải được bản nháp từ server');
+
+      if (draft.storeAddress) {
+        setAddresses([
+          {
+            id: draft.storeAddress.id || Date.now(),
+            recipient_name: draft.storeAddress.recipient_name || '',
+            phone: draft.storeAddress.phone || '',
+            street: draft.storeAddress.street || '',
+            district: (draft.storeAddress as any).district || draft.storeAddress.city || '',
+            province: draft.storeAddress.province || '',
+            country: draft.storeAddress.country || 'Vietnam',
+            ward: draft.storeAddress.ward || '',
+            postal_code: draft.storeAddress.postal_code || '',
+            type: draft.storeAddress.type || 'pickup',
+            detail: draft.storeAddress.detail || '',
+            is_default: true,
+          },
+        ]);
+      }
+
+      if (!savedFormData) {
+        setFormData(mapped);
+      } else {
+        const local = JSON.parse(savedFormData);
+        const hasLocal = local.name || local.phone || local.email;
+        setFormData(hasLocal ? { ...mapped, ...local } : mapped);
+      }
+
+      // Determine current step based on data completeness
+      let determinedStep = 1;
+      if (mapped.name && mapped.email && mapped.phone && addresses.length > 0) {
+        determinedStep = 2;
+      }
+      if (mapped.store_information?.name && mapped.store_information?.addresses && emails.length > 0) {
+        determinedStep = 3;
+      }
+      if (mapped.store_identification?.full_name || mapped.bank_account?.bank_name) {
+        determinedStep = 4;
+      }
+      
+      setCurrentStep(determinedStep);
+
+      if (!suppressMessage) {
+        setMessage(`✅ Đã tải đầy đủ thông tin bản nháp từ server! (Step ${determinedStep})`);
+        setMessageType('info');
+      }
+
+      // Clear file states when loading from server (since we have URLs now)
+      clearAllFiles();
+    } catch {
+      setMessage('⚠️ Không thể tải bản nháp từ server');
       setMessageType('error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Clear saved data
-  const clearSavedData = () => {
-    localStorage.removeItem(FORM_DATA_KEY);
-    localStorage.removeItem(CURRENT_STEP_KEY);
-    localStorage.removeItem(ADDRESSES_KEY);
-  };
 
-  // Show confirmation before leaving if there's unsaved data
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const hasData =
-        formData.name ||
-        formData.phone ||
-        formData.email ||
-        formData.store_information.name ||
-        addresses.length > 0;
-      if (hasData) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [formData, addresses]);
-
-  // Update nested object
-  const handleInputChange = (
-    section: keyof SellerFormData,
-    field: string,
-    value: any
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [section]: {
-        ...(prev[section] as object),
-        [field]: value,
-      },
-    }));
-  };
-
-  // Update root fields
-  const handleBasicChange = (field: keyof SellerFormData, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-  // Email handlers
-  const [emails, setEmails] = useState<Array<{
-    id: number;
-    email: string;
-    is_default: boolean;
-    description?: string;
-  }>>(
-    formData.store_information_email?.email
-      ? [{
-        id: Date.now(),
-        email: formData.store_information_email.email,
-        is_default: true,
-        description: ''
-      }]
-      : []
-  );
-
-  // Email form data cho modal
-  const [emailFormData, setEmailFormData] = useState({
-    email: '',
-    description: '',
-    is_default: true,
-  });
-
-  // Handle email input change trong modal
-  const handleEmailInputChange = (field: string, value: any) => {
-    setEmailFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Handle thêm/sửa email
-  const handleAddEmail = () => {
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailFormData.email || !emailRegex.test(emailFormData.email)) {
-      setMessage('❌ Vui lòng nhập email hợp lệ');
-      setMessageType('error');
-      return;
-    }
-
-    // Check duplicate
-    const isDuplicate = emails.some(
-      (email) => email.email === emailFormData.email &&
-        (!editingEmail || email.id !== editingEmail.id)
-    );
-    if (isDuplicate) {
-      setMessage('❌ Email này đã tồn tại');
-      setMessageType('error');
-      return;
-    }
-
-    if (emails.length >= 5 && !editingEmail) {
-      setMessage('❌ Chỉ được thêm tối đa 5 email');
-      setMessageType('error');
-      return;
-    }
-
-    if (editingEmail) {
-      // Update existing email
-      setEmails((prev) =>
-        prev.map((email) =>
-          email.id === editingEmail.id
-            ? {
-              ...emailFormData,
-              id: editingEmail.id,
-              is_default: editingEmail.is_default,
-            }
-            : email
-        )
-      );
-
-      // Update formData if editing default email
-      if (editingEmail.is_default) {
-        setFormData((prev) => ({
-          ...prev,
-          store_information_email: {
-            email: emailFormData.email,
-          },
-        }));
-      }
-
-      setMessage('✅ Email đã được cập nhật thành công');
-      setMessageType('success');
-    } else {
-      // Add new email
-      const isFirstEmail = emails.length === 0;
-
-      const newEmail = {
-        ...emailFormData,
-        id: Date.now(),
-        is_default: isFirstEmail,
-      };
-      setEmails((prev) => [...prev, newEmail]);
-
-      // Update formData for backend submission (always use default email)
-      if (isFirstEmail) {
-        setFormData((prev) => ({
-          ...prev,
-          store_information_email: {
-            email: emailFormData.email,
-          },
-        }));
-      }
-
-      setMessage('✅ Email đã được thêm thành công');
-      setMessageType('success');
-    }
-
-    // Reset form and close modal
-    setEmailFormData({
-      email: '',
-      description: '',
-      is_default: true,
-    });
-    setEditingEmail(null);
-    setShowEmailModal(false);
-  };
-
-  // Handle set default email
-  const handleSetDefaultEmail = (emailId: number) => {
-    // Update emails array - set new default and unset others
-    setEmails((prev) =>
-      prev.map((email) => ({
-        ...email,
-        is_default: email.id === emailId,
-      }))
-    );
-
-    // Update formData with new default email
-    const newDefaultEmail = emails.find((email) => email.id === emailId);
-    if (newDefaultEmail) {
-      setFormData((prev) => ({
-        ...prev,
-        store_information_email: {
-          email: newDefaultEmail.email,
-        },
-      }));
-    }
-  };
-
-  // Handle edit email
-  const handleEditEmail = (email: any) => {
-    setEditingEmail(email);
-    setEmailFormData({
-      email: email.email,
-      description: email.description || '',
-      is_default: email.is_default,
-    });
-    setShowEmailModal(true);
-  };
-
-
-
-
-  // Handle address modal
-  const [addressFormData, setAddressFormData] = useState({
-    recipient_name: '',
-    phone: '',
-    street: '',
-    city: '',
-    province: '',
-    country: 'Vietnam',
-    postal_code: '',
-    type: 'pickup',
-    detail: '',
-    is_default: true,
-  });
-
-  const handleAddressInputChange = (field: string, value: any) => {
-    setAddressFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleAddAddress = () => {
-    // Validate required fields
-    if (
-      !addressFormData.recipient_name ||
-      !addressFormData.phone ||
-      !addressFormData.street ||
-      !addressFormData.city ||
-      !addressFormData.province ||
-      !addressFormData.postal_code
-    ) {
-      setMessage('❌ Vui lòng điền đầy đủ thông tin địa chỉ');
-      setMessageType('error');
-      return;
-    }
-
-    if (editingAddress) {
-      // Update existing address
-      setAddresses((prev) =>
-        prev.map((addr) =>
-          addr.id === editingAddress.id
-            ? {
-              ...addressFormData,
-              id: editingAddress.id,
-              is_default: editingAddress.is_default,
-              // Removed is_draft reference
-            }
-            : addr
-        )
-      );
-
-      // Update formData if editing default address
-      if (editingAddress.is_default) {
-        setFormData((prev) => ({
-          ...prev,
-          store_address: {
-            ...addressFormData,
-            is_default: true,
-          },
-        }));
-      }
-
-      setMessage('✅ Địa chỉ đã được cập nhật thành công');
-      setMessageType('success');
-    } else {
-      // Add new address
-      const isFirstAddress = addresses.length === 0;
-
-      const newAddress = {
-        ...addressFormData,
-        id: Date.now(),
-        is_default: isFirstAddress,
-        // Removed is_draft reference
-      };
-      setAddresses((prev) => [...prev, newAddress]);
-
-      // Update formData for backend submission (always use default address)
-      if (isFirstAddress) {
-        setFormData((prev) => ({
-          ...prev,
-          store_address: {
-            ...addressFormData,
-          },
-        }));
-      }
-
-      setMessage('✅ Địa chỉ đã được thêm thành công');
-      setMessageType('success');
-    }
-
-    // Reset form and close modal
-    setAddressFormData({
-      recipient_name: '',
-      phone: '',
-      street: '',
-      city: '',
-      province: '',
-      country: 'Vietnam',
-      postal_code: '',
-      type: 'pickup',
-      detail: '',
-      is_default: true,
-    });
-    setEditingAddress(null);
-    setShowAddressModal(false);
-  };
-
-  const handleSetDefaultAddress = (addressId: number) => {
-    // Update addresses array - set new default and unset others
-    setAddresses((prev) =>
-      prev.map((addr) => ({
-        ...addr,
-        is_default: addr.id === addressId,
-      }))
-    );
-
-    // Update formData with new default address
-    const newDefaultAddress = addresses.find((addr) => addr.id === addressId);
-    if (newDefaultAddress) {
-      setFormData((prev) => ({
-        ...prev,
-        store_address: newDefaultAddress,
-      }));
-    }
-  };
-
-  const handleEditAddress = (address: any) => {
-    setEditingAddress(address);
-    setAddressFormData({
-      recipient_name: address.recipient_name,
-      phone: address.phone,
-      street: address.street,
-      city: address.city,
-      province: address.province,
-      country: address.country,
-      postal_code: address.postal_code,
-      type: address.type,
-      detail: address.detail || '',
-      is_default: address.is_default,
-      // Removed is_draft reference
-    });
-    setShowAddressModal(true);
-  };
-
-  const nextStep = () => {
-    setMessage('');
-    currentStep < steps.length && setCurrentStep(currentStep + 1);
-  };
-
-  const prevStep = () => {
-    setMessage('');
-    currentStep > 1 && setCurrentStep(currentStep - 1);
-  };
-
-  // Lưu nháp từng step riêng biệt
-  const handleSaveDraft = async () => {
-    setLoading(true);
-    setMessage('');
-
-    try {
-      const token = localStorage.getItem('token');
-
-      // Chỉ lấy data của step hiện tại
-      let stepData: any = {};
-
-      switch (currentStep) {
-        case 1: {
-          // Step 1: Thông tin shop cơ bản + địa chỉ
-          stepData = {
-            name: formData.name,
-            description: formData.description,
-            email: formData.email, // ✅ Thêm email
-            phone: formData.phone,
-            is_draft: true,
-          };
-
-          // Chỉ gửi store_address nếu user đã nhập thông tin (tương tự Step 3)
-          const hasAddressData =
-            formData.store_address.recipient_name ||
-            formData.store_address.phone ||
-            formData.store_address.street ||
-            formData.store_address.city ||
-            formData.store_address.province;
-
-          if (hasAddressData) {
-            stepData.store_address = formData.store_address;
-          }
-          break;
-        }
-
-        case 2: {
-          setLoading(true);
-          const token = localStorage.getItem('token');
-          // 1) Nếu có file đã chọn ở UI -> upload trước để lấy URL
-          const docs: Array<{ doc_type: string; file_url: string; is_draft?: boolean }> = [];
-          if (selectedDocFile) {
-            const form = new FormData();
-            form.append('file', selectedDocFile);
-            form.append('doc_type', 'BUSINESS_LICENSE');
-
-            const upRes = await fetch('http://localhost:3000/store-documents/upload-file', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-              body: form,
-            });
-            const upData = await upRes.json();
-            if (upRes.ok && upData.file_url) {
-              docs.push({ doc_type: 'BUSINESS_LICENSE', file_url: upData.file_url, is_draft: true });
-            } else {
-              setMessage(`❌ Upload giấy phép thất bại: ${upData.message || 'Lỗi'}`);
-              setMessageType('error');
-              setLoading(false);
-              return;
-            }
-          }
-
-          // Step 2: Thông tin doanh nghiệp (bao gồm thông tin từ Step 1)
-          stepData = {
-            name: formData.name, // Required từ Step 1
-            description: formData.description,
-            email: formData.email, // ✅ Thêm email
-            phone: formData.phone,
-            store_information: formData.store_information,
-            // ✅ Chỉ gửi store_information_email nếu có email
-            ...(formData.store_information_email?.email && {
-              store_information_email: formData.store_information_email
-            }),
-            ...(docs.length > 0 && { documents: docs }),
-            is_draft: true
-          };
-
-          // Include address từ Step 1 nếu có
-          const hasAddressDataStep2 =
-            formData.store_address.recipient_name ||
-            formData.store_address.phone ||
-            formData.store_address.street ||
-            formData.store_address.city ||
-            formData.store_address.province;
-
-          if (hasAddressDataStep2) {
-            stepData.store_address = formData.store_address;
-          }
-          break;
-
-        }
-
-        case 3: {
-          const sanitizedDocs =
-            (formData.documents || [])
-              .filter(d => d?.file_url && d?.doc_type)
-              .map(d => ({
-                doc_type: d.doc_type,
-                file_url: d.file_url,
-              }));
-          // Step 3: Thông tin định danh + ngân hàng + địa chỉ (bao gồm tất cả steps trước)
-          stepData = {
-            name: formData.name, // Required từ Step 1
-            description: formData.description,
-            email: formData.email, // ✅ Thêm email
-            phone: formData.phone,
-            store_information: formData.store_information, // Từ Step 2
-            ...(formData.store_information_email?.email && {
-              store_information_email: formData.store_information_email
-            }),
-            ...(sanitizedDocs.length > 0 && { documents: sanitizedDocs }),
-            is_draft: true,
-          };
-
-          // Chỉ gửi store_identification nếu user đã nhập thông tin
-          const hasIdentificationData =
-            formData.store_identification.full_name ||
-            formData.store_identification.img_front ||
-            formData.store_identification.img_back ||
-            formData.store_identification.img_front;
-
-
-          if (hasIdentificationData && storeId) {
-            stepData.store_identification = {
-              ...formData.store_identification,
-              store_id: String(storeId), // backend đòi string
-            };
-          }
-
-          // Chỉ gửi bank_account nếu user đã nhập thông tin
-          const hasBankData =
-            formData.bank_account.bank_name ||
-            formData.bank_account.account_number ||
-            formData.bank_account.account_holder;
-          if (hasBankData) {
-            stepData.bank_account = formData.bank_account;
-          }
-
-          break;
-        }
-
-        case 4: {
-          // Step 4: Submit toàn bộ (không phải draft)
-          return handleFinalSubmit();
-        }
-      }
-
-      const res = await fetch('http://localhost:3000/stores/register-seller', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(stepData),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setMessage(`✅ Đã lưu Step ${currentStep} thành công!`);
-        setMessageType('success');
-        if (data?.data?.id) {
-          // Refresh draft quietly to reflect latest data without overriding success message
-          await loadFullDraftData(
-            data.data.id,
-            localStorage.getItem(FORM_DATA_KEY),
-            true
-          );
-        }
-        setSelectedDocFile(null);
-
-      } else {
-        setMessage(
-          `❌ Lỗi lưu Step ${currentStep}: ${data.message || 'Thất bại'}`
-        );
-        setMessageType('error');
-      }
-    } catch (error) {
-      setMessage('❌ Lỗi kết nối');
-      setMessageType('error');
-    } finally {
-      setLoading(false);
-
-    }
-  };
-
-  // Submit hoàn tất toàn bộ form
+  // Final submit (Option 2 flow)
   const handleFinalSubmit = async () => {
     setLoading(true);
     setMessage('');
@@ -896,42 +310,125 @@ export const SellerRegistration: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
 
-      const sanitizedDocsFinal =
-        (formData.documents || [])
-          .filter(d => d?.file_url && d?.doc_type)
-          .map(d => ({ doc_type: d.doc_type, file_url: d.file_url }));
-      // Gửi toàn bộ form data
-      const submitData = {
-        ...formData,
-        ...(formData.store_information_email?.email && {
-          store_information_email: formData.store_information_email
-        }),
-        ...(sanitizedDocsFinal.length > 0 && { documents: sanitizedDocsFinal }),
-        is_draft: false, // Hoàn tất, không phải draft
+      const defaultAddress = addresses.find(a => a.is_default);
+      if (!formData.store_information_email.email) {
+        setMessage('❌ Vui lòng nhập email hóa đơn');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+      if (!defaultAddress) {
+        setMessage('❌ Vui lòng thêm địa chỉ và chọn địa chỉ mặc định');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+      // district tạm thời không bắt buộc (để hỗ trợ V2)
+      const required = ['recipient_name', 'phone', 'street', 'province', 'postal_code'] as const;
+      const missing = required.filter(k => !(defaultAddress as any)[k]);
+      if (missing.length) {
+        setMessage('❌ Vui lòng điền đầy đủ địa chỉ: người nhận, điện thoại, đường, thành phố, tỉnh, mã bưu điện');
+        setMessageType('error');
+        setLoading(false);
+        return;
+      }
+
+      const stepData: any = {
+        name: formData.name,
+        description: formData.description,
+        email: formData.email,
+        phone: formData.phone,
+        store_information: {
+          type: formData.store_information.type,
+          name: formData.store_information.name,
+          addresses: formData.store_information.addresses,
+          tax_code: formData.store_information.tax_code,
+        },
+        store_information_email: { email: formData.store_information_email.email },
+        // Đính kèm tài liệu hiện có (ví dụ: BUSINESS_LICENSE)
+        ...(Array.isArray(formData.documents) && formData.documents.filter(d => d?.file_url && d?.doc_type).length > 0
+          ? {
+              documents: formData.documents
+                .filter(d => d?.file_url && d?.doc_type)
+                .map(d => ({ doc_type: d.doc_type, file_url: d.file_url })),
+            }
+          : {}),
+        bank_account: {
+          bank_name: formData.bank_account.bank_name,
+          account_number: formData.bank_account.account_number,
+          account_holder: formData.bank_account.account_holder,
+          is_default: formData.bank_account.is_default ?? true,
+        },
+        store_address: {
+          recipient_name: defaultAddress.recipient_name,
+          phone: defaultAddress.phone,
+          street: defaultAddress.street,
+          // Backend hiện yêu cầu district là string không rỗng.
+          // Với V2 khi không có district, tạm thời fallback sang ward để tránh 400.
+          district:
+            (defaultAddress as any).district && String((defaultAddress as any).district).trim()
+              ? (defaultAddress as any).district
+              : null,
+          ward: (defaultAddress as any).ward || '',
+          province: defaultAddress.province,
+          country: defaultAddress.country,
+          postal_code: defaultAddress.postal_code,
+          type: defaultAddress.type,
+          detail: defaultAddress.detail,
+          is_default: true,
+        },
+        is_draft: false,
+        ...(storeId ? { store_id: storeId } : {}),
       };
+
+
+
+      // CHỈ thêm block định danh khi có dữ liệu hợp lệ
+      const hasIdentificationData =
+        !!formData.store_identification.full_name ||
+        !!formData.store_identification.img_front ||
+        !!formData.store_identification.img_back;
+
+      if (hasIdentificationData) {
+        if (!formData.store_identification.full_name) {
+          setMessage('❌ Vui lòng nhập Họ tên trong phần Thông tin định danh hoặc bỏ trống toàn bộ mục này.');
+          setMessageType('error');
+          setLoading(false);
+          return;
+        }
+        stepData.store_identification = {
+          type: formData.store_identification.type,
+          full_name: formData.store_identification.full_name,
+          img_front: formData.store_identification.img_front,
+          img_back: formData.store_identification.img_back,
+        };
+      }
+      // >>> Include store_id on final submit if available
+      if (storeId) {
+        stepData.store_id = storeId;
+      }
 
       const res = await fetch('http://localhost:3000/stores/register-seller', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(submitData),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(stepData),
       });
 
       const data = await res.json();
       if (res.ok) {
-        setMessage('✅ Đăng ký thành công! Cửa hàng đã được kích hoạt.');
+        // clear cache and redirect to your store page
+        localStorage.removeItem('seller_registration_form_data');
+        localStorage.removeItem('seller_registration_current_step');
+        localStorage.removeItem('seller_registration_addresses');
+        setMessage('✅ Đăng ký thành công!');
         setMessageType('success');
-
-        // Clear saved data sau khi thành công
-        clearSavedData();
-        setTimeout(() => navigate('/myStores'), 2000);
+        navigate('/myStores');
+        return;
       } else {
-        setMessage(data.message || 'Đăng ký thất bại');
+        setMessage(`❌ Lỗi đăng ký: ${data.message || 'Thất bại'}`);
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('❌ Lỗi kết nối');
       setMessageType('error');
     } finally {
@@ -939,796 +436,304 @@ export const SellerRegistration: React.FC = () => {
     }
   };
 
-  // --- Lấy danh sách document theo store_information_id ---
-  const fetchDocuments = async (infoId: number) => {
+  // Step navigation with validation and save
+  const handleNextStep = async () => {
+    setMessage('');
+    setLoading(true);
+    
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3000/store-documents/store/${infoId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-        setDocuments(list);
+      // 1. Validate current step
+      let validationErrors: string[] = [];
+      
+      switch (currentStep) {
+        case 1:
+          validationErrors = validateStep1(formData, addresses);
+          break;
+        case 2:
+          validationErrors = validateStep2(formData, emails);
+          break;
+        case 3:
+          validationErrors = validateStep3(formData);
+          break;
       }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-
-  // --- Xóa document ---
-  const handleDeleteDocument = async (docId: number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa tài liệu này?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3000/store-documents/${docId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        setMessage('✅ Đã xóa tài liệu');
-        setMessageType('success');
-        if (storeInformationId) await fetchDocuments(storeInformationId);
-      } else {
-        const data = await res.json();
-        setMessage(`❌ Xóa thất bại: ${data.message || 'Lỗi'}`);
+      
+      if (validationErrors.length > 0) {
+        setMessage(`❌ ${validationErrors.join(', ')}`);
         setMessageType('error');
+        setLoading(false);
+        return;
       }
-    } catch (e) {
-      setMessage('❌ Lỗi kết nối khi xóa');
+      
+      // 2. Upload files if needed
+      if (currentStep === 2 && selectedDocFile) {
+        await uploadBusinessLicense((fileUrl) => {
+          setFormData(prev => ({
+            ...prev,
+            documents: [
+              ...(prev.documents || []).filter(d => d.doc_type !== 'BUSINESS_LICENSE'),
+              { doc_type: 'BUSINESS_LICENSE', file_url: fileUrl },
+            ],
+          }));
+        });
+      }
+      
+      if (currentStep === 3 && (cccdFrontFile || cccdBackFile)) {
+        await uploadCCCD(storeId, (frontUrl, backUrl) => {
+          setFormData(prev => ({
+            ...prev,
+            store_identification: {
+              ...prev.store_identification,
+              img_front: frontUrl || prev.store_identification.img_front,
+              img_back: backUrl || prev.store_identification.img_back,
+            },
+          }));
+        });
+      }
+      
+      // 3. Save draft
+      const newStoreId = await saveDraft(
+        currentStep,
+        formData,
+        addresses,
+        emails,
+        storeId,
+        (message) => {
+          setMessage(message);
+          setMessageType('success');
+          markAsSaved();
+        },
+        (message) => {
+          setMessage(message);
+          setMessageType('error');
+        }
+      );
+      
+      if (newStoreId) {
+        setStoreId(newStoreId);
+      }
+      
+      // 4. Move to next step
+    nextStep();
+      
+    } catch (error: any) {
+      setMessage(`❌ Lỗi: ${error.message || 'Có lỗi xảy ra'}`);
       setMessageType('error');
+    } finally {
+      setLoading(false);
     }
   };
-  const renderStep1 = () => (
-    <div className="card">
-      <div className="card-header">
-        <h5>🏪 Thông tin Shop</h5>
-      </div>
-      <div className="card-body">
-        <div className="row">
-          {/* Tên Shop */}
-          <div className="col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Tên Shop *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.name}
-                onChange={(e) => handleBasicChange('name', e.target.value)}
-                placeholder="Tên shop"
-                maxLength={30}
-                required
-              />
-              <small className="text-muted">{formData.name.length}/30</small>
-            </div>
-          </div>
 
-        </div>
+  // Enhanced beforeunload with save-before-exit modal
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'Bạn có muốn lưu bản nháp trước khi thoát không?';
+        setShowSaveModal(true);
+        setPendingExit(true);
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
-        {/* Địa chỉ lấy hàng */}
-        <div className="mb-3">
-          <label className="form-label">Địa chỉ lấy hàng</label>
-          <div className="d-flex align-items-center gap-2 mb-2">
-            <span className="text-muted">
+  // Save-before-exit actions
+  const handleSaveBeforeExit = async () => {
+    try {
+      setLoading(true);
+      await saveDraft(
+        currentStep,
+        formData,
+        addresses,
+        emails,
+        storeId,
+        (message) => {
+          setMessage(message);
+          setMessageType('success');
+          markAsSaved();
+        },
+        (message) => {
+          setMessage(message);
+          setMessageType('error');
+        }
+      );
+      setShowSaveModal(false);
+      setPendingExit(false);
+      if (pendingExit) {
+        // Clear local changes and navigate
+        clearSavedData();
+        navigate('/');
+      }
+    } catch (error: any) {
+      setMessage(`❌ Lỗi lưu nháp: ${error.message}`);
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleDontSave = () => {
+    setShowSaveModal(false);
+    setPendingExit(false);
+    // Clear all local data and navigate
+    clearSavedData();
+    setFormData(defaultSellerFormData);
+    setAddresses([]);
+    setEmails([]);
+    setCurrentStep(1);
+    clearAllFiles();
+    if (pendingExit) {
+      navigate('/');
+    }
+  };
+  
+  const handleCancelExit = () => {
+    setShowSaveModal(false);
+    setPendingExit(false);
+  };
 
-              {addresses.length > 0
-                ? `${addresses.length} địa chỉ đã thêm`
-                : 'Chưa có địa chỉ'}
-            </span>
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm"
-              onClick={() => setShowAddressModal(true)}
-            >
-              + Thêm
-            </button>
-          </div>
+  // Adapters for child components
+  const handleStoreInformationChange = (field: string, value: any) => {
+    handleInputChange('store_information', field, value);
+  };
+  const handleStoreIdentificationChange = (field: string, value: any) => {
+    handleInputChange('store_identification', field, value);
+  };
+  const handleBankAccountChange = (field: string, value: any) => {
+    handleInputChange('bank_account', field, value);
+  };
 
-          {/* Hiển thị địa chỉ mặc định */}
-          {addresses.length > 0 && (
-            <div className="border rounded p-3 bg-light">
-              {(() => {
-
-                const defaultAddress = addresses.find(
-                  (addr) => addr.is_default
-                );
-                if (!defaultAddress) return null;
-                return (
-                  <div className="bg-white rounded p-3 border">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div className="flex-grow-1">
-                        <div className="fw-bold text-primary mb-1">
-                          📍 {defaultAddress.recipient_name}
-                        </div>
-                        <div className="text-muted small mb-1">
-                          📞 {defaultAddress.phone}
-                        </div>
-                        <div className="mb-1">
-                          {defaultAddress.street}, {defaultAddress.city},{' '}
-                          {defaultAddress.province}
-                          {defaultAddress.postal_code &&
-                            ` - ${defaultAddress.postal_code}`}
-                        </div>
-                        {defaultAddress.detail && (
-                          <div className="text-muted small mb-2">
-                            💬 {defaultAddress.detail}
-                          </div>
-                        )}
-                        <span className="badge bg-success">
-                          Địa chỉ mặc định
-                        </span>
-                      </div>
-                      <div className="d-flex gap-1">
-                        <button
-                          type="button"
-                          className="btn btn-outline-success btn-sm"
-                          onClick={() => handleEditAddress(defaultAddress)}
-                          title="Chỉnh sửa địa chỉ"
-                        >
-                          ✏️ Cập nhật
-                        </button>
-                        {addresses.length > 1 && (
-
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm"
-                            onClick={() => setShowSelectAddressModal(true)}
-                            title="Thay đổi địa chỉ mặc định"
-                          >
-                            🔄 Thay đổi
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger btn-sm"
-                          onClick={() => {
-                            const filteredAddresses = addresses.filter(
-                              (addr) => addr.id !== defaultAddress.id
-                            );
-                            setAddresses(filteredAddresses);
-
-                            if (filteredAddresses.length > 0) {
-                              // Set first remaining address as default
-                              const newDefault = {
-                                ...filteredAddresses[0],
-                                is_default: true,
-                              };
-                              setAddresses((prev) =>
-                                prev.map((addr) =>
-                                  addr.id === newDefault.id
-                                    ? newDefault
-                                    : { ...addr, is_default: false }
-                                )
-                              );
-                              setFormData((prev) => ({
-                                ...prev,
-                                store_address: newDefault,
-                              }));
-                            } else {
-                              // Reset formData if no addresses left
-                              setFormData((prev) => ({
-                                ...prev,
-                                store_address: {
-                                  recipient_name: '',
-                                  phone: '',
-                                  street: '',
-                                  city: '',
-                                  province: '',
-                                  country: 'Vietnam',
-                                  postal_code: '',
-                                  type: 'pickup',
-                                  detail: '',
-                                  is_default: true,
-                                  // Removed is_draft
-                                },
-                              }));
-                            }
-                          }}
-                          title="Xóa địa chỉ"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-
-        {/* Email */}
-        <div className="mb-3">
-
-          <label className="form-label">Email</label>
-          <input
-            type="email"
-            className="form-control"
-            value={formData.email || ''}
-            onChange={(e) => handleBasicChange('email', e.target.value)}
-            placeholder="Nhập vào"
+  // Render current step
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <Step1BasicInfo
+            formData={formData}
+            addresses={addresses}
+            onBasicChange={handleBasicChange}
+            onAddressChange={setAddresses}
+            onShowAddressModal={() => setShowAddressModal(true)}
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onShowSelectAddressModal={() => { }}
+            onEditAddress={handleEditAddress}
+            onSetDefaultAddress={handleSetDefaultAddress}
+            onDeleteAddress={handleDeleteAddress}
           />
-        </div>
-
-        {/* Số điện thoại */}
-        <div className="row">
-          <div className="col-md-6">
-            <label className="form-label">Số điện thoại *</label>
-            <div className="input-group">
-              <span className="input-group-text">+84</span>
-              <input
-                type="tel"
-                className="form-control"
-                value={formData.phone || ''}
-                onChange={(e) => handleBasicChange('phone', e.target.value)}
-                placeholder="367"
-                required
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="card">
-      <div className="card-header">
-        <h5>📋 Thông tin thuế </h5>
-      </div>
-      <div className="card-body">
-        <div className="alert alert-info">
-          <i className="bi bi-info-circle"></i>
-          <strong>
-            Việc thu thập Thông Tin Thuế và Thông Tin Định Danh là bắt buộc theo
-            quy định. Người bán chịu trách nhiệm về tính chính xác của thông
-            tin.
-          </strong>
-        </div>
-
-        {/* Loại hình kinh doanh */}
-        <div className="mb-4">
-          <h6>Loại hình kinh doanh</h6>
-          <div className="form-check">
-            <input
-              className="form-check-input"
-              type="radio"
-              name="businessType"
-              value="company"
-              checked={formData.store_information.type === 'company'}
-              onChange={(e) =>
-                handleInputChange('store_information', 'type', e.target.value)
-              }
-            />
-
-            <label className="form-check-label">Hộ kinh doanh / Công ty</label>
-          </div>
-        </div>
-
-        {/* Tên công ty */}
-        <div className="row">
-          <div className="col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Tên công ty *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.store_information.name}
-                onChange={(e) =>
-                  handleInputChange('store_information', 'name', e.target.value)
-                }
-                placeholder="Nhập vào"
-                maxLength={255}
-                required
-              />
-              <small className="text-muted">0/255</small>
-            </div>
-          </div>
-        </div>
-
-        {/* Địa chỉ đăng ký KD */}
-        <div className="mb-3">
-          <label className="form-label">Địa chỉ đăng ký kinh doanh</label>
-          <input
-            type="text"
-            className="form-control"
-            value={formData.store_information.addresses || ''}
-            onChange={(e) =>
-
-              handleInputChange(
-                'store_information',
-                'addresses',
-                e.target.value
-              )
-            }
-            placeholder="An Giang / Huyện An Phú / Thị Trấn An Phú"
+        );
+      case 2:
+        return (
+          <Step2BusinessInfo
+            formData={formData}
+            emails={emails}
+            selectedDocFile={selectedDocFile}
+            businessLicenseUrl={formData.documents?.find(d => d.doc_type === 'BUSINESS_LICENSE')?.file_url || ''}
+            onInputChange={handleStoreInformationChange}
+            onShowEmailModal={() => setShowEmailModal(true)}
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onShowSelectEmailModal={() => { }}
+            onEditEmail={handleEditEmail}
+            // IMPORTANT: update root-level store_information_email via handleBasicChange
+            onSetDefaultEmail={(id) => handleSetDefaultEmail(id, (field, value) => handleBasicChange(field as any, value))}
+            onDeleteEmail={(id) => handleDeleteEmail(id, (field, value) => handleBasicChange(field as any, value))}
+            onDocFileChange={setSelectedDocFile}
           />
-        </div>
-
-        {/* Email hóa đơn */}
-        <div className="mb-3">
-          <label className="form-label">Email nhận hóa đơn điện tử</label>
-          <div className="d-flex align-items-center gap-2 mb-2">
-            <span className="text-muted">
-              {emails.length > 0
-                ? `${emails.length} email đã thêm`
-                : 'Chưa có email'}
-            </span>
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm"
-              onClick={() => setShowEmailModal(true)}
-            >
-              + Thêm
-            </button>
-          </div>
-          {/* Hiển thị email mặc định */}
-          {emails.length > 0 && (
-            <div className="border rounded p-3 bg-light">
-              {(() => {
-                const defaultEmail = emails.find((email) => email.is_default);
-                if (!defaultEmail) return null;
-                return (
-                  <div className="bg-white rounded p-3 border">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div className="flex-grow-1">
-                        <div className="fw-bold text-primary mb-1">
-                          📧 {defaultEmail.email}
-                        </div>
-                        {defaultEmail.description && (
-                          <div className="text-muted small mb-2">
-                            💬 {defaultEmail.description}
-                          </div>
-                        )}
-                        <span className="badge bg-success">
-                          Email mặc định
-                        </span>
-                      </div>
-                      <div className="d-flex gap-1">
-                        <button
-                          type="button"
-                          className="btn btn-outline-success btn-sm"
-                          onClick={() => handleEditEmail(defaultEmail)}
-                          title="Chỉnh sửa email"
-                        >
-                          ✏️ Cập nhật
-                        </button>
-                        {emails.length > 1 && (
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm"
-                            onClick={() => setShowSelectEmailModal(true)}
-                            title="Thay đổi email mặc định"
-                          >
-                            🔄 Thay đổi
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger btn-sm"
-                          onClick={() => {
-                            const filteredEmails = emails.filter(
-                              (email) => email.id !== defaultEmail.id
-                            );
-                            setEmails(filteredEmails);
-
-                            if (filteredEmails.length > 0) {
-                              // Set first remaining email as default
-                              const newDefault = {
-                                ...filteredEmails[0],
-                                is_default: true,
-                              };
-                              setEmails((prev) =>
-                                prev.map((email) =>
-                                  email.id === newDefault.id
-                                    ? newDefault
-                                    : { ...email, is_default: false }
-                                )
-                              );
-                              setFormData((prev) => ({
-                                ...prev,
-                                store_information_email: {
-                                  email: newDefault.email,
-                                },
-                              }));
-                            } else {
-                              // Reset formData if no emails left
-                              setFormData((prev) => ({
-                                ...prev,
-                                store_information_email: {
-                                  email: '',
-                                },
-                              }));
-                            }
-                          }}
-                          title="Xóa email"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          <p className="small text-muted mt-2">
-            Hóa đơn điện tử sẽ được gửi đến email mặc định (tối đa 5 email)
-          </p>
-        </div>
-
-
-        {/* Mã số thuế */}
-        <div className="row">
-          <div className="col-md-6">
-            <div className="mb-3">
-              <label className="form-label">Mã số thuế</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formData.store_information.tax_code || ''}
-                onChange={(e) =>
-                  handleInputChange(
-                    'store_information',
-                    'tax_code',
-                    e.target.value
-                  )
-                }
-                placeholder="Nhập vào"
-                maxLength={14}
-              />
-              <small className="text-muted">0/14</small>
-            </div>
-          </div>
-        </div>
-
-        {/* Giấy phép */}
-        <div className="mb-3">
-          <label className="form-label">Giấy phép đăng ký kinh doanh</label>
-
-          {/* Chọn file */}
-          <div className="d-flex gap-2 align-items-center mb-2">
-            <input
-              type="file"
-              className="form-control"
-              accept="image/png, image/jpeg, application/pdf"
-              onChange={(e) => setSelectedDocFile(e.target.files?.[0] || null)}
-            />
-          </div>
-
-          <p className="text-muted small mb-2">
-            Hỗ trợ PDF/JPG/PNG, tối đa 10MB. File sẽ lưu với loại: BUSINESS_LICENSE.
-          </p>
-
-          {businessLicenseUrl && (
-            <div className="mt-3">
-              <div className="small text-muted mb-2">Xem nhanh Giấy phép:</div>
-              {businessLicenseUrl.startsWith('/uploads') ? (
-                /\.(png|jpe?g|webp|gif)$/i.test(businessLicenseUrl) ? (
-                  <img
-                    src={`http://localhost:3000${businessLicenseUrl}`}
-                    alt="Business License"
-                    style={{ maxWidth: 280, maxHeight: 240, border: '1px solid #eee', borderRadius: 6 }}
-                  />
-                ) : (
-                  <a
-                    className="btn btn-outline-secondary btn-sm"
-                    href={`http://localhost:3000${businessLicenseUrl}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Mở file
-                  </a>
-                )
-              ) : (
-                <img
-                  src={businessLicenseUrl}
-                  alt="Business License (local)"
-                  style={{ maxWidth: 280, maxHeight: 240, border: '1px solid #eee', borderRadius: 6 }}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      </div >
-    </div >
-  );
-  const renderStep3 = () => (
-    <div className="card">
-      <div className="card-header">
-        <h5>🪪 Thông tin định danh</h5>
-      </div>
-      <div className="card-body">
-
-        {/* Định danh */}
-        <div className="mb-4">
-          <h6>Thông tin định danh</h6>
-          <div className="mb-3">
-            <label className="form-label">Loại giấy tờ *</label>
-            <select
-              className="form-select"
-              value={formData.store_identification.type}
-              onChange={(e) =>
-                handleInputChange(
-                  'store_identification',
-                  'type',
-                  e.target.value
-                )
-              }
-              required
-            >
-              <option value="CCCD">Căn cước công dân</option>
-              {/* <option value="CMND">Chứng minh nhân dân</option>
-              <option value="Passport">Hộ chiếu</option>
-              <option value="GPKD">Giấy phép kinh doanh</option> */}
-            </select>
-
-            <CCCDUpload
-              storeId={storeId || undefined}
-              token={localStorage.getItem('token') || ''}
-              onUploaded={(side: string, url: string) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  store_identification: {
-                    ...prev.store_identification,
-                    img_front: side === 'front' ? url : prev.store_identification.img_front,
-                    img_back: side === 'back' ? url : prev.store_identification.img_back,
-                  },
-                }));
-                setMessage(`✅ Đã upload ảnh ${side === 'front' ? 'mặt trước' : 'mặt sau'}`);
-                setMessageType('success');
-              }}
-              className="mt-3"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Họ tên đầy đủ *</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.store_identification.full_name}
-              onChange={(e) =>
-                handleInputChange(
-                  'store_identification',
-                  'full_name',
-                  e.target.value
-                )
-              }
-              placeholder="Nhập họ tên đầy đủ"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Ngân hàng */}
-        <div className="mb-4">
-          <h6>Thông tin tài khoản ngân hàng</h6>
-          <div className="row">
-            <div className="col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Tên ngân hàng *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.bank_account.bank_name}
-                  onChange={(e) =>
-                    handleInputChange(
-                      'bank_account',
-                      'bank_name',
-                      e.target.value
-                    )
-                  }
-                  placeholder="Vietcombank"
-                  required
-                />
-              </div>
-            </div>
-            <div className="col-md-6">
-              <div className="mb-3">
-                <label className="form-label">Số tài khoản *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.bank_account.account_number}
-                  onChange={(e) =>
-                    handleInputChange(
-                      'bank_account',
-                      'account_number',
-                      e.target.value
-                    )
-                  }
-                  placeholder="1234567890"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Chủ tài khoản *</label>
-            <input
-              type="text"
-              className="form-control"
-              value={formData.bank_account.account_holder}
-              onChange={(e) =>
-                handleInputChange(
-                  'bank_account',
-                  'account_holder',
-                  e.target.value
-                )
-              }
-              placeholder="Nguyễn Văn A"
-              required
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div className="card">
-      <div className="card-header">
-        <h5>✅ Hoàn tất đăng ký</h5>
-      </div>
-      <div className="card-body text-center">
-        <h4>Xác nhận thông tin đăng ký</h4>
-        <p className="text-muted">
-          Vui lòng kiểm tra lại thông tin trước khi hoàn tất đăng ký
-        </p>
-
-        <div className="text-start mt-4">
-          <h6>Thông tin Shop:</h6>
-          <ul>
-            <li>Tên shop: {formData.name}</li>
-            <li>Email: {formData.email}</li>
-            <li>Số điện thoại: {formData.phone}</li>
-          </ul>
-
-          <h6>Thông tin kinh doanh:</h6>
-          <ul>
-            <li>
-              Loại hình:{' '}
-              {formData.store_information.type === 'individual'
-                ? 'Cá nhân'
-                : 'Công ty'}
-            </li>
-            <li>Tên: {formData.store_information.name}</li>
-            <li>Mã số thuế: {formData.store_information.tax_code}</li>
-          </ul>
-
-          <h6>Thông tin ngân hàng:</h6>
-          <ul>
-            <li>Ngân hàng: {formData.bank_account.bank_name}</li>
-            <li>Số tài khoản: {formData.bank_account.account_number}</li>
-            <li>Chủ tài khoản: {formData.bank_account.account_holder}</li>
-          </ul>
-        </div>
-
-        <div className="d-flex gap-3 justify-content-center mt-4">
-          <button
-            className="btn btn-success btn-lg"
-            onClick={handleFinalSubmit}
-            disabled={loading}
-          >
-            {loading ? 'Đang xử lý...' : '✅ Hoàn tất đăng ký'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+        );
+      case 3:
+        return (
+          <Step3Identification
+            formData={formData}
+            onInputChange={handleStoreIdentificationChange}
+            onBankAccountChange={handleBankAccountChange}
+            onFileSelected={(side, file) => {
+              if (side === 'front') setCccdFrontFile(file);
+              else setCccdBackFile(file);
+            }}
+            frontFile={cccdFrontFile}
+            backFile={cccdBackFile}
+          />
+        );
+      case 4:
+        return (
+          <Step4Confirmation
+            formData={formData}
+            loading={loading}
+            onFinalSubmit={handleFinalSubmit}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="container mt-4">
-      {/* Progress Steps */}
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="d-flex align-items-center justify-content-center">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div className="text-center">
-                  <div
-                    className={`rounded-circle d-flex align-items-center justify-content-center ${currentStep >= step.id
-                      ? 'bg-danger text-white'
-                      : 'bg-light text-muted'
-                      }`}
-                    style={{ width: '40px', height: '40px' }}
-                  >
-                    {step.id}
-                  </div>
-                  <div className="mt-2">
-                    <small className="fw-bold">{step.title}</small>
-                    <br />
-                    <small className="text-muted">{step.description}</small>
-                  </div>
-                </div>
+      <UnsavedChangesBanner
+        hasUnsavedChanges={hasUnsavedChanges}
+        loading={loading || saveLoading}
+        onSaveDraft={async () => {
+          await saveDraft(
+            currentStep,
+            formData,
+            addresses,
+            emails,
+            storeId,
+            (message) => {
+              setMessage(message);
+              setMessageType('success');
+              markAsSaved();
+            },
+            (message) => {
+              setMessage(message);
+              setMessageType('error');
+            }
+          );
+        }}
+        onDiscardChanges={() => {
+          setFormData(defaultSellerFormData);
+          setAddresses([]);
+          setEmails([]);
+          setCurrentStep(1);
+          clearAllFiles();
+          setMessage('✅ Đã hủy thay đổi');
+          setMessageType('success');
+        }}
+      />
 
-                {index < steps.length - 1 && (
-                  <div
-                    className={`mx-4 ${currentStep > step.id ? 'bg-danger' : 'bg-light'
-                      }`}
-                    style={{ height: '2px', width: '100px' }}
-                  ></div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
+      <StepProgress steps={steps} currentStep={currentStep} />
 
-      {/* Form Content */}
       <div className="row justify-content-center">
         <div className="col-md-10">
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
+          {renderCurrentStep()}
 
-          {/* Navigation Buttons */}
-          <div className="d-flex justify-content-between align-items-center mt-4">
-            <button
-              className="btn btn-outline-secondary"
-              onClick={prevStep}
-              disabled={currentStep === 1}
-            >
-              Quay lại
-            </button>
-
-            <div className="d-flex gap-2">
-              {/* Nút Clear Form */}
-              <button
-                className="btn btn-outline-danger btn-sm"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      'Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?'
-                    )
-                  ) {
+          <StepNavigation
+            currentStep={currentStep}
+            totalSteps={steps.length}
+            loading={loading || saveLoading}
+            onPrevStep={prevStep}
+            onNextStep={handleNextStep}
+            onClearData={() => {
                     clearSavedData();
                     setFormData(defaultSellerFormData);
                     setAddresses([]);
+              setEmails([]);
                     setCurrentStep(1);
+              clearAllFiles();
                     setMessage('✅ Đã xóa dữ liệu form');
                     setMessageType('success');
-                  }
-                }}
-                title="Xóa tất cả dữ liệu đã nhập"
-              >
-                🗑️ Clear
-              </button>
+            }}
+          />
 
-              {/* Nút Lưu nháp ở giữa - chỉ hiện từ Step 1-3 */}
-              {currentStep < steps.length && (
-                <button
-                  className="btn btn-outline-warning"
-                  onClick={handleSaveDraft}
-                  disabled={loading}
-                >
-                  {loading ? 'Đang lưu...' : `📝 Lưu Step ${currentStep}`}
-                </button>
-              )}
-            </div>
-
-            {currentStep < steps.length && (
-              <button
-                className="btn btn-danger"
-                onClick={nextStep}
-                disabled={currentStep === steps.length}
-              >
-                Tiếp theo
-              </button>
-            )}
-          </div>
-
-          {/* Message */}
           {message && (
             <div
-              className={`alert mt-3 ${messageType === 'success' ? 'alert-success' :
-                messageType === 'error' ? 'alert-danger' :
-                  messageType === 'warning' ? 'alert-warning' : 'alert-info'
+              className={`alert mt-3 ${messageType === 'success'
+                ? 'alert-success'
+                : messageType === 'error'
+                  ? 'alert-danger'
+                  : messageType === 'warning'
+                    ? 'alert-warning'
+                    : 'alert-info'
                 }`}
             >
               {message}
@@ -1737,412 +742,54 @@ export const SellerRegistration: React.FC = () => {
         </div>
       </div>
 
-      {/* Address Modal */}
-      {showAddressModal && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        >
+      <AddressModal
+        show={showAddressModal}
+        editingAddress={editingAddress}
+        addressFormData={addressFormData}
+        onClose={() => {
+          setShowAddressModal(false);
+          setEditingAddress(null);
+          setAddressFormData({
+            recipient_name: '',
+            phone: '',
+            street: '',
+            district: '',
+            province: '',
+            ward: '',
+            country: 'Vietnam',
+            postal_code: '',
+            type: 'pickup',
+            detail: '',
+            is_default: true,
+          });
+        }}
+        onInputChange={handleAddressInputChange}
+        onSave={(version) => {
+          handleAddAddress(setMessage, version);
+        }}
+      />
 
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingAddress
-                    ? '✏️ Chỉnh sửa địa chỉ lấy hàng'
-                    : '📍 Thêm địa chỉ lấy hàng'}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowAddressModal(false);
-                    setEditingAddress(null);
-                    setAddressFormData({
-                      recipient_name: '',
-                      phone: '',
-                      street: '',
-                      city: '',
-                      province: '',
-                      country: 'Vietnam',
-                      postal_code: '',
-                      type: 'pickup',
-                      detail: '',
-                      is_default: true,
-                      // Removed is_draft
-                    });
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <form>
-                  <div className="row">
-                    <div className="col-md-6">
-                      <div className="mb-3">
-                        <label className="form-label">Tên người nhận *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={addressFormData.recipient_name}
+      <EmailModal
+        show={showEmailModal}
+        editingEmail={editingEmail}
+        emailFormData={emailFormData}
+        onClose={() => {
+          setShowEmailModal(false);
+          setEditingEmail(null);
+          setEmailFormData({ email: '', description: '', is_default: true });
+        }}
+        onInputChange={handleEmailInputChange}
+        // IMPORTANT: update root-level email in formData
+        onSave={() => handleAddEmail(setMessage, (field, value) => handleBasicChange(field as any, value))}
+      />
 
-                          onChange={(e) =>
-                            handleAddressInputChange(
-                              'recipient_name',
-                              e.target.value
-                            )
-                          }
-                          placeholder="Nguyễn Văn A"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="col-md-6">
-                      <div className="mb-3">
-                        <label className="form-label">Số điện thoại *</label>
-                        <input
-                          type="tel"
-                          className="form-control"
-                          value={addressFormData.phone}
-
-                          onChange={(e) =>
-                            handleAddressInputChange('phone', e.target.value)
-                          }
-                          placeholder="0123456789"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Địa chỉ đường phố *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={addressFormData.street}
-                      onChange={(e) =>
-                        handleAddressInputChange('street', e.target.value)
-                      }
-                      placeholder="123 Nguyễn Văn Linh"
-                      required
-                    />
-                  </div>
-
-                  <div className="row">
-                    <div className="col-md-4">
-                      <div className="mb-3">
-                        <label className="form-label">Tỉnh/Thành phố *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={addressFormData.province}
-                          onChange={(e) =>
-                            handleAddressInputChange('province', e.target.value)
-                          }
-                          placeholder="TP. Hồ Chí Minh"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="mb-3">
-                        <label className="form-label">Quận/Huyện *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={addressFormData.city}
-                          onChange={(e) =>
-                            handleAddressInputChange('city', e.target.value)
-                          }
-                          placeholder="Quận 1"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="mb-3">
-                        <label className="form-label">Mã bưu điện *</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={addressFormData.postal_code}
-
-                          onChange={(e) =>
-                            handleAddressInputChange(
-                              'postal_code',
-                              e.target.value
-                            )
-                          }
-                          placeholder="700000"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Chi tiết thêm</label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      value={addressFormData.detail}
-                      onChange={(e) =>
-                        handleAddressInputChange('detail', e.target.value)
-                      }
-                      placeholder="Ghi chú thêm về địa chỉ..."
-                    ></textarea>
-                  </div>
-                </form>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAddressModal(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleAddAddress}
-                >
-                  {editingAddress ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Select Address Modal */}
-      {showSelectAddressModal && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">🏠 Chọn địa chỉ mặc định</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowSelectAddressModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <p className="text-muted mb-3">
-                  Chọn địa chỉ bạn muốn đặt làm mặc định:
-                </p>
-                <div className="d-grid gap-2">
-                  {addresses.map((address) => (
-                    <div
-                      key={address.id}
-                      className={`card ${address.is_default ? 'border-success' : 'border-light'
-                        }`}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        handleSetDefaultAddress(address.id);
-                        setShowSelectAddressModal(false);
-                        setMessage('✅ Đã thay đổi địa chỉ mặc định');
-                        setMessageType('success');
-                      }}
-                    >
-                      <div className="card-body p-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="flex-grow-1">
-                            <div className="fw-bold text-primary">
-                              📍 {address.recipient_name}
-                            </div>
-                            <div className="text-muted small">
-                              📞 {address.phone}
-                            </div>
-                            <div className="mt-1">
-                              {address.street}, {address.city},{' '}
-                              {address.province}
-                              {address.postal_code &&
-                                ` - ${address.postal_code}`}
-                            </div>
-                            {address.detail && (
-                              <div className="text-muted small mt-1">
-                                💬 {address.detail}
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            {address.is_default ? (
-                              <span className="badge bg-success">
-                                Đang sử dụng
-                              </span>
-                            ) : (
-                              <span className="badge bg-outline-secondary">
-                                Chọn làm mặc định
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowSelectAddressModal(false)}
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Email Modal */}
-      {showEmailModal && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingEmail
-                    ? '✏️ Chỉnh sửa email nhận hóa đơn'
-                    : '📧 Thêm email nhận hóa đơn'}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowEmailModal(false);
-                    setEditingEmail(null);
-                    setEmailFormData({
-                      email: '',
-                      description: '',
-                      is_default: true,
-                    });
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <form>
-                  <div className="mb-3">
-                    <label className="form-label">Địa chỉ email *</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={emailFormData.email}
-                      onChange={(e) =>
-                        handleEmailInputChange('email', e.target.value)
-                      }
-                      placeholder="example@company.com"
-                      required
-                    />
-                  </div>
-
-                </form>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowEmailModal(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={handleAddEmail}
-                >
-                  {editingEmail ? 'Cập nhật email' : 'Thêm email'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Select Email Modal */}
-      {showSelectEmailModal && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">📧 Chọn email mặc định</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowSelectEmailModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <p className="text-muted mb-3">
-                  Chọn email bạn muốn đặt làm mặc định để nhận hóa đơn:
-                </p>
-                <div className="d-grid gap-2">
-                  {emails.map((email) => (
-                    <div
-                      key={email.id}
-                      className={`card ${email.is_default ? 'border-success' : 'border-light'}`}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        handleSetDefaultEmail(email.id);
-                        setShowSelectEmailModal(false);
-                        setMessage('✅ Đã thay đổi email mặc định');
-                      }}
-                    >
-                      <div className="card-body p-3">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="flex-grow-1">
-                            <div className="fw-bold text-primary">
-                              📧 {email.email}
-                            </div>
-                            {email.description && (
-                              <div className="text-muted small mt-1">
-                                💬 {email.description}
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            {email.is_default ? (
-                              <span className="badge bg-success">
-                                Đang sử dụng
-                              </span>
-                            ) : (
-                              <span className="badge bg-outline-secondary">
-                                Chọn làm mặc định
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowSelectEmailModal(false)}
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaveBeforeExitModal
+        show={showSaveModal}
+        onSave={handleSaveBeforeExit}
+        onDontSave={handleDontSave}
+        onCancel={handleCancelExit}
+        loading={loading}
+      />
     </div>
   );
 };

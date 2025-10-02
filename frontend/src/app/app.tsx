@@ -2,15 +2,13 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { message } from "antd";
-
+import { SellerRegistration } from "./components/register_seller/SellerRegistration";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
-
 import Home from "./page/Home";
 import CategoryPage from "./page/CategoryPage";
 import AccountLayout from "./page/account/AccountLayout";
-import { SellerRegistration } from "./components/register_seller/SellerRegistration";
 // import {SellerDashboard }from './components/register_seller/SellerDashboard';
 import ProductDetailPage from "./page/ProductDetailPage";
 import NotificationsPage from "./page/account/NotificationsPage";
