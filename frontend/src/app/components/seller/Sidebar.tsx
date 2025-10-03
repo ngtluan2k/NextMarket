@@ -6,6 +6,7 @@ import {
   MenuUnfoldOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import {
   DashboardOutlined,
@@ -34,6 +35,7 @@ const items: MenuItem[] = [
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
   getItem('Hóa Đơn ', 'Invoices', <FileTextOutlined />),
+  getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
   getItem('Trở về trang chủ', 'HomePage', <HomeOutlined/>)
 ];
 

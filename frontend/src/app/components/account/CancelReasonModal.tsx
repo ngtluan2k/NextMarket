@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { orderService } from '../../../service/order.service';
+import { message } from 'antd';
 
 type CancelReasonModalProps = {
   orderId: number;
@@ -25,22 +26,23 @@ export default function CancelReasonModal({
   const [customNote, setCustomNote] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleCancel = async () => {
-    if (!selectedReason) return alert('Vui lòng chọn lý do hủy');
-    const note = selectedReason === 'Khác (ghi chú)' ? customNote : selectedReason;
-    console.log('Sending note:', note);
-    try {
-      setLoading(true);
-      await orderService.changeStatus(orderId, 'cancelled', token, note);
-      onCancelled();
-      onClose();
-    } catch (err) {
-      console.error('Lỗi khi hủy đơn:', err);
-      alert('Hủy đơn thất bại');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleCancel = async () => {
+  if (!selectedReason) return message.error('Vui lòng chọn lý do hủy');
+  const note = selectedReason === 'Khác (ghi chú)' ? customNote : selectedReason;
+
+  try {
+    setLoading(true);
+    await orderService.changeStatus(orderId, 'cancelled', token, note);
+    message.success('Hủy đơn thành công');
+    onCancelled();
+    onClose();
+  } catch (err) {
+    console.error('Lỗi khi hủy đơn:', err);
+    message.error('Hủy đơn thất bại');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

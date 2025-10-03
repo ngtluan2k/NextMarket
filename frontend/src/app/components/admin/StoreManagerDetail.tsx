@@ -27,6 +27,36 @@ const StoreManagerDetail: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<any>(null);
 
+
+    const refresh = async () => {
+        if (!id) return;
+        try {
+            setLoading(true);
+            const res = await storeService.getFullStore(Number(id));
+            setData(res);
+        } catch (err: any) {
+            console.error(err);
+            message.error(err?.response?.data?.message || 'Không tải được chi tiết cửa hàng');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRestore = async () => {
+        if (!id) return;
+        try {
+            setLoading(true);
+            await storeService.restoreStore(Number(id));
+            message.success('Khôi phục cửa hàng thành công');
+            await refresh();
+        } catch (err: any) {
+            console.error(err);
+            message.error(err?.response?.data?.message || 'Khôi phục thất bại');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!id) return;
         (async () => {
@@ -58,6 +88,7 @@ const StoreManagerDetail: React.FC = () => {
                     <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
                         Quay lại
                     </Button>
+                    <Button type='primary' onClick={handleRestore}>Khôi phục cửa hàng</Button>
                     <div>Không có dữ liệu</div>
                 </Space>
             </div>
@@ -77,10 +108,6 @@ const StoreManagerDetail: React.FC = () => {
         followers,
     } = data;
 
-
-    const docsOfThisStore = Array.isArray(documents)
-        ? documents.filter((d: any) => d.store_information_id === storeInformation?.id)
-        : [];
 
     return (
         <div className="p-6">
@@ -181,7 +208,6 @@ const StoreManagerDetail: React.FC = () => {
                     <Descriptions.Item label="Danh sách">
                         {documents ? (
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                <Tag color="blue">{documents.file_url}</Tag>
                                 <Image
                                     width={140}
                                     height={90}

@@ -39,15 +39,15 @@ export class CategoryController {
     };
   }
 
-  @Get(':id')
-  // @Permissions('view_category')
-  async findOne(@Param('id') id: number) {
-    const data = await this.categoryService.findOne(id);
-    return {
-      message: data ? 'Lấy category thành công' : 'Không tìm thấy category',
-      data,
-    };
-  }
+  // @Get(':id')
+  // // @Permissions('view_category')
+  // async findOne(@Param('id') id: number) {
+  //   const data = await this.categoryService.findOne(id);
+  //   return {
+  //     message: data ? 'Lấy category thành công' : 'Không tìm thấy category',
+  //     data,
+  //   };
+  // }
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionGuard)

@@ -487,6 +487,7 @@ newMedia.forEach((m) => {
               {/* Input file */}
               <input
                 type="file"
+                multiple
                 accept="image/*"
                 onChange={(e) => handleFileChange(e, i)}
                 className="flex-1"

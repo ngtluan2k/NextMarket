@@ -11,12 +11,12 @@ export class ProductCategory {
   @Generated('uuid')
   uuid!: string;
 
-  @Column()
+  @Column( {nullable: false})
   product_id!: number;
 
-  @ManyToOne(() => Product, (product) => product.categories, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.categories, { onDelete: 'CASCADE',nullable: false })
   @JoinColumn({ name: 'product_id' })
-  product!: Product;
+  product!: Product; 
 
   @Column()
   category_id!: number;

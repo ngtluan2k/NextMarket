@@ -154,10 +154,10 @@ export const CartSidebar: React.FC<Props> = ({
 
       const successState = {
         orderCode: order.uuid || order.id,
-        total: order.totalAmount, 
-        discountTotal: order.discountTotal, 
-        subtotal: order.subtotal, 
-        shippingFee: order.shippingFee, 
+        total: order.totalAmount, // ✅ Sử dụng từ BE
+        discountTotal: order.discountTotal, // ✅ Sử dụng từ BE
+        subtotal: order.subtotal, // ✅ Sử dụng từ BE
+        shippingFee: order.shippingFee, // ✅ Sử dụng từ BE
         paymentMethodLabel: selectedMethod.name,
         etaLabel,
         items,

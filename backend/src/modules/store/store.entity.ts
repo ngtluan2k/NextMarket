@@ -14,7 +14,6 @@ import { User } from '../user/user.entity';
 import { OneToMany } from 'typeorm';
 import { Product } from '../product/product.entity';
 import { Order } from '../orders/order.entity';
-import { StoreRating } from '../store-rating/store-rating.entity';
 import { StoreInformation } from '../store-information/store-information.entity';
 import { StoreIdentification } from '../store-identification/store-identification.entity';
 import { StoreLevel } from '../store-level/store-level.entity';
@@ -67,28 +66,38 @@ export class Store {
   @Column({ type: 'boolean', default: false })
   is_draft!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_deleted!: boolean;
+
+  @Column({ type: 'datetime', nullable: true })
+  deleted_at!: Date | null;
+
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
   @UpdateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
+  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
+  avg_rating!: number;
+
+  @Column({ type: 'int', default: 0 })
+  review_count!: number;
+
   @OneToMany(() => Product, (product) => product.store)
-  products!: Product[]; // <-- thêm dòng này
+  products!: Product[];
 
   @OneToMany(() => Order, (order) => order.store, { cascade: true })
-  orders!: Order[];
+  orders!: Order;
 
   // --- New inverse relations for eager loading with "relations"
-
-  @OneToMany(() => Voucher, (voucher) => voucher.store)
-  vouchers!: Voucher[];
-
   @OneToMany(
     () => StoreInformation,
     (StoreInformation) => StoreInformation.store
   )
   storeInformation!: StoreInformation[];
+
+  // --- New inverse relations for eager loading with "relations"
 
   @OneToMany(
     () => StoreIdentification,
@@ -111,6 +120,6 @@ export class Store {
   @OneToMany(() => StoreFollower, (StoreFollower) => StoreFollower.store)
   followers!: StoreFollower[];
 
-  @OneToMany(() => StoreRating, (StoreRating) => StoreRating.store)
-  rating!: StoreRating[];
+  @OneToMany(() => Voucher, (Voucher) => Voucher.store)
+  vouchers?: Voucher[];
 }

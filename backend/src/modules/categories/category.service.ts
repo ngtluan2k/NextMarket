@@ -60,15 +60,13 @@ async update(id: number, dto: UpdateCategoryDto) {
   cat.name = dto.name ?? cat.name;
   cat.image = dto.image ?? cat.image;
 
-  if (dto.parent_id === null) {
-    // ✅ gỡ parent ra
-    cat.parent = null;
-  } else if (dto.parent_id) {
-    // ✅ gán parent mới
-    const parent = await this.categoryRepo.findOneBy({ id: dto.parent_id });
-    if (!parent) throw new BadRequestException("Parent not found");
-    cat.parent = parent;
-  }
+if (dto.parent_id === null) {
+  cat.parent = null; // ✅ gỡ parent
+} else if (dto.parent_id !== undefined) {
+  const parent = await this.categoryRepo.findOneBy({ id: dto.parent_id });
+  if (!parent) throw new BadRequestException('Parent not found');
+  cat.parent = parent; // ✅ gán parent mới
+}
 
   return this.categoryRepo.save(cat);
 }

@@ -6,6 +6,7 @@ import {
   MenuUnfoldOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import {
   DashboardOutlined,
@@ -34,7 +35,8 @@ const items: MenuItem[] = [
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
   getItem('Invoices', 'Invoices', <FileTextOutlined />),
-  getItem('Back to home', 'HomePage', <HomeOutlined/>)
+  getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
+  getItem('Back to home', 'HomePage', <HomeOutlined />)
 ];
 
 
@@ -52,9 +54,9 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
 
   const handleMenuClick = (e: { key: string }) => {
     if (e.key === 'HomePage') {
-      navigate('/'); 
+      navigate('/');
     } else {
-      onSelect(e.key); 
+      onSelect(e.key);
     }
   };
 
@@ -72,9 +74,8 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
             <ShoppingCartOutlined className="text-white text-lg" />
           </div>
           <div
-            className={`transition-all duration-300 ease-in-out ${
-              collapsed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-            }`}
+            className={`transition-all duration-300 ease-in-out ${collapsed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+              }`}
             style={{ display: collapsed ? 'none' : 'block' }}
           >
             <span className="text-xl font-bold text-gray-900">
