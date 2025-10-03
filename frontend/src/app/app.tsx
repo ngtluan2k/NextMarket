@@ -35,8 +35,6 @@ import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
 import OtpVerifyPage from "./page/OtpVerify";
 
-
-import UserAddress from './page/UserAddress';
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
 }
@@ -69,7 +67,6 @@ const App: React.FC = () => {
           <Route path="/checkout" element={<CheckoutPayment />} />
           <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/add_product" element={<ProductForm />} />
-          <Route path="/user/address" element={<UserAddress />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />

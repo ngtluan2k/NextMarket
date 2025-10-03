@@ -82,13 +82,13 @@ export class Voucher {
   @Column({ type: 'datetime' })
   end_date!: Date;
 
-  @Column({ type: 'int', name: 'usage_limit', nullable: true })
+  @Column({ type: 'int', nullable: true })
   total_usage_limit?: number;
 
   @Column({ type: 'int', default: 1 })
   per_user_limit!: number;
 
-  @Column({ type: 'int', name: 'used_count', default: 0 })
+  @Column({ type: 'int', default: 0 })
   total_used_count!: number;
 
   @Column({ type: 'int', nullable: true })

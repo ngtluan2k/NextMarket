@@ -114,12 +114,14 @@ export class PaymentsService {
     rawPayload?: any;
   }) {
     return this.dataSource.transaction(async (manager) => {
+      // 1. Tìm payment
       const payment = await manager.findOne(Payment, {
         where: { uuid: paymentUuid },
         relations: ['order', 'paymentMethod'],
       });
       if (!payment) throw new NotFoundException('Payment not found');
 
+      // 2. Check trùng transaction id
       const existingTx = await manager.findOne(PaymentTransaction, {
         where: { providerTransactionId },
       });
@@ -130,6 +132,7 @@ export class PaymentsService {
         return payment;
       }
 
+      // 3. Tạo transaction
       const tx = manager.create(PaymentTransaction, {
         payment,
         providerTransactionId,
@@ -140,12 +143,14 @@ export class PaymentsService {
       });
       await manager.save(tx);
 
+      // 4. Nếu thất bại
       if (!success) {
         payment.status = PaymentStatus.Failed;
         await manager.save(payment);
         return payment;
       }
 
+      // 5. Nếu thành công
       payment.status = PaymentStatus.Completed;
       payment.transactionId = providerTransactionId;
       payment.paidAt = new Date();
@@ -155,9 +160,10 @@ export class PaymentsService {
           : JSON.stringify(rawPayload || {});
       await manager.save(payment);
 
+      // 6. Update order status + history
       const order = payment.order;
       const oldStatus = order.status;
-      order.status = 1;
+      order.status = 1; // đã thanh toán
       await manager.save(order);
 
       const history = manager.create(OrderStatusHistory, {
@@ -169,26 +175,59 @@ export class PaymentsService {
       });
       await manager.save(history);
 
+      // 7. Cập nhật tồn kho
       const items: OrderItem[] = await manager.find(OrderItem, {
         where: { order: { id: order.id } },
         relations: ['variant', 'product'],
       });
+
       for (const item of items) {
+        // Nếu có variant thì trừ trong variant.stock
+        this.logger.debug(
+          `Processing orderItem ${item.id}, product=${
+            item.product.id
+          }, variant=${item.variant?.id || 'none'}`
+        );
+
         if (item.variant) {
           item.variant.stock = (item.variant.stock || 0) - item.quantity;
           await manager.save(item.variant);
         }
-        const inv = await manager.findOne(Inventory, {
-          where: {
-            product: { id: item.product.id },
-            variant: item.variant ? { id: item.variant.id } : IsNull(),
-          },
-        });
+
+        // Tìm inventory theo product + variant
+        let inv: Inventory | null = null;
+        if (item.variant) {
+          inv = await manager.findOne(Inventory, {
+            where: {
+              product: { id: item.product.id },
+              variant: item.variant ? { id: item.variant.id } : IsNull(),
+            },
+            relations: ['product', 'variant'],
+          });
+        } else {
+          inv = await manager.findOne(Inventory, {
+            where: {
+              product: { id: item.product.id },
+              variant: IsNull(),
+            },
+            relations: ['product'],
+          });
+        }
+
         if (inv) {
-          inv.quantity = (inv.quantity || 0) - item.quantity;
           inv.used_quantity = (inv.used_quantity || 0) + item.quantity;
-          
           await manager.save(inv);
+          this.logger.log(
+            `Updated inventory: product ${item.product.id}, variant ${
+              item.variant?.id || 'none'
+            } → used_quantity = ${inv.used_quantity}`
+          );
+        } else {
+          this.logger.warn(
+            `No inventory found for product ${item.product.id}, variant ${
+              item.variant?.id || 'none'
+            }`
+          );
         }
       }
 

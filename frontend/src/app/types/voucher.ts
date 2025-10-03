@@ -1,15 +1,29 @@
-export type Voucher = {
+interface Voucher {
   id: number;
   uuid: string;
   code: string;
-  description: string;
-  discount_type: 'percentage' | 'fixed';
+  title: string;
+  description?: string;
+  type: number;
+  discount_type: number;
   discount_value: number;
+  max_discount_amount?: number;
   min_order_amount: number;
   start_date: string;
   end_date: string;
-  usage_limit: number;
-  used_count: number;
-  applicable_store_ids?: number[]; // Thêm để kiểm tra store
-  store?: { id: number; name: string }; // Thêm thông tin store (nếu API trả về)
-};
+  total_usage_limit?: number;
+  per_user_limit: number;
+  total_used_count: number;
+  collected_count: number;
+  status: number;
+  collection_type: number;
+  priority: number;
+  stackable: boolean;
+  new_user_only: boolean;
+  image_url?: string;
+  theme_color?: string;
+  store?: {
+    id: number;
+    name: string;
+  };
+}

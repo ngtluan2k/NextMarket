@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Typography, Button, Tag, message, Modal } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
@@ -8,7 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import { PaymentMethodResponse } from '../../types/payment';
 import { UserAddress } from '../../types/user';
 import { CartItem } from '../../types/cart';
-
+import AddressModal from '../../page/AddressModal';
+import VoucherDiscountSection from '../checkout/VoucherDiscountSection'; // Import VoucherDiscountSection
 const { Text } = Typography;
 
 type Props = {
@@ -23,6 +24,7 @@ type Props = {
   items?: CheckoutItem[];
   etaLabel?: string;
   onSubmit?: () => void;
+  onAddressChange?: (address: UserAddress) => void;
 };
 
 export const CartSidebar: React.FC<Props> = ({
@@ -37,39 +39,51 @@ export const CartSidebar: React.FC<Props> = ({
   items = [],
   etaLabel,
   onSubmit,
+  onAddressChange,
 }) => {
   const { cart } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
+  const [isVoucherModalVisible, setIsVoucherModalVisible] = useState(false); // State for voucher modal
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
+    userAddress || null
+  );
+  const [selectedVouchers, setSelectedVouchers] = useState<Voucher[]>([]); // State for selected vouchers
+  const [discountTotal, setDiscountTotal] = useState(0); // State for total discount
+
+  // Sync selectedAddress with userAddress prop when it changes
+  useEffect(() => {
+    if (userAddress) {
+      setSelectedAddress(userAddress);
+    }
+  }, [userAddress]);
+
+  // Calculate final total after discount
+  const finalTotal = selectedTotal - discountTotal;
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
       console.log('Items received: ', JSON.stringify(items, null, 2));
 
-      // Kiểm tra dữ liệu đầu vào
+      // Input validation
       if (items.length === 0) {
         message.error('Không có sản phẩm trong đơn hàng');
         return;
       }
 
-      if (!userAddress || !userAddress.id) {
+      if (!selectedAddress || !selectedAddress.id) {
         message.error('Vui lòng chọn địa chỉ giao hàng');
         return;
       }
 
-      const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+      const userId = me?.id;
       if (!userId) {
         message.error('Vui lòng đăng nhập để đặt hàng');
         navigate('/login');
-        return;
-      }
-
-      if (userAddress.userId !== userId) {
-        message.error('Địa chỉ không thuộc về người dùng hiện tại.');
-        navigate('/user/address');
         return;
       }
 
@@ -81,38 +95,44 @@ export const CartSidebar: React.FC<Props> = ({
       const storeId = items[0]?.product?.store?.id || 1;
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
-      // Tạo payload cho đơn hàng
+      // Create order payload with discount and voucher information
       const orderPayload = {
         userId,
         storeId,
-        addressId: Number(userAddress.id),
-        totalAmount: Number(selectedTotal),
+        addressId: selectedAddress.id,
+        subtotal: Number(selectedTotal),
         shippingFee,
-        discountTotal: 0,
-        items: items.map((item, index) => {
-          const productId = Number(item.product?.id);
-          if (isNaN(productId) || productId <= 0) {
-            throw new Error(`Sản phẩm không hợp lệ tại vị trí ${index}: ${item.product?.id}`);
-          }
-          return {
-            productId,
-            variantId: item.product?.variants?.[0].id,
-            quantity: Number(item.quantity),
-            price: Number(item.price),
-            ...(item.variant?.id && { variantId: Number(item.variant.id) }),
-          };
-        }),
+        voucherCodes: selectedVouchers.map((v) => v.code),
+        items: items.map((item) => ({
+          productId: Number(item.product?.id),
+          variantId: item.variant?.id ? Number(item.variant.id) : undefined,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        })),
       };
-
+      console.log(
+        '📦 Order payload (BE will calculate):',
+        JSON.stringify(orderPayload, null, 2)
+      );
       console.log('Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
       const orderRes = await api.post('/orders', orderPayload);
       const order = orderRes.data;
       console.log('Đơn hàng đã được tạo:', order);
-
-      const selectedMethod = paymentMethods.find((m) => m.type === selectedPaymentMethod);
+      console.log('✅ Order created by BE:', {
+        id: order.id,
+        subtotal: order.subtotal,
+        shippingFee: order.shippingFee,
+        discountTotal: order.discountTotal, // Lấy từ BE
+        totalAmount: order.totalAmount, // Lấy từ BE
+      });
+      const selectedMethod = paymentMethods.find(
+        (m) => m.type === selectedPaymentMethod
+      );
 
       if (!selectedMethod) {
-        message.error(`Không tìm thấy phương thức thanh toán: ${selectedPaymentMethod}`);
+        message.error(
+          `Không tìm thấy phương thức thanh toán: ${selectedPaymentMethod}`
+        );
         return;
       }
 
@@ -120,10 +140,13 @@ export const CartSidebar: React.FC<Props> = ({
       const paymentPayload = {
         orderUuid,
         paymentMethodUuid: selectedMethod.uuid,
-        amount: Number(selectedTotal),
+        amount: Number(order.totalAmount), // Use final total for payment
       };
 
-      console.log('💳 Tạo thanh toán:', JSON.stringify(paymentPayload, null, 2));
+      console.log(
+        '💳 Tạo thanh toán:',
+        JSON.stringify(paymentPayload, null, 2)
+      );
       const paymentRes = await api.post('/payments', paymentPayload);
       const { redirectUrl, payment } = paymentRes.data;
 
@@ -131,11 +154,18 @@ export const CartSidebar: React.FC<Props> = ({
 
       const successState = {
         orderCode: order.uuid || order.id,
-        total: selectedTotal,
+        total: order.totalAmount, 
+        discountTotal: order.discountTotal, 
+        subtotal: order.subtotal, 
+        shippingFee: order.shippingFee, 
         paymentMethodLabel: selectedMethod.name,
         etaLabel,
         items,
-        status: selectedMethod.type === 'cod' ? 'success' : (payment?.status ?? 'success'),
+        selectedVouchers,
+        status:
+          selectedMethod.type === 'cod'
+            ? 'success'
+            : payment?.status ?? 'success',
       };
 
       console.log('Navigating to OrderSuccess with state:', successState);
@@ -146,14 +176,7 @@ export const CartSidebar: React.FC<Props> = ({
       } else {
         console.log('✅ Không cần chuyển hướng, chuyển đến trang thành công');
         navigate('/order-success', {
-          state: {
-            orderCode: order.uuid || order.id,
-            total: selectedTotal,
-            paymentMethodLabel: selectedMethod.name,
-            etaLabel,
-            items,
-            status: payment?.status ?? 'success',
-          },
+          state: successState,
           replace: true,
         });
       }
@@ -170,6 +193,16 @@ export const CartSidebar: React.FC<Props> = ({
     }
   };
 
+  const handleApplyVoucher = (voucher: Voucher, discount: number) => {
+    setSelectedVouchers([voucher]); // Update to handle multiple vouchers if needed
+    setDiscountTotal(discount);
+  };
+
+  const handleRemoveVoucher = (voucherId: number) => {
+    setSelectedVouchers(selectedVouchers.filter((v) => v.id !== voucherId));
+    setDiscountTotal(0); // Recalculate discount if needed
+  };
+
   const showConfirmModal = () => {
     setIsModalVisible(true);
   };
@@ -183,85 +216,147 @@ export const CartSidebar: React.FC<Props> = ({
     setIsModalVisible(false);
   };
 
+  const handleAddressSelect = (address: UserAddress) => {
+    setSelectedAddress(address);
+    onAddressChange?.(address);
+  };
+
   return (
-    <div style={{ position: 'sticky', top: 24, maxWidth: 360, marginLeft: 'auto' }}>
+    <div
+      style={{ position: 'sticky', top: 24, maxWidth: 360, marginLeft: 'auto' }}
+    >
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
           <Text strong>Giao tới</Text>
-          <Button type="link" size="small" onClick={() => navigate('/user/address')}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => setIsAddressModalVisible(true)}
+          >
             Thay đổi
           </Button>
         </div>
-        {userAddress ? (
-          <>
-            <p>
-              <Text strong>
-                {userAddress.name ?? 'Người nhận'} | {userAddress.phone ?? 'Chưa có SĐT'}
-              </Text>
-            </p>
-            <p>{userAddress.fullAddress}</p>
-            {userAddress.tag && <Tag color="green">{userAddress.tag}</Tag>}
-          </>
-        ) : (
-          <Text type="secondary">Vui lòng chọn địa chỉ giao hàng</Text>
-        )}
+        <p>
+          {selectedAddress ? (
+            <>
+              <strong>{selectedAddress.recipientName}</strong> |{' '}
+              {selectedAddress.phone}
+              <br />
+              {[
+                selectedAddress.street,
+                selectedAddress.ward,
+                selectedAddress.district,
+                selectedAddress.province,
+                selectedAddress.country,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+            </>
+          ) : (
+            <Text type="secondary">Vui lòng chọn địa chỉ giao hàng</Text>
+          )}
+        </p>
       </Card>
+
+      <AddressModal
+        visible={isAddressModalVisible}
+        onClose={() => setIsAddressModalVisible(false)}
+        currentAddressId={selectedAddress?.id}
+        onSelect={handleAddressSelect}
+      />
+
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">
           <Text strong>Khuyến Mãi</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Có thể chọn 2
-          </Text>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => setIsVoucherModalVisible(true)}
+          >
+            Chọn voucher
+          </Button>
         </div>
         <div className="flex flex-col gap-2">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              border: '1px solid #1890ff',
-              borderRadius: 6,
-              padding: '8px 12px',
-            }}
-          >
-            <Text strong className="text-blue-600">
-              Giảm 6% tối đa 50K
-            </Text>
-            <Button size="small" type="primary">
-              Bỏ chọn
-            </Button>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              border: '1px solid #1890ff',
-              borderRadius: 6,
-              padding: '8px 12px',
-            }}
-          >
-            <Text strong className="text-blue-600">
-              Giảm 50K
-            </Text>
-            <Button size="small" type="primary">
-              Bỏ chọn
-            </Button>
-          </div>
+          {selectedVouchers.length > 0 ? (
+            selectedVouchers.map((voucher) => (
+              <div
+                key={voucher.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: '1px solid #1890ff',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                }}
+              >
+                <Text strong className="text-blue-600">
+                  {voucher.discount_type === 0
+                    ? `Giảm ${
+                        voucher.discount_value
+                      }% tối đa ${voucher.max_discount_amount?.toLocaleString()}đ`
+                    : `Giảm ${voucher.discount_value.toLocaleString()}đ`}
+                </Text>
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => handleRemoveVoucher(voucher.id)}
+                >
+                  Bỏ chọn
+                </Button>
+              </div>
+            ))
+          ) : (
+            <Text type="secondary">Chưa chọn voucher</Text>
+          )}
         </div>
         <Button type="link" style={{ padding: 0, marginTop: 8 }}>
           Mua thêm để freeship 300k cho đơn này
         </Button>
       </Card>
+
+      <VoucherDiscountSection
+        visible={isVoucherModalVisible}
+        onClose={() => setIsVoucherModalVisible(false)}
+        orderItems={items.map((item) => ({
+          productId: Number(item.product?.id),
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        }))}
+        storeId={items[0]?.product?.store?.id || 1}
+        orderAmount={selectedTotal}
+        onApply={handleApplyVoucher}
+        selectedVouchers={selectedVouchers}
+        maxSelect={2}
+      />
+
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Text>Tổng tiền hàng ({selectedCount})</Text>
           <Text>{selectedTotal.toLocaleString()}đ</Text>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+        {discountTotal > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 8,
+            }}
+          >
+            <Text>Giảm giá</Text>
+            <Text>-{discountTotal.toLocaleString()}đ</Text>
+          </div>
+        )}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 8,
+          }}
+        >
           <Text strong>Tổng thanh toán</Text>
           <Text strong style={{ color: 'red', fontSize: 18 }}>
-            {selectedTotal.toLocaleString()}đ
+            {finalTotal.toLocaleString()}đ
           </Text>
         </div>
         <Button
@@ -273,7 +368,8 @@ export const CartSidebar: React.FC<Props> = ({
           onClick={mode === 'checkout' ? showConfirmModal : onSubmit}
           loading={loading}
         >
-          {submitLabel ?? (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}
+          {submitLabel ??
+            (mode === 'checkout' ? 'Đặt hàng' : `Mua Hàng (${selectedCount})`)}
         </Button>
       </Card>
 
@@ -288,15 +384,28 @@ export const CartSidebar: React.FC<Props> = ({
       >
         <div>
           <Text strong>Thông tin giao hàng</Text>
-          {userAddress ? (
+          {selectedAddress ? (
             <div style={{ marginTop: 8 }}>
               <p>
                 <Text strong>
-                  {userAddress.name ?? 'Người nhận'} | {userAddress.phone ?? 'Chưa có SĐT'}
+                  {selectedAddress.recipientName ?? 'Người nhận'} |{' '}
+                  {selectedAddress.phone ?? 'Chưa có SĐT'}
                 </Text>
               </p>
-              <p>{userAddress.fullAddress}</p>
-              {userAddress.tag && <Tag color="green">{userAddress.tag}</Tag>}
+              <p>
+                {selectedAddress.fullAddress ??
+                  [
+                    selectedAddress.street,
+                    selectedAddress.ward,
+                    selectedAddress.district,
+                    selectedAddress.province,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+              </p>
+              {selectedAddress.tag && (
+                <Tag color="green">{selectedAddress.tag}</Tag>
+              )}
             </div>
           ) : (
             <Text type="secondary">Chưa chọn địa chỉ giao hàng</Text>
@@ -305,8 +414,8 @@ export const CartSidebar: React.FC<Props> = ({
           <div style={{ marginTop: 16 }}>
             <Text strong>Phương thức thanh toán</Text>
             <p>
-              {paymentMethods.find((m) => m.type === selectedPaymentMethod)?.name ??
-                'Chưa chọn phương thức thanh toán'}
+              {paymentMethods.find((m) => m.type === selectedPaymentMethod)
+                ?.name ?? 'Chưa chọn phương thức thanh toán'}
             </p>
           </div>
 
@@ -322,18 +431,66 @@ export const CartSidebar: React.FC<Props> = ({
                 }}
               >
                 <Text>
-                  {item.product?.name} {item.variant?.variant_name ? `(${item.variant.variant_name})` : ''} x{' '}
-                  {item.quantity}
+                  {item.product?.name}{' '}
+                  {item.variant?.variant_name
+                    ? `(${item.variant.variant_name})`
+                    : ''}{' '}
+                  x {item.quantity}
                 </Text>
                 <Text>{Number(item.price) * Number(item.quantity)}đ</Text>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
+          {selectedVouchers.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Text strong>Khuyến mãi</Text>
+              {selectedVouchers.map((voucher) => (
+                <div key={voucher.id} style={{ marginTop: 8 }}>
+                  <Text>
+                    {voucher.discount_type === 0
+                      ? `Giảm ${
+                          voucher.discount_value
+                        }% tối đa ${voucher.max_discount_amount?.toLocaleString()}đ`
+                      : `Giảm ${voucher.discount_value.toLocaleString()}đ`}
+                  </Text>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: 16,
+              display: 'flex',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Text>Tổng tiền hàng</Text>
+            <Text>{selectedTotal.toLocaleString()}đ</Text>
+          </div>
+          {discountTotal > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: 8,
+              }}
+            >
+              <Text>Giảm giá</Text>
+              <Text>-{discountTotal.toLocaleString()}đ</Text>
+            </div>
+          )}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 8,
+            }}
+          >
             <Text strong>Tổng thanh toán</Text>
             <Text strong style={{ color: 'red', fontSize: 16 }}>
-              {selectedTotal.toLocaleString()}đ
+              {finalTotal.toLocaleString()}đ
             </Text>
           </div>
 

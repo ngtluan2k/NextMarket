@@ -79,7 +79,7 @@ export class VoucherUsageService {
       return this.usageRepo.find({ relations: ['voucher', 'user', 'order', 'order.store'] });
     } else if (role === 'store_owner') {
       // Chỉ lấy VoucherUsage liên quan đến store của user
-      const stores = await this.orderRepo.manager.find(Store, { where: { owner: { id: userId } } });
+      const stores = await this.orderRepo.manager.find(Store, { where: { user: { id: userId } } });
       const storeIds = stores.map(store => store.id);
       return this.usageRepo.find({
         where: { order: { store: { id: In (storeIds) } } },
@@ -106,7 +106,7 @@ export class VoucherUsageService {
     if (role !== 'admin') {
       if (role === 'store_owner') {
         const store = await this.orderRepo.manager.findOne(Store, {
-          where: { id: usage.order.store.id, owner: { id: userId } },
+          where: { id: usage.order.store.id, user: { id: userId } },
         });
         if (!store) {
           throw new ForbiddenException('Bạn không có quyền xem bản ghi này');
