@@ -42,4 +42,6 @@ export class OrderItem {
 
   @Column({type: 'decimal', precision: 12, scale: 2, nullable: true,})
   subtotal?: number;
+
+
 }

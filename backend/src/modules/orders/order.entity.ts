@@ -18,7 +18,7 @@ import { OrderInvoice } from '../order-invoices/order-invoice.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
-
+import { ProductReview } from '../product_reviews/product_review.entity';
 export enum OrderStatuses {
   pending = 0,
   confirmed = 1,
@@ -121,4 +121,7 @@ export class Order {
 
   @OneToMany(() => Refund, (refund) => refund.order)
   refund!: Refund[];
+
+  @OneToMany(() => ProductReview, (reviews) => reviews.order)
+  reviews!: ProductReview;
 }

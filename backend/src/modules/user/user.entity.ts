@@ -13,6 +13,7 @@ import { ShoppingCart } from '../cart/cart.entity';
 import { Order } from '../orders/order.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { Store } from '../store/store.entity';
+import { ProductReview } from '../product_reviews/product_review.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -43,8 +44,8 @@ export class User {
   @Column({ type: 'datetime', nullable: true })
   updated_at!: Date;
 
-@OneToOne(() => Store, (store) => store.user, { cascade: true })
-store!: Store;
+  @OneToOne(() => Store, (store) => store.user, { cascade: true })
+  store!: Store;
 
   @OneToOne(() => UserProfile, (profile) => profile.user, {
     cascade: true,
@@ -58,8 +59,11 @@ store!: Store;
   voucherUsages!: VoucherUsage[];
   @OneToOne(() => ShoppingCart, (cart) => cart.user, { cascade: true })
   cart!: ShoppingCart;
-  @OneToMany(() => Order, (order) => order.user,{cascade: true} )
+  @OneToMany(() => Order, (order) => order.user, { cascade: true })
   orders!: Order[];
   @OneToMany(() => OrderStatusHistory, (history) => history.changedBy)
   orderStatusHistories!: OrderStatusHistory[];
+
+  @OneToMany(() => ProductReview, (reviews) => reviews.user)
+  reviews!: ProductReview[];
 }

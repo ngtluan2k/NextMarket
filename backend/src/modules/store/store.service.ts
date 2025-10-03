@@ -19,7 +19,6 @@ import { StoreIdentification } from '../store-identification/store-identificatio
 import { StoreInformation } from '../store-information/store-information.entity';
 import { StoreInformationEmail } from '../store-information-email/store-information-email.entity';
 import { StoreDocument } from '../store-document/store-document.entity';
-import { StoreRating } from '../store-rating/store-rating.entity';
 import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-request.entity';
 import { v4 as uuidv4 } from 'uuid';
@@ -55,8 +54,6 @@ export class StoreService {
     private storeEmailRepo: Repository<StoreInformationEmail>,
     @InjectRepository(StoreDocument)
     private storeDocumentRepo: Repository<StoreDocument>,
-    @InjectRepository(StoreRating)
-    private storeRatingRepo: Repository<StoreRating>,
     @InjectRepository(StoreFollower)
     private storeFollowerRepo: Repository<StoreFollower>,
     @InjectRepository(StoreUpgradeRequest)
@@ -458,7 +455,6 @@ export class StoreService {
       this.bankAccountRepo.delete({ store_id: id }),
       this.storeAddressRepo.delete({ stores_id: id }),
       this.storeLevelRepo.delete({ store_id: id }),
-      this.storeRatingRepo.delete({ store_id: id }),
       this.storeFollowerRepo.delete({ store_id: id }),
       this.storeUpgradeRequestRepo.delete({ store_id: id }),
     ]);
@@ -812,7 +808,6 @@ export class StoreService {
         bankAccount: true,
         address: true,
         followers: true,
-        rating: true,
       },
     });
     if (!store) throw new NotFoundException('Store not found');
@@ -824,11 +819,7 @@ export class StoreService {
     const address = store.address?.[0] ?? null;
     const followers = store.followers?.length ?? 0;
 
-    const totalRatings = store.rating?.length ?? 0;
-    const avgRating = totalRatings
-      ? store.rating.reduce((s, r: any) => s + (r.stars ?? r['rating'] ?? 0), 0) / totalRatings
-      : 0;
-
+    
     return {
       store,
       storeInformation: info,
@@ -838,7 +829,6 @@ export class StoreService {
       storeAddress: address,
       storeEmail: info?.emails?.[0] ?? null,
       documents: info?.documents?.[0] ?? null,
-      rating: { total: totalRatings, average: avgRating },
       followers,
     };
   }

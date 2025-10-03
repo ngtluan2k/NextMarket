@@ -12,6 +12,7 @@ import {
 import { Product } from '../product/product.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { OrderItem } from '../order-items/order-item.entity';
+import { ProductReview } from '../product_reviews/product_review.entity';
 
 @Entity('variants')
 export class Variant {
@@ -50,9 +51,13 @@ export class Variant {
   @UpdateDateColumn()
   updated_at!: Date;
 
+
+  
+
   // === Relations ===
   @OneToMany(() => Inventory, (inventories) => inventories.variant)
   inventories!: Inventory[];
   @OneToMany(() => OrderItem, (item) => item.variant)
   orderItems!: OrderItem[];
+
 }

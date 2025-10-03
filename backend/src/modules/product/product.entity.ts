@@ -18,7 +18,7 @@ import {
 } from 'typeorm';
 import { OrderItem } from '../order-items/order-item.entity';
 import { ProductTag } from '../product_tag/product_tag.entity';
-
+import { ProductReview } from '../product_reviews/product_review.entity';
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
@@ -66,6 +66,12 @@ export class Product {
   @UpdateDateColumn()
   updated_at!: Date;
 
+  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
+  avg_rating!: number;
+
+  @Column({ type: 'int', default: 0 })
+  review_count!: number;
+
   // === Relations ===
   @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
   categories!: ProductCategory[];
@@ -86,4 +92,7 @@ export class Product {
 
   @OneToMany(() => ProductTag, (pt) => pt.product)
   productTags!: ProductTag[];
+
+  @OneToMany(() => ProductReview, (reviews) => reviews.product)
+  reviews!: ProductReview[];
 }

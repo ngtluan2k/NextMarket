@@ -210,6 +210,7 @@ export class OrdersService {
         'orderItem.variant',
         'voucherUsages',
         'voucherUsages.voucher',
+        'orderItem.product.reviews',
       ],
     });
 
@@ -378,19 +379,25 @@ export class OrdersService {
     };
   }
   async findByStore(storeId: number): Promise<Order[]> {
-    return this.ordersRepository.find({
-      where: { store: { id: storeId } },
-      relations: [
-        'user',
-        'userAddress',
-        'orderItem',
-        'orderItem.product',
-        'orderItem.variant',
-        'voucherUsages',
-        'voucherUsages.voucher',
-        'payment',
-      ],
-      order: { id: 'DESC' }, // sắp xếp đơn mới nhất trước
-    });
-  }
+  return this.ordersRepository
+    .createQueryBuilder('order')
+    .leftJoinAndSelect('order.user', 'user')
+    .leftJoinAndSelect('order.userAddress', 'userAddress')
+    .leftJoinAndSelect('order.orderItem', 'orderItem')
+    .leftJoinAndSelect('orderItem.product', 'product')
+    .leftJoinAndSelect('orderItem.variant', 'variant')
+    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+    .leftJoinAndSelect('order.payment', 'payment')
+    // join reviews nhưng có điều kiện order_id = order.id
+    .leftJoinAndSelect(
+      'product.reviews',
+      'reviews',
+      'reviews.order_id = order.id'
+    )
+    .where('order.store_id = :storeId', { storeId })
+    .orderBy('order.id', 'DESC')
+    .getMany();
+}
+
 }
