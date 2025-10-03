@@ -109,7 +109,7 @@ export const useAddressManagement = () => {
       const newAddress = {
         ...addressFormData,
         // Nếu V2: đảm bảo district rỗng để không lưu sai
-        district: version === 'v2' ? '' : addressFormData.district,
+        district: version === 'v2' ? addressFormData.district : '',
         id: Date.now(),
         is_default: isFirstAddress,
       };

@@ -5,6 +5,7 @@ import {
   getCurrentUserId,
   UserProfile,
 } from '../../../service/user-profile.service';
+import { API_BASE_URL } from '../../api/api';
 
 export type ProfileFormValues = {
   fullName?: string;
@@ -50,6 +51,9 @@ export default function AccountProfileForm({
   const [countries, setCountries] = useState<{ name: string; code: string }[]>(
     []
   );
+  const [uploading, setUploading] = useState(false);
+
+
 
   useEffect(() => {
     fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
@@ -113,6 +117,64 @@ export default function AccountProfileForm({
     };
   };
 
+
+  // helpers
+  const toAbs = (p?: string) => {
+    if (!p) return '';
+    let s = p.trim();
+    if (/^data:/i.test(s) || /^https?:\/\//i.test(s)) return s;
+    s = s.replace(/\\/g, '/');
+    return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+  };
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  // tách hàm upload
+  const uploadAvatar = async (file: File) => {
+    const uid = getCurrentUserId();
+    if (!uid) throw new Error('Chưa đăng nhập');
+
+    const form = new FormData();
+    form.append('file', file);
+
+    const res = await fetch(`${API_BASE_URL}/users/${uid}/upload-avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || 'Upload thất bại');
+    return data.avatar_url || data.data?.avatar_url || data.file_url;
+  };
+
+  // tách hàm chọn file
+  const handlePickAvatar = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const temp = URL.createObjectURL(file);
+      setPreviewUrl(temp);
+      setUploading(true);
+
+      try {
+        const url = await uploadAvatar(file);
+        setVal((s) => ({ ...s, avatarUrl: url }));
+      } catch (err) {
+        console.error('Upload avatar error:', err);
+      } finally {
+        setPreviewUrl(null);
+        setUploading(false);
+      }
+    };
+    input.click();
+  };
+
   // Load profile from API if autoLoadProfile is enabled
   useEffect(() => {
     const loadProfile = async () => {
@@ -154,7 +216,7 @@ export default function AccountProfileForm({
   const body = (
     <div className={className}>
       <h2 className="text-lg font-semibold text-slate-900 mb-4">
-        Thông tin tài khoản
+        Thông tin tài
       </h2>
 
       {/* Error message */}
@@ -175,26 +237,23 @@ export default function AccountProfileForm({
         {/* Avatar + Họ & Tên + Nickname */}
         <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4 items-start">
           <div className="relative h-22 w-22">
-            <div className="h-22 w-22 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-slate-400">
-              <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M3 21a9 9 0 1 1 18 0"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-              </svg>
+            <div className="h-22 w-22 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-slate-400 overflow-hidden">
+              {(previewUrl || val.avatarUrl)
+                ? <img src={toAbs(previewUrl || val.avatarUrl)} alt="avatar" className="w-full h-full object-cover" />
+                : <svg width="42" height="42" viewBox="0 0 24 24" fill="none"> ... </svg>}
             </div>
             <button
               type="button"
-              className="absolute bottom-0 right-0 rounded-full bg-white border border-slate-200 p-2 shadow"
+              disabled={uploading}
+              className="absolute bottom-0 right-0 rounded-full bg-white border border-slate-200 p-2 shadow disabled:opacity-50 disabled:cursor-not-allowed"
               title="Đổi ảnh"
+              onClick={handlePickAvatar}
             >
-              <Camera className="h-4 w-4 text-slate-600" />
+              {uploading ? (
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+              ) : (
+                <Camera className="h-4 w-4 text-slate-600" />
+              )}
             </button>
           </div>
 
