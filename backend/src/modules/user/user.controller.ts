@@ -8,6 +8,9 @@ import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateUsernameDto } from './dto/update-username.dto';
 import { RequestRegisterOtpDto, VerifyRegisterOtpDto } from './dto/register-otp.dto';
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from '../../common/utils/multer.config';
 
 
 @ApiTags('users')
@@ -117,4 +120,22 @@ export class UserController {
     const user = await this.userService.verifyRegisterOtp(dto);
     return { message: 'Tạo tài khoản thành công', data: user };
   }
+  @Post(':id/upload-avatar')
+  @ApiOperation({ summary: 'Upload user avatar' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadAvatar(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) {
+      return { status: 400, message: 'No file provided' };
+    }
+    const currentUserId = req.user?.userId ?? req.user?.sub;
+    const data = await this.userService.uploadAvatar(id, currentUserId, file);
+    return { status: 200, message: 'Avatar uploaded', data };
+  }
+
 }
