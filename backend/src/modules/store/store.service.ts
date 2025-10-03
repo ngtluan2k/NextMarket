@@ -31,7 +31,8 @@ import { ProductTag } from '../product_tag/product_tag.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { ProductMedia } from '../product_media/product_media.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
-
+import * as fs from 'fs';
+import * as path from 'path';
 
 
 @Injectable()
@@ -68,8 +69,8 @@ export class StoreService {
     @InjectRepository(PricingRules) private pricingRulesRepo: Repository<PricingRules>,
     @InjectRepository(ProductCategory) private productCategoryRepo: Repository<ProductCategory>,
     @InjectRepository(ProductTag) private productTagRepo: Repository<ProductTag>,
-   
-    
+
+
   ) { }
 
   async findAll(includeDeleted = false) {
@@ -852,14 +853,14 @@ export class StoreService {
       where: { slug, is_deleted: false },
       relations: [
         'storeInformation',
-    'storeIdentification',
-    'bankAccount',
-    'address', 
-    'products',
-    'products.media',
-    'orders',
-    'followers',
-    'rating',
+        'storeIdentification',
+        'bankAccount',
+        'address',
+        'products',
+        'products.media',
+        'orders',
+        'followers',
+        'rating',
       ],
     });
 
@@ -920,7 +921,52 @@ export class StoreService {
     }));
   }
 
-  
+  // Upload logo
+  async uploadLogo(
+    storeId: number,
+    file: Express.Multer.File,
+    userId: number,
+  ): Promise<{ logo_url: string }> {
+    const store = await this.storeRepo.findOne({ where: { id: storeId } });
+    if (!store) throw new NotFoundException('Store not found');
+    if (store.user_id !== userId) {
+      throw new BadRequestException('You do not own this store');
+    }
+
+    // Validate image only
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowed.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Only JPG/PNG allowed');
+    }
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      throw new BadRequestException('File size must be <= 5MB');
+    }
+
+    // Ensure upload dir
+    const uploadDir = path.join(process.cwd(), 'uploads', 'logo');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Generate filename
+    const ext = path.extname(file.originalname) || '.jpg';
+    const filename = `store_${storeId}_${uuidv4()}${ext}`;
+    const fullPath = path.join(uploadDir, filename);
+
+    // Save
+    fs.writeFileSync(fullPath, file.buffer);
+
+    // Relative URL to serve via /uploads
+    const logoUrl = `/uploads/logo/${filename}`;
+
+    // Persist on store
+    store.logo_url = logoUrl;
+    await this.storeRepo.save(store);
+
+    return { logo_url: logoUrl };
+  }
+
 
 
 }

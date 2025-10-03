@@ -13,6 +13,8 @@ import {
   ParseIntPipe,
   NotFoundException,
   ForbiddenException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { StoreService } from './store.service';
@@ -26,6 +28,10 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProductService } from '../product/product.service';
 import { Store } from './store.entity';
 import { Repository } from 'typeorm';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { multerConfig } from '../../common/utils/multer.config';
+
 
 @ApiTags('stores')
 @ApiBearerAuth('access-token')
@@ -291,6 +297,31 @@ export class StoreController {
   async restore(@Param('id') id: number) {
     const result = await this.storeService.restore(id);
     return result;
+  }
+    @Post(':id/upload-logo')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Upload store logo (owner only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadLogo(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+    const result = await this.storeService.uploadLogo(id, file, req.user.userId);
+    return { message: 'Logo uploaded', data: result };
   }
 
 }

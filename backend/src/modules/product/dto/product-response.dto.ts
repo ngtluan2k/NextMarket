@@ -69,6 +69,8 @@ export class StoreDto {
 
   @ApiProperty({ description: 'Store slug' })
   slug?: string;
+  @ApiProperty({ description: 'Store logo URL' })
+  logo_url?: string;
 }
 
 
