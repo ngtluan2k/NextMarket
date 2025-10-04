@@ -92,7 +92,7 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      const storeId = items[0]?.product?.store?.id || 1;
+      const storeId = items[0]?.product?.store?.id;
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
       // Create order payload with discount and voucher information
@@ -165,7 +165,7 @@ export const CartSidebar: React.FC<Props> = ({
         status:
           selectedMethod.type === 'cod'
             ? 'success'
-            : payment?.status ?? 'success',
+            : payment?.status ?? 'pending',
       };
 
       console.log('Navigating to OrderSuccess with state:', successState);

@@ -163,7 +163,7 @@ export class PaymentsService {
       // 6. Update order status + history
       const order = payment.order;
       const oldStatus = order.status;
-      order.status = 1; // đã thanh toán
+      order.status = 0; // đã thanh toán
       await manager.save(order);
 
       const history = manager.create(OrderStatusHistory, {
