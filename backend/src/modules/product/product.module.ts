@@ -18,6 +18,8 @@ import { ProductCategoryModule } from '../product_category/product_category.modu
 import { StoreModule } from '../store/store.module';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
+import { ProductReview } from '../product_reviews/product_review.entity';
+import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { Tag } from '../tag/tag.entity';
       ProductCategory,
       ProductTag,
       Tag,
+      ProductReview,
     ]),
     forwardRef(() => ProductMediaModule),
     forwardRef(() => VariantModule),
@@ -38,6 +41,8 @@ import { Tag } from '../tag/tag.entity';
     forwardRef(() => PricingRuleModule),
     forwardRef(() => ProductCategoryModule),
     forwardRef(() => StoreModule),
+    forwardRef(() => ProductReviewsModule), // Để products có thể liên kết reviews
+
   ],
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],

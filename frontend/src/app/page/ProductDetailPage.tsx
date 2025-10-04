@@ -115,14 +115,18 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
-      .filter((r: any) => {
-        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
-        const end = r.ends_at
-          ? new Date(r.ends_at)
-          : new Date(8640000000000000);
-        return quantity >= r.min_quantity && now >= start && now <= end;
-      })
-      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+  .filter((r: any) => {
+    const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
+    const end = r.ends_at ? new Date(r.ends_at) : null;
+
+    return (
+      quantity >= r.min_quantity &&
+      now >= start &&
+      (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
+    );
+  })
+  .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
+
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 
@@ -236,7 +240,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 showMessage={showMessage}
               />
             </div>
-            <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
+            
+          </div>
+          <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <Suspense fallback={<div>Loading reviews...</div>}>
                 <LazyProductReviews />
               </Suspense>
@@ -246,7 +252,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 <LazyExploreMore />
               </Suspense>
             </div>
-          </div>
         </div>
       </main>
       <Footer />

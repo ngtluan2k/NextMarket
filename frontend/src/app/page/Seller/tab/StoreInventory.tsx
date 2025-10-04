@@ -47,16 +47,17 @@ import type { StatisticProps } from 'antd';
 import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
 import { ProductForm } from '../../../components/seller/ProductFormWizard';
-
+import { EditProductForm } from '../../../components/seller/EditProductForm';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-interface Product {
+export interface Product {
   key: string;
   id: string;
   name: string;
   category: string;
-  price: number;
+  base_price: number;
+  brandId: number;
   stock: number;
   sold: number;
   revenue: number;
@@ -64,9 +65,41 @@ interface Product {
   statusApi: 'active' | 'draft';
   image: string;
   sku: string;
+  short_description: string;
   description: string;
   tags: string[];
   createdAt: string;
+  categories: { id: number; name: string }[];
+  media: {
+    media_type: string;
+    url: string;
+    is_primary?: boolean;
+    sort_order?: number;
+    file?: File;
+  }[];
+  variants: {
+    id?: number;
+    sku: string;
+    variant_name: string;
+    price: number;
+    stock: number;
+    barcode?: string;
+    inventories?: {
+      id?: number;
+      location: string;
+      quantity: number;
+      used_quantity?: number;
+    }[];
+  }[];
+
+  pricing_rules: {
+    type: string;
+    min_quantity: number;
+    price: number;
+    cycle?: string;
+    starts_at?: string | Date;
+    ends_at?: string | Date;
+  }[];
   apiId?: number; // To link with backend
 }
 
@@ -84,7 +117,11 @@ export default function StoreInventory() {
   const [form] = Form.useForm();
 
   const [isAddWizardVisible, setAddWizardVisible] = useState(false);
-
+  const handleProductUpdated = (updatedProduct: Product) => {
+  setProducts((prev) =>
+    prev.map((p) => (p.apiId === updatedProduct.apiId ? updatedProduct : p))
+  );
+};
 
   useEffect(() => {
     fetchStores();
@@ -98,97 +135,165 @@ export default function StoreInventory() {
     }
   }, [selectedStoreId]);
 
-const fetchStores = async () => {
-  try {
-    const store = await storeService.getMyStore();
-    if (store) {
-      setStores([store]); // 👈 bọc object thành array
-      setSelectedStoreId(store.id);
-    } else {
-      setStores([]);
+  const fetchStores = async () => {
+    try {
+      const store = await storeService.getMyStore();
+      if (store) {
+        setStores([store]); // 👈 bọc object thành array
+        setSelectedStoreId(store.id);
+      } else {
+        setStores([]);
+      }
+    } catch (error) {
+      message.error('Không thể tải danh sách cửa hàng');
+      console.error('Lỗi khi tải cửa hàng:', error);
     }
-  } catch (error) {
-    message.error('Không thể tải danh sách cửa hàng');
-    console.error('Lỗi khi tải cửa hàng:', error);
-  }
-};
-
-
-
+  };
 
   const fetchProducts = async () => {
-  if (!selectedStoreId) return;
+    if (!selectedStoreId) return;
 
-  setLoading(true);
-  try {
-    const apiProducts = await productService.getStoreProducts(selectedStoreId);
+    setLoading(true);
+    try {
+      const apiProducts = await productService.getStoreProducts(
+        selectedStoreId
+      );
 
-    if (!Array.isArray(apiProducts)) {
-      console.error('API không trả về mảng:', apiProducts);
-      message.error('Dữ liệu sản phẩm không hợp lệ');
-      setProducts([]);
-      return;
+      if (!Array.isArray(apiProducts)) {
+        console.error('API không trả về mảng:', apiProducts);
+        message.error('Dữ liệu sản phẩm không hợp lệ');
+        setProducts([]);
+        return;
+      }
+
+      // ✅ Lọc chỉ lấy sản phẩm active
+      const activeProducts = apiProducts.filter(
+        (p: ApiProduct) => p.status !== 'deleted'
+      );
+
+      const mappedProducts: Product[] = activeProducts.map(
+        
+        (apiProduct: ApiProduct) => {
+          
+          // Lấy ảnh chính
+          const primaryImage =
+            apiProduct.media?.find(
+              (m) => m.is_primary && m.media_type === 'image'
+            )?.url || '/placeholder.svg';
+
+          const imageUrl = primaryImage.startsWith('/uploads')
+            ? `http://localhost:3000${primaryImage}`
+            : primaryImage;
+
+          // Lấy tên category để hiển thị
+          const categoryName =
+            apiProduct.categories?.[0]?.category?.name || 'Chung';
+
+          // Lấy stock & price
+          const stock = apiProduct.variants?.[0]?.stock || 0;
+          const rawPrice =
+            apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
+          const price =
+            typeof rawPrice === 'string'
+              ? parseFloat(rawPrice)
+              : Number(rawPrice);
+          const finalPrice = isNaN(price) ? 0 : price;
+
+          // Tính sold & revenue
+          const sold = Math.floor(Math.random() * 50);
+          const revenue = finalPrice * sold;
+
+          // Trạng thái
+          const status = getStockStatus(stock);
+
+          return {
+            key: apiProduct.id.toString(),
+            id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
+            name: apiProduct.name || 'Sản Phẩm Không Xác Định',
+            category: categoryName,
+            base_price: finalPrice,
+            stock,
+            sold,
+            revenue,
+            status,
+            statusApi: apiProduct.status as 'active' | 'draft',
+            image: imageUrl,
+            sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
+            short_description: apiProduct.short_description || '',
+            description: apiProduct.description || '',
+            tags: [],
+            createdAt:
+              apiProduct.created_at?.split('T')[0] ||
+              new Date().toISOString().split('T')[0],
+            apiId: apiProduct.id,
+            brandId: apiProduct.brand?.id || apiProduct.brand_id || 0,
+
+            // ✅ categories là số
+            categories:
+              apiProduct.categories?.map((c) => ({
+                id: c.category_id || c.id,
+                name: c.category?.name || '',
+              })) || [],
+
+            // ✅ media
+            media:
+              apiProduct.media?.map((m) => ({
+                media_type: m.media_type,
+                url: m.url.startsWith('/uploads')
+                  ? `http://localhost:3000${m.url}`
+                  : m.url,
+                is_primary: m.is_primary || false,
+                sort_order: m.sort_order,
+              })) || [],
+
+            // ✅ variants
+            // variants
+            
+            variants:
+              apiProduct.variants?.map((v) => ({
+                
+                id: v.id,
+                sku: v.sku,
+                variant_name: v.variant_name,
+                price:
+                  typeof v.price === 'string' ? parseFloat(v.price) : v.price,
+                stock: v.stock,
+                barcode: v.barcode,
+                inventories:
+                  v.inventories?.map((inv) => ({
+                    id: inv.id,
+                    location: inv.location,
+                    quantity: inv.quantity,
+                    used_quantity: inv.used_quantity || 0,
+                  })) || [],
+              })) || [],
+
+            // ✅ pricing_rules
+            pricing_rules:
+              apiProduct.pricing_rules?.map((rule) => ({
+                type: rule.type,
+                min_quantity: rule.min_quantity,
+                price:
+                  typeof rule.price === 'string'
+                    ? parseFloat(rule.price)
+                    : rule.price,
+                cycle: rule.cycle,
+                starts_at: rule.starts_at,
+                ends_at: rule.ends_at,
+              })) || [],
+          };
+        }
+      );
+
+      console.log('Danh Sách Sản Phẩm Active:', mappedProducts);
+      setProducts(mappedProducts);
+    } catch (error) {
+      message.error('Không thể tải danh sách sản phẩm');
+      console.error('Lỗi khi tải sản phẩm:', error);
+    } finally {
+      setLoading(false);
     }
-
-    // ✅ Lọc chỉ lấy sản phẩm active
-    const activeProducts = apiProducts.filter(
-      (p: ApiProduct) => p.status !== 'deleted'
-    );
-
-const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) => {
-  const primaryImage =
-    apiProduct.media?.find((m) => m.is_primary && m.media_type === 'image')?.url ||
-    '/placeholder.svg';
-
-  const imageUrl = primaryImage.startsWith('/uploads')
-    ? `http://localhost:3000${primaryImage}`
-    : primaryImage;
-
-  const categoryName =
-    apiProduct.categories?.find((c) => c.category?.name)?.category?.name || 'Chung';
-
-  const stock = apiProduct.variants?.[0]?.stock || 0;
-
-  const rawPrice = apiProduct.variants?.[0]?.price || apiProduct.base_price || 0;
-  const price = typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice);
-  const finalPrice = isNaN(price) ? 0 : price;
-
-  const sold = Math.floor(Math.random() * 50);
-  const revenue = finalPrice * sold;
-
-  const status = getStockStatus(stock);
-
-  return {
-    key: apiProduct.id.toString(),
-    id: `PRD${String(apiProduct.id).padStart(3, '0')}`,
-    name: apiProduct.name || 'Sản Phẩm Không Xác Định',
-    category: categoryName,
-    price: finalPrice,
-    stock,
-    sold,
-    revenue,
-    status,
-    statusApi: apiProduct.status as 'active' | 'draft', // ✅ ép kiểu
-    image: imageUrl,
-    sku: apiProduct.variants?.[0]?.sku || `SKU${apiProduct.id}`,
-    description: apiProduct.description || '',
-    tags: [],
-    createdAt: apiProduct.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-    apiId: apiProduct.id,
   };
-});
-
-
-    console.log('Danh Sách Sản Phẩm Active:', mappedProducts);
-    setProducts(mappedProducts);
-  } catch (error) {
-    message.error('Không thể tải danh sách sản phẩm');
-    console.error('Lỗi khi tải sản phẩm:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   // console.log(products);
 
@@ -208,12 +313,14 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
   const inStock = products.filter((p) => p.status === 'Còn Hàng').length;
   const lowStock = products.filter((p) => p.status === 'Sắp Hết Hàng').length;
   const outOfStock = products.filter((p) => p.status === 'Hết Hàng').length;
-  const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
+  const [editingProductApi, setEditingProductApi] = useState<ApiProduct | null>(
+    null
+  );
 
   const handleAddProduct = () => {
     setEditingProduct(null);
     form.resetFields();
-    setAddWizardVisible(true); 
+    setAddWizardVisible(true);
   };
 
   const handleEditProduct = (product: Product) => {
@@ -256,13 +363,12 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
           return;
         }
 
-        const updateDto: UpdateProductDto = {
-          name: values.name,
-          description: values.description,
-          base_price: values.price,
-        };
+        const formData = new FormData();
+        formData.append('name', values.name);
+        formData.append('description', values.description);
+        formData.append('base_price', values.price);
 
-        await productService.updateProduct(editingProduct.apiId, updateDto);
+        await productService.updateProduct(editingProduct.apiId, formData);
 
         setProducts(
           products.map((p) =>
@@ -357,10 +463,9 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
     },
     {
       title: 'Giá',
-      dataIndex: 'price',
-      key: 'price',
+      dataIndex: 'base_price',
+      key: 'base_price',
       render: (price: number) => `₫${price.toLocaleString('vi-VN')}`,
-      sorter: (a, b) => a.price - b.price,
     },
     {
       title: 'Tồn Kho',
@@ -416,45 +521,47 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
       onFilter: (value, record) => record.status === value,
     },
 
-   {
-  title: 'Tình Trạng',
-  dataIndex: 'statusApi',
-  key: 'statusApi',
-  render: (_: any, record: Product) => (
-    <Switch
-      checked={record.statusApi === 'active'}
-      checkedChildren="Active"
-      unCheckedChildren="Draft"
-      onChange={async () => {
-        if (!record.apiId) {
-          message.error('Không thể cập nhật sản phẩm không có API ID');
-          return;
-        }
+    {
+      title: 'Tình Trạng',
+      dataIndex: 'statusApi',
+      key: 'statusApi',
+      render: (_: any, record: Product) => (
+        <Switch
+          checked={record.statusApi === 'active'}
+          checkedChildren="Active"
+          unCheckedChildren="Draft"
+          onChange={async () => {
+            if (!record.apiId) {
+              message.error('Không thể cập nhật sản phẩm không có API ID');
+              return;
+            }
 
-        try {
-          // Gọi API toggle trạng thái sản phẩm
-          const updatedProduct = await productService.toggleProductStatus(record.apiId);
+            try {
+              // Gọi API toggle trạng thái sản phẩm
+              const updatedProduct = await productService.toggleProductStatus(
+                record.apiId
+              );
 
-          // Xác định newStatus type-safe
-          const newStatus: 'active' | 'draft' =
-            updatedProduct.status === 'active' ? 'active' : 'draft';
+              // Xác định newStatus type-safe
+              const newStatus: 'active' | 'draft' =
+                updatedProduct.status === 'active' ? 'active' : 'draft';
 
-          // Cập nhật state products để UI thay đổi ngay
-          setProducts((prev) =>
-            prev.map((p) =>
-              p.apiId === record.apiId ? { ...p, statusApi: newStatus } : p
-            )
-          );
+              // Cập nhật state products để UI thay đổi ngay
+              setProducts((prev) =>
+                prev.map((p) =>
+                  p.apiId === record.apiId ? { ...p, statusApi: newStatus } : p
+                )
+              );
 
-          message.success(`Cập nhật trạng thái thành ${newStatus}`);
-        } catch (error) {
-          message.error('Cập nhật trạng thái thất bại');
-          console.error(error);
-        }
-      }}
-    />
-  ),
-},
+              message.success(`Cập nhật trạng thái thành ${newStatus}`);
+            } catch (error) {
+              message.error('Cập nhật trạng thái thất bại');
+              console.error(error);
+            }
+          }}
+        />
+      ),
+    },
 
     {
       title: 'Hành Động',
@@ -472,7 +579,7 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
                 key: 'edit',
                 icon: <EditOutlined />,
                 label: 'Chỉnh Sửa Sản Phẩm',
-                onClick: () => handleEditProduct(record),
+                onClick: () => setEditingProduct(record), // mở modal EditProductForm
               },
               {
                 key: 'duplicate',
@@ -557,7 +664,6 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
             />
             <Statistic
               title="Tổng giá trị sản phẩm:"
-              value={totalValue}
               precision={2}
               formatter={formatter}
             />
@@ -646,9 +752,25 @@ const mappedProducts: Product[] = activeProducts.map((apiProduct: ApiProduct) =>
           width={1000}
           destroyOnClose
         >
-   < ProductForm/>
+          <ProductForm />
         </Modal>
+        {editingProduct && (
+          <Modal
+            open={true}
+            onCancel={() => setEditingProduct(null)}
+            footer={null}
+            width={800}
+          >
+            <EditProductForm
+            
+              product={editingProduct}
+              
+              onClose={() => setEditingProduct(null)}
+                onProductUpdated={handleProductUpdated}
 
+            />
+          </Modal>
+        )}
       </Content>
     </Layout>
   );

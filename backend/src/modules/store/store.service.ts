@@ -19,12 +19,19 @@ import { StoreIdentification } from '../store-identification/store-identificatio
 import { StoreInformation } from '../store-information/store-information.entity';
 import { StoreInformationEmail } from '../store-information-email/store-information-email.entity';
 import { StoreDocument } from '../store-document/store-document.entity';
-import { StoreRating } from '../store-rating/store-rating.entity';
 import { StoreFollower } from '../store-follower/store-follower.entity';
 import { StoreUpgradeRequest } from '../store-upgrade-request/store-upgrade-request.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { Product } from '../product/product.entity';
 import { Category } from '../categories/category.entity';
+import { ProductCategory } from '../product_category/product_category.entity';
+import { Variant } from '../variant/variant.entity';
+import { ProductTag } from '../product_tag/product_tag.entity';
+import { Inventory } from '../inventory/inventory.entity';
+import { ProductMedia } from '../product_media/product_media.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+
+
 
 @Injectable()
 export class StoreService {
@@ -47,32 +54,41 @@ export class StoreService {
     private storeEmailRepo: Repository<StoreInformationEmail>,
     @InjectRepository(StoreDocument)
     private storeDocumentRepo: Repository<StoreDocument>,
-    @InjectRepository(StoreRating)
-    private storeRatingRepo: Repository<StoreRating>,
     @InjectRepository(StoreFollower)
     private storeFollowerRepo: Repository<StoreFollower>,
     @InjectRepository(StoreUpgradeRequest)
     private storeUpgradeRequestRepo: Repository<StoreUpgradeRequest>,
-    @InjectRepository(Product) private productRepo: Repository<Product>
-  ) {}
+    @InjectRepository(Product) private productRepo: Repository<Product>,
+    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
+    @InjectRepository(Variant) private variantRepo: Repository<Variant>,
+    @InjectRepository(ProductMedia) private productMediaRepo: Repository<ProductMedia>,
+    @InjectRepository(PricingRules) private pricingRulesRepo: Repository<PricingRules>,
+    @InjectRepository(ProductCategory) private productCategoryRepo: Repository<ProductCategory>,
+    @InjectRepository(ProductTag) private productTagRepo: Repository<ProductTag>,
+   
+    
+  ) { }
 
-  async findAll() {
+  async findAll(includeDeleted = false) {
+    const where: any = {};
+    if (!includeDeleted) where.is_deleted = false;
     return this.storeRepo.find({
+      where,
       order: { created_at: 'DESC' },
     });
   }
 
   async findOne(id: number) {
     const store = await this.storeRepo.findOne({
-      where: { id },
+      where: { id, is_deleted: false },
     });
     if (!store) throw new NotFoundException('Store not found');
     return store;
   }
 
-  async findByUserId(userId: number) {
+  async findByUserId(userId: number, includeDeleted = false) {
     return this.storeRepo.findOne({
-      where: { user_id: userId },
+      where: includeDeleted ? { user_id: userId } : { user_id: userId, is_deleted: false },
     });
   }
 
@@ -109,73 +125,111 @@ export class StoreService {
 
   // Đăng ký làm seller
   async registerSeller(userId: number, dto: RegisterSellerDto) {
-    // 1. Kiểm tra user có tồn tại không
+    // 0) Nếu FE gửi store_id → luôn UPDATE đúng record đó
+    if (dto.store_id) {
+      const target = await this.storeRepo.findOne({
+        where: { id: Number(dto.store_id), user_id: userId },
+      });
+      if (!target) {
+        throw new BadRequestException('Store không tồn tại hoặc không thuộc user');
+      }
+      if (target.is_deleted) {
+        throw new BadRequestException('Store này đã bị xóa . Vui lòng liên hệ admin để khôi phục hoặc đợi 30 ngày.');
+      }
+      return await this.updateDraftStore(target.id, dto, userId);
+    }
+
+    // 1) Không có store_id: kiểm tra store hiện có theo user
+    const existing = await this.storeRepo.findOne({ where: { user_id: userId, is_deleted: false } });
+
+    // 1.a) Đã có store (draft/final) → luôn UPDATE record đó (đảm bảo 1 user chỉ có 1 store)
+    if (existing) {
+      return await this.updateDraftStore(existing.id, dto, userId);
+    }
+
+    // 1.b) Đã có store bị xóa mềm → chặn tạo lại trong 30 ngày
+    const existingDeleted = await this.storeRepo.findOne({
+      where: { user_id: userId, is_deleted: true },
+    });
+    if (existingDeleted) {
+      if (existingDeleted.deleted_at) {
+        const msSinceDelete = Date.now() - new Date(existingDeleted.deleted_at).getTime();
+        const daysSinceDelete = Math.floor(msSinceDelete / (1000 * 60 * 60 * 24));
+        const waitDays = 30 - daysSinceDelete;
+        if (waitDays > 0) {
+          throw new BadRequestException(`Bạn đã xóa cửa hàng trước đó. Vui lòng đợi thêm ${waitDays} ngày để tạo lại.`);
+        }
+        // quá 30 ngày → cho phép tạo mới (không đụng record cũ)
+      } else {
+        // không có mốc thời gian xóa → an toàn: chặn tạo mới
+        throw new BadRequestException('Bạn đã xóa cửa hàng trước đó. Vui lòng liên hệ admin hoặc chờ đủ thời gian để tạo lại.');
+      }
+    }
+
+    // 2) Chưa có store nào → tạo mới (đây là trường hợp duy nhất INSERT)
+    // Validate bắt buộc khi final
+    if (!dto.is_draft && !dto.name) {
+      throw new BadRequestException('Tên cửa hàng là bắt buộc khi hoàn tất đăng ký');
+    }
+
+    // Tạo slug nếu chưa có
+    let slug = dto.slug;
+    if (!slug && dto.name) {
+      slug = dto.name.toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const dup = await this.storeRepo.findOne({ where: { slug } });
+      if (dup) slug = `${slug}-${Date.now()}`;
+    }
+
+    const store = this.storeRepo.create({
+      ...dto,
+      slug: slug || `draft-${Date.now()}`,
+      user_id: userId,
+      status: dto.is_draft ? 'inactive' : 'active',
+      is_draft: dto.is_draft ?? false,
+      is_deleted: false,          // đảm bảo store mới không ở trạng thái xóa mềm
+      deleted_at: null,           // yêu cầu đã có cột deleted_at
+    });
+
+    try {
+      const savedStore = await this.storeRepo.save(store);
+
+      // Tạo/Update dữ liệu liên quan nếu có
+      if (dto.store_information || dto.store_identification || dto.bank_account || dto.store_address || dto.store_information_email || dto.documents) {
+        await this.handleComprehensiveData(savedStore.id, dto);
+      }
+
+      // Gán role nếu submit final
+      if (!dto.is_draft) {
+        await this.assignSellerRole(userId);
+      }
+
+      return {
+        store: savedStore,
+        message: dto.is_draft ? 'Đã lưu nháp thành công!' : 'Đăng ký thành công!',
+      };
+    } catch (e: any) {
+      // Chặn race condition với UNIQUE user_id: fallback sang UPDATE
+      if (e?.code === 'ER_DUP_ENTRY' || e?.code === '23505') {
+        const ex = await this.storeRepo.findOne({ where: { user_id: userId } });
+        if (ex) {
+          return await this.updateDraftStore(ex.id, dto, userId);
+        }
+      }
+      throw e;
+    }
+  }
+
+  // ✅ Thêm method assignSellerRole
+  private async assignSellerRole(userId: number) {
     const user = await this.userRepo.findOne({
       where: { id: userId },
       relations: ['roles', 'roles.role'],
     });
 
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // 2. Kiểm tra user đã có store chưa
-    const existingStore = await this.storeRepo.findOne({
-      where: { user_id: userId },
-    });
-
-    // Nếu đã có store và không phải draft, không cho tạo mới
-    if (existingStore && !existingStore.is_draft && !dto.is_draft) {
-      throw new BadRequestException('User already has a complete store');
-    }
-
-    // Nếu đây là update của store draft existing
-    if (existingStore && existingStore.is_draft) {
-      return await this.updateDraftStore(existingStore.id, dto, userId);
-    }
-
-    // Validate required fields khi không phải draft
-    if (!dto.is_draft) {
-      if (!dto.name) {
-        throw new BadRequestException(
-          'Tên cửa hàng là bắt buộc khi hoàn tất đăng ký'
-        );
-      }
-    }
-
-    // 3. Tạo slug tự động nếu không được cung cấp và có name
-    let slug = dto.slug;
-    if (!slug && dto.name) {
-      slug = dto.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-
-      // Kiểm tra slug có trùng không
-      const existingSlug = await this.storeRepo.findOne({ where: { slug } });
-      if (existingSlug) {
-        slug = `${slug}-${Date.now()}`;
-      }
-    }
-
-    // 4. Tạo store với status theo is_draft
-    const store = this.storeRepo.create({
-      ...dto,
-      slug: slug || `draft-${Date.now()}`, // Tạo slug tạm thời cho draft
-      user_id: userId,
-      status: dto.is_draft ? 'inactive' : 'active', // Draft = inactive, Final = active
-      is_draft: dto.is_draft ?? false, // Sử dụng ?? để handle undefined/false
-    });
-
-    const savedStore = await this.storeRepo.save(store);
-
-    // 5. Tạo store level mặc định là 'basic'
-    const storeLevel = this.storeLevelRepo.create({
-      store_id: savedStore.id,
-      level: 'basic',
-    });
-    await this.storeLevelRepo.save(storeLevel);
+    if (!user) return;
 
     // 6. Gán role "seller" cho user (nếu chưa có)
     const sellerRole = await this.roleRepo.findOne({
@@ -195,29 +249,9 @@ export class StoreService {
           role: sellerRole,
           assigned_at: new Date(),
         });
-
         await this.userRoleRepo.save(userRole);
       }
     }
-
-    // 13. Xử lý thông tin comprehensive (nếu có)
-    if (
-      dto.store_information ||
-      dto.store_identification ||
-      dto.bank_account ||
-      dto.store_address
-    ) {
-      await this.handleComprehensiveData(savedStore.id, dto);
-    }
-
-    return {
-      store: savedStore,
-      message: dto.is_draft
-        ? 'Đã lưu nháp thành công! Bạn có thể hoàn tất đăng ký sau.'
-        : dto.store_information
-        ? 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt với đầy đủ thông tin.'
-        : 'Đăng ký làm người bán hàng thành công! Store đã được kích hoạt.',
-    };
   }
 
   // Update draft store với data từ các steps
@@ -232,20 +266,10 @@ export class StoreService {
       throw new NotFoundException('Store not found');
     }
 
-    // Debug log
-    console.log(
-      '🔍 UpdateDraftStore - dto.is_draft:',
-      dto.is_draft,
-      'type:',
-      typeof dto.is_draft
-    );
-    console.log('🔍 UpdateDraftStore - dto.email:', dto.email);
-    console.log('🔍 UpdateDraftStore - dto:', JSON.stringify(dto, null, 2));
-
     // Luôn update status và is_draft trước
     const updateData: any = {
       status: dto.is_draft ? 'inactive' : 'active',
-      is_draft: dto.is_draft ?? false, // Sử dụng ?? để handle undefined/false
+      is_draft: dto.is_draft ?? false,
     };
 
     // Update thông tin cơ bản nếu có (Step 1)
@@ -253,11 +277,10 @@ export class StoreService {
       updateData.name = dto.name || store.name;
       updateData.description = dto.description || store.description;
       updateData.phone = dto.phone || store.phone;
-      updateData.email = dto.email || store.email; // Thêm email
+      updateData.email = dto.email || store.email;
     }
 
     // Update store với all data
-    console.log('🔍 UpdateData being sent to DB:', updateData);
     await this.storeRepo.update(storeId, updateData);
 
     // Update comprehensive data nếu có (Step 2, 3)
@@ -268,6 +291,11 @@ export class StoreService {
       dto.store_address
     ) {
       await this.handleComprehensiveData(storeId, dto);
+    }
+
+    // Gán role seller nếu submit final
+    if (!dto.is_draft) {
+      await this.assignSellerRole(userId);
     }
 
     const updatedStore = await this.storeRepo.findOne({
@@ -285,10 +313,12 @@ export class StoreService {
   // Kiểm tra user có phải seller không
   async isUserSeller(userId: number): Promise<boolean> {
     const store = await this.storeRepo.findOne({
-      where: { user_id: userId },
+      where: { user_id: userId, is_deleted: false },
     });
     return !!store;
   }
+
+
 
   // Lấy thống kê store
   async getStoreStats(storeId: number) {
@@ -307,61 +337,158 @@ export class StoreService {
     return this.storeRepo.save(store);
   }
 
+
+  private async fineOneIncludedDeleted(id: number) {
+    const store = await this.storeRepo.findOne({ where: { id } });
+    if (!store) throw new NotFoundException('Store not found');
+    return store;
+
+  }
+
   async deleteMyStore(userId: number) {
     const store = await this.findByUserId(userId);
     if (!store) {
       throw new NotFoundException('Bạn chưa có cửa hàng để xóa');
     }
 
-    const result = await this.remove(store.id);
+    store.is_deleted = true;
+    store.status = 'closed';
+    store.deleted_at = new Date(); // <-- set mốc xóa mềm
+    await this.storeRepo.save(store);
+
     return {
-      ...result,
-      message:
-        'Đã xóa cửa hàng của bạn và toàn bộ dữ liệu liên quan thành công',
-    };
+      message: 'Đã xóa mềm cửa hàng thành công',
+      deletedStoreId: store.id,
+      deletedRecords: 0,
+    }
+  }
+
+  private async orderItemsHardDeleteByProductIds(ids: number[]) {
+    await this.storeRepo.manager
+      .createQueryBuilder()
+      .delete()
+      .from('order_items')
+      .where('product_id IN (:...ids)', { ids })
+      .execute();
   }
 
   async remove(id: number) {
-    const store = await this.findOne(id);
+    const store = await this.fineOneIncludedDeleted(id);
 
-    // 0. Xóa tất cả sản phẩm liên quan store
-    await this.productRepo.delete({ store: { id } });
+    // Lấy tất cả product_id thuộc store
+    const products = await this.productRepo.find({
+      where: { store: { id } },
+      select: ['id'],
+    });
+    const productIds = products.map((p) => p.id);
 
-    // Trước tiên, tìm tất cả store_information để xóa emails và documents
+    // Xóa dữ liệu con theo product_id (tránh lỗi FK)
+    if (productIds.length > 0) {
+      // order_items
+      await this.orderItemsHardDeleteByProductIds(productIds);
+      // inventory
+      await this.inventoryRepo
+        .createQueryBuilder()
+        .delete()
+        .from('inventory')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // product_media
+      await this.productMediaRepo
+        .createQueryBuilder()
+        .delete()
+        .from('product_media')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // pricing_rules
+      await this.pricingRulesRepo
+        .createQueryBuilder()
+        .delete()
+        .from('pricing_rules')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // product_category
+      await this.productCategoryRepo
+        .createQueryBuilder()
+        .delete()
+        .from('product_category')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // product_tag
+      await this.productTagRepo
+        .createQueryBuilder()
+        .delete()
+        .from('product_tag')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+      // variants (đặt sau inventory/order_items)
+      await this.variantRepo
+        .createQueryBuilder()
+        .delete()
+        .from('variants')
+        .where('product_id IN (:...ids)', { ids: productIds })
+        .execute();
+    }
+    // Xóa tất cả products của store
+    await this.productRepo
+      .createQueryBuilder()
+      .delete()
+      .from('products')
+      .where('store_id = :id', { id })
+      .execute();
+
+    // Xóa bảng phụ thuộc store_information (emails, documents) trước
     const storeInformations = await this.storeInformationRepo.find({
       where: { store_id: id },
     });
-    // Xóa emails và documents theo store_information_id
     for (const storeInfo of storeInformations) {
       await Promise.all([
         this.storeEmailRepo.delete({ store_information_id: storeInfo.id }),
         this.storeDocumentRepo.delete({ store_information_id: storeInfo.id }),
       ]);
     }
-    // Xóa tất cả dữ liệu liên quan còn lại
+
+    // Xóa các dữ liệu liên quan khác theo store_id
     const deletedResults = await Promise.all([
       this.storeInformationRepo.delete({ store_id: id }),
       this.storeIdentificationRepo.delete({ store_id: id }),
       this.bankAccountRepo.delete({ store_id: id }),
-      this.storeAddressRepo.delete({ stores_id: id }), // Chú ý: stores_id
+      this.storeAddressRepo.delete({ stores_id: id }),
       this.storeLevelRepo.delete({ store_id: id }),
-      this.storeRatingRepo.delete({ store_id: id }),
       this.storeFollowerRepo.delete({ store_id: id }),
       this.storeUpgradeRequestRepo.delete({ store_id: id }),
     ]);
 
-    // Cuối cùng xóa store
+    // Xóa store
     await this.storeRepo.remove(store);
 
-    const totalDeletedRecords = deletedResults.reduce(
-      (sum, result) => sum + (result.affected || 0),
-      0
-    );
-
+    const totalDeletedRecords = deletedResults.reduce((sum, r) => sum + (r.affected || 0), 0);
     return {
       message: 'Xóa cửa hàng và toàn bộ dữ liệu liên quan thành công',
       deletedStoreId: id,
-      deletedRecords: totalDeletedRecords + 1, // +1 for the store itself
+      deletedRecords: totalDeletedRecords + 1,
+    };
+  }
+  async restore(id: number) {
+    // Chỉ khôi phục các store đang bị soft-delete
+    const store = await this.storeRepo.findOne({
+      where: { id, is_deleted: true },
+    });
+    if (!store) {
+      throw new NotFoundException('Store không tồn tại hoặc không bị xóa mềm');
+    }
+
+    store.is_deleted = false;
+    // Tùy chính sách: đưa về 'inactive' để admin/seller kích hoạt lại
+    if (store.status === 'closed') {
+      store.status = 'active';
+    }
+
+    await this.storeRepo.save(store);
+
+    return {
+      message: 'Khôi phục cửa hàng thành công',
+      restoredStoreId: id,
     };
   }
 
@@ -375,7 +502,7 @@ export class StoreService {
     if (dto.store_information) {
       // Kiểm tra xem đã có store_information chưa
       const existingStoreInfo = await this.storeInformationRepo.findOne({
-        where: { store_id: storeId },
+        where: { store_id: storeId }
       });
 
       if (existingStoreInfo) {
@@ -397,7 +524,7 @@ export class StoreService {
           name: dto.store_information.name,
           addresses: dto.store_information.addresses,
           tax_code: dto.store_information.tax_code,
-          is_draft: dto.is_draft ?? false,
+
         });
         storeInformation = await this.storeInformationRepo.save(
           storeInformation
@@ -415,16 +542,12 @@ export class StoreService {
         // Update existing
         await this.storeEmailRepo.update(existingEmail.id, {
           email: dto.store_information_email.email,
-          is_draft:
-            dto.store_information_email.is_draft ?? dto.is_draft ?? false,
         });
       } else {
         // Create new
         const storeEmailInfo = this.storeEmailRepo.create({
           email: dto.store_information_email.email,
           store_information_id: storeInformation.id,
-          is_draft:
-            dto.store_information_email.is_draft ?? dto.is_draft ?? false,
         });
         await this.storeEmailRepo.save(storeEmailInfo);
       }
@@ -445,7 +568,7 @@ export class StoreService {
           full_name: dto.store_identification.full_name,
           img_front: dto.store_identification.img_front,
           img_back: dto.store_identification.img_back,
-          is_draft: dto.is_draft ?? false,
+
         });
       } else {
         // Create new
@@ -455,7 +578,7 @@ export class StoreService {
           full_name: dto.store_identification.full_name,
           img_front: dto.store_identification.img_front,
           img_back: dto.store_identification.img_back,
-          is_draft: dto.is_draft ?? false,
+
         });
         await this.storeIdentificationRepo.save(storeIdentification);
       }
@@ -480,7 +603,7 @@ export class StoreService {
         if (existingDoc) {
           await this.storeDocumentRepo.update(existingDoc.id, {
             file_url: doc.file_url,
-            is_draft: (doc as any).is_draft ?? dto.is_draft ?? false,
+
             verified: false,
             verified_at: null,
           });
@@ -489,7 +612,7 @@ export class StoreService {
             store_information_id: storeInformation.id,
             doc_type: doc.doc_type,
             file_url: doc.file_url,
-            is_draft: (doc as any).is_draft ?? dto.is_draft ?? false,
+
             verified: false,
             verified_at: null,
           });
@@ -537,14 +660,15 @@ export class StoreService {
           recipient_name: dto.store_address.recipient_name,
           phone: dto.store_address.phone,
           street: dto.store_address.street,
-          city: dto.store_address.city,
+          district: dto.store_address.district,
+          ward: (dto.store_address as any).ward,
           province: dto.store_address.province,
           country: dto.store_address.country,
           postal_code: dto.store_address.postal_code,
           type: dto.store_address.type,
           detail: dto.store_address.detail,
           is_default: dto.store_address.is_default ?? true,
-          is_draft: dto.is_draft ?? false,
+
         });
       } else {
         // Create new
@@ -553,14 +677,15 @@ export class StoreService {
           recipient_name: dto.store_address.recipient_name,
           phone: dto.store_address.phone,
           street: dto.store_address.street,
-          city: dto.store_address.city,
+          district: dto.store_address.district,
+          ward: (dto.store_address as any).ward,
           province: dto.store_address.province,
           country: dto.store_address.country,
           postal_code: dto.store_address.postal_code,
           type: dto.store_address.type,
           detail: dto.store_address.detail,
           is_default: dto.store_address.is_default ?? true,
-          is_draft: dto.is_draft ?? false,
+
         });
         await this.storeAddressRepo.save(storeAddress);
       }
@@ -573,7 +698,7 @@ export class StoreService {
   async getFullDraftData(storeId: number, userId: number) {
     // Verify ownership
     const store = await this.storeRepo.findOne({
-      where: { id: storeId, user_id: userId },
+      where: { id: storeId, user_id: userId, is_deleted: false },
     });
 
     if (!store) {
@@ -630,55 +755,81 @@ export class StoreService {
         status: store.status,
         is_draft: store.is_draft,
       },
-      storeInformation: storeInformation
-        ? {
-            id: storeInformation.id,
-            type: storeInformation.type,
-            name: storeInformation.name,
-            addresses: storeInformation.addresses,
-            tax_code: storeInformation.tax_code,
-          }
-        : null,
-      storeIdentification: storeIdentification
-        ? {
-            id: storeIdentification.id,
-            type: storeIdentification.type,
-            full_name: storeIdentification.full_name,
-            img_front: storeIdentification.img_front,
-            img_back: storeIdentification.img_back,
-          }
-        : null,
-      bankAccount: bankAccount
-        ? {
-            id: bankAccount.id,
-            bank_name: bankAccount.bank_name,
-            account_number: bankAccount.account_number,
-            account_holder: bankAccount.account_holder,
-            is_default: bankAccount.is_default,
-          }
-        : null,
-      storeAddress: storeAddress
-        ? {
-            id: storeAddress.id,
-            recipient_name: storeAddress.recipient_name,
-            phone: storeAddress.phone,
-            street: storeAddress.street,
-            city: storeAddress.city,
-            province: storeAddress.province,
-            country: storeAddress.country,
-            postal_code: storeAddress.postal_code,
-            type: storeAddress.type,
-            detail: storeAddress.detail,
-            is_default: storeAddress.is_default,
-          }
-        : null,
-      storeEmail: storeEmail
-        ? {
-            id: storeEmail.id,
-            email: storeEmail.email,
-          }
-        : null,
+      storeInformation: storeInformation ? {
+        id: storeInformation.id,
+        type: storeInformation.type,
+        name: storeInformation.name,
+        addresses: storeInformation.addresses,
+        tax_code: storeInformation.tax_code,
+      } : null,
+      storeIdentification: storeIdentification ? {
+        id: storeIdentification.id,
+        type: storeIdentification.type,
+        full_name: storeIdentification.full_name,
+        img_front: storeIdentification.img_front,
+        img_back: storeIdentification.img_back,
+      } : null,
+      bankAccount: bankAccount ? {
+        id: bankAccount.id,
+        bank_name: bankAccount.bank_name,
+        account_number: bankAccount.account_number,
+        account_holder: bankAccount.account_holder,
+        is_default: bankAccount.is_default,
+      } : null,
+      storeAddress: storeAddress ? {
+        id: storeAddress.id,
+        recipient_name: storeAddress.recipient_name,
+        phone: storeAddress.phone,
+        street: storeAddress.street,
+        district: storeAddress.district,
+        province: storeAddress.province,
+        country: storeAddress.country,
+        postal_code: storeAddress.postal_code,
+        type: storeAddress.type,
+        detail: storeAddress.detail,
+        is_default: storeAddress.is_default,
+      } : null,
+      storeEmail: storeEmail ? {
+        id: storeEmail.id,
+        email: storeEmail.email,
+      } : null,
       documents: documents || [],
+    };
+  }
+  //lấy full thông tin cửa hàng
+
+  async getFullData(storeId: number) {
+    const store = await this.storeRepo.findOne({
+      where: { id: storeId, is_deleted: false },
+      relations: {
+        storeInformation: { emails: true, documents: true },
+        storeIdentification: true,
+        storeLevels: true,
+        bankAccount: true,
+        address: true,
+        followers: true,
+      },
+    });
+    if (!store) throw new NotFoundException('Store not found');
+
+    const info = store.storeInformation?.[0] ?? null;
+    const identification = store.storeIdentification?.[0] ?? null;
+    const level = store.storeLevels?.[0] ?? null;
+    const bank = store.bankAccount?.[0] ?? null;
+    const address = store.address?.[0] ?? null;
+    const followers = store.followers?.length ?? 0;
+
+    
+    return {
+      store,
+      storeInformation: info,
+      storeIdentification: identification,
+      storeLevel: level,
+      bankAccount: bank,
+      storeAddress: address,
+      storeEmail: info?.emails?.[0] ?? null,
+      documents: info?.documents?.[0] ?? null,
+      followers,
     };
   }
 
@@ -688,18 +839,18 @@ export class StoreService {
     }
 
     const store = await this.storeRepo.findOne({
-      where: { slug },
+      where: { slug, is_deleted: false },
       relations: [
         'storeInformation',
     'storeIdentification',
     'bankAccount',
-    'address', // ✅ đúng tên
+    'address', 
     'products',
     'products.media',
     'orders',
-    'follower',
+    'followers',
     'rating',
-      ], // join các entity liên quan nếu muốn trả luôn
+      ],
     });
 
     if (!store) return null;
@@ -707,30 +858,30 @@ export class StoreService {
   }
 
   async findProductsBySlug(slug: string, categorySlug?: string): Promise<Store | null> {
-  if (!slug) throw new BadRequestException('Slug không hợp lệ');
+    if (!slug) throw new BadRequestException('Slug không hợp lệ');
 
-  const store = await this.storeRepo.findOne({
-    where: { slug },
-    relations: [
-      'products',
-      'products.media',
-      'products.categories',
-      'products.categories.category',
-    ],
-  });
+    const store = await this.storeRepo.findOne({
+      where: { slug, is_deleted: false },
+      relations: [
+        'products',
+        'products.media',
+        'products.categories',
+        'products.categories.category',
+      ],
+    });
 
-  if (!store) return null;
+    if (!store) return null;
 
-  if (categorySlug) {
-    store.products = store.products.filter((p) =>
-      p.categories.some((pc) => pc.category.slug === categorySlug),
-    );
+    if (categorySlug) {
+      store.products = store.products.filter((p) =>
+        p.categories.some((pc) => pc.category.slug === categorySlug),
+      );
+    }
+
+    return store;
   }
 
-  return store;
-}
-
-async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
+  async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
     const products = await this.productRepo.find({
       where: { store: { id: storeId } },
       relations: ['categories', 'categories.category'],
@@ -758,6 +909,8 @@ async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; nam
       count,
     }));
   }
+
+  
 
 
 }

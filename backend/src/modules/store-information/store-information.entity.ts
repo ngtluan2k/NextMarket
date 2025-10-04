@@ -27,8 +27,8 @@ export class StoreInformation {
   @Column({ length: 50, nullable: true })
   tax_code!: string;
 
-  @Column({ type: 'boolean', default: false })
-  is_draft!: boolean;
+  // @Column({ type: 'boolean', default: false })
+  // is_draft!: boolean;
 
   // New relationships: One StoreInformation can have many emails and documents
   @OneToMany(() => StoreInformationEmail, email => email.storeInformation)

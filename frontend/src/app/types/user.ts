@@ -1,27 +1,34 @@
-
 export type UserAddress = {
   id: number;
-  fullAddress: string;
-  name?: string;
-  phone?: string;
-  tag?: string;
-  userId?: number;
+  recipientName: string;
+  phone: string;
+  street?: string;
+  ward?: string;
+  district?: string;
+  province?: string;
+  country?: string;
+  postalCode?: string;
+  fullAddress?: string;
+  isDefault?: boolean;
+  userId?: number; 
+  tag?: string;   
 };
 
+
+
 export type AddressFormValues = {
-  fullName: string;
-  company?: string;
+  recipientName: string; 
   phone: string;
-  provinceCode?: number; province?: string;
-  districtCode?: number;  district?: string;
-  wardCode?: number;      ward?: string;
-  addressLine: string;
-  note?: string;
-  kind: "home" | "company";
+  street: string;        
+  ward: string;
+  district: string;
+  province: string;
+  country?: string;
+  postalCode?: string;
   isDefault?: boolean;
 };
 
-
+// User
 export interface User {
   id: number;
   username: string;
@@ -30,17 +37,19 @@ export interface User {
   permissions: string[];
 }
 
-
+// Context cho user
 export type UserContextType = {
   user: User;
   setUser: (u: User) => void;
 };
 
+// Dữ liệu của API /me
 export type Me = {
   id: number;
+  username?: string; 
   email: string;
   full_name?: string;
   roles?: string[];
   permissions?: string[];
+  addresses?: UserAddress[];
 };
-

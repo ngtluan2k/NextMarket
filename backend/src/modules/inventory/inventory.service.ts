@@ -73,7 +73,7 @@ export class InventoryService {
         location: dto.location,
         quantity: dto.quantity,
         used_quantity: dto.used_quantity || 0,
-        updated_at: new Date(),
+        updatedAt: new Date(),
       });
 
       return await this.repo.save(inventory);

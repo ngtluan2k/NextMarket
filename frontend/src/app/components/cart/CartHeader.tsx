@@ -32,10 +32,8 @@ export const CartHeader: React.FC<Props> = ({
   // console.log("selected id : " + selectedIds)
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
-  const shopName =
-    (cart[0] && (cart[0] as any).shop?.name) ||
-    (cart[0] && (cart[0] as any).shop_name) ||
-    'Shop';
+  const storeName = cart[0]?.product?.store?.name ?? 'Shop';
+  const selectedCartItems = cart.filter(item => selectedIds.includes(item.id));
 
   const handleRemoveFromCart = async (productId: number, productName: string, variantId?: number) => {
     try {
@@ -46,7 +44,12 @@ export const CartHeader: React.FC<Props> = ({
       showMessage?.('error', `Failed to remove ${productName} from cart`);
     }
   };
-
+  
+  const toImageUrl = (url?: string) => {
+    if (!url) return '/default-product.png'; // fallback ảnh mặc định
+    if (url.startsWith('http')) return url; // đã là full URL
+    return `http://localhost:3000${url}`; // nếu là path local -> thêm host
+  };
   // 1) GIỎ TRỐNG -> render header trống + nút "Tiếp tục mua sắm"
   if (cart.length === 0) {
     return (
@@ -100,27 +103,28 @@ export const CartHeader: React.FC<Props> = ({
           indeterminate={indeterminate}
           onChange={onToggleAll}
         />
-        <Text strong>{shopName}</Text>
+        <Text strong>{storeName}</Text>
       </div>
 
       {/* Products */}
       {cart.map((item) => {
-        const mediaArray = Array.isArray((item as any).product?.media)
-          ? (item as any).product.media
-          : (item as any).product?.media
-          ? [(item as any).product.media]
+        const mediaArray = Array.isArray(item.product?.media)
+          ? item.product.media
+          : item.product?.media
+          ? [item.product.media]
           : [];
-        const imageUrl =
+
+        const imageUrl = toImageUrl(
           mediaArray.find((m: any) => m?.is_primary)?.url ||
-          mediaArray[0]?.url ||
-          (item as any).product?.url ||
-          '';
+            mediaArray[0]?.url ||
+            item.product?.url
+        );
 
         const oldPrice: number | undefined = (item as any)?.old_price;
         const deliveryDate: string | undefined = (item as any)?.delivery_date;
         const color: string | undefined = (item as any)?.product?.color;
 
-        const checked = selectedIds.includes(item.id);  // Check by cart item id
+        const checked = selectedIds.includes(item.id); // Check by cart item id
 
         return (
           <div
@@ -131,19 +135,20 @@ export const CartHeader: React.FC<Props> = ({
             {/* Checkbox từng sản phẩm */}
             <Checkbox
               checked={checked}
-              onChange={() => onToggleOne(item.id)}  // Toggle by cart item id
+              onChange={() => onToggleOne(item.id)} // Toggle by cart item id
             />
 
             {/* Thông tin sản phẩm */}
             <div className="flex gap-3 items-start">
               <Image
                 src={imageUrl}
-                alt={(item as any).product?.name}
+                alt={item.product?.name}
                 width={80}
                 height={80}
                 className="rounded-md object-cover"
                 preview={false}
               />
+
               <div>
                 <Text className="block font-medium">
                   {(item as any).product?.name}

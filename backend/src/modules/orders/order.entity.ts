@@ -18,16 +18,16 @@ import { OrderInvoice } from '../order-invoices/order-invoice.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
-
+import { ProductReview } from '../product_reviews/product_review.entity';
 export enum OrderStatuses {
-  Pending = 0,
-  Confirmed = 1,
-  Processing = 2,
-  Shipped = 3,
-  Delivered = 4,
-  Completed = 5,
-  Cancelled = 6,
-  Returned = 7,
+  pending = 0,
+  confirmed = 1,
+  processing = 2,
+  shipped = 3,
+  delivered = 4,  
+  completed = 5,
+  cancelled = 6,
+  returned = 7,
 }
 
 @Entity('orders')
@@ -55,7 +55,7 @@ export class Order {
 
   @Column({
     type: 'tinyint',
-    default: OrderStatuses.Pending,
+    default: OrderStatuses.pending,
   })
   status!: OrderStatuses;
 
@@ -98,7 +98,7 @@ export class Order {
   @Column({ type: 'char', length: 3, default: 'VND' })
   currency!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp', })
   createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
@@ -121,4 +121,7 @@ export class Order {
 
   @OneToMany(() => Refund, (refund) => refund.order)
   refund!: Refund[];
+
+  @OneToMany(() => ProductReview, (reviews) => reviews.order)
+  reviews!: ProductReview;
 }

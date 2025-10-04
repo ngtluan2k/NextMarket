@@ -60,7 +60,10 @@ const CategoryManager: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('name', name);
-      if (parentId) formData.append('parent_id', parentId.toString());
+      formData.append(
+        'parent_id',
+        parentId !== null ? parentId.toString() : ''
+      );
       if (imageFile) formData.append('image', imageFile);
 
       if (editingCategory) {
@@ -249,8 +252,8 @@ const CategoryManager: React.FC = () => {
                     variant="outline-danger"
                     size="sm"
                     onClick={() => {
-                      setParentId(null);
-                      setParentQuery('');
+                      setParentId(null); // gỡ parent
+                      setParentQuery(''); // reset input search
                     }}
                   >
                     ✕

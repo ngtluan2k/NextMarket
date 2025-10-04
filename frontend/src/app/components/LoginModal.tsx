@@ -1,4 +1,3 @@
-// src/components/LoginModal.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Mail,
@@ -8,10 +7,13 @@ import {
   Phone,
   BadgeCheck,
   Eye,
-  EyeOff, Globe
+  EyeOff,
+  Globe,
 } from 'lucide-react';
-import { FcGoogle } from 'react-icons/fc'; // react-icons/google
+import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { requestRegisterOtp } from '../../service/auth.service';
 
 export type LoginPayload = {
   email: string;
@@ -68,9 +70,11 @@ export default function LoginModal({
   title = 'Xin chào,',
   sideImageUrl,
   apiBase = 'http://localhost:3000',
+  onSuccess,
 }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const { me } = useAuth(); // ✅ lấy user từ context
+  const { me, login } = useAuth();
+  const navigate = useNavigate();
 
   // Ưu tiên full_name nếu có, fallback về email
   const greeting = me?.full_name
@@ -84,8 +88,7 @@ export default function LoginModal({
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
-    const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
-
+  const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
 
   // register states
   const [reg, setReg] = useState<RegisterPayload>({
@@ -101,12 +104,12 @@ export default function LoginModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useAuth();
 
   const emailRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!open) return;
-    fetch("https://restcountries.com/v3.1/all?fields=name,cca2")
+    fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
       .then((res) => res.json())
       .then((data) => {
         const list = data.map((c: any) => ({
@@ -136,6 +139,7 @@ export default function LoginModal({
     if (password.length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
     return null;
   };
+
   const validateRegister = () => {
     if (!reg.username) return 'Vui lòng nhập Username';
     if (!reg.full_name) return 'Vui lòng nhập Họ tên';
@@ -157,31 +161,33 @@ export default function LoginModal({
     const data = await res.json();
     if (!res.ok) throw new Error(data?.message || 'Đăng nhập thất bại');
 
-    if (data?.access_token) {
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.data));
-      localStorage.setItem('userId', data.data.id.toString());
-      // fetch giỏ hàng riêng theo user
-      const cartRes = await fetch(`${apiBase}/cart/me`, {
-        headers: { Authorization: `Bearer ${data.access_token}` },
-      });
-      const cartJson = await cartRes.json();
-      localStorage.setItem('cart', JSON.stringify(cartJson));
-    }
-
-    return data;
-  };
-
-  const callDefaultRegister = async (payload: RegisterPayload) => {
-    const res = await fetch(`${apiBase}/users/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    // Lấy thông tin người dùng đầy đủ từ /users/me
+    const profileRes = await fetch(`${apiBase}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`,
+      },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.message || 'Đăng ký thất bại');
-    return data;
+    const profileJson = await profileRes.json();
+    if (!profileRes.ok) throw new Error('Không thể tải thông tin người dùng');
+
+    // Lấy danh sách địa chỉ
+    const addressRes = await fetch(`${apiBase}/users/${profileJson.data.id}/addresses`, {
+      headers: {
+        Authorization: `Bearer ${data.access_token}`,
+      },
+    });
+    const addresses = (await addressRes.json()) || [];
+
+    // Lấy giỏ hàng
+    const cartRes = await fetch(`${apiBase}/cart/me`, {
+      headers: { Authorization: `Bearer ${data.access_token}` },
+    });
+    const cartJson = await cartRes.json();
+    localStorage.setItem('cart', JSON.stringify(cartJson));
+
+    return { user: { ...profileJson.data, addresses }, access_token: data.access_token };
   };
+
   // ---------- submit ----------
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -190,11 +196,41 @@ export default function LoginModal({
     setError(null);
     setSubmitting(true);
     try {
-      if (onLogin) await onLogin({ email, password });
-      else await callDefaultLogin({ email, password });
+      let loginData;
+      if (onLogin) {
+        await onLogin({ email, password });
+        // Nếu onLogin được cung cấp, giả sử nó đã xử lý đăng nhập
+        // Gọi API để lấy thông tin người dùng và địa chỉ
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Không tìm thấy token');
+        const profileRes = await fetch(`${apiBase}/users/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const profileJson = await profileRes.json();
+        if (!profileRes.ok) throw new Error('Không thể tải thông tin người dùng');
 
-      // close modal
+        const addressRes = await fetch(`${apiBase}/users/${profileJson.data.id}/addresses`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const addresses = (await addressRes.json()) || [];
+
+        loginData = { user: { ...profileJson.data, addresses }, access_token: token };
+      } else {
+        loginData = await callDefaultLogin({ email, password });
+      }
+
+      // Cập nhật AuthContext
+      login(loginData.user, loginData.access_token);
+
+      // Đóng modal
       onClose();
+
+      // Gọi callback onSuccess nếu có
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       setError(err?.message ?? 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
@@ -209,15 +245,12 @@ export default function LoginModal({
     setError(null);
     setSubmitting(true);
     try {
-      if (onRegister) await onRegister(reg);
-      else await callDefaultRegister(reg);
-
-      // after successful register, switch to login and prefill email
-      setMode('login');
-      setEmail(reg.email);
-      setPassword('');
+      await requestRegisterOtp(reg.email);
+      sessionStorage.setItem('pendingRegister', JSON.stringify(reg));
+      onClose();
+      navigate(`/verify-otp?email=${encodeURIComponent(reg.email)}`);
     } catch (err: any) {
-      setError(err?.message ?? 'Đăng ký thất bại. Vui lòng thử lại.');
+      setError(err?.message ?? 'Gửi OTP thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -239,31 +272,44 @@ export default function LoginModal({
       if (!popup) throw new Error('Không thể mở popup');
 
       const listener = (event: MessageEvent) => {
-        // kiểm tra origin
         if (event.origin !== new URL(apiBase).origin) return;
         const data = event.data;
 
         if (data?.access_token) {
-          login(data.user, data.access_token); // ✅ gọi context login
-          // onLogin && onLogin({ email: data.user.email, password: '' }); // gọi callback nếu có
-          if (onLogin) {
-            console.log('onLogin is set');
-          } else {
-            console.log('onLogin is NOT set');
-          }
-          // fetch giỏ hàng
-          fetch(`${apiBase}/cart/me`, {
+          // Lấy thông tin người dùng và địa chỉ
+          fetch(`${apiBase}/users/me`, {
             headers: { Authorization: `Bearer ${data.access_token}` },
           })
             .then((res) => res.json())
-            .then((cartJson) =>
-              localStorage.setItem('cart', JSON.stringify(cartJson))
-            );
+            .then((profileJson) => {
+              if (!profileJson.data) throw new Error('Không thể tải thông tin người dùng');
 
-          onClose();
-          popup.close();
-          window.removeEventListener('message', listener);
-          window.location.href = '/home';
+              // Lấy danh sách địa chỉ
+              fetch(`${apiBase}/users/${profileJson.data.id}/addresses`, {
+                headers: { Authorization: `Bearer ${data.access_token}` },
+              })
+                .then((res) => res.json())
+                .then((addresses) => {
+                  login({ ...profileJson.data, addresses }, data.access_token);
+
+                  // Lấy giỏ hàng
+                  fetch(`${apiBase}/cart/me`, {
+                    headers: { Authorization: `Bearer ${data.access_token}` },
+                  })
+                    .then((res) => res.json())
+                    .then((cartJson) => {
+                      localStorage.setItem('cart', JSON.stringify(cartJson));
+                    });
+
+                  onClose();
+                  popup.close();
+                  window.removeEventListener('message', listener);
+                  if (onSuccess) onSuccess();
+                });
+            })
+            .catch((err) => {
+              setError(err.message || 'Đăng nhập Google thất bại');
+            });
         }
       };
 
@@ -322,23 +368,15 @@ export default function LoginModal({
           {/* Tabs */}
           <div className="mt-2 flex w-full rounded-xl bg-slate-100 p-1">
             <button
-              className={`flex-1 rounded-lg  py-2 text-sm font-medium transition
-                ${
-                  mode === 'login'
-                    ? 'bg-white shadow text-sky-700'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition
+                ${mode === 'login' ? 'bg-white shadow text-sky-700' : 'text-slate-600 hover:text-slate-800'}`}
               onClick={() => setMode('login')}
             >
               Đăng nhập
             </button>
             <button
-              className={`flex-1 rounded-lg  py-2 text-sm font-medium transition
-                ${
-                  mode === 'register'
-                    ? 'bg-white shadow text-sky-700'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition
+                ${mode === 'register' ? 'bg-white shadow text-sky-700' : 'text-slate-600 hover:text-slate-800'}`}
               onClick={() => setMode('register')}
             >
               Đăng ký
@@ -347,7 +385,7 @@ export default function LoginModal({
 
           {/* Error banner */}
           {error && (
-            <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50  py-2 text-xs text-rose-700">
+            <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 py-2 text-xs text-rose-700">
               {error}
             </div>
           )}
@@ -379,11 +417,7 @@ export default function LoginModal({
                     className="rounded-md p-1 text-slate-500 hover:bg-slate-100"
                     onClick={() => setShowPw((v) => !v)}
                   >
-                    {showPw ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 }
               />
@@ -461,7 +495,6 @@ export default function LoginModal({
                 />
               </div>
 
-              {/* Gender chips */}
               <div>
                 <div className="mb-1 text-sm font-medium text-slate-700">
                   Giới tính
@@ -480,10 +513,9 @@ export default function LoginModal({
                         onClick={() => setReg({ ...reg, gender: g.key })}
                         aria-pressed={active}
                         className={`h-9 rounded-full border px-4 text-sm transition
-                              ${
-                                active
-                                  ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
-                                  : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                              ${active
+                                ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
+                                : 'border-slate-300 text-slate-600 hover:bg-slate-50'
                               }`}
                       >
                         {g.label}
@@ -514,7 +546,6 @@ export default function LoginModal({
                 />
               </div>
 
-              {/* Country */}
               <div className="group">
                 <label className="mb-1 block text-sm font-medium text-slate-700">Đất nước</label>
                 <div
@@ -558,7 +589,6 @@ export default function LoginModal({
           </p>
         </div>
 
-        {/* Right: artwork */}
         <div className="hidden min-h-[480px] bg-gradient-to-br from-sky-50 to-indigo-50 p-8 lg:flex lg:flex-col lg:items-center lg:justify-center">
           <img
             src={RightArt}
@@ -578,8 +608,6 @@ export default function LoginModal({
     </div>
   );
 }
-
-/* ========= Subcomponents ========= */
 
 type FieldProps = {
   label: string;
@@ -626,10 +654,8 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
           placeholder={placeholder}
           type={type}
           autoComplete={autoComplete}
-          className={`w-full rounded-xl bg-transparent  py-2.5 text-sm text-slate-900 outline-none
-                        ${iconLeft ? 'pl-10' : 'pl-3'} ${
-            rightSlot ? 'pr-10' : 'pr-3'
-          }`}
+          className={`w-full rounded-xl bg-transparent py-2.5 text-sm text-slate-900 outline-none
+                        ${iconLeft ? 'pl-10' : 'pl-3'} ${rightSlot ? 'pr-10' : 'pr-3'}`}
         />
         {rightSlot && <span className="absolute right-2">{rightSlot}</span>}
       </div>

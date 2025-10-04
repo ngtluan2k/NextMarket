@@ -7,13 +7,16 @@ import { JwtService } from '@nestjs/jwt';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateUsernameDto } from './dto/update-username.dto';
+import { RequestRegisterOtpDto, VerifyRegisterOtpDto } from './dto/register-otp.dto';
+
+
 @ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all users' })
@@ -32,25 +35,25 @@ export class UserController {
     };
   }
 
-@Post('login')
-@ApiOperation({ summary: 'User login' })
-@ApiBody({ type: LoginDto })
-async login(@Body() dto: LoginDto) {
-  const userData = await this.userService.login(dto);
+  @Post('login')
+  @ApiOperation({ summary: 'User login' })
+  @ApiBody({ type: LoginDto })
+  async login(@Body() dto: LoginDto) {
+    const userData = await this.userService.login(dto);
 
-  // Tạo JWT
-  const payload = { sub: userData.id, username: userData.username, email: userData.email, roles: userData.roles, permissions: userData.permissions };
-  const token = await this.jwtService.signAsync(payload);
+    // Tạo JWT
+    const payload = { sub: userData.id, username: userData.username, email: userData.email, roles: userData.roles, permissions: userData.permissions };
+    const token = await this.jwtService.signAsync(payload);
 
-  return {
-    status: 200,
-    message: 'Login successful',
-    data: payload,
-    access_token: token,
-  };
-}
+    return {
+      status: 200,
+      message: 'Login successful',
+      data: payload,
+      access_token: token,
+    };
+  }
 
-@Get(':id/profile')
+  @Get(':id/profile')
   @ApiOperation({ summary: 'Get user profile by user ID' })
   @ApiBearerAuth()
   async getUserProfile(@Param('id', ParseIntPipe) id: number) {
@@ -62,7 +65,7 @@ async login(@Body() dto: LoginDto) {
     };
   }
 
-   @Put(':id/profile')
+  @Put(':id/profile')
   @ApiOperation({ summary: 'Update user profile by user ID' })
   @ApiBearerAuth()
   @ApiBody({ type: UpdateUserProfileDto })
@@ -77,7 +80,7 @@ async login(@Body() dto: LoginDto) {
       data: updated,
     };
   }
-   @Get('me')
+  @Get('me')
   @ApiOperation({ summary: 'Get current user profile from JWT' })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
@@ -92,7 +95,7 @@ async login(@Body() dto: LoginDto) {
     };
   }
 
-   @Put(':id/username')
+  @Put(':id/username')
   async updateUsername(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUsernameDto,
@@ -101,4 +104,17 @@ async login(@Body() dto: LoginDto) {
     return { status: 200, message: 'Username updated', data };
   }
 
+  @Post('register/request-otp')
+  @ApiOperation({ summary: 'Request OTP for email verification' })
+  async requestRegisterOtp(@Body() dto: RequestRegisterOtpDto) {
+    await this.userService.requestRegisterOtp(dto.email);
+    return { message: 'OTP đã được gửi tới email' };
+  }
+
+  @Post('register/verify')
+  @ApiOperation({ summary: 'Verify OTP and create account' })
+  async verifyRegisterOtp(@Body() dto: VerifyRegisterOtpDto) {
+    const user = await this.userService.verifyRegisterOtp(dto);
+    return { message: 'Tạo tài khoản thành công', data: user };
+  }
 }

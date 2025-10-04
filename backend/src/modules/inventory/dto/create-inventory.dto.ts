@@ -15,10 +15,6 @@ export class CreateInventoryDto {
   @Min(0)
   quantity!: number;
 
-  @IsNumber()
-  @Min(0)
-  reserved_stock!: number;
-
   @IsOptional()
   @IsNumber()
   @Min(0)

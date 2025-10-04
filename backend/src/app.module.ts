@@ -12,7 +12,6 @@ import { RolePermissionModule } from './modules/role-permission/role-permission.
 import { UserRoleModule } from './modules/user-role/user-role.module';
 import { CartModule } from './modules/cart/cart.module';
 import { join } from 'path';
-import { StoreRatingModule } from './modules/store-rating/store-rating.module';
 import { StoreDocumentModule } from './modules/store-document/store-document.module';
 import { ProductCategoryModule } from './modules/product_category/product_category.module';
 import { ProductMediaModule } from './modules/product_media/product_media.module';
@@ -39,8 +38,12 @@ import { OrderShipmentsModule } from './modules/order-shipments/order-shipments.
 import { ShippingLabelsModule } from './modules/shipping-labels/shipping-labels.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { AffiliateCommissionsModule } from './modules/affiliate-commissions/affiliate-commissions.module';
+import { ProvincesModule } from './provinces/provinces.module';
 import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.module';
 import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
+import { ProductReviewsModule } from './modules/product_reviews/product_reviews.module';
+import { FilesModule } from './common/files/files.module';
+
 @Module({
   imports: [
     // Đọc file .env
@@ -83,7 +86,6 @@ import { PaymentTransactionsModule } from './modules/payment-transactions/paymen
     ProductModule,
     UserModule,
     CategoryModule,
-    StoreRatingModule,
     StoreModule,
     BrandModule,
     RoleModule,
@@ -113,9 +115,12 @@ import { PaymentTransactionsModule } from './modules/payment-transactions/paymen
     ShippingLabelsModule,
     ShipmentsModule,
     AffiliateCommissionsModule,
+    ProvincesModule,
     AuthModule,
     PaymentMethodsModule,
     PaymentTransactionsModule,
+    ProductReviewsModule,
+    FilesModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

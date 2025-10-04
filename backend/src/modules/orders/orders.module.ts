@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,6 +10,8 @@ import { OrderItem } from '../order-items/order-item.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { Payment } from '../payments/payment.entity';
 import { VouchersModule } from '../vouchers/vouchers.module';
+import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
+import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
 
 @Module({
   imports: [
@@ -21,8 +23,10 @@ import { VouchersModule } from '../vouchers/vouchers.module';
       OrderItem,
       Inventory,
       Payment,
+      OrderStatusHistory,
     ]),
     VouchersModule,
+    forwardRef(() => ProductReviewsModule), // 👈 thêm cái này
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

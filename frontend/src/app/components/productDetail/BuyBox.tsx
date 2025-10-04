@@ -134,8 +134,13 @@ export default function BuyBox({
     navigate('/checkout', { state: checkoutState });
   };
 
-  const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
+  // --- tính giá dựa trên variant + pricing_rules ---
 
+
+  const totalPrice = useMemo(
+    () => calculatedPrice * quantity,
+    [calculatedPrice, quantity]
+  );
   if (!product) return null;
 
   const handleAddToCart = async (product: Product, quantity: number) => {

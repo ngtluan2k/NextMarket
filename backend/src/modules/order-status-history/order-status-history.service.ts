@@ -20,26 +20,26 @@ export class OrderStatusHistoryService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
-  async create(dto: CreateOrderStatusHistoryDto): Promise<OrderStatusHistory> {
-    const order = await this.ordersRepository.findOneBy({ id: dto.orderId });
-    const user = dto.changedById
-      ? await this.usersRepository.findOneBy({ id: dto.changedById })
-      : null;
+  // async create(dto: CreateOrderStatusHistoryDto): Promise<OrderStatusHistory> {
+  //   const order = await this.ordersRepository.findOneBy({ id: dto.orderId });
+  //   const user = dto.changedById
+  //     ? await this.usersRepository.findOneBy({ id: dto.changedById })
+  //     : null;
 
-    if (!order) {
-      throw new BadRequestException('Order không tồn tại');
-    }
+  //   if (!order) {
+  //     throw new BadRequestException('Order không tồn tại');
+  //   }
 
-    const history = this.historyRepository.create({
-      order,
-      old_status: dto.oldStatus,
-      new_status: dto.newStatus,
-      note: dto.note,
-      changedBy: user || null,
-    });
+  //   const history = this.historyRepository.create({
+  //     order,
+  //     old_status: dto.oldStatus,
+  //     new_status: dto.newStatus,
+  //     note: dto.note,
+  //     changedBy: user || null,
+  //   });
 
-    return await this.historyRepository.save(history);
-  }
+  //   return await this.historyRepository.save(history);
+  // }
 
   async findAll(): Promise<OrderStatusHistory[]> {
     return this.historyRepository.find({ relations: ['order', 'changedBy'] });

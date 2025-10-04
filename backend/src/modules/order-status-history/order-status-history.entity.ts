@@ -10,14 +10,14 @@ import {
 import { Order } from '../orders/order.entity';
 import { User } from '../user/user.entity';
 export enum historyStatus{
-  Pending = 0,
-  Confirmed = 1,
-  Processing = 2,
-  Shipped = 3,
-  Delivered = 4,
-  Completed = 5,
-  Cancelled = 6,
-  Returned = 7,
+  pending = 0,
+  confirmed = 1,
+  processing = 2,
+  shipped = 3,
+  delivered = 4,  
+  completed = 5,
+  cancelled = 6,
+  returned = 7,
 }
 
 @Entity('order_status_history')
@@ -36,14 +36,14 @@ export class OrderStatusHistory {
   @Column({
     name: 'old_status',
     type: 'tinyint',
-    default: historyStatus.Pending,
+    default: historyStatus.pending,
   })
   oldStatus!: historyStatus;
 
   @Column({
     name: 'new_status',
     type: 'tinyint',
-    default: historyStatus.Pending,
+    default: historyStatus.pending,
   })
   newStatus!: historyStatus;
 

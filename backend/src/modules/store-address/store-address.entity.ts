@@ -26,11 +26,14 @@ export class StoreAddress {
   @Column({ type: 'text' })
   street!: string;
 
-  @Column({ length: 100 })
-  city!: string;
+  @Column({ length: 100, nullable: true })
+  district!: string;
 
   @Column({ length: 100 })
   province!: string;
+
+  @Column({ length: 100, nullable: true })
+  ward!: string;
 
   @Column({ length: 100 })
   country!: string;
@@ -47,8 +50,6 @@ export class StoreAddress {
   @Column({ type: 'boolean', default: false })
   is_default!: boolean;
 
-  @Column({ type: 'boolean', default: false })
-  is_draft!: boolean;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

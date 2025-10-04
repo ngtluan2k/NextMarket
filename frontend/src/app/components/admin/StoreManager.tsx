@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Table, Spin, message, Card, Popconfirm, Button } from "antd";
+import { Table, Spin, message, Card, Popconfirm, Button, Drawer, Descriptions } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import axios from "axios";
 import { DeleteOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { storeService } from "../../../service/store.service";
 
 interface Store {
   id: number;
   uuid: string;
   name: string;
+  status: string;
   description?: string;
   created_at: string;
 }
@@ -16,21 +19,22 @@ const StoreManager: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detail, setDetail] = useState<any | null>(null);
+  const [selected, setSelected] = useState<Store | null>(null);
+  const navigate = useNavigate();
+
   // Gọi API lấy danh sách store
   const fetchStores = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token"); // token từ login
-      const res = await axios.get("http://localhost:3000/stores", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setStores(res.data.data || []);
+      const data = await storeService.getStores(true); // admin xem cả soft-deleted
+      setStores(data || []);
     } catch (err: any) {
       console.error("Lỗi fetch stores:", err);
-      message.error(err.response?.data?.message || "Không lấy được danh sách cửa hàng");
+      message.error(err?.response?.data?.message || "Không lấy được danh sách cửa hàng");
     } finally {
       setLoading(false);
     }
@@ -48,6 +52,12 @@ const StoreManager: React.FC = () => {
 
       message.success("Xóa cửa hàng thành công");
       setStores((prev) => prev.filter((store) => store.id !== id));
+      // Nếu đang xem chi tiết cửa hàng vừa xóa thì đóng Drawer
+      if (selected?.id === id) {
+        setDrawerOpen(false);
+        setSelected(null);
+        setDetail(null);
+      }
     } catch (err: any) {
       console.error("Lỗi xóa store:", err);
       message.error(err.response?.data?.message || "Xóa cửa hàng thất bại");
@@ -57,7 +67,25 @@ const StoreManager: React.FC = () => {
   useEffect(() => {
     fetchStores();
   }, []);
-  
+
+  const openDetail = async (record: Store) => {
+    setSelected(record);
+    setDrawerOpen(true);
+    setDetailLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`http://localhost:3000/stores/${record.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      // Backend có thể trả về { data: {...} } hoặc trực tiếp object
+      setDetail(res.data?.data ?? res.data ?? null);
+    } catch (err: any) {
+      console.error(err);
+      message.error(err.response?.data?.message || "Không lấy được thông tin cửa hàng");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const columns: ColumnsType<Store> = [
     {
@@ -70,7 +98,29 @@ const StoreManager: React.FC = () => {
       title: "Tên cửa hàng",
       dataIndex: "name",
       key: "name",
+      render: (text: string) => (text || "(Chưa đặt tên)"), 
     },
+
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (text: string) => {
+        switch (text) {
+          case "active":
+            return <span style={{ color: "green" }}>Hoạt động</span>;
+          case "inactive":
+            return <span style={{ color: "gray" }}>Chưa hoạt động</span>;
+          case "suspended":
+            return <span style={{ color: "orange" }}>Bị tạm ngưng</span>;
+          case "closed":
+            return <span style={{ color: "red" }}>Đã đóng</span>;
+          default:
+            return text || "-";
+        }
+      },
+    },
+
     {
       title: "Mô tả",
       dataIndex: "description",
@@ -87,16 +137,21 @@ const StoreManager: React.FC = () => {
       key: "actions",
       width: 120,
       render: (_, record) => (
-        <Popconfirm
-          title="Bạn có chắc chắn muốn xóa cửa hàng này?"
-          onConfirm={() => deleteStore(record.id)}
-          okText="Xóa"
-          cancelText="Hủy"
-        >
-          <Button type="primary" danger size="small" icon={<DeleteOutlined />}>
-            Xóa
+        <div className="flex gap-2">
+          <Button size="small" onClick={() => navigate(`/admin/stores/${record.id}`)}>
+            Xem chi tiết
           </Button>
-        </Popconfirm>
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xóa cửa hàng này?"
+            onConfirm={() => deleteStore(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button type="primary" danger size="small" icon={<DeleteOutlined />}>
+              Xóa
+            </Button>
+          </Popconfirm>
+        </div>
       ),
     },
   ];
@@ -108,12 +163,14 @@ const StoreManager: React.FC = () => {
           <Spin size="large" />
         </div>
       ) : (
-        <Table
-          rowKey="id"
-          dataSource={stores}
-          columns={columns}
-          pagination={{ pageSize: 10 }}
-        />
+        <>
+          <Table
+            rowKey="id"
+            dataSource={stores}
+            columns={columns}
+            pagination={{ pageSize: 10 }}
+          />
+        </>
       )}
     </Card>
   );
