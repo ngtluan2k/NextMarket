@@ -261,7 +261,8 @@ export class StoreController {
       storeIdentification: store.storeIdentification,
       bankAccount: store.bankAccount,
       address: store.address,
-      rating: store.rating,
+      avg_rating: store.avg_rating,
+      review_count: store.review_count,
       totalProducts: productCount,
     };
 
