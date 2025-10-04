@@ -74,7 +74,7 @@ import { PaymentTransactionsModule } from './modules/payment-transactions/paymen
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: false,
+          synchronize: true,
           logging: true,
         };
       },
