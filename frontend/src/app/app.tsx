@@ -33,6 +33,10 @@ import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
 import OtpVerifyPage from "./page/OtpVerify";
 
+
+import UserAddress from './page/UserAddress';
+import ShopXuPage from './components/account/ShopXuPage';
+
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
 }
@@ -63,8 +67,9 @@ const App: React.FC = () => {
           <Route path="/cart" element={<CartPage showMessage={showMessage} />} />
           <Route path="/test/home" element={<ProductList />} />
           <Route path="/checkout" element={<CheckoutPayment />} />
-          <Route path="/order-success" element={<OrderSuccess />} />
+          <Route path="/order/success" element={<OrderSuccess />} />
           <Route path="/add_product" element={<ProductForm />} />
+          <Route path="/user/address" element={<UserAddress />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -81,8 +86,10 @@ const App: React.FC = () => {
             <Route path="orders" element={<OrdersPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="returns" element={<ReturnsPage />} />
-            <Route path="addresses" element={<AddressBook />} />      
-            <Route path="addresses/create" element={<AddressCreatePage />} /> 
+            <Route path="addresses" element={<AddressBook />} />
+            <Route path="addresses/create" element={<AddressCreatePage />} />
+            <Route path="shop-xu" element={<ShopXuPage />} />
+            
           </Route>
 
           {/* Store Routes */}

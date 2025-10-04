@@ -2,7 +2,8 @@ import React from "react";
 import {
   User, Bell, ClipboardList, RefreshCcw, MapPin, CreditCard,
   MessageSquare, Eye, Heart, Star, Crown, Share2, Wallet,
-  BadgePercent, Sparkles, Coins, BookOpen, HelpCircle
+  BadgePercent, Sparkles, Coins, BookOpen, HelpCircle,
+  Gift
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -40,6 +41,8 @@ const DEFAULT_ITEMS: AccountMenuItem[] = [
   { key: "vouchers",    label: "Mã giảm giá",          icon: <BadgePercent className="h-4 w-4" />, to: "/account/vouchers" },
   { key: "bookcare",    label: "BookCare của tôi",     icon: <BookOpen className="h-4 w-4" />, to: "/account/bookcare" },
   { key: "support",     label: "Hỗ trợ khách hàng",    icon: <HelpCircle className="h-4 w-4" />, to: "/account/support" },
+  { key: "shop-xu",     label: "Shop Xu của tôi",      icon: <Coins className="h-4 w-4" />, to: "/account/shop-xu" },
+  { key: "subscription", label: "Quản lý Subscription", icon: <CreditCard className="h-4 w-4" />, to: "/account/subscription" },
 ];
 
 export default function AccountSidebar({

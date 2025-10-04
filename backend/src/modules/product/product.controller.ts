@@ -47,20 +47,21 @@ export class ProductController {
   }
 
   // Lấy tất cả sản phẩm của store
-  // @UseGuards(JwtAuthGuard)
-  // @Get('store')
-  // async findAll(@Req() req: any) {
-  //   const userId = req.user.id;
-  //   return this.productService.findAll(userId);
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Get('store')
+  async findAll(@Req() req: any) {
+    const userId = req.user.id;
+    return this.productService.findAll(userId);
+  }
 
   // Lấy 1 sản phẩm theo id
-  // @UseGuards(JwtAuthGuard)
-  // @Get(':id')
-  // async findOne(@Param('id') id: number, @Req() req: any) {
-  //   const userId = req.user.sub;
-  //   return this.productService.findOne(id, userId);
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  async findOne(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user.sub;
+    return this.productService.findOne(id, userId);
+  }
+
 
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
@@ -99,13 +100,15 @@ export class ProductController {
         media_type: 'image',
         is_primary: index === 0,
         url: `/uploads/products/${file.filename}`,
-        sort_order: index + 1,
+                sort_order: index + 1,
+
       }));
     }
 
     const userId = req.user.sub;
     return this.productService.createProduct(dto, userId);
   }
+
 
   // Xóa sản phẩm
   @UseGuards(JwtAuthGuard)
@@ -116,17 +119,17 @@ export class ProductController {
   }
 
   // Publish sản phẩm (đăng lên store)
-  // @Post(':id/publish')
-  // async publishDraft(@Param('id') id: number, @Req() req: any) {
-  //   const userId = req.user.id;
+  @Post(':id/publish')
+  async publishDraft(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user.id;
 
-  //   // Lấy sản phẩm hiện tại
-  //   const product = await this.productService.findOne(id, userId);
-  //   if (!product) throw new NotFoundException('Product not found');
+    // Lấy sản phẩm hiện tại
+    const product = await this.productService.findOne(id, userId);
+    if (!product) throw new NotFoundException('Product not found');
 
-  //   // Publish bằng cách lưu lại với status 'active'
-  //   return this.productService.saveProduct(product as any, userId, 'active');
-  // }
+    // Publish bằng cách lưu lại với status 'active'
+    return this.productService.saveProduct(product as any, userId, 'active');
+  }
 
   @Post('publish')
   @UseGuards(JwtAuthGuard)
@@ -165,9 +168,11 @@ export class ProductController {
         media_type: 'image',
         is_primary: index === 0,
         url: `/uploads/products/${file.filename}`,
-        sort_order: index + 1,
+                sort_order: index + 1,
+
       }));
     }
+    
 
     const userId = req.user.sub;
     return this.productService.publishProduct(dto, userId);
@@ -229,109 +234,104 @@ export class ProductController {
       data: products,
     };
   }
-  @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FilesInterceptor('media', 10, {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = './uploads/products';
-          if (!existsSync(uploadPath))
-            mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, uniqueSuffix + extname(file.originalname));
-        },
-      }),
-    })
-  )
-  async updateDraft(
-    @Param('id') id: number,
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body() dto: any,
-    @Req() req: any
-  ) {
-    // --- Parse JSON từ FormData và chuẩn hóa thành array ---
-    dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
-    dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
-    dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
-    dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
-    dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
-    if (Array.isArray(dto.inventory) && Array.isArray(dto.variants)) {
-      dto.variants = dto.variants.map((v: any) => ({
-        ...v,
-        inventories: dto.inventory.filter(
-          (inv: any) => inv.variant_id === v.id
-        ),
-      }));
-    }
-    // --- Merge media_meta + files mới ---
-    dto.media = dto.media_meta.map((m: any) => ({
-      ...m,
-      url: m.url ? m.url.replace(/^https?:\/\/[^/]+/, '') : '', // chuyển URL cũ thành relative
-    }));
+@Put(':id')
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(
+  FilesInterceptor('media', 10, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = './uploads/products';
+        if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  }),
+)
+async updateDraft(
+  @Param('id') id: number,
+  @UploadedFiles() files: Express.Multer.File[],
+  @Body() dto: any,
+  @Req() req: any,
+) {
+  // --- Parse JSON từ FormData và chuẩn hóa thành array ---
+  dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
+  dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
+  dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
+  dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
+  dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
+  if (Array.isArray(dto.inventory) && Array.isArray(dto.variants)) {
+  dto.variants = dto.variants.map((v: any) => ({
+    ...v,
+    inventories: dto.inventory.filter((inv: any) => inv.variant_id === v.id),
+  }));
+}
+  // --- Merge media_meta + files mới ---
+  dto.media = dto.media_meta.map((m: any) => ({
+    ...m,
+    url: m.url ? m.url.replace(/^https?:\/\/[^/]+/, '') : '', // chuyển URL cũ thành relative
+  }));
 
-    if (files?.length) {
-      files.forEach((file) => {
-        dto.media.push({
-          file_name: file.filename,
-          media_type: 'image',
-          is_primary: false,
-          url: `/uploads/products/${file.filename}`,
-          sort_order: dto.media.length + 1,
-        });
+  if (files?.length) {
+    files.forEach((file) => {
+      dto.media.push({
+        file_name: file.filename,
+        media_type: 'image',
+        is_primary: false,
+        url: `/uploads/products/${file.filename}`,
+        sort_order: dto.media.length + 1,
       });
-    }
-
-    // --- Gọi service update ---
-    const userId = req.user.sub;
-    return this.productService.updateProduct(id, dto, userId);
+    });
   }
 
-  // @Put(':id/publish')
-  // @UseGuards(JwtAuthGuard)
-  // @UseInterceptors(
-  //   FilesInterceptor('media', 10, {
-  //     storage: diskStorage({
-  //       destination: (req, file, cb) => {
-  //         const uploadPath = './uploads/products';
-  //         if (!existsSync(uploadPath))
-  //           mkdirSync(uploadPath, { recursive: true });
-  //         cb(null, uploadPath);
-  //       },
-  //       filename: (req, file, cb) => {
-  //         const uniqueSuffix =
-  //           Date.now() + '-' + Math.round(Math.random() * 1e9);
-  //         cb(null, uniqueSuffix + extname(file.originalname));
-  //       },
-  //     }),
-  //   })
-  // )
-  // async updateAndPublish(
-  //   @Param('id') id: number,
-  //   @UploadedFiles() files: Express.Multer.File[],
-  //   @Body() dto: any,
-  //   @Req() req: any
-  // ) {
-  //   // Parse JSON từ FormData
-  //   if (dto.variants) dto.variants = JSON.parse(dto.variants);
-  //   if (dto.inventory) dto.inventory = JSON.parse(dto.inventory);
-  //   if (dto.pricing_rules) dto.pricing_rules = JSON.parse(dto.pricing_rules);
-  //   if (dto.categories) dto.categories = JSON.parse(dto.categories);
+  // --- Gọi service update ---
+  const userId = req.user.sub;
+  return this.productService.updateProduct(id, dto, userId);
+}
 
-  //   if (files?.length) {
-  //     dto.media = files.map((file, index) => ({
-  //       file_name: file.filename,
-  //       media_type: 'image',
-  //       is_primary: index === 0,
-  //       url: `/uploads/products/${file.filename}`,
-  //     }));
-  //   }
 
-  //   const userId = req.user.sub;
-  //   return this.productService.updateAndPublishProduct(id, dto, userId);
-  // }
+@Put(':id/publish')
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(
+  FilesInterceptor('media', 10, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = './uploads/products';
+        if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  })
+)
+async updateAndPublish(
+  @Param('id') id: number,
+  @UploadedFiles() files: Express.Multer.File[],
+  @Body() dto: any,
+  @Req() req: any
+) {
+  // Parse JSON từ FormData
+  if (dto.variants) dto.variants = JSON.parse(dto.variants);
+  if (dto.inventory) dto.inventory = JSON.parse(dto.inventory);
+  if (dto.pricing_rules) dto.pricing_rules = JSON.parse(dto.pricing_rules);
+  if (dto.categories) dto.categories = JSON.parse(dto.categories);
+
+  if (files?.length) {
+    dto.media = files.map((file, index) => ({
+      file_name: file.filename,
+      media_type: 'image',
+      is_primary: index === 0,
+      url: `/uploads/products/${file.filename}`,
+    }));
+  }
+
+  const userId = req.user.sub;
+  return this.productService.updateAndPublishProduct(id, dto, userId);
+}
 }

@@ -134,8 +134,7 @@ export default function BuyBox({
     navigate('/checkout', { state: checkoutState });
   };
 
-  // --- tính giá dựa trên variant + pricing_rules ---
-
+  
 
   const totalPrice = useMemo(
     () => calculatedPrice * quantity,
