@@ -52,9 +52,7 @@ const EmailModal: React.FC<EmailModalProps> = ({
                   type="email"
                   className="form-control"
                   value={emailFormData.email}
-                  onChange={(e) =>
-                    onInputChange('email', e.target.value)
-                  }
+                  onChange={(e) => onInputChange('email', e.target.value)}
                   placeholder="example@company.com"
                   required
                 />
@@ -69,11 +67,7 @@ const EmailModal: React.FC<EmailModalProps> = ({
             >
               Hủy
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={onSave}
-            >
+            <button type="button" className="btn btn-primary" onClick={onSave}>
               {editingEmail ? 'Cập nhật email' : 'Thêm email'}
             </button>
           </div>

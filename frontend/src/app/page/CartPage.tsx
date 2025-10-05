@@ -54,7 +54,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         },
         variant: i.variant,
       }));
-    console.log("cartPage data: " +JSON.stringify(items));
+    console.log('cartPage data: ' + JSON.stringify(items));
     navigate('/checkout', { state: { items, subtotal: selectedTotal } });
   };
   const toggleAll = () => {

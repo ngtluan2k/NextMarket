@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export type CatNode = {
   id: number;
@@ -18,9 +18,9 @@ type Props = {
 };
 
 export default function CategorySidebar({
-  title = "Khám phá theo danh mục",
+  title = 'Khám phá theo danh mục',
   fetchAllCategories,
-  className = "",
+  className = '',
 }: Props) {
   const [categories, setCategories] = useState<CatNode[]>([]);
   const [open, setOpen] = useState<Record<number, boolean>>({});
@@ -30,9 +30,9 @@ export default function CategorySidebar({
   // Build tree
   const buildTree = (data: CatNode[]): CatNode[] => {
     const map = new Map<number, CatNode>();
-    data.forEach(c => map.set(c.id, { ...c, children: [] }));
+    data.forEach((c) => map.set(c.id, { ...c, children: [] }));
     const tree: CatNode[] = [];
-    map.forEach(c => {
+    map.forEach((c) => {
       if (c.parent_id) {
         const parent = map.get(c.parent_id);
         if (parent) {
@@ -59,11 +59,13 @@ export default function CategorySidebar({
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [fetchAllCategories]);
 
   const toggle = (node: CatNode) => {
-    setOpen(prev => ({ ...prev, [node.id]: !prev[node.id] }));
+    setOpen((prev) => ({ ...prev, [node.id]: !prev[node.id] }));
   };
 
   const handleClickNode = (node: CatNode) => {
@@ -90,22 +92,25 @@ export default function CategorySidebar({
             }}
           >
             <ChevronDown
-              className={`h-4 w-4 text-slate-500 transition-transform ${open[node.id] ? "rotate-180" : ""}`}
+              className={`h-4 w-4 text-slate-500 transition-transform ${
+                open[node.id] ? 'rotate-180' : ''
+              }`}
             />
           </button>
         )}
       </div>
 
       {node.children && open[node.id] && (
-        <ul className="pl-6">
-          {node.children.map(c => renderNode(c))}
-        </ul>
+        <ul className="pl-6">{node.children.map((c) => renderNode(c))}</ul>
       )}
     </li>
   );
 
   return (
-    <aside className={`w-full rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 ${className}`} aria-label={title}>
+    <aside
+      className={`w-full rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 ${className}`}
+      aria-label={title}
+    >
       <div className="px-4 py-3 text-sm font-bold text-slate-900">{title}</div>
 
       {loading ? (
@@ -118,7 +123,7 @@ export default function CategorySidebar({
         </ul>
       ) : (
         <ul className="divide-y divide-slate-100">
-          {categories.map(c => renderNode(c))}
+          {categories.map((c) => renderNode(c))}
         </ul>
       )}
     </aside>

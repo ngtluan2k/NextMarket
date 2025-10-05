@@ -10,16 +10,14 @@ export type UserAddress = {
   postalCode?: string;
   fullAddress?: string;
   isDefault?: boolean;
-  userId?: number; 
-  tag?: string;   
+  userId?: number;
+  tag?: string;
 };
 
-
-
 export type AddressFormValues = {
-  recipientName: string; 
+  recipientName: string;
   phone: string;
-  street: string;        
+  street: string;
   ward: string;
   district: string;
   province: string;
@@ -46,7 +44,7 @@ export type UserContextType = {
 // Dữ liệu của API /me
 export type Me = {
   id: number;
-  username?: string; 
+  username?: string;
   email: string;
   full_name?: string;
   roles?: string[];

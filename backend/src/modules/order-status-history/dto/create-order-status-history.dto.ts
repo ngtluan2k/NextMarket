@@ -1,10 +1,10 @@
 import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { historyStatus } from '../../order-status-history/order-status-history.entity'
+import { historyStatus } from '../../order-status-history/order-status-history.entity';
 
 export class CreateOrderStatusHistoryDto {
   @IsInt()
   @IsNotEmpty()
-  orderId!: number; 
+  orderId!: number;
 
   @IsInt()
   @IsNotEmpty()
@@ -16,7 +16,7 @@ export class CreateOrderStatusHistoryDto {
 
   @IsInt()
   @IsOptional()
-  changedById?: number; 
+  changedById?: number;
 
   @IsString()
   @IsOptional()

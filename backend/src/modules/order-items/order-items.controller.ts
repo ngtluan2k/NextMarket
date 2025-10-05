@@ -40,7 +40,7 @@ export class OrderItemsController {
   @ApiOperation({ summary: 'Cập nhật order item theo ID' })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateOrderItemDto: UpdateOrderItemDto,
+    @Body() updateOrderItemDto: UpdateOrderItemDto
   ) {
     return this.orderItemsService.update(id, updateOrderItemDto);
   }

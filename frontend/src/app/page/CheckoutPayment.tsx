@@ -109,7 +109,7 @@ const CheckoutPayment: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    
+
     // FIX: Đảm bảo userId luôn là số hợp lệ
     const storedUserId = localStorage.getItem('userId');
     const userId = me?.id || (storedUserId ? parseInt(storedUserId, 10) : 0);
@@ -169,11 +169,12 @@ const CheckoutPayment: React.FC = () => {
         console.log('📍 Fetching address for userId:', userId);
         const response = await api.get(`/users/${userId}/addresses`);
         const addresses = response.data || [];
-        
+
         if (addresses.length > 0) {
           // Tìm địa chỉ mặc định hoặc lấy địa chỉ đầu tiên
-          const defaultAddr = addresses.find((a: any) => a.isDefault) || addresses[0];
-          
+          const defaultAddr =
+            addresses.find((a: any) => a.isDefault) || addresses[0];
+
           setUserAddress({
             id: defaultAddr.id,
             userId: userId, // FIX: Đảm bảo userId là số hợp lệ

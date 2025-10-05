@@ -17,7 +17,6 @@ import { ShoppingCart } from '../cart/cart.entity';
 import { OtpService } from '../../common/otp/otp.service';
 import { MailService } from '../../common/mail/mail.service';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -34,7 +33,7 @@ import { MailService } from '../../common/mail/mail.service';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [UserService, JwtStrategy,OtpService,MailService],
+  providers: [UserService, JwtStrategy, OtpService, MailService],
   controllers: [UserController],
   exports: [UserService],
 })

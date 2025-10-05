@@ -146,9 +146,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
                       type="tel"
                       className="form-control"
                       value={addressFormData.phone}
-                      onChange={(e) =>
-                        onInputChange('phone', e.target.value)
-                      }
+                      onChange={(e) => onInputChange('phone', e.target.value)}
                       placeholder="0123456789"
                       required
                     />
@@ -162,16 +160,14 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   type="text"
                   className="form-control"
                   value={addressFormData.street}
-                  onChange={(e) =>
-                    onInputChange('street', e.target.value)
-                  }
+                  onChange={(e) => onInputChange('street', e.target.value)}
                   placeholder="123 Nguyễn Văn Linh"
                   required
                 />
               </div>
 
               <div className="row">
-                <div className={isV2 ? "col-md-6" : "col-md-4"}>
+                <div className={isV2 ? 'col-md-6' : 'col-md-4'}>
                   <div className="mb-3">
                     <label className="form-label">Tỉnh/Thành phố *</label>
                     <select
@@ -179,7 +175,9 @@ const AddressModal: React.FC<AddressModalProps> = ({
                       value={selectedProvince?.code || ''}
                       onChange={(e) => {
                         const provinceCode = parseInt(e.target.value);
-                        const provName = provinces.find(p=>p.code===provinceCode)?.name || '';
+                        const provName =
+                          provinces.find((p) => p.code === provinceCode)
+                            ?.name || '';
                         onInputChange('province', provName);
                         handleProvinceChange(provinceCode);
                       }}
@@ -197,7 +195,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   </div>
                 </div>
                 {!isV2 && (
-                <div className="col-md-4">
+                  <div className="col-md-4">
                     <div className="mb-3">
                       <label className="form-label">Quận/Huyện *</label>
                       <select
@@ -205,7 +203,9 @@ const AddressModal: React.FC<AddressModalProps> = ({
                         value={selectedDistrict?.code || ''}
                         onChange={(e) => {
                           const districtCode = parseInt(e.target.value);
-                          const distName = districts.find(d=>d.code===districtCode)?.name || '';
+                          const distName =
+                            districts.find((d) => d.code === districtCode)
+                              ?.name || '';
                           onInputChange('district', distName);
                           handleDistrictChange(districtCode);
                         }}
@@ -220,12 +220,14 @@ const AddressModal: React.FC<AddressModalProps> = ({
                         ))}
                       </select>
                       {!selectedProvince && (
-                        <div className="form-text">Vui lòng chọn tỉnh/thành phố trước</div>
+                        <div className="form-text">
+                          Vui lòng chọn tỉnh/thành phố trước
+                        </div>
                       )}
                     </div>
-                </div>
+                  </div>
                 )}
-                <div className={isV2 ? "col-md-6" : "col-md-4"}>
+                <div className={isV2 ? 'col-md-6' : 'col-md-4'}>
                   <div className="mb-3">
                     <label className="form-label">Phường/Xã *</label>
                     <select
@@ -233,12 +235,17 @@ const AddressModal: React.FC<AddressModalProps> = ({
                       value={selectedWard?.code || ''}
                       onChange={(e) => {
                         const wardCode = parseInt(e.target.value);
-                        const wardName = wards.find(w=>w.code===wardCode)?.name || '';
+                        const wardName =
+                          wards.find((w) => w.code === wardCode)?.name || '';
                         onInputChange('ward', wardName);
                         handleWardChange(wardCode);
                       }}
                       required
-                      disabled={(isV2 && !selectedProvince) || (!isV2 && !selectedDistrict) || loading}
+                      disabled={
+                        (isV2 && !selectedProvince) ||
+                        (!isV2 && !selectedDistrict) ||
+                        loading
+                      }
                     >
                       <option value="">Chọn phường/xã</option>
                       {wards.map((ward) => (
@@ -248,7 +255,9 @@ const AddressModal: React.FC<AddressModalProps> = ({
                       ))}
                     </select>
                     {!isV2 && !selectedDistrict && (
-                      <div className="form-text">Vui lòng chọn quận/huyện trước</div>
+                      <div className="form-text">
+                        Vui lòng chọn quận/huyện trước
+                      </div>
                     )}
                   </div>
                 </div>
@@ -277,9 +286,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
                       type="text"
                       className="form-control"
                       value={addressFormData.country}
-                      onChange={(e) =>
-                        onInputChange('country', e.target.value)
-                      }
+                      onChange={(e) => onInputChange('country', e.target.value)}
                       placeholder="Vietnam"
                       required
                     />
@@ -293,9 +300,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   className="form-control"
                   rows={2}
                   value={addressFormData.detail}
-                  onChange={(e) =>
-                    onInputChange('detail', e.target.value)
-                  }
+                  onChange={(e) => onInputChange('detail', e.target.value)}
                   placeholder="Ghi chú thêm về địa chỉ..."
                 ></textarea>
               </div>

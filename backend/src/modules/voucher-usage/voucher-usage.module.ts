@@ -9,9 +9,11 @@ import { Order } from '../orders/order.entity';
 import { Store } from '../store/store.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([VoucherUsage, Voucher, User, Order, Store])],
+  imports: [
+    TypeOrmModule.forFeature([VoucherUsage, Voucher, User, Order, Store]),
+  ],
   controllers: [VoucherUsageController],
   providers: [VoucherUsageService],
-  exports: [VoucherUsageService], 
+  exports: [VoucherUsageService],
 })
 export class VoucherUsageModule {}

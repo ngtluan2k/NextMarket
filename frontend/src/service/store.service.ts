@@ -39,7 +39,7 @@ export type RegisterSellerPayload = {
     province?: string;
     country?: string;
     postal_code?: string;
-     type?: string;  
+    type?: string;
     detail?: string;
   };
   bank_account?: {
@@ -85,7 +85,6 @@ class StoreService {
     return res.data;
   }
 
-
   async updateStore(id: number, dto: Partial<Store>) {
     const res = await axios.put(`${API_BASE_URL}/stores/${id}`, dto, {
       headers: this.getAuthHeaders(),
@@ -94,13 +93,15 @@ class StoreService {
   }
 
   async updateComprehensive(payload: RegisterSellerPayload) {
-    const res = await axios.post(`${API_BASE_URL}/stores/register-seller`, payload, {
-      headers: this.getAuthHeaders(),
-    });
+    const res = await axios.post(
+      `${API_BASE_URL}/stores/register-seller`,
+      payload,
+      {
+        headers: this.getAuthHeaders(),
+      }
+    );
     return res.data?.data;
   }
-
 }
-
 
 export const storeService = new StoreService();

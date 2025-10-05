@@ -1,5 +1,9 @@
 // role-permission.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RolePermission } from './role-permission.entity';
@@ -10,9 +14,10 @@ import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class RolePermissionService {
   constructor(
-    @InjectRepository(RolePermission) private rpRepo: Repository<RolePermission>,
+    @InjectRepository(RolePermission)
+    private rpRepo: Repository<RolePermission>,
     @InjectRepository(Role) private roleRepo: Repository<Role>,
-    @InjectRepository(Permission) private permRepo: Repository<Permission>,
+    @InjectRepository(Permission) private permRepo: Repository<Permission>
   ) {}
 
   // Lấy tất cả roles kèm permissions
@@ -21,11 +26,11 @@ export class RolePermissionService {
       relations: ['rolePermissions', 'rolePermissions.permission'],
     });
 
-    return roles.map(role => ({
+    return roles.map((role) => ({
       id: role.id,
       name: role.name,
       permissionCount: role.rolePermissions.length,
-      permissions: role.rolePermissions.map(rp => ({
+      permissions: role.rolePermissions.map((rp) => ({
         id: rp.permission.id,
         code: rp.permission.code,
         description: rp.permission.description,
@@ -37,7 +42,8 @@ export class RolePermissionService {
   async assignPermission(roleId: number, permId: number) {
     const role = await this.roleRepo.findOne({ where: { id: roleId } });
     const perm = await this.permRepo.findOne({ where: { id: permId } });
-    if (!role || !perm) throw new NotFoundException('Role or Permission not found');
+    if (!role || !perm)
+      throw new NotFoundException('Role or Permission not found');
 
     const exist = await this.rpRepo.findOne({
       where: { role: { id: roleId }, permission: { id: permId } },
@@ -45,7 +51,7 @@ export class RolePermissionService {
     if (exist) throw new BadRequestException('Permission already assigned');
 
     return this.rpRepo.save(
-      this.rpRepo.create({ role, permission: perm, uuid: uuidv4() }),
+      this.rpRepo.create({ role, permission: perm, uuid: uuidv4() })
     );
   }
 

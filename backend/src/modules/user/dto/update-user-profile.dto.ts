@@ -7,7 +7,11 @@ export class UpdateUserProfileDto {
   @IsString()
   full_name?: string;
 
-  @ApiPropertyOptional({ description: 'Date of birth', type: String, format: 'date' })
+  @ApiPropertyOptional({
+    description: 'Date of birth',
+    type: String,
+    format: 'date',
+  })
   @IsOptional()
   @IsDateString()
   dob?: string;

@@ -1,9 +1,9 @@
-import React from "react";
-import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { Breadcrumb } from "antd";
-import EveryMartHeader from "../../components/Navbar";
-import Footer from "../../components/Footer";
-import AccountSidebar from "../../components/account/AccountSidebar";
+import React from 'react';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Breadcrumb } from 'antd';
+import EveryMartHeader from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AccountSidebar from '../../components/account/AccountSidebar';
 
 export default function AccountLayout() {
   const { pathname } = useLocation();
@@ -23,7 +23,9 @@ export default function AccountLayout() {
           {/* Nội dung động theo route con */}
           <section className="col-span-12 md:col-span-9">
             {/* Chuyển /account -> /account/profile */}
-            {pathname === "/account" ? <Navigate to="/account/profile" replace /> : null}
+            {pathname === '/account' ? (
+              <Navigate to="/account/profile" replace />
+            ) : null}
             <Outlet />
           </section>
         </div>

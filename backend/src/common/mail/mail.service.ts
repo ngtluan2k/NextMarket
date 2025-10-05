@@ -10,9 +10,9 @@ export class MailService {
     secure: false,
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,// Gmail: dùng App Password
+      pass: process.env.SMTP_PASS, // Gmail: dùng App Password
     },
-    });
+  });
 
   async send(to: string, subject: string, html: string) {
     const from = process.env.MAIL_FROM || `"EveryMart" <choheo.soss@gmail.com>`;

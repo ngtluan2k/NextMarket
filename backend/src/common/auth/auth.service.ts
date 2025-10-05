@@ -20,7 +20,7 @@ export class AuthService {
     private readonly userRoleRepository: Repository<UserRole>,
     @InjectRepository(RolePermission)
     private readonly rolePermissionRepository: Repository<RolePermission>,
-    private readonly jwtService: JwtService,
+    private readonly jwtService: JwtService
   ) {}
 
   async googleLogin(profile: any) {
@@ -86,7 +86,7 @@ export class AuthService {
     // ✅ Lấy permissions qua bảng rolePermissions
     const permissions =
       user.roles?.flatMap((ur) =>
-        ur.role.rolePermissions?.map((rp) => rp.permission.code),
+        ur.role.rolePermissions?.map((rp) => rp.permission.code)
       ) || [];
 
     // JWT payload
@@ -95,7 +95,6 @@ export class AuthService {
       email: user.email,
       roles,
       permissions,
-      
     };
 
     const token = this.jwtService.sign(payload);

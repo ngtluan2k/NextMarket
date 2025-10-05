@@ -17,9 +17,9 @@ export const useSaveDraft = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const defaultAddress = addresses.find(a => a.is_default);
-      const defaultEmail = emails.find(e => e.is_default);
-      
+      const defaultAddress = addresses.find((a) => a.is_default);
+      const defaultEmail = emails.find((e) => e.is_default);
+
       // Build step data based on current step
       let stepData: any = {
         name: formData.name,
@@ -42,7 +42,8 @@ export const useSaveDraft = () => {
           street: defaultAddress.street,
           // Backend yêu cầu "district" thay vì "city" và là string không rỗng
           district:
-            (defaultAddress as any).district && String((defaultAddress as any).district).trim()
+            (defaultAddress as any).district &&
+            String((defaultAddress as any).district).trim()
               ? (defaultAddress as any).district
               : null,
           ward: (defaultAddress as any).ward || '',
@@ -71,9 +72,9 @@ export const useSaveDraft = () => {
 
         // Add documents if available
         const sanitizedDocs = (formData.documents || [])
-          .filter(d => d?.file_url && d?.doc_type)
-          .map(d => ({ doc_type: d.doc_type, file_url: d.file_url }));
-        
+          .filter((d) => d?.file_url && d?.doc_type)
+          .map((d) => ({ doc_type: d.doc_type, file_url: d.file_url }));
+
         if (sanitizedDocs.length > 0) {
           stepData.documents = sanitizedDocs;
         }
@@ -81,11 +82,11 @@ export const useSaveDraft = () => {
 
       if (currentStep >= 3) {
         // Add identification if available
-        const hasIdentificationData = 
+        const hasIdentificationData =
           !!formData.store_identification.full_name ||
           !!formData.store_identification.img_front ||
           !!formData.store_identification.img_back;
-        
+
         if (hasIdentificationData) {
           stepData.store_identification = {
             type: formData.store_identification.type,
@@ -96,11 +97,11 @@ export const useSaveDraft = () => {
         }
 
         // Add bank account if available
-        const hasBankData = 
+        const hasBankData =
           formData.bank_account.bank_name ||
           formData.bank_account.account_number ||
           formData.bank_account.account_holder;
-        
+
         if (hasBankData) {
           stepData.bank_account = formData.bank_account;
         }
@@ -108,26 +109,40 @@ export const useSaveDraft = () => {
 
       const res = await fetch('http://localhost:3000/stores/register-seller', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(stepData),
       });
 
       const data = await res.json();
       if (res.ok) {
         onSuccess(`✅ Đã lưu Step ${currentStep} thành công!`);
-        
+
         if (data?.data?.id) {
           // Save current step to localStorage
-          localStorage.setItem('seller_registration_current_step', currentStep.toString());
+          localStorage.setItem(
+            'seller_registration_current_step',
+            currentStep.toString()
+          );
           // Save form data to localStorage
-          localStorage.setItem('seller_registration_form_data', JSON.stringify(formData));
+          localStorage.setItem(
+            'seller_registration_form_data',
+            JSON.stringify(formData)
+          );
           // Save addresses to localStorage
-          localStorage.setItem('seller_registration_addresses', JSON.stringify(addresses));
-          
+          localStorage.setItem(
+            'seller_registration_addresses',
+            JSON.stringify(addresses)
+          );
+
           return data.data.id;
         }
       } else {
-        onError(`❌ Lỗi lưu Step ${currentStep}: ${data.message || 'Thất bại'}`);
+        onError(
+          `❌ Lỗi lưu Step ${currentStep}: ${data.message || 'Thất bại'}`
+        );
       }
     } catch (error: any) {
       onError(`❌ Lỗi kết nối: ${error.message}`);

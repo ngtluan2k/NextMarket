@@ -190,102 +190,102 @@ const AddressModal: React.FC<Props> = ({
   );
 
   const handleFinish = async (values: any) => {
-  setLoading(true);
-  try {
-    const userId = me?.id || Number(localStorage.getItem('userId') || 0);
-    if (!userId) {
-      message.error('Vui lòng đăng nhập để thêm địa chỉ');
-      setLoading(false);
-      return;
-    }
+    setLoading(true);
+    try {
+      const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+      if (!userId) {
+        message.error('Vui lòng đăng nhập để thêm địa chỉ');
+        setLoading(false);
+        return;
+      }
 
-    const wardName = wards.find((w) => w.code === values.ward)?.name;
-    const districtName =
-      mode === 'v1'
-        ? districts.find((d) => d.code === values.district)?.name
-        : '';
-    const provinceName = provinces.find(
-      (p) => p.code === values.province
-    )?.name;
+      const wardName = wards.find((w) => w.code === values.ward)?.name;
+      const districtName =
+        mode === 'v1'
+          ? districts.find((d) => d.code === values.district)?.name
+          : '';
+      const provinceName = provinces.find(
+        (p) => p.code === values.province
+      )?.name;
 
-    if (
-      !values.recipientName ||
-      !values.phone ||
-      !values.addressLine ||
-      !provinceName ||
-      !wardName ||
-      (mode === 'v1' && !districtName)
-    ) {
-      message.error('Vui lòng điền đầy đủ thông tin bắt buộc.');
-      setLoading(false);
-      return;
-    }
+      if (
+        !values.recipientName ||
+        !values.phone ||
+        !values.addressLine ||
+        !provinceName ||
+        !wardName ||
+        (mode === 'v1' && !districtName)
+      ) {
+        message.error('Vui lòng điền đầy đủ thông tin bắt buộc.');
+        setLoading(false);
+        return;
+      }
 
-    const payload = {
-      user_id: userId,
-      recipientName: values.recipientName,
-      phone: values.phone,
-      street: values.addressLine,
-      ward: wardName,
-      district: districtName,
-      province: provinceName,
-      country: 'Việt Nam',
-      postalCode: values.postalCode || '',
-      isDefault: values.isDefault || false,
-    };
-
-    let res: { data: UserAddress };
-
-    if (editingId) {
-      // Chế độ EDIT: cập nhật và tự động chọn địa chỉ đó
-      res = await api.patch(
-        `/users/${userId}/addresses/${editingId}`,
-        payload
-      );
-      
-      // ✅ Normalize userId về đúng format
-      const normalizedAddress = {
-        ...res.data,
-        userId: userId,
-        user_id: userId
+      const payload = {
+        user_id: userId,
+        recipientName: values.recipientName,
+        phone: values.phone,
+        street: values.addressLine,
+        ward: wardName,
+        district: districtName,
+        province: provinceName,
+        country: 'Việt Nam',
+        postalCode: values.postalCode || '',
+        isDefault: values.isDefault || false,
       };
-      
-      // Cập nhật trong danh sách
-      setAddresses((prev) =>
-        prev.map((addr) => (addr.id === editingId ? normalizedAddress : addr))
-      );
 
-      // ✅ Tự động chọn địa chỉ vừa cập nhật
-      setSelectedId(normalizedAddress.id);
-      onSelect(normalizedAddress);
+      let res: { data: UserAddress };
 
-      message.success('Đã cập nhật địa chỉ');
-      setEditingId(null);
-    } else {
-      // Chế độ THÊM MỚI: tự động chọn địa chỉ vừa thêm
-      res = await api.post(`/users/${userId}/addresses`, payload);
-      
-      // ✅ Normalize userId về đúng format
-      const normalizedAddress = {
-        ...res.data,
-        userId: userId,
-        user_id: userId
-      };
-      
-      setAddresses((prev) => [...prev, normalizedAddress]);
-      setSelectedId(normalizedAddress.id);
-      message.success('Đã thêm địa chỉ mới');
+      if (editingId) {
+        // Chế độ EDIT: cập nhật và tự động chọn địa chỉ đó
+        res = await api.patch(
+          `/users/${userId}/addresses/${editingId}`,
+          payload
+        );
+
+        // ✅ Normalize userId về đúng format
+        const normalizedAddress = {
+          ...res.data,
+          userId: userId,
+          user_id: userId,
+        };
+
+        // Cập nhật trong danh sách
+        setAddresses((prev) =>
+          prev.map((addr) => (addr.id === editingId ? normalizedAddress : addr))
+        );
+
+        // ✅ Tự động chọn địa chỉ vừa cập nhật
+        setSelectedId(normalizedAddress.id);
+        onSelect(normalizedAddress);
+
+        message.success('Đã cập nhật địa chỉ');
+        setEditingId(null);
+      } else {
+        // Chế độ THÊM MỚI: tự động chọn địa chỉ vừa thêm
+        res = await api.post(`/users/${userId}/addresses`, payload);
+
+        // ✅ Normalize userId về đúng format
+        const normalizedAddress = {
+          ...res.data,
+          userId: userId,
+          user_id: userId,
+        };
+
+        setAddresses((prev) => [...prev, normalizedAddress]);
+        setSelectedId(normalizedAddress.id);
+        message.success('Đã thêm địa chỉ mới');
+      }
+
+      setAddingNew(false);
+      form.resetFields();
+    } catch (error: any) {
+      console.error('❌ Address error:', error.response?.data || error);
+      message.error(error.response?.data?.message || 'Không thể lưu địa chỉ');
+    } finally {
+      setLoading(false);
     }
-
-    setAddingNew(false);
-    form.resetFields();
-  } catch (error: any) {
-    console.error('❌ Address error:', error.response?.data || error);
-    message.error(error.response?.data?.message || 'Không thể lưu địa chỉ');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleEdit = async (address: UserAddress) => {
     setEditingId(address.id);

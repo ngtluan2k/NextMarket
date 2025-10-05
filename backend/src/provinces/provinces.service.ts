@@ -77,7 +77,9 @@ export class ProvincesService {
   async getWards(districtCode: number, version: 'v1' | 'v2' = 'v1') {
     try {
       if (version === 'v2') {
-        console.warn('⚠️ v2 API does not support fetching wards by districtCode');
+        console.warn(
+          '⚠️ v2 API does not support fetching wards by districtCode'
+        );
         return [];
       }
 

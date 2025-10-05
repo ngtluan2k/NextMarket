@@ -1,6 +1,10 @@
 import React from 'react';
 import { Card, Radio, Button, Tag } from 'antd';
-import { PaymentMethodResponse, PaymentMethodType, SavedCard } from '../../types/payment';
+import {
+  PaymentMethodResponse,
+  PaymentMethodType,
+  SavedCard,
+} from '../../types/payment';
 import {
   CreditCardOutlined,
   MobileOutlined,
@@ -10,14 +14,12 @@ import {
   DollarOutlined,
 } from '@ant-design/icons';
 
-
 type Props = {
   selected: PaymentMethodType;
   onChange: (m: PaymentMethodType) => void;
   methods: PaymentMethodResponse[];
   savedCards?: SavedCard[];
 };
-
 
 const getPaymentIcon = (type: string) => {
   switch (type) {
@@ -44,7 +46,6 @@ const PaymentMethods: React.FC<Props> = ({
   methods,
   savedCards = [],
 }) => {
-
   // console.log(methods)
   return (
     <Card

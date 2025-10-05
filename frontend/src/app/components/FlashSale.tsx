@@ -161,8 +161,7 @@ export default function ProductFlashSale({
                       alt={p.name}
                       className="mx-auto block h-[110px] w-[110px] rounded-lg object-cover"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          "";
+                        (e.currentTarget as HTMLImageElement).src = '';
                       }}
                     />
                   </div>

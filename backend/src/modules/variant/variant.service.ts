@@ -13,21 +13,23 @@ export class VariantService {
     @InjectRepository(Variant)
     private readonly repo: Repository<Variant>,
     @InjectRepository(Product)
-    private readonly productRepo: Repository<Product>,
+    private readonly productRepo: Repository<Product>
   ) {}
 
   async addVariant(dto: CreateVariantDto, userId: number) {
-  const product = await this.productRepo.findOne({ where: { id: dto.productId }, relations: ['store'] });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('You do not own this product');
+    const product = await this.productRepo.findOne({
+      where: { id: dto.productId },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('You do not own this product');
 
-  const variant = this.repo.create({
-    ...dto,
-    product: { id: dto.productId } as Product,
-  });
+    const variant = this.repo.create({
+      ...dto,
+      product: { id: dto.productId } as Product,
+    });
 
-  return this.repo.save(variant);
+    return this.repo.save(variant);
+  }
 }
-
-}
-

@@ -31,6 +31,7 @@ export async function verifyRegisterOtp(payload: VerifyRegisterPayload) {
     body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || (data as any)?.error) throw new Error((data as any)?.message || 'Xác thực OTP thất bại');
+  if (!res.ok || (data as any)?.error)
+    throw new Error((data as any)?.message || 'Xác thực OTP thất bại');
   return data;
 }

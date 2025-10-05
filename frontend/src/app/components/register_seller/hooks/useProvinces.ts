@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
-import ProvincesService, { Province, District, Ward } from '../../../../service/provinces.service';
+import ProvincesService, {
+  Province,
+  District,
+  Ward,
+} from '../../../../service/provinces.service';
 
 export const useProvinces = (version: 'v1' | 'v2' = 'v2') => {
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
-  
-  const [selectedProvince, setSelectedProvince] = useState<Province | null>(null);
-  const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
+
+  const [selectedProvince, setSelectedProvince] = useState<Province | null>(
+    null
+  );
+  const [selectedDistrict, setSelectedDistrict] = useState<District | null>(
+    null
+  );
   const [selectedWard, setSelectedWard] = useState<Ward | null>(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +92,7 @@ export const useProvinces = (version: 'v1' | 'v2' = 'v2') => {
   };
 
   const handleProvinceChange = (provinceCode: number) => {
-    const province = provinces.find(p => p.code === provinceCode);
+    const province = provinces.find((p) => p.code === provinceCode);
     setSelectedProvince(province || null);
     if (province) {
       loadDistricts(provinceCode);
@@ -92,13 +100,13 @@ export const useProvinces = (version: 'v1' | 'v2' = 'v2') => {
   };
 
   const handleDistrictChange = (districtCode: number) => {
-    const district = districts.find(d => d.code === districtCode);
+    const district = districts.find((d) => d.code === districtCode);
     setSelectedDistrict(district || null);
     if (district && version === 'v1') loadWards(districtCode);
   };
 
   const handleWardChange = (wardCode: number) => {
-    const ward = wards.find(w => w.code === wardCode);
+    const ward = wards.find((w) => w.code === wardCode);
     setSelectedWard(ward || null);
   };
 
@@ -118,11 +126,11 @@ export const useProvinces = (version: 'v1' | 'v2' = 'v2') => {
     selectedProvince,
     selectedDistrict,
     selectedWard,
-    
+
     // State
     loading,
     error,
-    
+
     // Actions
     handleProvinceChange,
     handleDistrictChange,

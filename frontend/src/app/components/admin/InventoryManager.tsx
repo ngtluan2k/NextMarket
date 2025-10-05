@@ -77,11 +77,15 @@ interface CreateInventoryDto {
 
 const InventoryManager: React.FC = () => {
   const [inventories, setInventories] = useState<Inventory[]>([]);
-  const [filteredInventories, setFilteredInventories] = useState<Inventory[]>([]);
+  const [filteredInventories, setFilteredInventories] = useState<Inventory[]>(
+    []
+  );
   const [products, setProducts] = useState<Product[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editingInventory, setEditingInventory] = useState<Inventory | null>(null);
+  const [editingInventory, setEditingInventory] = useState<Inventory | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
@@ -94,9 +98,17 @@ const InventoryManager: React.FC = () => {
 
   // ==== Statistics ====
   const totalItems = inventories.reduce((sum, inv) => sum + inv.quantity, 0);
-  const totalUsed = inventories.reduce((sum, inv) => sum + (inv.used_quantity || 0), 0);
-  const totalAvailable = inventories.reduce((sum, inv) => sum + (inv.available_quantity || 0), 0);
-  const lowStockItems = inventories.filter((inv) => (inv.available_quantity || 0) < 10).length;
+  const totalUsed = inventories.reduce(
+    (sum, inv) => sum + (inv.used_quantity || 0),
+    0
+  );
+  const totalAvailable = inventories.reduce(
+    (sum, inv) => sum + (inv.available_quantity || 0),
+    0
+  );
+  const lowStockItems = inventories.filter(
+    (inv) => (inv.available_quantity || 0) < 10
+  ).length;
 
   useEffect(() => {
     const loadData = async () => {
@@ -125,7 +137,8 @@ const InventoryManager: React.FC = () => {
   apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+      const errorMessage =
+        error.response?.data?.message || error.message || 'An error occurred';
       message.error(errorMessage);
       return Promise.reject(error);
     }
@@ -159,7 +172,8 @@ const InventoryManager: React.FC = () => {
         quantity: inv.quantity,
         used_quantity: inv.used_quantity || 0,
         updated_at: inv.updated_at,
-        available_quantity: inv.available_quantity || inv.quantity - (inv.used_quantity || 0),
+        available_quantity:
+          inv.available_quantity || inv.quantity - (inv.used_quantity || 0),
       }));
       setInventories(mapped);
       setFilteredInventories(mapped);
@@ -174,7 +188,9 @@ const InventoryManager: React.FC = () => {
   const fetchProducts = async () => {
     try {
       const res = await apiClient.get('/products');
-      const productData = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const productData = Array.isArray(res.data)
+        ? res.data
+        : res.data?.data || [];
       const mapped: Product[] = productData.map((p: any) => ({
         id: p.id,
         name: p.name,
@@ -190,7 +206,9 @@ const InventoryManager: React.FC = () => {
   const fetchVariantsByProduct = async (productId: number) => {
     try {
       const res = await apiClient.get(`/variants/product/${productId}`);
-      const variantData = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const variantData = Array.isArray(res.data)
+        ? res.data
+        : res.data?.data || [];
       const mapped: Variant[] = variantData.map((v: any) => ({
         id: v.id,
         name: v.variant_name || v.name,
@@ -218,7 +236,10 @@ const InventoryManager: React.FC = () => {
 
       let res;
       if (editingInventory) {
-        res = await apiClient.patch(`/inventory/${editingInventory.id}`, payload);
+        res = await apiClient.patch(
+          `/inventory/${editingInventory.id}`,
+          payload
+        );
         message.success('Cập nhật tồn kho thành công');
       } else {
         res = await apiClient.post('/inventory', payload);
@@ -454,7 +475,9 @@ const InventoryManager: React.FC = () => {
             style={{ width: '100%' }}
             placeholder="Lọc theo thương hiệu"
             value={brandFilter || undefined}
-            onChange={(val:number | undefined | null) => setBrandFilter(val || null)}
+            onChange={(val: number | undefined | null) =>
+              setBrandFilter(val || null)
+            }
           >
             {[...new Map(products.map((p) => [p.brand?.id, p.brand])).values()]
               .filter((b) => b)

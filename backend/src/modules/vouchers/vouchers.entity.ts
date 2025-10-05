@@ -64,7 +64,11 @@ export class Voucher {
   @Column({ type: 'enum', enum: VoucherType, default: VoucherType.PRODUCT })
   type!: VoucherType;
 
-  @Column({ type: 'enum', enum: VoucherDiscountType, default: VoucherDiscountType.PERCENTAGE })
+  @Column({
+    type: 'enum',
+    enum: VoucherDiscountType,
+    default: VoucherDiscountType.PERCENTAGE,
+  })
   discount_type!: VoucherDiscountType;
 
   @Column({ type: 'decimal', precision: 15, scale: 2 })
@@ -100,7 +104,11 @@ export class Voucher {
   @Column({ type: 'enum', enum: VoucherStatus, default: VoucherStatus.ACTIVE })
   status!: VoucherStatus;
 
-  @Column({ type: 'enum', enum: VoucherCollectionType, default: VoucherCollectionType.MANUAL })
+  @Column({
+    type: 'enum',
+    enum: VoucherCollectionType,
+    default: VoucherCollectionType.MANUAL,
+  })
   collection_type!: VoucherCollectionType;
 
   @Column({ type: 'int', default: 0 })
@@ -152,4 +160,3 @@ export class Voucher {
   @OneToMany(() => VoucherUsage, (usage) => usage.voucher)
   usages!: VoucherUsage[];
 }
-

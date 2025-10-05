@@ -58,9 +58,7 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
               name="businessType"
               value="company"
               checked={formData.store_information.type === 'company'}
-              onChange={(e) =>
-                onInputChange('type', e.target.value)
-              }
+              onChange={(e) => onInputChange('type', e.target.value)}
             />
             <label className="form-check-label">Hộ kinh doanh / Công ty</label>
           </div>
@@ -75,9 +73,7 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
                 type="text"
                 className="form-control"
                 value={formData.store_information.name}
-                onChange={(e) =>
-                  onInputChange('name', e.target.value)
-                }
+                onChange={(e) => onInputChange('name', e.target.value)}
                 placeholder="Nhập vào"
                 maxLength={255}
                 required
@@ -94,9 +90,7 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
             type="text"
             className="form-control"
             value={formData.store_information.addresses || ''}
-            onChange={(e) =>
-              onInputChange('addresses', e.target.value)
-            }
+            onChange={(e) => onInputChange('addresses', e.target.value)}
             placeholder="An Giang / Huyện An Phú / Thị Trấn An Phú"
           />
         </div>
@@ -136,9 +130,7 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
                             💬 {defaultEmail.description}
                           </div>
                         )}
-                        <span className="badge bg-success">
-                          Email mặc định
-                        </span>
+                        <span className="badge bg-success">Email mặc định</span>
                       </div>
                       <div className="d-flex gap-1">
                         <button
@@ -189,9 +181,7 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
                 type="text"
                 className="form-control"
                 value={formData.store_information.tax_code || ''}
-                onChange={(e) =>
-                  onInputChange('tax_code', e.target.value)
-                }
+                onChange={(e) => onInputChange('tax_code', e.target.value)}
                 placeholder="Nhập vào"
                 maxLength={14}
               />
@@ -215,7 +205,8 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
           </div>
 
           <p className="text-muted small mb-2">
-            Hỗ trợ PDF/JPG/PNG, tối đa 10MB. File sẽ lưu với loại: BUSINESS_LICENSE.
+            Hỗ trợ PDF/JPG/PNG, tối đa 10MB. File sẽ lưu với loại:
+            BUSINESS_LICENSE.
           </p>
 
           {businessLicenseUrl && (
@@ -226,7 +217,12 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
                   <img
                     src={`http://localhost:3000${businessLicenseUrl}`}
                     alt="Business License"
-                    style={{ maxWidth: 280, maxHeight: 240, border: '1px solid #eee', borderRadius: 6 }}
+                    style={{
+                      maxWidth: 280,
+                      maxHeight: 240,
+                      border: '1px solid #eee',
+                      borderRadius: 6,
+                    }}
                   />
                 ) : (
                   <a
@@ -242,7 +238,12 @@ const Step2BusinessInfo: React.FC<Step2BusinessInfoProps> = ({
                 <img
                   src={businessLicenseUrl}
                   alt="Business License (local)"
-                  style={{ maxWidth: 280, maxHeight: 240, border: '1px solid #eee', borderRadius: 6 }}
+                  style={{
+                    maxWidth: 280,
+                    maxHeight: 240,
+                    border: '1px solid #eee',
+                    borderRadius: 6,
+                  }}
                 />
               )}
             </div>

@@ -1,39 +1,44 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 import {
-  Star, StarHalf, Image as ImageIcon,
-  MessageSquare, Share2, ThumbsUp, CheckCircle2
-} from "lucide-react";
+  Star,
+  StarHalf,
+  Image as ImageIcon,
+  MessageSquare,
+  Share2,
+  ThumbsUp,
+  CheckCircle2,
+} from 'lucide-react';
 
 /* ===================== Types ===================== */
 export type Review = {
   id: string | number;
-  rating: number;                 // 1..5
+  rating: number; // 1..5
   title?: string;
   body?: string;
   images?: string[];
   author?: { name?: string; avatarUrl?: string };
-  variantText?: string;           // ví dụ: "Màu: Đen"
-  verifiedPurchase?: boolean;     // Đã mua hàng
+  variantText?: string; // ví dụ: "Màu: Đen"
+  verifiedPurchase?: boolean; // Đã mua hàng
   createdAt?: string | number | Date;
   helpfulCount?: number;
   commentCount?: number;
 };
 
 export type ProductReviewsProps = {
-  reviews?: Review[];          // dữ liệu từ API
-  loading?: boolean;           // hiển thị skeleton
-  pageSize?: number;           // số review hiển thị mỗi lần
-  hasMore?: boolean;           // nếu phân trang server
+  reviews?: Review[]; // dữ liệu từ API
+  loading?: boolean; // hiển thị skeleton
+  pageSize?: number; // số review hiển thị mỗi lần
+  hasMore?: boolean; // nếu phân trang server
   onLoadMore?: () => void | Promise<void>;
   className?: string;
 };
 
 /* ===================== Helpers ===================== */
 const formatViDateTime = (t?: string | number | Date) => {
-  if (!t) return "";
+  if (!t) return '';
   const d = new Date(t);
-  if (Number.isNaN(+d)) return "";
-  return d.toLocaleString("vi-VN");
+  if (Number.isNaN(+d)) return '';
+  return d.toLocaleString('vi-VN');
 };
 
 const Stars = ({ value = 0, size = 16 }: { value?: number; size?: number }) => {
@@ -43,9 +48,18 @@ const Stars = ({ value = 0, size = 16 }: { value?: number; size?: number }) => {
   return (
     <span className="inline-flex items-center gap-0.5 text-amber-500">
       {Array.from({ length: full }).map((_, i) => (
-        <Star key={i} className="fill-current" style={{ width: size, height: size }} />
+        <Star
+          key={i}
+          className="fill-current"
+          style={{ width: size, height: size }}
+        />
       ))}
-      {half && <StarHalf className="fill-current" style={{ width: size, height: size }} />}
+      {half && (
+        <StarHalf
+          className="fill-current"
+          style={{ width: size, height: size }}
+        />
+      )}
       {Array.from({ length: 5 - full - (half ? 1 : 0) }).map((_, i) => (
         <Star key={`e${i}`} style={{ width: size, height: size }} />
       ))}
@@ -57,7 +71,11 @@ const DistributionBar = ({
   count,
   total,
   label,
-}: { count: number; total: number; label: string }) => {
+}: {
+  count: number;
+  total: number;
+  label: string;
+}) => {
   const pct = total ? Math.round((count / total) * 100) : 0;
   return (
     <div className="flex items-center gap-2 text-[13px]">
@@ -75,14 +93,20 @@ const DistributionBar = ({
 };
 
 const Chip = ({
-  active, children, onClick,
-}: { active?: boolean; children: React.ReactNode; onClick?: () => void }) => (
+  active,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) => (
   <button
     onClick={onClick}
     className={`rounded-full border px-3 py-1.5 text-sm ${
       active
-        ? "border-sky-600 bg-sky-50 text-sky-700"
-        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        ? 'border-sky-600 bg-sky-50 text-sky-700'
+        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
     }`}
   >
     {children}
@@ -96,7 +120,7 @@ export default function ProductReviews({
   pageSize = 5,
   hasMore,
   onLoadMore,
-  className = "",
+  className = '',
 }: ProductReviewsProps) {
   // filters
   const [withPhotos, setWithPhotos] = useState(false);
@@ -126,10 +150,13 @@ export default function ProductReviews({
     let arr = reviews;
     if (withPhotos) arr = arr.filter((r) => (r.images?.length || 0) > 0);
     if (verifiedOnly) arr = arr.filter((r) => r.verifiedPurchase);
-    if (starFilter) arr = arr.filter((r) => Math.round(r.rating) === starFilter);
+    if (starFilter)
+      arr = arr.filter((r) => Math.round(r.rating) === starFilter);
     // mặc định "Mới nhất"
     arr = [...arr].sort(
-      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime()
     );
     return arr;
   }, [reviews, withPhotos, verifiedOnly, starFilter]);
@@ -145,8 +172,12 @@ export default function ProductReviews({
   };
 
   return (
-    <section className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}>
-      <h3 className="text-lg font-semibold text-slate-900">Khách hàng đánh giá</h3>
+    <section
+      className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}
+    >
+      <h3 className="text-lg font-semibold text-slate-900">
+        Khách hàng đánh giá
+      </h3>
 
       {/* ===== Summary Row ===== */}
       <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-[200px,1fr]">
@@ -189,7 +220,10 @@ export default function ProductReviews({
               <div className="grid grid-flow-col auto-cols-[80px] gap-2 overflow-x-auto pb-1">
                 {loading &&
                   Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="h-20 rounded bg-slate-100 animate-pulse" />
+                    <div
+                      key={i}
+                      className="h-20 rounded bg-slate-100 animate-pulse"
+                    />
                   ))}
                 {!loading &&
                   (allImages.length ? (
@@ -201,7 +235,11 @@ export default function ProductReviews({
                         rel="noreferrer"
                         className="block h-20 overflow-hidden rounded ring-1 ring-slate-200"
                       >
-                        <img src={src} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={src}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </a>
                     ))
                   ) : (
@@ -219,11 +257,18 @@ export default function ProductReviews({
             <Chip active={withPhotos} onClick={() => setWithPhotos((v) => !v)}>
               Có hình ảnh
             </Chip>
-            <Chip active={verifiedOnly} onClick={() => setVerifiedOnly((v) => !v)}>
+            <Chip
+              active={verifiedOnly}
+              onClick={() => setVerifiedOnly((v) => !v)}
+            >
               Đã mua hàng
             </Chip>
             {[5, 4, 3, 2, 1].map((s) => (
-              <Chip key={s} active={starFilter === s} onClick={() => setStarFilter(s)}>
+              <Chip
+                key={s}
+                active={starFilter === s}
+                onClick={() => setStarFilter(s)}
+              >
                 {s} sao
               </Chip>
             ))}
@@ -251,83 +296,110 @@ export default function ProductReviews({
                 <div className="h-3 w-3/5 rounded bg-slate-100 animate-pulse" />
                 <div className="grid grid-cols-4 gap-2">
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-16 rounded bg-slate-100 animate-pulse" />
+                    <div
+                      key={i}
+                      className="h-16 rounded bg-slate-100 animate-pulse"
+                    />
                   ))}
                 </div>
               </div>
             </div>
           ))}
 
-        {!loading && list.map((r) => (
-          <article key={r.id} className="grid grid-cols-[40px,1fr] gap-3 py-4">
-            {/* avatar */}
-            <div className="mt-1">
-              {r.author?.avatarUrl ? (
-                <img
-                  src={r.author.avatarUrl}
-                  className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200"
-                  alt=""
-                />
-              ) : (
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-[13px] font-semibold text-slate-500">
-                  {(r.author?.name || "NA").slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            {/* content */}
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="font-medium text-slate-900">{r.author?.name || "Người dùng"}</div>
-                {r.verifiedPurchase && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Đã mua hàng
-                  </span>
+        {!loading &&
+          list.map((r) => (
+            <article
+              key={r.id}
+              className="grid grid-cols-[40px,1fr] gap-3 py-4"
+            >
+              {/* avatar */}
+              <div className="mt-1">
+                {r.author?.avatarUrl ? (
+                  <img
+                    src={r.author.avatarUrl}
+                    className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200"
+                    alt=""
+                  />
+                ) : (
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-[13px] font-semibold text-slate-500">
+                    {(r.author?.name || 'NA').slice(0, 2).toUpperCase()}
+                  </div>
                 )}
               </div>
 
-              <div className="mt-1 flex items-center gap-2">
-                <Stars value={r.rating} />
-                <span className="text-xs text-slate-500">{formatViDateTime(r.createdAt)}</span>
-              </div>
-
-              {r.title && <div className="mt-1 font-medium text-slate-900">{r.title}</div>}
-              {r.body && <p className="mt-1 text-[15px] leading-6 text-slate-700">{r.body}</p>}
-
-              {r.variantText && (
-                <div className="mt-1 text-xs text-slate-500">{r.variantText}</div>
-              )}
-
-              {r.images?.length ? (
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {r.images.slice(0, 8).map((src, i) => (
-                    <a
-                      key={i}
-                      href={src}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block h-20 overflow-hidden rounded ring-1 ring-slate-200"
-                    >
-                      <img src={src} alt="" className="h-full w-full object-cover" />
-                    </a>
-                  ))}
+              {/* content */}
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="font-medium text-slate-900">
+                    {r.author?.name || 'Người dùng'}
+                  </div>
+                  {r.verifiedPurchase && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Đã mua hàng
+                    </span>
+                  )}
                 </div>
-              ) : null}
 
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500">
-                <button className="inline-flex items-center gap-1 hover:text-slate-700">
-                  <ThumbsUp className="h-4 w-4" /> Hữu ích {r.helpfulCount ? `(${r.helpfulCount})` : ""}
-                </button>
-                <button className="inline-flex items-center gap-1 hover:text-slate-700">
-                  <MessageSquare className="h-4 w-4" /> Bình luận {r.commentCount ? `(${r.commentCount})` : ""}
-                </button>
-                <button className="ml-auto inline-flex items-center gap-1 hover:text-slate-700">
-                  <Share2 className="h-4 w-4" /> Chia sẻ
-                </button>
+                <div className="mt-1 flex items-center gap-2">
+                  <Stars value={r.rating} />
+                  <span className="text-xs text-slate-500">
+                    {formatViDateTime(r.createdAt)}
+                  </span>
+                </div>
+
+                {r.title && (
+                  <div className="mt-1 font-medium text-slate-900">
+                    {r.title}
+                  </div>
+                )}
+                {r.body && (
+                  <p className="mt-1 text-[15px] leading-6 text-slate-700">
+                    {r.body}
+                  </p>
+                )}
+
+                {r.variantText && (
+                  <div className="mt-1 text-xs text-slate-500">
+                    {r.variantText}
+                  </div>
+                )}
+
+                {r.images?.length ? (
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {r.images.slice(0, 8).map((src, i) => (
+                      <a
+                        key={i}
+                        href={src}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block h-20 overflow-hidden rounded ring-1 ring-slate-200"
+                      >
+                        <img
+                          src={src}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                  <button className="inline-flex items-center gap-1 hover:text-slate-700">
+                    <ThumbsUp className="h-4 w-4" /> Hữu ích{' '}
+                    {r.helpfulCount ? `(${r.helpfulCount})` : ''}
+                  </button>
+                  <button className="inline-flex items-center gap-1 hover:text-slate-700">
+                    <MessageSquare className="h-4 w-4" /> Bình luận{' '}
+                    {r.commentCount ? `(${r.commentCount})` : ''}
+                  </button>
+                  <button className="ml-auto inline-flex items-center gap-1 hover:text-slate-700">
+                    <Share2 className="h-4 w-4" /> Chia sẻ
+                  </button>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))}
       </div>
 
       {/* Load more */}

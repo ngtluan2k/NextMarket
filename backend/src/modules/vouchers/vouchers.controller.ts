@@ -30,13 +30,21 @@ export class VouchersController {
   @ApiOperation({ summary: 'Xác thực mã voucher' })
   @UseGuards(JwtAuthGuard)
   @ApiResponse({ status: 200, description: 'Kết quả xác thực voucher' })
-  async validateVoucher(@Body() validateVoucherDto: ValidateVoucherDto, @Req() req: any) {
+  async validateVoucher(
+    @Body() validateVoucherDto: ValidateVoucherDto,
+    @Req() req: any
+  ) {
     const userId = req.user?.userId;
     if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
 
     const { code, order_amount, store_id } = validateVoucherDto;
     const orderItems = [{ productId: 0, quantity: 1, price: order_amount }];
 
-    return this.vouchersService.validateVoucher(code, userId, orderItems, store_id ?? 0);
+    return this.vouchersService.validateVoucher(
+      code,
+      userId,
+      orderItems,
+      store_id ?? 0
+    );
   }
 }

@@ -26,7 +26,9 @@ export class Variant {
   @Column()
   product_id!: number;
 
-  @ManyToOne(() => Product, (product) => product.variants, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.variants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
@@ -51,13 +53,9 @@ export class Variant {
   @UpdateDateColumn()
   updated_at!: Date;
 
-
-  
-
   // === Relations ===
   @OneToMany(() => Inventory, (inventories) => inventories.variant)
   inventories!: Inventory[];
   @OneToMany(() => OrderItem, (item) => item.variant)
   orderItems!: OrderItem[];
-
 }

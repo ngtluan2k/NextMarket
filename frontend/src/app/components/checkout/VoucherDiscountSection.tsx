@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, List, Button, Input, message, Tag, Empty, Spin } from 'antd';
-import { TagOutlined, CheckCircleFilled, CloseCircleOutlined } from '@ant-design/icons';
+import {
+  TagOutlined,
+  CheckCircleFilled,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
 import { api } from '../../api/api';
 
 // Types
@@ -88,13 +92,14 @@ const VoucherDiscountSection: React.FC<Props> = ({
       const res = await api.get('/user/vouchers/available');
       // Lọc voucher theo store nếu cần
       const filtered = res.data.filter(
-        (v: Voucher) =>
-          !v.store || v.store.id === storeId
+        (v: Voucher) => !v.store || v.store.id === storeId
       );
       setVouchers(filtered);
     } catch (error: any) {
       console.error('Error fetching vouchers:', error);
-      message.error(error.response?.data?.message || 'Không thể tải danh sách voucher');
+      message.error(
+        error.response?.data?.message || 'Không thể tải danh sách voucher'
+      );
     } finally {
       setLoading(false);
     }
@@ -117,7 +122,10 @@ const VoucherDiscountSection: React.FC<Props> = ({
     let discount = 0;
     if (voucher.discount_type === VoucherDiscountType.PERCENTAGE) {
       discount = (orderAmount * voucher.discount_value) / 100;
-      if (voucher.max_discount_amount && discount > voucher.max_discount_amount) {
+      if (
+        voucher.max_discount_amount &&
+        discount > voucher.max_discount_amount
+      ) {
         discount = voucher.max_discount_amount;
       }
     } else if (voucher.discount_type === VoucherDiscountType.FIXED) {
@@ -154,7 +162,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       });
 
       const { voucher, discount } = res.data;
-      
+
       if (selectedIds.includes(voucher.id)) {
         message.info('Voucher này đã được chọn');
       } else if (selectedIds.length >= maxSelect) {
@@ -165,12 +173,16 @@ const VoucherDiscountSection: React.FC<Props> = ({
         if (!vouchers.find((v) => v.id === voucher.id)) {
           setVouchers([voucher, ...vouchers]);
         }
-        message.success(`Áp dụng thành công! Giảm ${discount.toLocaleString()}đ`);
+        message.success(
+          `Áp dụng thành công! Giảm ${discount.toLocaleString()}đ`
+        );
         setVoucherCode('');
       }
     } catch (error: any) {
       console.error('Error applying voucher:', error);
-      message.error(error.response?.data?.message || 'Không thể áp dụng voucher');
+      message.error(
+        error.response?.data?.message || 'Không thể áp dụng voucher'
+      );
     } finally {
       setApplying(false);
     }
@@ -209,7 +221,9 @@ const VoucherDiscountSection: React.FC<Props> = ({
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <div>
-            <Tag color="blue">{selectedIds.length}/{maxSelect} đã chọn</Tag>
+            <Tag color="blue">
+              {selectedIds.length}/{maxSelect} đã chọn
+            </Tag>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <Button onClick={onClose}>Hủy</Button>
@@ -297,12 +311,19 @@ const VoucherDiscountSection: React.FC<Props> = ({
                           <div style={{ color: '#666', fontSize: 12 }}>
                             {voucher.title}
                           </div>
-                          <div style={{ color: '#999', fontSize: 12, marginTop: 4 }}>
+                          <div
+                            style={{
+                              color: '#999',
+                              fontSize: 12,
+                              marginTop: 4,
+                            }}
+                          >
                             Mã: <strong>{voucher.code}</strong>
                           </div>
                           {voucher.min_order_amount > 0 && (
                             <div style={{ color: '#999', fontSize: 12 }}>
-                              Đơn tối thiểu: {voucher.min_order_amount.toLocaleString()}đ
+                              Đơn tối thiểu:{' '}
+                              {voucher.min_order_amount.toLocaleString()}đ
                             </div>
                           )}
                           {isValid && (

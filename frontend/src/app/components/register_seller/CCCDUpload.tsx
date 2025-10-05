@@ -9,8 +9,15 @@ interface Props {
   className?: string;
 }
 
-export const CCCDUpload: React.FC<Props> = ({ onFileSelected, frontFile: propFrontFile, backFile: propBackFile, className }) => {
-  const [frontFile, setFrontFile] = useState<File | null>(propFrontFile || null);
+export const CCCDUpload: React.FC<Props> = ({
+  onFileSelected,
+  frontFile: propFrontFile,
+  backFile: propBackFile,
+  className,
+}) => {
+  const [frontFile, setFrontFile] = useState<File | null>(
+    propFrontFile || null
+  );
   const [backFile, setBackFile] = useState<File | null>(propBackFile || null);
 
   // Sync with props

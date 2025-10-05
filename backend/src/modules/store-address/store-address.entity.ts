@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+} from 'typeorm';
 import { Store } from './../store/store.entity';
 
 @Entity('store_addresses')
@@ -49,7 +56,6 @@ export class StoreAddress {
 
   @Column({ type: 'boolean', default: false })
   is_default!: boolean;
-
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

@@ -12,11 +12,8 @@ import AdminSidebar from './AdminSidebar';
 import VoucherManager from './VoucherManager';
 import StoreManager from './StoreManager';
 
-
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
-  
-
 
   const handleMenuClick = (key: string) => {
     setActiveKey(key);
@@ -110,7 +107,7 @@ export const AdminDashboard: React.FC = () => {
           />
         );
       case '8-1': // Mã giảm giá
-        return <VoucherManager />
+        return <VoucherManager />;
       case '8-2': // Chiến dịch quảng cáo
         return (
           <Empty
@@ -127,7 +124,7 @@ export const AdminDashboard: React.FC = () => {
         );
       case '10-1': // Xem danh sách cửa hàng
         return <StoreManager />;
-      case '10-2': 
+      case '10-2':
         return (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}

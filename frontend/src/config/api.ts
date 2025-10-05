@@ -1,5 +1,5 @@
-export const API_BASE_URL = "http://localhost:3000";
-import axios from "axios";
+export const API_BASE_URL = 'http://localhost:3000';
+import axios from 'axios';
 export const API_ENDPOINTS = {
   products: `${API_BASE_URL}/products`,
   orders: `${API_BASE_URL}/orders`,
@@ -9,8 +9,8 @@ export const API_ENDPOINTS = {
 };
 
 export const api = axios.create({
-  baseURL: "http://localhost:3000", 
+  baseURL: 'http://localhost:3000',
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
 });

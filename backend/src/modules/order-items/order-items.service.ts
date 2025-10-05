@@ -22,7 +22,7 @@ export class OrderItemsService {
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
     @InjectRepository(Variant)
-    private readonly variantsRepository: Repository<Variant>,
+    private readonly variantsRepository: Repository<Variant>
   ) {}
 
   async create(createOrderItemDto: CreateOrderItemDto): Promise<OrderItem> {
@@ -82,7 +82,7 @@ export class OrderItemsService {
 
   async update(
     id: number,
-    updateOrderItemDto: UpdateOrderItemDto,
+    updateOrderItemDto: UpdateOrderItemDto
   ): Promise<OrderItem> {
     const orderItem = await this.findOne(id);
 

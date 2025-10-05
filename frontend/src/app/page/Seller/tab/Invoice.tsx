@@ -1,6 +1,6 @@
-"use client"
-import type React from "react"
-import { useState } from "react"
+'use client';
+import type React from 'react';
+import { useState } from 'react';
 import {
   Layout,
   Card,
@@ -21,7 +21,7 @@ import {
   DatePicker,
   InputNumber,
   Divider,
-} from "antd"
+} from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -37,187 +37,242 @@ import {
   PrinterOutlined,
   SendOutlined,
   MinusCircleOutlined,
-} from "@ant-design/icons"
-import type { ColumnsType } from "antd/es/table"
-import dayjs from "dayjs"
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 
-const { Content } = Layout
-const { Title, Text } = Typography
+const { Content } = Layout;
+const { Title, Text } = Typography;
 
 interface InvoiceItem {
-  id: string
-  description: string
-  quantity: number
-  unitPrice: number
-  total: number
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
 }
 
 interface Invoice {
-  key: string
-  id: string
-  invoiceNumber: string
-  customerName: string
-  customerEmail: string
-  customerAddress: string
-  items: InvoiceItem[]
-  subtotal: number
-  tax: number
-  discount: number
-  total: number
-  status: "Nháp" | "Đã Gửi" | "Đã Thanh Toán" | "Quá Hạn" | "Hủy"
-  issueDate: string
-  dueDate: string
-  paidDate?: string
-  notes?: string
+  key: string;
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerAddress: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  tax: number;
+  discount: number;
+  total: number;
+  status: 'Nháp' | 'Đã Gửi' | 'Đã Thanh Toán' | 'Quá Hạn' | 'Hủy';
+  issueDate: string;
+  dueDate: string;
+  paidDate?: string;
+  notes?: string;
 }
 
 // Mock data for invoices
 const mockInvoices: Invoice[] = [
   {
-    key: "1",
-    id: "INV001",
-    invoiceNumber: "INV-2025-001",
-    customerName: "Nguyễn Văn An",
-    customerEmail: "an.nguyen@email.com",
-    customerAddress: "123 Đường Láng, Hà Nội",
+    key: '1',
+    id: 'INV001',
+    invoiceNumber: 'INV-2025-001',
+    customerName: 'Nguyễn Văn An',
+    customerEmail: 'an.nguyen@email.com',
+    customerAddress: '123 Đường Láng, Hà Nội',
     items: [
-      { id: "1", description: "Áo thun Nike Cơ Bản", quantity: 2, unitPrice: 500000, total: 1000000 },
-      { id: "2", description: "Giày Adidas", quantity: 1, unitPrice: 2000000, total: 2000000 },
+      {
+        id: '1',
+        description: 'Áo thun Nike Cơ Bản',
+        quantity: 2,
+        unitPrice: 500000,
+        total: 1000000,
+      },
+      {
+        id: '2',
+        description: 'Giày Adidas',
+        quantity: 1,
+        unitPrice: 2000000,
+        total: 2000000,
+      },
     ],
     subtotal: 3000000,
     tax: 300000,
     discount: 0,
     total: 3300000,
-    status: "Đã Thanh Toán",
-    issueDate: "2025-01-10",
-    dueDate: "2025-01-25",
-    paidDate: "2025-01-15",
+    status: 'Đã Thanh Toán',
+    issueDate: '2025-01-10',
+    dueDate: '2025-01-25',
+    paidDate: '2025-01-15',
   },
   {
-    key: "2",
-    id: "INV002",
-    invoiceNumber: "INV-2025-002",
-    customerName: "Trần Thị Bình",
-    customerEmail: "binh.tran@email.com",
-    customerAddress: "456 Nguyễn Trãi, TP.HCM",
+    key: '2',
+    id: 'INV002',
+    invoiceNumber: 'INV-2025-002',
+    customerName: 'Trần Thị Bình',
+    customerEmail: 'binh.tran@email.com',
+    customerAddress: '456 Nguyễn Trãi, TP.HCM',
     items: [
-      { id: "1", description: "Quần Jeans Slim Fit", quantity: 1, unitPrice: 1000000, total: 1000000 },
-      { id: "2", description: "Áo sơ mi Cotton", quantity: 1, unitPrice: 800000, total: 800000 },
+      {
+        id: '1',
+        description: 'Quần Jeans Slim Fit',
+        quantity: 1,
+        unitPrice: 1000000,
+        total: 1000000,
+      },
+      {
+        id: '2',
+        description: 'Áo sơ mi Cotton',
+        quantity: 1,
+        unitPrice: 800000,
+        total: 800000,
+      },
     ],
     subtotal: 1800000,
     tax: 180000,
     discount: 100000,
     total: 1880000,
-    status: "Đã Gửi",
-    issueDate: "2025-01-12",
-    dueDate: "2025-01-27",
+    status: 'Đã Gửi',
+    issueDate: '2025-01-12',
+    dueDate: '2025-01-27',
   },
   {
-    key: "3",
-    id: "INV003",
-    invoiceNumber: "INV-2025-003",
-    customerName: "Lê Văn Cường",
-    customerEmail: "cuong.le@email.com",
-    customerAddress: "789 Lê Lợi, Đà Nẵng",
-    items: [{ id: "1", description: "Giày New Balance 327", quantity: 1, unitPrice: 1200000, total: 1200000 }],
+    key: '3',
+    id: 'INV003',
+    invoiceNumber: 'INV-2025-003',
+    customerName: 'Lê Văn Cường',
+    customerEmail: 'cuong.le@email.com',
+    customerAddress: '789 Lê Lợi, Đà Nẵng',
+    items: [
+      {
+        id: '1',
+        description: 'Giày New Balance 327',
+        quantity: 1,
+        unitPrice: 1200000,
+        total: 1200000,
+      },
+    ],
     subtotal: 1200000,
     tax: 120000,
     discount: 0,
     total: 1320000,
-    status: "Quá Hạn",
-    issueDate: "2024-12-15",
-    dueDate: "2024-12-30",
+    status: 'Quá Hạn',
+    issueDate: '2024-12-15',
+    dueDate: '2024-12-30',
   },
   {
-    key: "4",
-    id: "INV004",
-    invoiceNumber: "INV-2025-004",
-    customerName: "Phạm Thị Duyên",
-    customerEmail: "duyen.pham@email.com",
-    customerAddress: "321 Trần Phú, Hải Phòng",
-    items: [{ id: "1", description: "Váy Mùa Hè", quantity: 1, unitPrice: 1500000, total: 1500000 }],
+    key: '4',
+    id: 'INV004',
+    invoiceNumber: 'INV-2025-004',
+    customerName: 'Phạm Thị Duyên',
+    customerEmail: 'duyen.pham@email.com',
+    customerAddress: '321 Trần Phú, Hải Phòng',
+    items: [
+      {
+        id: '1',
+        description: 'Váy Mùa Hè',
+        quantity: 1,
+        unitPrice: 1500000,
+        total: 1500000,
+      },
+    ],
     subtotal: 1500000,
     tax: 150000,
     discount: 200000,
     total: 1450000,
-    status: "Nháp",
-    issueDate: "2025-01-14",
-    dueDate: "2025-01-29",
+    status: 'Nháp',
+    issueDate: '2025-01-14',
+    dueDate: '2025-01-29',
   },
-]
+];
 
 export default function Invoice() {
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices)
-  const [loading, setLoading] = useState(false)
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
-  const [searchText, setSearchText] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [form] = Form.useForm()
+  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  const [loading, setLoading] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [form] = Form.useForm();
 
   // Filter invoices based on search and filters
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
       invoice.customerName.toLowerCase().includes(searchText.toLowerCase()) ||
       invoice.invoiceNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      invoice.customerEmail.toLowerCase().includes(searchText.toLowerCase())
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter
+      invoice.customerEmail.toLowerCase().includes(searchText.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' || invoice.status === statusFilter;
 
-    return matchesSearch && matchesStatus
-  })
+    return matchesSearch && matchesStatus;
+  });
 
   // Calculate statistics
-  const totalInvoices = invoices.length
-  const paidInvoices = invoices.filter((inv) => inv.status === "Đã Thanh Toán").length
-  const overdueInvoices = invoices.filter((inv) => inv.status === "Quá Hạn").length
-  const totalRevenue = invoices.filter((inv) => inv.status === "Đã Thanh Toán").reduce((sum, invoice) => sum + invoice.total, 0)
+  const totalInvoices = invoices.length;
+  const paidInvoices = invoices.filter(
+    (inv) => inv.status === 'Đã Thanh Toán'
+  ).length;
+  const overdueInvoices = invoices.filter(
+    (inv) => inv.status === 'Quá Hạn'
+  ).length;
+  const totalRevenue = invoices
+    .filter((inv) => inv.status === 'Đã Thanh Toán')
+    .reduce((sum, invoice) => sum + invoice.total, 0);
 
   const handleAddInvoice = () => {
-    setEditingInvoice(null)
-    form.resetFields()
+    setEditingInvoice(null);
+    form.resetFields();
     form.setFieldsValue({
-      items: [{ description: "", quantity: 1, unitPrice: 0 }],
+      items: [{ description: '', quantity: 1, unitPrice: 0 }],
       tax: 10,
       discount: 0,
-    })
-    setIsModalVisible(true)
-  }
+    });
+    setIsModalVisible(true);
+  };
 
   const handleEditInvoice = (invoice: Invoice) => {
-    setEditingInvoice(invoice)
+    setEditingInvoice(invoice);
     form.setFieldsValue({
       ...invoice,
       issueDate: dayjs(invoice.issueDate),
       dueDate: dayjs(invoice.dueDate),
       paidDate: invoice.paidDate ? dayjs(invoice.paidDate) : null,
-    })
-    setIsModalVisible(true)
-  }
+    });
+    setIsModalVisible(true);
+  };
 
   const handleDeleteInvoice = (invoiceId: string) => {
     Modal.confirm({
-      title: "Xóa Hóa Đơn",
-      content: "Bạn có chắc chắn muốn xóa hóa đơn này? Hành động này không thể hoàn tác.",
-      okText: "Xóa",
-      okType: "danger",
+      title: 'Xóa Hóa Đơn',
+      content:
+        'Bạn có chắc chắn muốn xóa hóa đơn này? Hành động này không thể hoàn tác.',
+      okText: 'Xóa',
+      okType: 'danger',
       onOk: () => {
-        setInvoices(invoices.filter((invoice) => invoice.id !== invoiceId))
-        message.success("Xóa hóa đơn thành công")
+        setInvoices(invoices.filter((invoice) => invoice.id !== invoiceId));
+        message.success('Xóa hóa đơn thành công');
       },
-    })
-  }
+    });
+  };
 
-  const calculateTotals = (items: InvoiceItem[], tax: number, discount: number) => {
-    const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-    const taxAmount = (subtotal * tax) / 100
-    const total = subtotal + taxAmount - discount
-    return { subtotal, taxAmount, total }
-  }
+  const calculateTotals = (
+    items: InvoiceItem[],
+    tax: number,
+    discount: number
+  ) => {
+    const subtotal = items.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0
+    );
+    const taxAmount = (subtotal * tax) / 100;
+    const total = subtotal + taxAmount - discount;
+    return { subtotal, taxAmount, total };
+  };
 
   const handleModalOk = async () => {
     try {
-      const values = await form.validateFields()
+      const values = await form.validateFields();
 
       // Calculate totals
       const items = values.items.map((item: any, index: number) => ({
@@ -226,9 +281,13 @@ export default function Invoice() {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         total: item.quantity * item.unitPrice,
-      }))
+      }));
 
-      const { subtotal, taxAmount, total } = calculateTotals(items, values.tax || 0, values.discount || 0)
+      const { subtotal, taxAmount, total } = calculateTotals(
+        items,
+        values.tax || 0,
+        values.discount || 0
+      );
 
       if (editingInvoice) {
         // Update existing invoice
@@ -242,62 +301,69 @@ export default function Invoice() {
                   subtotal,
                   tax: taxAmount,
                   total,
-                  issueDate: values.issueDate.format("YYYY-MM-DD"),
-                  dueDate: values.dueDate.format("YYYY-MM-DD"),
-                  paidDate: values.paidDate ? values.paidDate.format("YYYY-MM-DD") : undefined,
+                  issueDate: values.issueDate.format('YYYY-MM-DD'),
+                  dueDate: values.dueDate.format('YYYY-MM-DD'),
+                  paidDate: values.paidDate
+                    ? values.paidDate.format('YYYY-MM-DD')
+                    : undefined,
                 }
-              : invoice,
-          ),
-        )
-        message.success("Cập nhật hóa đơn thành công")
+              : invoice
+          )
+        );
+        message.success('Cập nhật hóa đơn thành công');
       } else {
         // Add new invoice
         const newInvoice: Invoice = {
           ...values,
           key: `${invoices.length + 1}`,
-          id: `INV${String(invoices.length + 1).padStart(3, "0")}`,
-          invoiceNumber: `INV-2025-${String(invoices.length + 1).padStart(3, "0")}`,
+          id: `INV${String(invoices.length + 1).padStart(3, '0')}`,
+          invoiceNumber: `INV-2025-${String(invoices.length + 1).padStart(
+            3,
+            '0'
+          )}`,
           items,
           subtotal,
           tax: taxAmount,
           total,
-          issueDate: values.issueDate.format("YYYY-MM-DD"),
-          dueDate: values.dueDate.format("YYYY-MM-DD"),
-          paidDate: values.paidDate ? values.paidDate.format("YYYY-MM-DD") : undefined,
-        }
-        setInvoices([...invoices, newInvoice])
-        message.success("Tạo hóa đơn thành công")
+          issueDate: values.issueDate.format('YYYY-MM-DD'),
+          dueDate: values.dueDate.format('YYYY-MM-DD'),
+          paidDate: values.paidDate
+            ? values.paidDate.format('YYYY-MM-DD')
+            : undefined,
+        };
+        setInvoices([...invoices, newInvoice]);
+        message.success('Tạo hóa đơn thành công');
       }
 
-      setIsModalVisible(false)
-      form.resetFields()
+      setIsModalVisible(false);
+      form.resetFields();
     } catch (error) {
-      message.error("Không thể lưu hóa đơn")
+      message.error('Không thể lưu hóa đơn');
     }
-  }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Đã Thanh Toán":
-        return "green"
-      case "Đã Gửi":
-        return "blue"
-      case "Nháp":
-        return "gray"
-      case "Quá Hạn":
-        return "red"
-      case "Hủy":
-        return "red"
+      case 'Đã Thanh Toán':
+        return 'green';
+      case 'Đã Gửi':
+        return 'blue';
+      case 'Nháp':
+        return 'gray';
+      case 'Quá Hạn':
+        return 'red';
+      case 'Hủy':
+        return 'red';
       default:
-        return "default"
+        return 'default';
     }
-  }
+  };
 
   const columns: ColumnsType<Invoice> = [
     {
-      title: "Hóa Đơn",
-      dataIndex: "invoiceNumber",
-      key: "invoiceNumber",
+      title: 'Hóa Đơn',
+      dataIndex: 'invoiceNumber',
+      key: 'invoiceNumber',
       render: (text: string, record: Invoice) => (
         <div>
           <div className="font-medium text-gray-900">{text}</div>
@@ -307,9 +373,9 @@ export default function Invoice() {
       sorter: (a, b) => a.invoiceNumber.localeCompare(b.invoiceNumber),
     },
     {
-      title: "Khách Hàng",
-      dataIndex: "customerName",
-      key: "customerName",
+      title: 'Khách Hàng',
+      dataIndex: 'customerName',
+      key: 'customerName',
       render: (text: string, record: Invoice) => (
         <div>
           <div className="font-medium text-gray-900">{text}</div>
@@ -319,98 +385,102 @@ export default function Invoice() {
       sorter: (a, b) => a.customerName.localeCompare(b.customerName),
     },
     {
-      title: "Tổng Tiền",
-      dataIndex: "total",
-      key: "total",
-      render: (amount: number) => <span className="font-medium text-gray-900">₫{amount.toLocaleString('vi-VN')}</span>,
+      title: 'Tổng Tiền',
+      dataIndex: 'total',
+      key: 'total',
+      render: (amount: number) => (
+        <span className="font-medium text-gray-900">
+          ₫{amount.toLocaleString('vi-VN')}
+        </span>
+      ),
       sorter: (a, b) => a.total - b.total,
     },
     {
-      title: "Trạng Thái",
-      dataIndex: "status",
-      key: "status",
+      title: 'Trạng Thái',
+      dataIndex: 'status',
+      key: 'status',
       render: (status: string) => (
         <Tag color={getStatusColor(status)} className="border-0">
           {status}
         </Tag>
       ),
       filters: [
-        { text: "Nháp", value: "Nháp" },
-        { text: "Đã Gửi", value: "Đã Gửi" },
-        { text: "Đã Thanh Toán", value: "Đã Thanh Toán" },
-        { text: "Quá Hạn", value: "Quá Hạn" },
-        { text: "Hủy", value: "Hủy" },
+        { text: 'Nháp', value: 'Nháp' },
+        { text: 'Đã Gửi', value: 'Đã Gửi' },
+        { text: 'Đã Thanh Toán', value: 'Đã Thanh Toán' },
+        { text: 'Quá Hạn', value: 'Quá Hạn' },
+        { text: 'Hủy', value: 'Hủy' },
       ],
       onFilter: (value, record) => record.status === value,
     },
     {
-      title: "Ngày Phát Hành",
-      dataIndex: "issueDate",
-      key: "issueDate",
-      render: (date: string) => dayjs(date).format("DD MMM, YYYY"),
+      title: 'Ngày Phát Hành',
+      dataIndex: 'issueDate',
+      key: 'issueDate',
+      render: (date: string) => dayjs(date).format('DD MMM, YYYY'),
       sorter: (a, b) => dayjs(a.issueDate).unix() - dayjs(b.issueDate).unix(),
     },
     {
-      title: "Ngày Hạn Thanh Toán",
-      dataIndex: "dueDate",
-      key: "dueDate",
-      render: (date: string) => dayjs(date).format("DD MMM, YYYY"),
+      title: 'Ngày Hạn Thanh Toán',
+      dataIndex: 'dueDate',
+      key: 'dueDate',
+      render: (date: string) => dayjs(date).format('DD MMM, YYYY'),
       sorter: (a, b) => dayjs(a.dueDate).unix() - dayjs(b.dueDate).unix(),
     },
     {
-      title: "Hành Động",
-      key: "actions",
+      title: 'Hành Động',
+      key: 'actions',
       render: (_, record: Invoice) => (
         <Dropdown
           menu={{
             items: [
               {
-                key: "view",
+                key: 'view',
                 icon: <EyeOutlined />,
-                label: "Xem Hóa Đơn",
+                label: 'Xem Hóa Đơn',
               },
               {
-                key: "edit",
+                key: 'edit',
                 icon: <EditOutlined />,
-                label: "Chỉnh Sửa Hóa Đơn",
+                label: 'Chỉnh Sửa Hóa Đơn',
                 onClick: () => handleEditInvoice(record),
               },
               {
-                key: "print",
+                key: 'print',
                 icon: <PrinterOutlined />,
-                label: "In",
+                label: 'In',
               },
               {
-                key: "send",
+                key: 'send',
                 icon: <SendOutlined />,
-                label: "Gửi Email",
+                label: 'Gửi Email',
               },
               {
-                type: "divider",
+                type: 'divider',
               },
               {
-                key: "delete",
+                key: 'delete',
                 icon: <DeleteOutlined />,
-                label: "Xóa",
+                label: 'Xóa',
                 danger: true,
                 onClick: () => handleDeleteInvoice(record.id),
               },
             ],
           }}
-          trigger={["click"]}
+          trigger={['click']}
         >
           <Button type="text" icon={<MoreOutlined />} />
         </Dropdown>
       ),
     },
-  ]
+  ];
 
   const rowSelection = {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[]) => {
-      setSelectedRowKeys(newSelectedRowKeys)
+      setSelectedRowKeys(newSelectedRowKeys);
     },
-  }
+  };
 
   return (
     <Layout>
@@ -421,7 +491,9 @@ export default function Invoice() {
             <Title level={2} className="!mb-1 !text-gray-900">
               Quản Lý Hóa Đơn
             </Title>
-            <Text className="text-gray-500">Tạo, quản lý và theo dõi hóa đơn của bạn</Text>
+            <Text className="text-gray-500">
+              Tạo, quản lý và theo dõi hóa đơn của bạn
+            </Text>
           </div>
           <Space>
             <Button icon={<ExportOutlined />}>Xuất Dữ Liệu</Button>
@@ -482,11 +554,18 @@ export default function Invoice() {
         <Card className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Space wrap>
-              <Select placeholder="Trạng Thái" style={{ width: 120 }} value={statusFilter} onChange={setStatusFilter}>
+              <Select
+                placeholder="Trạng Thái"
+                style={{ width: 120 }}
+                value={statusFilter}
+                onChange={setStatusFilter}
+              >
                 <Select.Option value="all">Tất Cả Trạng Thái</Select.Option>
                 <Select.Option value="Nháp">Nháp</Select.Option>
                 <Select.Option value="Đã Gửi">Đã Gửi</Select.Option>
-                <Select.Option value="Đã Thanh Toán">Đã Thanh Toán</Select.Option>
+                <Select.Option value="Đã Thanh Toán">
+                  Đã Thanh Toán
+                </Select.Option>
                 <Select.Option value="Quá Hạn">Quá Hạn</Select.Option>
                 <Select.Option value="Hủy">Hủy</Select.Option>
               </Select>
@@ -501,7 +580,9 @@ export default function Invoice() {
             />
             {selectedRowKeys.length > 0 && (
               <Space>
-                <Text className="text-gray-600">Đã chọn {selectedRowKeys.length}</Text>
+                <Text className="text-gray-600">
+                  Đã chọn {selectedRowKeys.length}
+                </Text>
                 <Button size="small">Gửi Hàng Loạt</Button>
                 <Button size="small" danger>
                   Xóa Hàng Loạt
@@ -523,7 +604,8 @@ export default function Invoice() {
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} trên tổng số ${total} hóa đơn`,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} trên tổng số ${total} hóa đơn`,
             }}
             scroll={{ x: 1200 }}
             className="custom-table"
@@ -532,13 +614,13 @@ export default function Invoice() {
 
         {/* Add/Edit Invoice Modal */}
         <Modal
-          title={editingInvoice ? "Chỉnh Sửa Hóa Đơn" : "Tạo Hóa Đơn Mới"}
+          title={editingInvoice ? 'Chỉnh Sửa Hóa Đơn' : 'Tạo Hóa Đơn Mới'}
           open={isModalVisible}
           onOk={handleModalOk}
           onCancel={() => setIsModalVisible(false)}
           width={900}
-          okText={editingInvoice ? "Cập Nhật Hóa Đơn" : "Tạo Hóa Đơn"}
-          okButtonProps={{ className: "bg-cyan-500 border-cyan-500" }}
+          okText={editingInvoice ? 'Cập Nhật Hóa Đơn' : 'Tạo Hóa Đơn'}
+          okButtonProps={{ className: 'bg-cyan-500 border-cyan-500' }}
         >
           <Form form={form} layout="vertical" className="mt-4">
             {/* Customer Information */}
@@ -548,7 +630,9 @@ export default function Invoice() {
                 <Form.Item
                   name="customerName"
                   label="Tên Khách Hàng"
-                  rules={[{ required: true, message: "Vui lòng nhập tên khách hàng" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập tên khách hàng' },
+                  ]}
                 >
                   <Input placeholder="Nhập tên khách hàng" />
                 </Form.Item>
@@ -558,8 +642,11 @@ export default function Invoice() {
                   name="customerEmail"
                   label="Email Khách Hàng"
                   rules={[
-                    { required: true, message: "Vui lòng nhập email khách hàng" },
-                    { type: "email", message: "Vui lòng nhập email hợp lệ" },
+                    {
+                      required: true,
+                      message: 'Vui lòng nhập email khách hàng',
+                    },
+                    { type: 'email', message: 'Vui lòng nhập email hợp lệ' },
                   ]}
                 >
                   <Input placeholder="Nhập email khách hàng" />
@@ -570,7 +657,9 @@ export default function Invoice() {
             <Form.Item
               name="customerAddress"
               label="Địa Chỉ Khách Hàng"
-              rules={[{ required: true, message: "Vui lòng nhập địa chỉ khách hàng" }]}
+              rules={[
+                { required: true, message: 'Vui lòng nhập địa chỉ khách hàng' },
+              ]}
             >
               <Input.TextArea rows={2} placeholder="Nhập địa chỉ khách hàng" />
             </Form.Item>
@@ -581,11 +670,19 @@ export default function Invoice() {
             <Title level={5}>Chi Tiết Hóa Đơn</Title>
             <Row gutter={16}>
               <Col span={8}>
-                <Form.Item name="status" label="Trạng Thái" rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}>
+                <Form.Item
+                  name="status"
+                  label="Trạng Thái"
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn trạng thái' },
+                  ]}
+                >
                   <Select placeholder="Chọn trạng thái">
                     <Select.Option value="Nháp">Nháp</Select.Option>
                     <Select.Option value="Đã Gửi">Đã Gửi</Select.Option>
-                    <Select.Option value="Đã Thanh Toán">Đã Thanh Toán</Select.Option>
+                    <Select.Option value="Đã Thanh Toán">
+                      Đã Thanh Toán
+                    </Select.Option>
                     <Select.Option value="Quá Hạn">Quá Hạn</Select.Option>
                     <Select.Option value="Hủy">Hủy</Select.Option>
                   </Select>
@@ -595,7 +692,9 @@ export default function Invoice() {
                 <Form.Item
                   name="issueDate"
                   label="Ngày Phát Hành"
-                  rules={[{ required: true, message: "Vui lòng chọn ngày phát hành" }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng chọn ngày phát hành' },
+                  ]}
                 >
                   <DatePicker className="w-full" />
                 </Form.Item>
@@ -604,7 +703,12 @@ export default function Invoice() {
                 <Form.Item
                   name="dueDate"
                   label="Ngày Hạn Thanh Toán"
-                  rules={[{ required: true, message: "Vui lòng chọn ngày hạn thanh toán" }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Vui lòng chọn ngày hạn thanh toán',
+                    },
+                  ]}
                 >
                   <DatePicker className="w-full" />
                 </Form.Item>
@@ -623,8 +727,10 @@ export default function Invoice() {
                       <Col span={8}>
                         <Form.Item
                           {...restField}
-                          name={[name, "description"]}
-                          rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+                          name={[name, 'description']}
+                          rules={[
+                            { required: true, message: 'Vui lòng nhập mô tả' },
+                          ]}
                         >
                           <Input placeholder="Mô tả sản phẩm" />
                         </Form.Item>
@@ -632,17 +738,28 @@ export default function Invoice() {
                       <Col span={4}>
                         <Form.Item
                           {...restField}
-                          name={[name, "quantity"]}
-                          rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+                          name={[name, 'quantity']}
+                          rules={[
+                            {
+                              required: true,
+                              message: 'Vui lòng nhập số lượng',
+                            },
+                          ]}
                         >
-                          <InputNumber min={1} placeholder="Số lượng" className="w-full" />
+                          <InputNumber
+                            min={1}
+                            placeholder="Số lượng"
+                            className="w-full"
+                          />
                         </Form.Item>
                       </Col>
                       <Col span={6}>
                         <Form.Item
                           {...restField}
-                          name={[name, "unitPrice"]}
-                          rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+                          name={[name, 'unitPrice']}
+                          rules={[
+                            { required: true, message: 'Vui lòng nhập giá' },
+                          ]}
                         >
                           <InputNumber
                             min={0}
@@ -654,12 +771,22 @@ export default function Invoice() {
                         </Form.Item>
                       </Col>
                       <Col span={4}>
-                        <Button type="text" icon={<MinusCircleOutlined />} onClick={() => remove(name)} danger />
+                        <Button
+                          type="text"
+                          icon={<MinusCircleOutlined />}
+                          onClick={() => remove(name)}
+                          danger
+                        />
                       </Col>
                     </Row>
                   ))}
                   <Form.Item>
-                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                    >
                       Thêm Mục
                     </Button>
                   </Form.Item>
@@ -696,5 +823,5 @@ export default function Invoice() {
         </Modal>
       </Content>
     </Layout>
-  )
+  );
 }

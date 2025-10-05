@@ -22,6 +22,6 @@ export class Brand {
   @Column({ type: 'datetime', nullable: true })
   created_at!: Date;
 
-    @OneToMany(() => Product, product => product.brand)
-  products!: Product[];   // <-- thêm dòng này
+  @OneToMany(() => Product, (product) => product.brand)
+  products!: Product[]; // <-- thêm dòng này
 }

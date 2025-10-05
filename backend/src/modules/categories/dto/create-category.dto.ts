@@ -3,7 +3,11 @@ import { IsOptional, IsInt, IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCategoryDto {
-  @ApiPropertyOptional({ description: 'ID danh mục cha', type: Number, nullable: true })
+  @ApiPropertyOptional({
+    description: 'ID danh mục cha',
+    type: Number,
+    nullable: true,
+  })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === null || value === '' || value === undefined) return null;

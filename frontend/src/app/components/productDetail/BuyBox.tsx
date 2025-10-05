@@ -1,11 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
-import { vnd, TIKI_RED} from "../../types/productDetail";
+import { vnd, TIKI_RED } from '../../types/productDetail';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import LoginModal from '../LoginModal';
 import { Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
+import { API_BASE_URL } from '../../api/api';
+import { log } from 'console';
+
+function toAbs(p?: string) {
+  if (!p) return '';
+  let s = p.trim();
+
+  if (/^data:/i.test(s)) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  s = s.replace(/\\/g, '/');
+  if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
+    const idx = s.toLowerCase().lastIndexOf('/uploads/');
+    if (idx >= 0) s = s.slice(idx + 1);
+  }
+  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+}
 
 export default function BuyBox({
   product,
@@ -136,7 +152,6 @@ export default function BuyBox({
 
   // --- tính giá dựa trên variant + pricing_rules ---
 
-
   const totalPrice = useMemo(
     () => calculatedPrice * quantity,
     [calculatedPrice, quantity]
@@ -183,9 +198,23 @@ export default function BuyBox({
           onClick={handleClickStore}
         >
           <img
-            src={product.store?.logo_url ?? 'https://via.placeholder.com/24'}
-            className="h-6 w-6 rounded-full"
+            src={
+              product.store?.logo_url
+                ? toAbs(product.store.logo_url)
+                : 'https://via.placeholder.com/24'
+            }
+            className="h-12 w-12 rounded-full"
             alt={product.store?.name ?? 'Store'}
+            onError={(e) => {
+              console.log(
+                'Image load error',
+                e,
+                'URL:',
+                product.store?.logo_url
+              );
+              const target = e.target as HTMLImageElement;
+              target.src = 'https://via.placeholder.com/24'; // fallback chắc chắn hiển thị
+            }}
           />
           <div>
             <div className="text-sm font-semibold">

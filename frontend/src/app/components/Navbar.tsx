@@ -18,8 +18,6 @@ import LoginModal, { LoginPayload } from './LoginModal';
 import AccountMenu from './AccountMenu';
 import debounce from 'lodash.debounce';
 
-
-
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -67,7 +65,6 @@ export interface ProductSuggestion {
 }
 
 export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
-
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
@@ -75,7 +72,6 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const [openLogin, setOpenLogin] = useState(false);
   const { cart } = useCart();
   const totalItems = cart.length;
-
 
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
@@ -88,20 +84,28 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
       return;
     }
     try {
-      const res = await fetch('http://localhost:3000/stores/my-store?includeDeleted=true', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        'http://localhost:3000/stores/my-store?includeDeleted=true',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const json = await res.json();
       const store = json?.data || null;
 
       if (store && store.is_deleted) {
         let waitDays = 30;
         if (store.deleted_at) {
-          const msSinceDelete = Date.now() - new Date(store.deleted_at).getTime();
-          const daysSinceDelete = Math.floor(msSinceDelete / (1000 * 60 * 60 * 24));
+          const msSinceDelete =
+            Date.now() - new Date(store.deleted_at).getTime();
+          const daysSinceDelete = Math.floor(
+            msSinceDelete / (1000 * 60 * 60 * 24)
+          );
           waitDays = Math.max(30 - daysSinceDelete, 0);
         }
-        alert(`Store này đã bị xóa. Vui lòng liên hệ admin để khôi phục hoặc đợi ${waitDays} ngày.`);
+        alert(
+          `Store này đã bị xóa. Vui lòng liên hệ admin để khôi phục hoặc đợi ${waitDays} ngày.`
+        );
         return;
       }
 
@@ -256,9 +260,9 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                           const imageUrl = rawUrl.startsWith('http')
                             ? rawUrl
                             : `http://localhost:3000/${rawUrl.replace(
-                              /^\/+/,
-                              ''
-                            )}`;
+                                /^\/+/,
+                                ''
+                              )}`;
 
                           return (
                             <img

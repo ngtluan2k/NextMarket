@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsOptional, IsInt, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsInt,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateStoreInformationDto {
@@ -36,6 +42,4 @@ export class CreateStoreInformationDto {
   @IsOptional()
   @IsBoolean()
   is_draft?: boolean;
-  
-
 }

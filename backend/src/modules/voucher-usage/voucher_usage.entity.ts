@@ -36,6 +36,4 @@ export class VoucherUsage {
 
   @CreateDateColumn({ name: 'used_at', type: 'timestamp' })
   usedAt!: Date;
-
- 
 }

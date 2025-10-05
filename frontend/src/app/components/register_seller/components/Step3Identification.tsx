@@ -33,9 +33,7 @@ const Step3Identification: React.FC<Step3IdentificationProps> = ({
             <select
               className="form-select"
               value={formData.store_identification.type}
-              onChange={(e) =>
-                onInputChange('type', e.target.value)
-              }
+              onChange={(e) => onInputChange('type', e.target.value)}
               required
             >
               <option value="CCCD">Căn cước công dân</option>
@@ -55,9 +53,7 @@ const Step3Identification: React.FC<Step3IdentificationProps> = ({
               type="text"
               className="form-control"
               value={formData.store_identification.full_name}
-              onChange={(e) =>
-                onInputChange('full_name', e.target.value)
-              }
+              onChange={(e) => onInputChange('full_name', e.target.value)}
               placeholder="Nhập họ tên đầy đủ"
               required
             />

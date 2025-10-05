@@ -105,26 +105,25 @@ export class ProductReviewsService {
   }
 
   private async updateStoreStats(storeId: number) {
-  // Tính trung bình rating của các product có review_count > 0
-  const { avg } = await this.productRepo
-    .createQueryBuilder('p')
-    .select('AVG(p.avg_rating)', 'avg')
-    .where('p.store_id = :storeId', { storeId })
-    .andWhere('p.review_count > 0')   // 👈 chỉ lấy product đã có review
-    .getRawOne();
+    // Tính trung bình rating của các product có review_count > 0
+    const { avg } = await this.productRepo
+      .createQueryBuilder('p')
+      .select('AVG(p.avg_rating)', 'avg')
+      .where('p.store_id = :storeId', { storeId })
+      .andWhere('p.review_count > 0') // 👈 chỉ lấy product đã có review
+      .getRawOne();
 
-  // Tổng số review = sum(review_count) của tất cả product trong store
-  const { total } = await this.productRepo
-    .createQueryBuilder('p')
-    .select('SUM(p.review_count)', 'total')
-    .where('p.store_id = :storeId', { storeId })
-    .andWhere('p.review_count > 0')
-    .getRawOne();
+    // Tổng số review = sum(review_count) của tất cả product trong store
+    const { total } = await this.productRepo
+      .createQueryBuilder('p')
+      .select('SUM(p.review_count)', 'total')
+      .where('p.store_id = :storeId', { storeId })
+      .andWhere('p.review_count > 0')
+      .getRawOne();
 
-  await this.storeRepo.update(storeId, {
-    avg_rating: avg || 0,
-    review_count: total || 0,
-  });
-}
-
+    await this.storeRepo.update(storeId, {
+      avg_rating: avg || 0,
+      review_count: total || 0,
+    });
+  }
 }

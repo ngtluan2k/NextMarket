@@ -26,7 +26,7 @@ import { RequirePermissions as Permissions } from '../../common/auth/permission.
 @ApiTags('inventory')
 @ApiBearerAuth()
 @Controller('inventory')
-@UseGuards(JwtAuthGuard, PermissionGuard) 
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
@@ -35,9 +35,8 @@ export class InventoryController {
   @ApiOperation({ summary: 'Add new inventory' })
   @ApiResponse({ status: 201, description: 'Inventory created successfully' })
   async add(@Body() dto: CreateInventoryDto, @Req() req: any) {
-    
     const userId = req.user?.userId;
-    const role = req.user?.role
+    const role = req.user?.role;
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -45,12 +44,10 @@ export class InventoryController {
   }
 
   @Get()
-  @Permissions('view_inventory') 
+  @Permissions('view_inventory')
   @ApiOperation({ summary: 'Get all inventories' })
   @ApiResponse({ status: 200, description: 'List of inventories' })
   async findAll(@Req() req: any) {
-
-    
     const userId = req.user?.userId;
     if (!userId) {
       throw new Error('User not authenticated');
@@ -59,18 +56,16 @@ export class InventoryController {
   }
 
   @Patch(':id')
-  @Permissions('update_inventory') 
+  @Permissions('update_inventory')
   @ApiOperation({ summary: 'Update inventory' })
   @ApiResponse({ status: 200, description: 'Inventory updated successfully' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateInventoryDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
-   
-    
     const userId = req.user?.userId;
-    const role = req.user?.role
+    const role = req.user?.role;
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -78,14 +73,12 @@ export class InventoryController {
   }
 
   @Delete(':id')
-  @Permissions('delete_inventory') 
+  @Permissions('delete_inventory')
   @ApiOperation({ summary: 'Delete inventory' })
   @ApiResponse({ status: 200, description: 'Inventory deleted successfully' })
   async delete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-
-    
     const userId = req.user?.userId;
-    const role = req.user?.role
+    const role = req.user?.role;
     if (!userId) {
       throw new Error('User not authenticated');
     }

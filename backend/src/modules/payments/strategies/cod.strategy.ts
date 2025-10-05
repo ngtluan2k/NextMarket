@@ -4,7 +4,10 @@ import { IsNull, Repository } from 'typeorm';
 import { Payment, PaymentStatus } from '../payment.entity';
 import { Order } from '../../orders/order.entity';
 import { PaymentMethod } from '../../payment-methods/payment-method.entity';
-import { historyStatus, OrderStatusHistory } from '../../order-status-history/order-status-history.entity';
+import {
+  historyStatus,
+  OrderStatusHistory,
+} from '../../order-status-history/order-status-history.entity';
 import { OrderItem } from '../../order-items/order-item.entity';
 import { Variant } from '../../variant/variant.entity';
 import { Inventory } from '../../inventory/inventory.entity';
@@ -14,10 +17,11 @@ export class CodStrategy {
   constructor(
     @InjectRepository(Payment) private paymentRepo: Repository<Payment>,
     @InjectRepository(Order) private ordersRepo: Repository<Order>,
-    @InjectRepository(OrderStatusHistory) private historyRepo: Repository<OrderStatusHistory>,
+    @InjectRepository(OrderStatusHistory)
+    private historyRepo: Repository<OrderStatusHistory>,
     @InjectRepository(OrderItem) private orderItemsRepo: Repository<OrderItem>,
     @InjectRepository(Variant) private variantsRepo: Repository<Variant>,
-    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
+    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>
   ) {}
 
   async createPayment(order: Order, paymentMethod: PaymentMethod) {

@@ -1,4 +1,4 @@
-import { Me } from "./user";
+import { Me } from './user';
 
 export type AuthContextType = {
   me: Me | null;

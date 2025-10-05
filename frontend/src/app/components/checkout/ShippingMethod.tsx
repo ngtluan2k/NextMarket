@@ -19,14 +19,12 @@ type Props = {
   badgeLabel?: string;
 };
 
-
 const toNum = (v: number | string | null | undefined): number | null => {
   if (v === null || v === undefined) return null;
   const n =
     typeof v === 'string' ? Number(v.replace(/[^\d.-]/g, '')) : Number(v);
   return Number.isFinite(n) ? n : null;
 };
-
 
 const fmt = (v?: number | string | null): string => {
   const n = toNum(v);
@@ -45,7 +43,7 @@ export const ShippingMethod: React.FC<Props> = ({
   methodLabel = 'Giao tiết kiệm',
   badgeLabel = 'GIAO TIẾT KIỆM',
 }) => {
-  console.log('in shipping method: ' + JSON.stringify(items))
+  console.log('in shipping method: ' + JSON.stringify(items));
   return (
     <Card title="Chọn hình thức giao hàng" bodyStyle={{ paddingTop: 12 }}>
       <Radio.Group

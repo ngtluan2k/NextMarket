@@ -13,6 +13,8 @@ import {
   ParseIntPipe,
   NotFoundException,
   ForbiddenException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { StoreService } from './store.service';
@@ -26,6 +28,9 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProductService } from '../product/product.service';
 import { Store } from './store.entity';
 import { Repository } from 'typeorm';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { multerConfig } from '../../common/utils/multer.config';
 
 @ApiTags('stores')
 @ApiBearerAuth('access-token')
@@ -35,15 +40,14 @@ export class StoreController {
     private readonly productService: ProductService,
     private readonly storeService: StoreService,
     @InjectRepository(Store)
-    private readonly storeRepo: Repository<Store>,
-  ) { }
-
+    private readonly storeRepo: Repository<Store>
+  ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permissions('view_store')
   @ApiOperation({ summary: 'Lấy danh sách tất cả stores' })
-  async findAll(@Query('includeDeleted') includeDeleted?: string ) {
+  async findAll(@Query('includeDeleted') includeDeleted?: string) {
     const stores = await this.storeService.findAll(includeDeleted === 'true');
     return {
       message: 'Danh sách cửa hàng',
@@ -52,10 +56,13 @@ export class StoreController {
     };
   }
 
-   @Get('my-store')
+  @Get('my-store')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy store của tôi' })
-  async getMyStore(@Req() req: any, @Query('includeDeleted') includeDeleted?: string) {
+  async getMyStore(
+    @Req() req: any,
+    @Query('includeDeleted') includeDeleted?: string
+  ) {
     const store = await this.storeService.findByUserId(
       req.user.userId,
       includeDeleted === 'true'
@@ -101,7 +108,9 @@ export class StoreController {
     };
   }
   @Get(':id/full')
-  @ApiOperation({ summary: 'Lấy đầy đủ thông tin cửa hàng và các dữ liệu liên quan' })
+  @ApiOperation({
+    summary: 'Lấy đầy đủ thông tin cửa hàng và các dữ liệu liên quan',
+  })
   async getFull(@Param('id') id: number) {
     const data = await this.storeService.getFullData(id);
     return {
@@ -217,14 +226,20 @@ export class StoreController {
 
   @Get('slug/:slug/all')
   @ApiOperation({ summary: 'Lấy tất cả sản phẩm của store theo slug' })
-  async getStoreProducts(@Param('slug') slug: string, @Query('category') categorySlug?: string,) {
-    const store = await this.storeService.findProductsBySlug(slug, categorySlug);
+  async getStoreProducts(
+    @Param('slug') slug: string,
+    @Query('category') categorySlug?: string
+  ) {
+    const store = await this.storeService.findProductsBySlug(
+      slug,
+      categorySlug
+    );
     if (!store) {
       throw new BadRequestException('Store không tồn tại');
     }
 
     // Nếu muốn chỉ lấy sản phẩm đang active
-    const products = store.products.filter(p => p.status === 'active');
+    const products = store.products.filter((p) => p.status === 'active');
 
     return {
       message: `Danh sách sản phẩm của store ${store.name}`,
@@ -233,17 +248,14 @@ export class StoreController {
     };
   }
 
-
   @Get('slug/:slug/profile')
   @ApiOperation({ summary: 'Lấy profile cửa hàng theo slug' })
   async getStoreProfile(@Param('slug') slug: string) {
-
     const store = await this.storeService.findBySlug(slug);
     if (!store) {
       throw new BadRequestException('Store không tồn tại');
     }
     const productCount = await this.productService.countByStoreId(store.id);
-
 
     // Chỉ trả về thông tin profile, bank, address, info, identification
     const profileData = {
@@ -277,7 +289,9 @@ export class StoreController {
     const store = await this.storeRepo.findOne({ where: { slug } });
     if (!store) throw new NotFoundException('Store not found');
 
-    const categories = await this.storeService.findCategoriesByStoreWithCount(store.id);
+    const categories = await this.storeService.findCategoriesByStoreWithCount(
+      store.id
+    );
     return {
       message: `Danh mục sản phẩm của store ${store.name}`,
       total: categories.length,
@@ -287,11 +301,39 @@ export class StoreController {
 
   @Put(':id/restore')
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @Permissions('restore_store') 
+  @Permissions('restore_store')
   @ApiOperation({ summary: 'Admin khôi phục store đã xóa mềm' })
   async restore(@Param('id') id: number) {
     const result = await this.storeService.restore(id);
     return result;
   }
-
+  @Post(':id/upload-logo')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Upload store logo (owner only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadLogo(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+    const result = await this.storeService.uploadLogo(
+      id,
+      file,
+      req.user.userId
+    );
+    return { message: 'Logo uploaded', data: result };
+  }
 }

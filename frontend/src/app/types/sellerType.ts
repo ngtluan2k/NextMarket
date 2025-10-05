@@ -42,7 +42,6 @@ export interface SellerFormData {
     type: string;
     detail?: string;
     is_default?: boolean;
-   
   };
 
   // Store Email (optional)
@@ -92,12 +91,9 @@ export const defaultSellerFormData: SellerFormData = {
     type: 'pickup',
     detail: '',
     is_default: true,
-    
   },
   store_information_email: {
     email: '',
   },
   documents: [],
 };
-
-

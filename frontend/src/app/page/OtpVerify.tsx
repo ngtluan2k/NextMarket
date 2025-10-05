@@ -1,7 +1,10 @@
 // frontend/src/app/page/OtpVerify.tsx
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { requestRegisterOtp, verifyRegisterOtp } from '../../service/auth.service';
+import {
+  requestRegisterOtp,
+  verifyRegisterOtp,
+} from '../../service/auth.service';
 import type { VerifyRegisterPayload } from '../../service/auth.service';
 
 function useQuery() {
@@ -22,7 +25,9 @@ export default function OtpVerifyPage() {
   const saved: Omit<VerifyRegisterPayload, 'code'> | null = (() => {
     try {
       const raw = sessionStorage.getItem('pendingRegister');
-      return raw ? (JSON.parse(raw) as Omit<VerifyRegisterPayload, 'code'>) : null;
+      return raw
+        ? (JSON.parse(raw) as Omit<VerifyRegisterPayload, 'code'>)
+        : null;
     } catch {
       return null;
     }
@@ -77,7 +82,10 @@ export default function OtpVerifyPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl bg-white p-6 shadow">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow"
+      >
         <h1 className="text-xl font-semibold text-slate-900">Xác thực email</h1>
         <p className="mt-1 text-sm text-slate-600">
           Nhập mã OTP đã gửi tới <b>{email}</b>. Kiểm tra cả thư mục Spam.
@@ -90,7 +98,9 @@ export default function OtpVerifyPage() {
         )}
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Mã OTP</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Mã OTP
+          </label>
           <input
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
@@ -105,7 +115,9 @@ export default function OtpVerifyPage() {
               type="button"
               onClick={resend}
               disabled={cooldown > 0}
-              className={`font-medium ${cooldown > 0 ? 'text-slate-400' : 'text-sky-600 hover:underline'}`}
+              className={`font-medium ${
+                cooldown > 0 ? 'text-slate-400' : 'text-sky-600 hover:underline'
+              }`}
             >
               {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : 'Gửi lại OTP'}
             </button>
@@ -121,7 +133,10 @@ export default function OtpVerifyPage() {
         </button>
 
         <div className="mt-4 text-center text-xs text-slate-500">
-          Sai email? <Link to="/" className="text-sky-600 hover:underline">Quay lại</Link>
+          Sai email?{' '}
+          <Link to="/" className="text-sky-600 hover:underline">
+            Quay lại
+          </Link>
         </div>
       </form>
     </div>

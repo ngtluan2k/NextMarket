@@ -23,7 +23,9 @@ export class OrderItem {
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 
-  @ManyToOne(() => Product, (product) => product.orderItems, { nullable: false })
+  @ManyToOne(() => Product, (product) => product.orderItems, {
+    nullable: false,
+  })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
@@ -37,11 +39,9 @@ export class OrderItem {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   price!: number;
 
-  @Column({type: 'decimal', precision: 12, scale: 2, nullable: true,})
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   discount?: number;
 
-  @Column({type: 'decimal', precision: 12, scale: 2, nullable: true,})
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   subtotal?: number;
-
-
 }

@@ -9,12 +9,12 @@ import {
 } from 'typeorm';
 import { Order } from '../orders/order.entity';
 import { User } from '../user/user.entity';
-export enum historyStatus{
+export enum historyStatus {
   pending = 0,
   confirmed = 1,
   processing = 2,
   shipped = 3,
-  delivered = 4,  
+  delivered = 4,
   completed = 5,
   cancelled = 6,
   returned = 7,
@@ -29,7 +29,9 @@ export class OrderStatusHistory {
   @Generated('uuid')
   uuid!: string;
 
-  @ManyToOne(() => Order, (order) => order.orderStatusHistory, { nullable: false })
+  @ManyToOne(() => Order, (order) => order.orderStatusHistory, {
+    nullable: false,
+  })
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 

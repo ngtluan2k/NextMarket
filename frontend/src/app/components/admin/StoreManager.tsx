@@ -1,10 +1,19 @@
-import React, { useEffect, useState } from "react";
-import { Table, Spin, message, Card, Popconfirm, Button, Drawer, Descriptions } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import axios from "axios";
-import { DeleteOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import { storeService } from "../../../service/store.service";
+import React, { useEffect, useState } from 'react';
+import {
+  Table,
+  Spin,
+  message,
+  Card,
+  Popconfirm,
+  Button,
+  Drawer,
+  Descriptions,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import axios from 'axios';
+import { DeleteOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { storeService } from '../../../service/store.service';
 
 interface Store {
   id: number;
@@ -33,8 +42,10 @@ const StoreManager: React.FC = () => {
       const data = await storeService.getStores(true); // admin xem cả soft-deleted
       setStores(data || []);
     } catch (err: any) {
-      console.error("Lỗi fetch stores:", err);
-      message.error(err?.response?.data?.message || "Không lấy được danh sách cửa hàng");
+      console.error('Lỗi fetch stores:', err);
+      message.error(
+        err?.response?.data?.message || 'Không lấy được danh sách cửa hàng'
+      );
     } finally {
       setLoading(false);
     }
@@ -43,14 +54,14 @@ const StoreManager: React.FC = () => {
   // Gọi API xóa store
   const deleteStore = async (id: number) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
       await axios.delete(`http://localhost:3000/stores/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      message.success("Xóa cửa hàng thành công");
+      message.success('Xóa cửa hàng thành công');
       setStores((prev) => prev.filter((store) => store.id !== id));
       // Nếu đang xem chi tiết cửa hàng vừa xóa thì đóng Drawer
       if (selected?.id === id) {
@@ -59,8 +70,8 @@ const StoreManager: React.FC = () => {
         setDetail(null);
       }
     } catch (err: any) {
-      console.error("Lỗi xóa store:", err);
-      message.error(err.response?.data?.message || "Xóa cửa hàng thất bại");
+      console.error('Lỗi xóa store:', err);
+      message.error(err.response?.data?.message || 'Xóa cửa hàng thất bại');
     }
   };
 
@@ -73,7 +84,7 @@ const StoreManager: React.FC = () => {
     setDrawerOpen(true);
     setDetailLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem('token');
       const res = await axios.get(`http://localhost:3000/stores/${record.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -81,7 +92,9 @@ const StoreManager: React.FC = () => {
       setDetail(res.data?.data ?? res.data ?? null);
     } catch (err: any) {
       console.error(err);
-      message.error(err.response?.data?.message || "Không lấy được thông tin cửa hàng");
+      message.error(
+        err.response?.data?.message || 'Không lấy được thông tin cửa hàng'
+      );
     } finally {
       setDetailLoading(false);
     }
@@ -89,56 +102,59 @@ const StoreManager: React.FC = () => {
 
   const columns: ColumnsType<Store> = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
       width: 80,
     },
     {
-      title: "Tên cửa hàng",
-      dataIndex: "name",
-      key: "name",
-      render: (text: string) => (text || "(Chưa đặt tên)"), 
+      title: 'Tên cửa hàng',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string) => text || '(Chưa đặt tên)',
     },
 
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
       render: (text: string) => {
         switch (text) {
-          case "active":
-            return <span style={{ color: "green" }}>Hoạt động</span>;
-          case "inactive":
-            return <span style={{ color: "gray" }}>Chưa hoạt động</span>;
-          case "suspended":
-            return <span style={{ color: "orange" }}>Bị tạm ngưng</span>;
-          case "closed":
-            return <span style={{ color: "red" }}>Đã đóng</span>;
+          case 'active':
+            return <span style={{ color: 'green' }}>Hoạt động</span>;
+          case 'inactive':
+            return <span style={{ color: 'gray' }}>Chưa hoạt động</span>;
+          case 'suspended':
+            return <span style={{ color: 'orange' }}>Bị tạm ngưng</span>;
+          case 'closed':
+            return <span style={{ color: 'red' }}>Đã đóng</span>;
           default:
-            return text || "-";
+            return text || '-';
         }
       },
     },
 
     {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
+      title: 'Mô tả',
+      dataIndex: 'description',
+      key: 'description',
     },
     {
-      title: "Ngày tạo",
-      dataIndex: "created_at",
-      key: "created_at",
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (text: string) => new Date(text).toLocaleString(),
     },
     {
-      title: "Thao tác",
-      key: "actions",
+      title: 'Thao tác',
+      key: 'actions',
       width: 120,
       render: (_, record) => (
         <div className="flex gap-2">
-          <Button size="small" onClick={() => navigate(`/admin/stores/${record.id}`)}>
+          <Button
+            size="small"
+            onClick={() => navigate(`/admin/stores/${record.id}`)}
+          >
             Xem chi tiết
           </Button>
           <Popconfirm
@@ -147,7 +163,12 @@ const StoreManager: React.FC = () => {
             okText="Xóa"
             cancelText="Hủy"
           >
-            <Button type="primary" danger size="small" icon={<DeleteOutlined />}>
+            <Button
+              type="primary"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+            >
               Xóa
             </Button>
           </Popconfirm>

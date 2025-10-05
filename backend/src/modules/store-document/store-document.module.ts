@@ -7,13 +7,7 @@ import { StoreInformation } from '../store-information/store-information.entity'
 import { Store } from '../store/store.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      StoreDocument,
-      StoreInformation,
-      Store,
-    ])
-  ],
+  imports: [TypeOrmModule.forFeature([StoreDocument, StoreInformation, Store])],
   controllers: [StoreDocumentController],
   providers: [StoreDocumentService],
   exports: [StoreDocumentService],

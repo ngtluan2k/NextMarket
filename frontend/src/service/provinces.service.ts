@@ -46,9 +46,14 @@ export class ProvincesService {
   }
 
   // Lấy danh sách quận/huyện theo tỉnh
-  static async getDistricts(provinceCode: number, version: 'v1' | 'v2' = 'v2'): Promise<any> {
+  static async getDistricts(
+    provinceCode: number,
+    version: 'v1' | 'v2' = 'v2'
+  ): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE}/provinces/${provinceCode}/districts?version=${version}`);
+      const response = await fetch(
+        `${API_BASE}/provinces/${provinceCode}/districts?version=${version}`
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch districts');
       }
@@ -67,9 +72,14 @@ export class ProvincesService {
   }
 
   // Lấy danh sách phường/xã theo quận/huyện
-  static async getWards(districtCode: number, version: 'v1' | 'v2' = 'v2'): Promise<Ward[]> {
+  static async getWards(
+    districtCode: number,
+    version: 'v1' | 'v2' = 'v2'
+  ): Promise<Ward[]> {
     try {
-      const response = await fetch(`${API_BASE}/provinces/districts/${districtCode}/wards?version=${version}`);
+      const response = await fetch(
+        `${API_BASE}/provinces/districts/${districtCode}/wards?version=${version}`
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch wards');
       }

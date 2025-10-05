@@ -1,20 +1,26 @@
 // src/components/account/AccountNotifications.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Home, Gift, Receipt, RefreshCcw, MoreVertical, CheckCheck, Trash2,
-} from "lucide-react";
+  Home,
+  Gift,
+  Receipt,
+  RefreshCcw,
+  MoreVertical,
+  CheckCheck,
+  Trash2,
+} from 'lucide-react';
 
-export type NotifyCategory = "all" | "promo" | "order" | "system";
+export type NotifyCategory = 'all' | 'promo' | 'order' | 'system';
 
 export type NotificationItem = {
   id: string | number;
   title: string;
   body?: string;
-  imageUrl?: string;     // ảnh nhỏ bên trái (tùy chọn)
+  imageUrl?: string; // ảnh nhỏ bên trái (tùy chọn)
   type?: NotifyCategory; // dùng để client lọc nếu không gọi API theo tab
   createdAt?: string | number | Date;
   read?: boolean;
-  link?: string;         // click mở link (nếu có)
+  link?: string; // click mở link (nếu có)
 };
 
 type Props = {
@@ -22,7 +28,9 @@ type Props = {
   items?: NotificationItem[];
 
   /** Hàm gọi API theo từng tab */
-  fetchNotifications?: (category: NotifyCategory) => Promise<NotificationItem[]>;
+  fetchNotifications?: (
+    category: NotifyCategory
+  ) => Promise<NotificationItem[]>;
 
   /** Mở thông báo (ví dụ: mark read + navigate) */
   onOpenItem?: (n: NotificationItem) => void;
@@ -38,10 +46,14 @@ type Props = {
 };
 
 const TABS: { key: NotifyCategory; icon: React.ReactNode; label: string }[] = [
-  { key: "all",    icon: <Home className="h-5 w-5" />,    label: "Tất cả" },
-  { key: "promo",  icon: <Gift className="h-5 w-5" />,    label: "Khuyến mãi" },
-  { key: "order",  icon: <Receipt className="h-5 w-5" />, label: "Đơn hàng" },
-  { key: "system", icon: <RefreshCcw className="h-5 w-5"/>, label: "Hệ thống" },
+  { key: 'all', icon: <Home className="h-5 w-5" />, label: 'Tất cả' },
+  { key: 'promo', icon: <Gift className="h-5 w-5" />, label: 'Khuyến mãi' },
+  { key: 'order', icon: <Receipt className="h-5 w-5" />, label: 'Đơn hàng' },
+  {
+    key: 'system',
+    icon: <RefreshCcw className="h-5 w-5" />,
+    label: 'Hệ thống',
+  },
 ];
 
 export default function AccountNotifications({
@@ -51,9 +63,9 @@ export default function AccountNotifications({
   onMarkAllRead,
   onDeleteAll,
   onContinue,
-  className = "",
+  className = '',
 }: Props) {
-  const [tab, setTab] = useState<NotifyCategory>("all");
+  const [tab, setTab] = useState<NotifyCategory>('all');
   const [list, setList] = useState<NotificationItem[]>(items ?? []);
   const [loading, setLoading] = useState<boolean>(!!fetchNotifications);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
@@ -71,18 +83,22 @@ export default function AccountNotifications({
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [tab, fetchNotifications]);
 
   // nếu dùng props.items (không gọi API), lọc client theo tab
   const filtered = useMemo(() => {
     if (!items) return list;
-    if (tab === "all") return items;
+    if (tab === 'all') return items;
     return items.filter((x) => x.type === tab);
   }, [tab, items, list]);
 
   return (
-    <section className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}>
+    <section
+      className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}
+    >
       {/* header */}
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-base md:text-lg font-semibold text-slate-900">
@@ -104,14 +120,20 @@ export default function AccountNotifications({
             >
               <button
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
-                onClick={() => { setMenuOpen(false); onMarkAllRead?.(tab); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onMarkAllRead?.(tab);
+                }}
               >
                 <CheckCheck className="h-4 w-4 text-slate-600" />
                 Đánh dấu tất cả đã đọc
               </button>
               <button
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 text-rose-600"
-                onClick={() => { setMenuOpen(false); onDeleteAll?.(tab); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDeleteAll?.(tab);
+                }}
               >
                 <Trash2 className="h-4 w-4" />
                 Xóa tất cả
@@ -130,7 +152,11 @@ export default function AccountNotifications({
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`relative grid place-items-center h-12 w-12 rounded-md
-                          ${active ? "text-sky-600" : "text-slate-600 hover:bg-slate-50"}`}
+                          ${
+                            active
+                              ? 'text-sky-600'
+                              : 'text-slate-600 hover:bg-slate-50'
+                          }`}
               title={t.label}
               aria-pressed={active}
             >
@@ -167,12 +193,16 @@ export default function AccountNotifications({
               <li key={n.id}>
                 <button
                   className={`flex w-full gap-3 px-2 py-3 text-left hover:bg-slate-50 rounded-lg
-                              ${!n.read ? "bg-sky-50/40" : ""}`}
+                              ${!n.read ? 'bg-sky-50/40' : ''}`}
                   onClick={() => onOpenItem?.(n)}
                 >
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100 grid place-items-center">
                     {n.imageUrl ? (
-                      <img src={n.imageUrl} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={n.imageUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="h-6 w-6 rounded bg-slate-300" />
                     )}
@@ -192,7 +222,9 @@ export default function AccountNotifications({
                       </div>
                     )}
                   </div>
-                  {!n.read && <span className="mt-1 h-2 w-2 rounded-full bg-sky-500" />}
+                  {!n.read && (
+                    <span className="mt-1 h-2 w-2 rounded-full bg-sky-500" />
+                  )}
                 </button>
               </li>
             ))}
@@ -221,8 +253,8 @@ export default function AccountNotifications({
 
 function formatTime(t: string | number | Date) {
   const d = new Date(t);
-  if (Number.isNaN(+d)) return "";
-  return d.toLocaleString("vi-VN");
+  if (Number.isNaN(+d)) return '';
+  return d.toLocaleString('vi-VN');
 }
 
 function EmptyIllustration() {

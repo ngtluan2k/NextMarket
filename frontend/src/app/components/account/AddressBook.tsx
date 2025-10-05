@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { Plus, Pencil, Trash2, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export type Address = {
   id: string;
@@ -12,23 +12,27 @@ export type Address = {
   ward: string;
   addressLine: string;
   note?: string;
-  kind: "home" | "company";
+  kind: 'home' | 'company';
   isDefault?: boolean;
 };
 
-const API_BASE = "/api/addresses";
+const API_BASE = '/api/addresses';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   });
   if (!res.ok) throw new Error(await res.text());
   return res.status === 204 ? (undefined as unknown as T) : res.json();
 }
 
-export default function AddressBook({ className = "" }: { className?: string }) {
+export default function AddressBook({
+  className = '',
+}: {
+  className?: string;
+}) {
   const [items, setItems] = useState<Address[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -38,10 +42,10 @@ export default function AddressBook({ className = "" }: { className?: string }) 
     (async () => {
       try {
         setLoading(true);
-        const data = await request<Address[]>(API_BASE, { method: "GET" });
+        const data = await request<Address[]>(API_BASE, { method: 'GET' });
         setItems(data ?? []);
       } catch (e: any) {
-        setErr(e?.message ?? "Không tải được sổ địa chỉ");
+        setErr(e?.message ?? 'Không tải được sổ địa chỉ');
       } finally {
         setLoading(false);
       }
@@ -49,12 +53,12 @@ export default function AddressBook({ className = "" }: { className?: string }) 
   }, []);
 
   const setDefault = async (id: string) => {
-    await request(`${API_BASE}/${id}/default`, { method: "PATCH" });
+    await request(`${API_BASE}/${id}/default`, { method: 'PATCH' });
     setItems((prev) => prev.map((x) => ({ ...x, isDefault: x.id === id })));
   };
 
   const removeAddress = async (id: string) => {
-    await request<void>(`${API_BASE}/${id}`, { method: "DELETE" });
+    await request<void>(`${API_BASE}/${id}`, { method: 'DELETE' });
     setItems((prev) => prev.filter((x) => x.id !== id));
   };
 
@@ -65,7 +69,7 @@ export default function AddressBook({ className = "" }: { className?: string }) 
       {/* Ô "Thêm địa chỉ mới" giống ảnh – bấm để điều hướng */}
       <button
         type="button"
-        onClick={() => navigate("/account/addresses/create")}
+        onClick={() => navigate('/account/addresses/create')}
         className="w-full rounded-md border border-dashed py-6 grid place-items-center text-slate-600 hover:bg-slate-50"
       >
         <span className="inline-flex items-center gap-2 text-sky-600">
@@ -74,19 +78,24 @@ export default function AddressBook({ className = "" }: { className?: string }) 
         </span>
       </button>
 
-      
       {loading && <div className="mt-3 text-sm text-slate-500">Đang tải…</div>}
 
       {/* Danh sách địa chỉ (nếu có) */}
       <div className="mt-3 space-y-3">
         {items.map((it) => (
-          <div key={it.id} className="flex items-start justify-between rounded-md border p-4">
+          <div
+            key={it.id}
+            className="flex items-start justify-between rounded-md border p-4"
+          >
             <div>
               <div className="font-medium">{it.fullName}</div>
               <div className="text-sm text-gray-600">
-                Địa chỉ: {it.addressLine}, {it.ward}, {it.district}, {it.province}
+                Địa chỉ: {it.addressLine}, {it.ward}, {it.district},{' '}
+                {it.province}
               </div>
-              <div className="text-sm text-gray-600">Điện thoại: {it.phone}</div>
+              <div className="text-sm text-gray-600">
+                Điện thoại: {it.phone}
+              </div>
               {it.isDefault && (
                 <div className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-green-600">
                   ● Địa chỉ mặc định

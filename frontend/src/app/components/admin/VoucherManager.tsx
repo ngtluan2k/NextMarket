@@ -251,7 +251,7 @@ const VoucherManager: React.FC = () => {
             allowClear
             style={{ width: 160 }}
             value={statusFilter || undefined}
-            onChange={(val:string) => setStatusFilter(val || null)}
+            onChange={(val: string) => setStatusFilter(val || null)}
           >
             <Option value="active">Đang hoạt động</Option>
             <Option value="upcoming">Chưa bắt đầu</Option>

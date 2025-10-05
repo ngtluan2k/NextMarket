@@ -19,21 +19,23 @@ export class Inventory {
   @Generated('uuid')
   uuid!: string;
 
-  @ManyToOne(() => Product, (product) => product.inventories, { nullable: false })
+  @ManyToOne(() => Product, (product) => product.inventories, {
+    nullable: false,
+  })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
-  @ManyToOne(() => Variant, (variant) => variant.inventories, { nullable: true })
+  @ManyToOne(() => Variant, (variant) => variant.inventories, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'variant_id' })
-  variant?: Variant | null;  
+  variant?: Variant | null;
 
   @Column()
   location!: string;
 
   @Column()
   quantity!: number;
-  
-  
 
   @Column({ default: 0 })
   used_quantity!: number;

@@ -1,4 +1,3 @@
-
 export type PaymentMethodType = string;
 
 export type SavedCard = {

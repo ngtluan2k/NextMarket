@@ -26,8 +26,8 @@ export class StoreDocumentService {
     @InjectRepository(StoreInformation)
     private storeInformationRepo: Repository<StoreInformation>,
     @InjectRepository(Store)
-    private storeRepo: Repository<Store>,
-  ) { }
+    private storeRepo: Repository<Store>
+  ) {}
 
   // Upload và tạo document record
   async uploadDocument(
@@ -321,7 +321,10 @@ export class StoreDocumentService {
 
     return await this.storeDocumentRepo.save(document);
   }
-  async storeFileAndGetPath(file: Express.Multer.File, docType: DocumentType): Promise<string> {
+  async storeFileAndGetPath(
+    file: Express.Multer.File,
+    docType: DocumentType
+  ): Promise<string> {
     this.validateFile(file, docType);
     return this.saveFileToDisk(file, docType);
   }

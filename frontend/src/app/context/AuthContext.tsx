@@ -22,11 +22,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const user = userJson.data;
 
       // Lấy danh sách địa chỉ từ /users/:id/addresses
-      const addressRes = await fetch(`http://localhost:3000/users/${user.id}/addresses`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const addressRes = await fetch(
+        `http://localhost:3000/users/${user.id}/addresses`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const addresses = (await addressRes.json()) || [];
 
       // Cập nhật me với thông tin người dùng và địa chỉ

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { VoucherUsage } from './voucher_usage.entity';
@@ -19,7 +24,7 @@ export class VoucherUsageService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     @InjectRepository(Order)
-    private readonly orderRepo: Repository<Order>,
+    private readonly orderRepo: Repository<Order>
   ) {}
 
   async create(dto: CreateVoucherUsageDto): Promise<VoucherUsage> {
@@ -33,7 +38,9 @@ export class VoucherUsageService {
     }
 
     if (voucher.status !== VoucherStatus.ACTIVE) {
-      throw new BadRequestException(`Voucher đang ở trạng thái ${voucher.status}`);
+      throw new BadRequestException(
+        `Voucher đang ở trạng thái ${voucher.status}`
+      );
     }
 
     const user = await this.userRepo.findOne({ where: { id: dto.user_id } });
@@ -59,7 +66,9 @@ export class VoucherUsageService {
       where: { voucher: { id: dto.voucher_id }, user: { id: dto.user_id } },
     });
     if (userUsageCount >= voucher.per_user_limit) {
-      throw new BadRequestException('Người dùng đã đạt giới hạn sử dụng voucher');
+      throw new BadRequestException(
+        'Người dùng đã đạt giới hạn sử dụng voucher'
+      );
     }
 
     // Tạo bản ghi VoucherUsage
@@ -76,13 +85,17 @@ export class VoucherUsageService {
 
   async findAll(userId: number, role: string): Promise<VoucherUsage[]> {
     if (role === 'admin') {
-      return this.usageRepo.find({ relations: ['voucher', 'user', 'order', 'order.store'] });
+      return this.usageRepo.find({
+        relations: ['voucher', 'user', 'order', 'order.store'],
+      });
     } else if (role === 'store_owner') {
       // Chỉ lấy VoucherUsage liên quan đến store của user
-      const stores = await this.orderRepo.manager.find(Store, { where: { user: { id: userId } } });
-      const storeIds = stores.map(store => store.id);
+      const stores = await this.orderRepo.manager.find(Store, {
+        where: { user: { id: userId } },
+      });
+      const storeIds = stores.map((store) => store.id);
       return this.usageRepo.find({
-        where: { order: { store: { id: In (storeIds) } } },
+        where: { order: { store: { id: In(storeIds) } } },
         relations: ['voucher', 'user', 'order', 'order.store'],
       });
     } else {
@@ -94,13 +107,19 @@ export class VoucherUsageService {
     }
   }
 
-  async findOne(id: number, userId: number, role: string): Promise<VoucherUsage> {
+  async findOne(
+    id: number,
+    userId: number,
+    role: string
+  ): Promise<VoucherUsage> {
     const usage = await this.usageRepo.findOne({
       where: { id },
       relations: ['voucher', 'user', 'order', 'order.store'],
     });
     if (!usage) {
-      throw new NotFoundException(`Không tìm thấy bản ghi sử dụng voucher #${id}`);
+      throw new NotFoundException(
+        `Không tìm thấy bản ghi sử dụng voucher #${id}`
+      );
     }
 
     if (role !== 'admin') {

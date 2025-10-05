@@ -1,6 +1,11 @@
 // File: backend/src/modules/store-identification/store-identification.service.ts
 
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreIdentification } from './store-identification.entity';
@@ -17,26 +22,36 @@ export class StoreIdentificationService {
     @InjectRepository(StoreIdentification)
     private storeIdentificationRepo: Repository<StoreIdentification>,
     @InjectRepository(Store)
-    private storeRepo: Repository<Store>,
+    private storeRepo: Repository<Store>
   ) {}
 
   // Tạo store identification
-  async create(createDto: CreateStoreIdentificationDto, userId: number): Promise<StoreIdentification> {
+  async create(
+    createDto: CreateStoreIdentificationDto,
+    userId: number
+  ): Promise<StoreIdentification> {
     await this.verifyStoreOwnership(createDto.store_id, userId);
     const identification = this.storeIdentificationRepo.create(createDto);
     return await this.storeIdentificationRepo.save(identification);
   }
 
   // Lấy store identification theo store_id
-  async findByStoreId(storeId: number, userId: number): Promise<StoreIdentification | null> {
+  async findByStoreId(
+    storeId: number,
+    userId: number
+  ): Promise<StoreIdentification | null> {
     await this.verifyStoreOwnership(storeId, userId);
     return await this.storeIdentificationRepo.findOne({
-      where: { store_id: storeId }
+      where: { store_id: storeId },
     });
   }
 
   // Cập nhật store identification
-  async update(storeId: number, updateDto: UpdateStoreIdentificationDto, userId: number): Promise<StoreIdentification> {
+  async update(
+    storeId: number,
+    updateDto: UpdateStoreIdentificationDto,
+    userId: number
+  ): Promise<StoreIdentification> {
     const identification = await this.findByStoreId(storeId, userId);
     if (!identification) {
       throw new NotFoundException('Store identification not found');
@@ -48,7 +63,7 @@ export class StoreIdentificationService {
   // Upload ảnh CCCD tạm (không cần store_id) -> chỉ trả về file_url
   async uploadTempImage(
     file: Express.Multer.File,
-    side: 'front' | 'back',
+    side: 'front' | 'back'
   ): Promise<{ file_url: string }> {
     this.validateImageFile(file);
     const filePath = this.saveImageToDisk(file, side);
@@ -73,7 +88,6 @@ export class StoreIdentificationService {
         type: 'CCCD',
         full_name: '',
         img_front: filePath,
-        is_draft: true,
       });
     } else {
       if (identification.img_front) {
@@ -103,7 +117,6 @@ export class StoreIdentificationService {
         type: 'CCCD',
         full_name: '',
         img_back: filePath,
-        is_draft: true,
       });
     } else {
       if (identification.img_back) {
@@ -133,9 +146,12 @@ export class StoreIdentificationService {
   }
 
   // Private helpers
-  private async verifyStoreOwnership(storeId: number, userId: number): Promise<void> {
+  private async verifyStoreOwnership(
+    storeId: number,
+    userId: number
+  ): Promise<void> {
     const store = await this.storeRepo.findOne({
-      where: { id: storeId }
+      where: { id: storeId },
     });
     if (!store || store.user_id !== userId) {
       throw new ForbiddenException('You do not have access to this store');
@@ -158,7 +174,10 @@ export class StoreIdentificationService {
     }
   }
 
-  private saveImageToDisk(file: Express.Multer.File, side: 'front' | 'back'): string {
+  private saveImageToDisk(
+    file: Express.Multer.File,
+    side: 'front' | 'back'
+  ): string {
     const uploadDir = path.join(process.cwd(), 'uploads', 'identification');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -183,17 +202,17 @@ export class StoreIdentificationService {
   }
 
   // Lấy data file để stream xem ảnh
-  async getFileData(filePath: string, userId: number): Promise<{
-    data: Buffer,
-    mimetype: string,
-    filename: string
+  async getFileData(
+    filePath: string,
+    userId: number
+  ): Promise<{
+    data: Buffer;
+    mimetype: string;
+    filename: string;
   }> {
     const identification = await this.storeIdentificationRepo.findOne({
-      where: [
-        { img_front: filePath },
-        { img_back: filePath }
-      ],
-      relations: ['store']
+      where: [{ img_front: filePath }, { img_back: filePath }],
+      relations: ['store'],
     });
 
     if (!identification || identification.store.user_id !== userId) {
@@ -223,7 +242,7 @@ export class StoreIdentificationService {
     return {
       data: fileData,
       mimetype,
-      filename
+      filename,
     };
   }
 }

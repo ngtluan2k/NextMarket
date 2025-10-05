@@ -56,5 +56,4 @@ export class CreateStoreAddressDto {
   @IsOptional()
   @IsBoolean()
   is_default?: boolean;
-
 }

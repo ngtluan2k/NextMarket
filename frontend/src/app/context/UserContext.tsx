@@ -1,5 +1,11 @@
 // src/context/UserContext.tsx
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from 'react';
 
 type User = { email: string; full_name: string } | null;
 
@@ -21,7 +27,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     else localStorage.removeItem('user');
   }, [user]);
 
-  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserContext.Provider>
+  );
 };
 
 export const useUser = () => {

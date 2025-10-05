@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Product } from './product.entity';
 
 @Entity('product_media')
@@ -9,7 +15,7 @@ export class ProductMedia {
   @Column({ type: 'char', length: 36, unique: true })
   uuid!: string;
 
-  @ManyToOne(() => Product, product => product.media)
+  @ManyToOne(() => Product, (product) => product.media)
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 

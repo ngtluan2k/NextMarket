@@ -13,19 +13,23 @@ export class ProductMediaService {
     @InjectRepository(ProductMedia)
     private readonly repo: Repository<ProductMedia>,
     @InjectRepository(Product)
-    private readonly productRepo: Repository<Product>,
+    private readonly productRepo: Repository<Product>
   ) {}
 
- async addMedia(dto: CreateProductMediaDto, userId: number) {
-  const product = await this.productRepo.findOne({ where: { id: dto.productId }, relations: ['store'] });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('You do not own this product');
+  async addMedia(dto: CreateProductMediaDto, userId: number) {
+    const product = await this.productRepo.findOne({
+      where: { id: dto.productId },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('You do not own this product');
 
-  const media = this.repo.create({
-    ...dto,
-    product: { id: dto.productId } as Product,
-  });
+    const media = this.repo.create({
+      ...dto,
+      product: { id: dto.productId } as Product,
+    });
 
-  return this.repo.save(media);
-}
+    return this.repo.save(media);
+  }
 }

@@ -27,20 +27,22 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { StoreDocumentService } from './store-document.service';
-import { CreateStoreDocumentDto, DocumentType } from './dto/create-store-document.dto';
+import {
+  CreateStoreDocumentDto,
+  DocumentType,
+} from './dto/create-store-document.dto';
 import { UpdateStoreDocumentDto } from './dto/update-store-document.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions } from '../../common/auth/permission.decorator';
 import { multerConfig } from './config/multer.config';
 
-
 @ApiTags('Store Documents')
 @Controller('store-documents')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class StoreDocumentController {
-  constructor(private readonly storeDocumentService: StoreDocumentService) { }
+  constructor(private readonly storeDocumentService: StoreDocumentService) {}
   //Upload file cho cửa hàng.
   @Post('upload-file')
   @ApiConsumes('multipart/form-data')
@@ -65,10 +67,13 @@ export class StoreDocumentController {
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async uploadFileOnly(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: any,
+    @Body() body: any
   ) {
     if (!file) throw new BadRequestException('No file provided');
-    const path = await this.storeDocumentService.storeFileAndGetPath(file, body.doc_type as DocumentType);
+    const path = await this.storeDocumentService.storeFileAndGetPath(
+      file,
+      body.doc_type as DocumentType
+    );
     return { file_url: path };
   }
 
@@ -85,11 +90,11 @@ export class StoreDocumentController {
   })
   async findByStore(
     @Param('storeInformationId', ParseIntPipe) storeInformationId: number,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return await this.storeDocumentService.findByStoreInformation(
       storeInformationId,
-      req.user.id,
+      req.user.id
     );
   }
   //Lấy chi tiết 1 document theo id.
@@ -116,9 +121,12 @@ export class StoreDocumentController {
   async downloadFile(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: any,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
-    const fileData = await this.storeDocumentService.getFileData(id, req.user.id);
+    const fileData = await this.storeDocumentService.getFileData(
+      id,
+      req.user.id
+    );
     res.set({
       'Content-Type': fileData.mimetype,
       'Content-Disposition': `attachment; filename="${fileData.filename}"`,
@@ -137,9 +145,12 @@ export class StoreDocumentController {
   async viewFile(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: any,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
-    const fileData = await this.storeDocumentService.getFileData(id, req.user.id);
+    const fileData = await this.storeDocumentService.getFileData(
+      id,
+      req.user.id
+    );
     res.set({
       'Content-Type': fileData.mimetype,
       'Content-Disposition': `inline; filename="${fileData.filename}"`,
@@ -158,7 +169,7 @@ export class StoreDocumentController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdateStoreDocumentDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     return await this.storeDocumentService.update(id, updateDto, req.user.id);
   }
@@ -183,7 +194,7 @@ export class StoreDocumentController {
   async replaceDocument(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
+    @Req() req: any
   ) {
     if (!file) {
       throw new BadRequestException('No file provided');
@@ -192,7 +203,7 @@ export class StoreDocumentController {
     return await this.storeDocumentService.replaceDocument(
       id,
       file,
-      req.user.id,
+      req.user.id
     );
   }
   //Xóa document.
@@ -216,7 +227,7 @@ export class StoreDocumentController {
   @RequirePermissions('manage_documents')
   async findAllDocuments(
     @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @Query('limit') limit?: string
   ) {
     const pageNum = page ? parseInt(page) : 1;
     const limitNum = limit ? parseInt(limit) : 20;

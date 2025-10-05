@@ -7,19 +7,15 @@ import multer from 'multer';
 export const multerConfig: MulterOptions = {
   // Store in memory for processing
   storage: multer.memoryStorage(),
-  
+
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB for images
     files: 1, // Only one file at a time
   },
-  
+
   fileFilter: (req, file, callback) => {
     // Allowed MIME types for images only
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg', 
-      'image/png',
-    ];
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
 
     if (allowedMimeTypes.includes(file.mimetype)) {
       callback(null, true);

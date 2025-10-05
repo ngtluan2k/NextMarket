@@ -26,13 +26,16 @@ export class CartController {
     @Request() req: AuthRequest,
     @Body() body: { productId: number; quantity?: number; variantId?: number }
   ) {
-    console.log("{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}userId for add cart : "+req.user.userId);
-    console.log(req)
+    console.log(
+      '{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}userId for add cart : ' +
+        req.user.userId
+    );
+    console.log(req);
     return this.cartService.addToCart(
       req.user.userId,
       body.productId,
       body.quantity,
-      body.variantId,
+      body.variantId
     );
   }
 
@@ -60,7 +63,11 @@ export class CartController {
     @Param('productId') productId: number,
     @Body() body?: { variantId?: number }
   ) {
-    await this.cartService.removeFromCart(req.user.userId, +productId, body?.variantId);
+    await this.cartService.removeFromCart(
+      req.user.userId,
+      +productId,
+      body?.variantId
+    );
     return { message: 'Đã xóa khỏi giỏ hàng' };
   }
 

@@ -16,8 +16,8 @@ import { GoogleStrategy } from './google.strategy';
     TypeOrmModule.forFeature([
       User,
       UserProfile,
-        Role,
-        UserRole,
+      Role,
+      UserRole,
       RolePermission,
       Permission,
     ]),
@@ -26,7 +26,7 @@ import { GoogleStrategy } from './google.strategy';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [AuthService,GoogleStrategy],
+  providers: [AuthService, GoogleStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

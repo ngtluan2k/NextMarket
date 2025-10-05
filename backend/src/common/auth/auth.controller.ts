@@ -30,7 +30,9 @@ export class AuthController {
           window.close();
         } else {
           // Fallback: redirect về FE kèm token
-          window.location.href = "${frontendUrl}/home?token=${jwt.access_token}";
+          window.location.href = "${frontendUrl}/home?token=${
+      jwt.access_token
+    }";
         }
       </script>
     `;

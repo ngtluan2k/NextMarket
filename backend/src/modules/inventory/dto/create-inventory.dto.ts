@@ -6,7 +6,7 @@ export class CreateInventoryDto {
 
   @IsOptional()
   @IsNumber()
-  variantId?: number| null;;
+  variantId?: number | null;
 
   @IsString()
   location!: string;

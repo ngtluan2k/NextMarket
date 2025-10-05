@@ -39,7 +39,6 @@ const SellerMainLayout: React.FC = () => {
           return;
         }
         setStore(store);
-
       } catch (err) {
         console.error('Error checking store:', err);
         navigate('/seller-registration');
@@ -48,9 +47,6 @@ const SellerMainLayout: React.FC = () => {
 
     checkStore();
   }, [navigate]);
-
-
-
 
   return (
     <Layout style={{ minHeight: '100vh' }}>

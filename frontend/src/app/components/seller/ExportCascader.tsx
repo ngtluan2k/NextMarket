@@ -20,7 +20,7 @@ const exportOptions: ExportOption[] = [
 ];
 
 const onChange: CascaderProps<ExportOption>['onChange'] = (value) => {
-  console.log('Selected export type:', value[0]); 
+  console.log('Selected export type:', value[0]);
 };
 
 const displayRender = (labels: string[]) => labels[0];
@@ -32,9 +32,9 @@ const ExportCascader: React.FC = () => (
       expandTrigger="click"
       displayRender={displayRender}
       onChange={onChange}
-      defaultValue={['excel']} 
+      defaultValue={['excel']}
       placeholder="Chọn loại xuất dữ liệu"
-      className="w-32 sm:w-36 h-9 bg-white rounded-md shadow-sm text-sm" 
+      className="w-32 sm:w-36 h-9 bg-white rounded-md shadow-sm text-sm"
       suffixIcon={<ExportOutlined className="text-gray-600" />}
     />
   </Space>

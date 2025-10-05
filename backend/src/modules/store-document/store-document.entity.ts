@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+} from 'typeorm';
 import { StoreInformation } from './../store-information/store-information.entity';
 
 @Entity('store_documents')

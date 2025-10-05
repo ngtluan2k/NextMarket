@@ -15,7 +15,7 @@ import {
   Shipping,
   ComboStrip,
 } from '../components/productDetail';
-import { VariantInfo } from "../types/product"
+import { VariantInfo } from '../types/product';
 
 interface Props {
   showMessage?: (
@@ -48,8 +48,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
-  console.log("product in product detail page: "+JSON.stringify(product));
-
+  console.log('product in product detail page: ' + JSON.stringify(product));
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
@@ -115,18 +114,15 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
-  .filter((r: any) => {
-    const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
-    const end = r.ends_at ? new Date(r.ends_at) : null;
+      .filter((r: any) => {
+        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
+        const end = r.ends_at ? new Date(r.ends_at) : null;
 
-    return (
-      quantity >= r.min_quantity &&
-      now >= start &&
-      (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
-    );
-  })
-  .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
-
+        return (
+          quantity >= r.min_quantity && now >= start && (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
+        );
+      })
+      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 
@@ -240,18 +236,17 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 showMessage={showMessage}
               />
             </div>
-            
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-              <Suspense fallback={<div>Loading reviews...</div>}>
-                <LazyProductReviews />
-              </Suspense>
-            </div>
-            <div className="lg:col-span-3 mt-2">
-              <Suspense fallback={<div>Loading more products...</div>}>
-                <LazyExploreMore />
-              </Suspense>
-            </div>
+            <Suspense fallback={<div>Loading reviews...</div>}>
+              <LazyProductReviews />
+            </Suspense>
+          </div>
+          <div className="lg:col-span-3 mt-2">
+            <Suspense fallback={<div>Loading more products...</div>}>
+              <LazyExploreMore />
+            </Suspense>
+          </div>
         </div>
       </main>
       <Footer />

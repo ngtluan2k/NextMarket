@@ -30,8 +30,8 @@ import { ProductTag } from '../product_tag/product_tag.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { ProductMedia } from '../product_media/product_media.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
-
-
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class StoreService {
@@ -61,13 +61,14 @@ export class StoreService {
     @InjectRepository(Product) private productRepo: Repository<Product>,
     @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
     @InjectRepository(Variant) private variantRepo: Repository<Variant>,
-    @InjectRepository(ProductMedia) private productMediaRepo: Repository<ProductMedia>,
-    @InjectRepository(PricingRules) private pricingRulesRepo: Repository<PricingRules>,
-    @InjectRepository(ProductCategory) private productCategoryRepo: Repository<ProductCategory>,
-    @InjectRepository(ProductTag) private productTagRepo: Repository<ProductTag>,
-   
-    
-  ) { }
+    @InjectRepository(ProductMedia)
+    private productMediaRepo: Repository<ProductMedia>,
+    @InjectRepository(PricingRules)
+    private pricingRulesRepo: Repository<PricingRules>,
+    @InjectRepository(ProductCategory)
+    private productCategoryRepo: Repository<ProductCategory>,
+    @InjectRepository(ProductTag) private productTagRepo: Repository<ProductTag>
+  ) {}
 
   async findAll(includeDeleted = false) {
     const where: any = {};
@@ -88,7 +89,9 @@ export class StoreService {
 
   async findByUserId(userId: number, includeDeleted = false) {
     return this.storeRepo.findOne({
-      where: includeDeleted ? { user_id: userId } : { user_id: userId, is_deleted: false },
+      where: includeDeleted
+        ? { user_id: userId }
+        : { user_id: userId, is_deleted: false },
     });
   }
 
@@ -131,16 +134,22 @@ export class StoreService {
         where: { id: Number(dto.store_id), user_id: userId },
       });
       if (!target) {
-        throw new BadRequestException('Store không tồn tại hoặc không thuộc user');
+        throw new BadRequestException(
+          'Store không tồn tại hoặc không thuộc user'
+        );
       }
       if (target.is_deleted) {
-        throw new BadRequestException('Store này đã bị xóa . Vui lòng liên hệ admin để khôi phục hoặc đợi 30 ngày.');
+        throw new BadRequestException(
+          'Store này đã bị xóa . Vui lòng liên hệ admin để khôi phục hoặc đợi 30 ngày.'
+        );
       }
       return await this.updateDraftStore(target.id, dto, userId);
     }
 
     // 1) Không có store_id: kiểm tra store hiện có theo user
-    const existing = await this.storeRepo.findOne({ where: { user_id: userId, is_deleted: false } });
+    const existing = await this.storeRepo.findOne({
+      where: { user_id: userId, is_deleted: false },
+    });
 
     // 1.a) Đã có store (draft/final) → luôn UPDATE record đó (đảm bảo 1 user chỉ có 1 store)
     if (existing) {
@@ -153,29 +162,39 @@ export class StoreService {
     });
     if (existingDeleted) {
       if (existingDeleted.deleted_at) {
-        const msSinceDelete = Date.now() - new Date(existingDeleted.deleted_at).getTime();
-        const daysSinceDelete = Math.floor(msSinceDelete / (1000 * 60 * 60 * 24));
+        const msSinceDelete =
+          Date.now() - new Date(existingDeleted.deleted_at).getTime();
+        const daysSinceDelete = Math.floor(
+          msSinceDelete / (1000 * 60 * 60 * 24)
+        );
         const waitDays = 30 - daysSinceDelete;
         if (waitDays > 0) {
-          throw new BadRequestException(`Bạn đã xóa cửa hàng trước đó. Vui lòng đợi thêm ${waitDays} ngày để tạo lại.`);
+          throw new BadRequestException(
+            `Bạn đã xóa cửa hàng trước đó. Vui lòng đợi thêm ${waitDays} ngày để tạo lại.`
+          );
         }
         // quá 30 ngày → cho phép tạo mới (không đụng record cũ)
       } else {
         // không có mốc thời gian xóa → an toàn: chặn tạo mới
-        throw new BadRequestException('Bạn đã xóa cửa hàng trước đó. Vui lòng liên hệ admin hoặc chờ đủ thời gian để tạo lại.');
+        throw new BadRequestException(
+          'Bạn đã xóa cửa hàng trước đó. Vui lòng liên hệ admin hoặc chờ đủ thời gian để tạo lại.'
+        );
       }
     }
 
     // 2) Chưa có store nào → tạo mới (đây là trường hợp duy nhất INSERT)
     // Validate bắt buộc khi final
     if (!dto.is_draft && !dto.name) {
-      throw new BadRequestException('Tên cửa hàng là bắt buộc khi hoàn tất đăng ký');
+      throw new BadRequestException(
+        'Tên cửa hàng là bắt buộc khi hoàn tất đăng ký'
+      );
     }
 
     // Tạo slug nếu chưa có
     let slug = dto.slug;
     if (!slug && dto.name) {
-      slug = dto.name.toLowerCase()
+      slug = dto.name
+        .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
@@ -189,15 +208,22 @@ export class StoreService {
       user_id: userId,
       status: dto.is_draft ? 'inactive' : 'active',
       is_draft: dto.is_draft ?? false,
-      is_deleted: false,          // đảm bảo store mới không ở trạng thái xóa mềm
-      deleted_at: null,           // yêu cầu đã có cột deleted_at
+      is_deleted: false, // đảm bảo store mới không ở trạng thái xóa mềm
+      deleted_at: null, // yêu cầu đã có cột deleted_at
     });
 
     try {
       const savedStore = await this.storeRepo.save(store);
 
       // Tạo/Update dữ liệu liên quan nếu có
-      if (dto.store_information || dto.store_identification || dto.bank_account || dto.store_address || dto.store_information_email || dto.documents) {
+      if (
+        dto.store_information ||
+        dto.store_identification ||
+        dto.bank_account ||
+        dto.store_address ||
+        dto.store_information_email ||
+        dto.documents
+      ) {
         await this.handleComprehensiveData(savedStore.id, dto);
       }
 
@@ -208,7 +234,9 @@ export class StoreService {
 
       return {
         store: savedStore,
-        message: dto.is_draft ? 'Đã lưu nháp thành công!' : 'Đăng ký thành công!',
+        message: dto.is_draft
+          ? 'Đã lưu nháp thành công!'
+          : 'Đăng ký thành công!',
       };
     } catch (e: any) {
       // Chặn race condition với UNIQUE user_id: fallback sang UPDATE
@@ -237,9 +265,7 @@ export class StoreService {
     });
 
     if (sellerRole) {
-      const hasSellerRole = user.roles?.some(
-        (ur) => ur.role.name === 'Seller'
-      );
+      const hasSellerRole = user.roles?.some((ur) => ur.role.name === 'Seller');
       console.log('has seller role : ' + hasSellerRole);
 
       if (!hasSellerRole) {
@@ -318,8 +344,6 @@ export class StoreService {
     return !!store;
   }
 
-
-
   // Lấy thống kê store
   async getStoreStats(storeId: number) {
     // Sẽ implement sau khi có các modules khác
@@ -337,12 +361,10 @@ export class StoreService {
     return this.storeRepo.save(store);
   }
 
-
   private async fineOneIncludedDeleted(id: number) {
     const store = await this.storeRepo.findOne({ where: { id } });
     if (!store) throw new NotFoundException('Store not found');
     return store;
-
   }
 
   async deleteMyStore(userId: number) {
@@ -360,7 +382,7 @@ export class StoreService {
       message: 'Đã xóa mềm cửa hàng thành công',
       deletedStoreId: store.id,
       deletedRecords: 0,
-    }
+    };
   }
 
   private async orderItemsHardDeleteByProductIds(ids: number[]) {
@@ -462,7 +484,10 @@ export class StoreService {
     // Xóa store
     await this.storeRepo.remove(store);
 
-    const totalDeletedRecords = deletedResults.reduce((sum, r) => sum + (r.affected || 0), 0);
+    const totalDeletedRecords = deletedResults.reduce(
+      (sum, r) => sum + (r.affected || 0),
+      0
+    );
     return {
       message: 'Xóa cửa hàng và toàn bộ dữ liệu liên quan thành công',
       deletedStoreId: id,
@@ -502,7 +527,7 @@ export class StoreService {
     if (dto.store_information) {
       // Kiểm tra xem đã có store_information chưa
       const existingStoreInfo = await this.storeInformationRepo.findOne({
-        where: { store_id: storeId }
+        where: { store_id: storeId },
       });
 
       if (existingStoreInfo) {
@@ -524,7 +549,6 @@ export class StoreService {
           name: dto.store_information.name,
           addresses: dto.store_information.addresses,
           tax_code: dto.store_information.tax_code,
-
         });
         storeInformation = await this.storeInformationRepo.save(
           storeInformation
@@ -568,7 +592,6 @@ export class StoreService {
           full_name: dto.store_identification.full_name,
           img_front: dto.store_identification.img_front,
           img_back: dto.store_identification.img_back,
-
         });
       } else {
         // Create new
@@ -578,7 +601,6 @@ export class StoreService {
           full_name: dto.store_identification.full_name,
           img_front: dto.store_identification.img_front,
           img_back: dto.store_identification.img_back,
-
         });
         await this.storeIdentificationRepo.save(storeIdentification);
       }
@@ -668,7 +690,6 @@ export class StoreService {
           type: dto.store_address.type,
           detail: dto.store_address.detail,
           is_default: dto.store_address.is_default ?? true,
-
         });
       } else {
         // Create new
@@ -685,7 +706,6 @@ export class StoreService {
           type: dto.store_address.type,
           detail: dto.store_address.detail,
           is_default: dto.store_address.is_default ?? true,
-
         });
         await this.storeAddressRepo.save(storeAddress);
       }
@@ -755,44 +775,54 @@ export class StoreService {
         status: store.status,
         is_draft: store.is_draft,
       },
-      storeInformation: storeInformation ? {
-        id: storeInformation.id,
-        type: storeInformation.type,
-        name: storeInformation.name,
-        addresses: storeInformation.addresses,
-        tax_code: storeInformation.tax_code,
-      } : null,
-      storeIdentification: storeIdentification ? {
-        id: storeIdentification.id,
-        type: storeIdentification.type,
-        full_name: storeIdentification.full_name,
-        img_front: storeIdentification.img_front,
-        img_back: storeIdentification.img_back,
-      } : null,
-      bankAccount: bankAccount ? {
-        id: bankAccount.id,
-        bank_name: bankAccount.bank_name,
-        account_number: bankAccount.account_number,
-        account_holder: bankAccount.account_holder,
-        is_default: bankAccount.is_default,
-      } : null,
-      storeAddress: storeAddress ? {
-        id: storeAddress.id,
-        recipient_name: storeAddress.recipient_name,
-        phone: storeAddress.phone,
-        street: storeAddress.street,
-        district: storeAddress.district,
-        province: storeAddress.province,
-        country: storeAddress.country,
-        postal_code: storeAddress.postal_code,
-        type: storeAddress.type,
-        detail: storeAddress.detail,
-        is_default: storeAddress.is_default,
-      } : null,
-      storeEmail: storeEmail ? {
-        id: storeEmail.id,
-        email: storeEmail.email,
-      } : null,
+      storeInformation: storeInformation
+        ? {
+            id: storeInformation.id,
+            type: storeInformation.type,
+            name: storeInformation.name,
+            addresses: storeInformation.addresses,
+            tax_code: storeInformation.tax_code,
+          }
+        : null,
+      storeIdentification: storeIdentification
+        ? {
+            id: storeIdentification.id,
+            type: storeIdentification.type,
+            full_name: storeIdentification.full_name,
+            img_front: storeIdentification.img_front,
+            img_back: storeIdentification.img_back,
+          }
+        : null,
+      bankAccount: bankAccount
+        ? {
+            id: bankAccount.id,
+            bank_name: bankAccount.bank_name,
+            account_number: bankAccount.account_number,
+            account_holder: bankAccount.account_holder,
+            is_default: bankAccount.is_default,
+          }
+        : null,
+      storeAddress: storeAddress
+        ? {
+            id: storeAddress.id,
+            recipient_name: storeAddress.recipient_name,
+            phone: storeAddress.phone,
+            street: storeAddress.street,
+            district: storeAddress.district,
+            province: storeAddress.province,
+            country: storeAddress.country,
+            postal_code: storeAddress.postal_code,
+            type: storeAddress.type,
+            detail: storeAddress.detail,
+            is_default: storeAddress.is_default,
+          }
+        : null,
+      storeEmail: storeEmail
+        ? {
+            id: storeEmail.id,
+            email: storeEmail.email,
+          }
+        : null,
       documents: documents || [],
     };
   }
@@ -819,7 +849,6 @@ export class StoreService {
     const address = store.address?.[0] ?? null;
     const followers = store.followers?.length ?? 0;
 
-    
     return {
       store,
       storeInformation: info,
@@ -842,13 +871,14 @@ export class StoreService {
       where: { slug, is_deleted: false },
       relations: [
         'storeInformation',
-    'storeIdentification',
-    'bankAccount',
-    'address', 
-    'products',
-    'products.media',
-    'orders',
-    'followers',
+        'storeIdentification',
+        'bankAccount',
+        'address',
+        'products',
+        'products.media',
+        'orders',
+        'followers',
+        'rating',
       ],
     });
 
@@ -856,7 +886,10 @@ export class StoreService {
     return store;
   }
 
-  async findProductsBySlug(slug: string, categorySlug?: string): Promise<Store | null> {
+  async findProductsBySlug(
+    slug: string,
+    categorySlug?: string
+  ): Promise<Store | null> {
     if (!slug) throw new BadRequestException('Slug không hợp lệ');
 
     const store = await this.storeRepo.findOne({
@@ -873,14 +906,16 @@ export class StoreService {
 
     if (categorySlug) {
       store.products = store.products.filter((p) =>
-        p.categories.some((pc) => pc.category.slug === categorySlug),
+        p.categories.some((pc) => pc.category.slug === categorySlug)
       );
     }
 
     return store;
   }
 
-  async findCategoriesByStoreWithCount(storeId: number): Promise<{ id: number; name: string; slug: string; count: number }[]> {
+  async findCategoriesByStoreWithCount(
+    storeId: number
+  ): Promise<{ id: number; name: string; slug: string; count: number }[]> {
     const products = await this.productRepo.find({
       where: { store: { id: storeId } },
       relations: ['categories', 'categories.category'],
@@ -909,7 +944,49 @@ export class StoreService {
     }));
   }
 
-  
+  // Upload logo
+  async uploadLogo(
+    storeId: number,
+    file: Express.Multer.File,
+    userId: number
+  ): Promise<{ logo_url: string }> {
+    const store = await this.storeRepo.findOne({ where: { id: storeId } });
+    if (!store) throw new NotFoundException('Store not found');
+    if (store.user_id !== userId) {
+      throw new BadRequestException('You do not own this store');
+    }
 
+    // Validate image only
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowed.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Only JPG/PNG allowed');
+    }
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      throw new BadRequestException('File size must be <= 5MB');
+    }
 
+    // Ensure upload dir
+    const uploadDir = path.join(process.cwd(), 'uploads', 'logo');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Generate filename
+    const ext = path.extname(file.originalname) || '.jpg';
+    const filename = `store_${storeId}_${uuidv4()}${ext}`;
+    const fullPath = path.join(uploadDir, filename);
+
+    // Save
+    fs.writeFileSync(fullPath, file.buffer);
+
+    // Relative URL to serve via /uploads
+    const logoUrl = `/uploads/logo/${filename}`;
+
+    // Persist on store
+    store.logo_url = logoUrl;
+    await this.storeRepo.save(store);
+
+    return { logo_url: logoUrl };
+  }
 }

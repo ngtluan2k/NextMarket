@@ -42,7 +42,6 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
     forwardRef(() => ProductCategoryModule),
     forwardRef(() => StoreModule),
     forwardRef(() => ProductReviewsModule), // Để products có thể liên kết reviews
-
   ],
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],

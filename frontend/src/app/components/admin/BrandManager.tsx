@@ -101,11 +101,11 @@ const BrandManager: React.FC = () => {
       console.error('Delete brand failed:', err);
     }
   };
-const toImageUrl = (url?: string) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url; 
-  return `http://localhost:3000${url}`;
-};
+  const toImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `http://localhost:3000${url}`;
+  };
 
   return (
     <div>

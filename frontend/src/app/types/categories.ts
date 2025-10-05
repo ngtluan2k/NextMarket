@@ -7,5 +7,5 @@ export interface Crumb {
   label: string;
   to?: string;
   current?: boolean;
-  name?: string; 
+  name?: string;
 }

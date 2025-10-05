@@ -1,5 +1,11 @@
-import { 
-  IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, Matches, Validate 
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  Matches,
+  Validate,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsFullName } from './validate/full-name.validator';

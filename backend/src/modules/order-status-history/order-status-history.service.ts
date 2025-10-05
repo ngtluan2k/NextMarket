@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderStatusHistory } from './order-status-history.entity';
@@ -17,7 +21,7 @@ export class OrderStatusHistoryService {
     private readonly ordersRepository: Repository<Order>,
 
     @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>
   ) {}
 
   // async create(dto: CreateOrderStatusHistoryDto): Promise<OrderStatusHistory> {
@@ -58,12 +62,14 @@ export class OrderStatusHistoryService {
 
   async update(
     id: number,
-    dto: UpdateOrderStatusHistoryDto,
+    dto: UpdateOrderStatusHistoryDto
   ): Promise<OrderStatusHistory> {
     const history = await this.findOne(id);
 
     if (dto.changedById) {
-      const user = await this.usersRepository.findOneBy({ id: dto.changedById });
+      const user = await this.usersRepository.findOneBy({
+        id: dto.changedById,
+      });
       if (!user) throw new BadRequestException('User không tồn tại');
       history.changedBy = user;
     }

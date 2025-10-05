@@ -88,7 +88,9 @@ export default function LoginModal({
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
+  const [countries, setCountries] = useState<{ name: string; code: string }[]>(
+    []
+  );
 
   // register states
   const [reg, setReg] = useState<RegisterPayload>({
@@ -171,11 +173,14 @@ export default function LoginModal({
     if (!profileRes.ok) throw new Error('Không thể tải thông tin người dùng');
 
     // Lấy danh sách địa chỉ
-    const addressRes = await fetch(`${apiBase}/users/${profileJson.data.id}/addresses`, {
-      headers: {
-        Authorization: `Bearer ${data.access_token}`,
-      },
-    });
+    const addressRes = await fetch(
+      `${apiBase}/users/${profileJson.data.id}/addresses`,
+      {
+        headers: {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      }
+    );
     const addresses = (await addressRes.json()) || [];
 
     // Lấy giỏ hàng
@@ -185,7 +190,10 @@ export default function LoginModal({
     const cartJson = await cartRes.json();
     localStorage.setItem('cart', JSON.stringify(cartJson));
 
-    return { user: { ...profileJson.data, addresses }, access_token: data.access_token };
+    return {
+      user: { ...profileJson.data, addresses },
+      access_token: data.access_token,
+    };
   };
 
   // ---------- submit ----------
@@ -209,16 +217,23 @@ export default function LoginModal({
           },
         });
         const profileJson = await profileRes.json();
-        if (!profileRes.ok) throw new Error('Không thể tải thông tin người dùng');
+        if (!profileRes.ok)
+          throw new Error('Không thể tải thông tin người dùng');
 
-        const addressRes = await fetch(`${apiBase}/users/${profileJson.data.id}/addresses`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const addressRes = await fetch(
+          `${apiBase}/users/${profileJson.data.id}/addresses`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         const addresses = (await addressRes.json()) || [];
 
-        loginData = { user: { ...profileJson.data, addresses }, access_token: token };
+        loginData = {
+          user: { ...profileJson.data, addresses },
+          access_token: token,
+        };
       } else {
         loginData = await callDefaultLogin({ email, password });
       }
@@ -282,7 +297,8 @@ export default function LoginModal({
           })
             .then((res) => res.json())
             .then((profileJson) => {
-              if (!profileJson.data) throw new Error('Không thể tải thông tin người dùng');
+              if (!profileJson.data)
+                throw new Error('Không thể tải thông tin người dùng');
 
               // Lấy danh sách địa chỉ
               fetch(`${apiBase}/users/${profileJson.data.id}/addresses`, {
@@ -369,14 +385,22 @@ export default function LoginModal({
           <div className="mt-2 flex w-full rounded-xl bg-slate-100 p-1">
             <button
               className={`flex-1 rounded-lg py-2 text-sm font-medium transition
-                ${mode === 'login' ? 'bg-white shadow text-sky-700' : 'text-slate-600 hover:text-slate-800'}`}
+                ${
+                  mode === 'login'
+                    ? 'bg-white shadow text-sky-700'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
               onClick={() => setMode('login')}
             >
               Đăng nhập
             </button>
             <button
               className={`flex-1 rounded-lg py-2 text-sm font-medium transition
-                ${mode === 'register' ? 'bg-white shadow text-sky-700' : 'text-slate-600 hover:text-slate-800'}`}
+                ${
+                  mode === 'register'
+                    ? 'bg-white shadow text-sky-700'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
               onClick={() => setMode('register')}
             >
               Đăng ký
@@ -417,7 +441,11 @@ export default function LoginModal({
                     className="rounded-md p-1 text-slate-500 hover:bg-slate-100"
                     onClick={() => setShowPw((v) => !v)}
                   >
-                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPw ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 }
               />
@@ -513,9 +541,10 @@ export default function LoginModal({
                         onClick={() => setReg({ ...reg, gender: g.key })}
                         aria-pressed={active}
                         className={`h-9 rounded-full border px-4 text-sm transition
-                              ${active
-                                ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
-                                : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                              ${
+                                active
+                                  ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
+                                  : 'border-slate-300 text-slate-600 hover:bg-slate-50'
                               }`}
                       >
                         {g.label}
@@ -547,7 +576,9 @@ export default function LoginModal({
               </div>
 
               <div className="group">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Đất nước</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Đất nước
+                </label>
                 <div
                   className="relative flex items-center rounded-xl border border-slate-300 bg-white
                 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100"
@@ -557,7 +588,9 @@ export default function LoginModal({
                   </span>
                   <select
                     value={reg.country}
-                    onChange={(e) => setReg({ ...reg, country: e.target.value })}
+                    onChange={(e) =>
+                      setReg({ ...reg, country: e.target.value })
+                    }
                     className="w-full rounded-xl bg-transparent py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none"
                   >
                     <option value="Vietnam">Vietnam</option>
@@ -655,7 +688,9 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
           type={type}
           autoComplete={autoComplete}
           className={`w-full rounded-xl bg-transparent py-2.5 text-sm text-slate-900 outline-none
-                        ${iconLeft ? 'pl-10' : 'pl-3'} ${rightSlot ? 'pr-10' : 'pr-3'}`}
+                        ${iconLeft ? 'pl-10' : 'pl-3'} ${
+            rightSlot ? 'pr-10' : 'pr-3'
+          }`}
         />
         {rightSlot && <span className="absolute right-2">{rightSlot}</span>}
       </div>

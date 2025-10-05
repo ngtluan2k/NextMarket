@@ -18,19 +18,19 @@ export class PaymentsWebhookController {
 
   constructor(
     private paymentsService: PaymentsService,
-    private vnpayStrategy: VnpayStrategy,
+    private vnpayStrategy: VnpayStrategy
   ) {}
 
   @Get('vnpay/callback')
   async vnpayCallback(
     @Req() req: Express.Request,
-    @Res() res: Express.Response,
+    @Res() res: Express.Response
   ) {
     try {
       const rawQuery = req.url.split('?')[1] || '';
       const params = querystring.parse(rawQuery);
       this.logger.debug(
-        'VNPay GET callback received: ' + JSON.stringify(params),
+        'VNPay GET callback received: ' + JSON.stringify(params)
       );
 
       const result = await this.vnpayStrategy.handleCallback(params, rawQuery);
@@ -52,7 +52,7 @@ export class PaymentsWebhookController {
       const redirectUrl = `${feBaseUrl}/order-success?paymentUuid=${
         result.paymentUuid
       }&responseCode=${params.vnp_ResponseCode}&message=${encodeURIComponent(
-        result.message,
+        result.message
       )}`;
 
       return res.redirect(redirectUrl);
@@ -62,7 +62,7 @@ export class PaymentsWebhookController {
       const feBaseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
 
       const redirectUrl = `${feBaseUrl}/order-success?responseCode=error&message=${encodeURIComponent(
-        err instanceof Error ? err.message : 'Invalid callback',
+        err instanceof Error ? err.message : 'Invalid callback'
       )}`;
 
       return res.redirect(redirectUrl);
@@ -73,7 +73,7 @@ export class PaymentsWebhookController {
   async providerNotify(@Req() req: Express.Request) {
     const body = req.body;
     this.logger.debug(
-      'Provider POST callback received: ' + JSON.stringify(body),
+      'Provider POST callback received: ' + JSON.stringify(body)
     );
 
     if (body.vnp_TxnRef) {
