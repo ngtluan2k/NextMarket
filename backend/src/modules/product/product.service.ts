@@ -428,7 +428,7 @@ async findBySlug(slug: string): Promise<ProductResponseDto> {
       ends_at: pr.ends_at,
     })),
     store: product.store
-      ? { id: product.store.id, name: product.store.name, slug: product.store.slug, logo_url: product.store.logo_url }
+      ? { id: product.store.id, name: product.store.name, slug: product.store.slug }
       : undefined,
   };
 

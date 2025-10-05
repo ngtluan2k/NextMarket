@@ -35,6 +35,8 @@ export class UserProfile {
   @Column({ type: 'datetime', nullable: true })
   created_at!: Date;
 
+  @Column({ type: 'text', nullable: true, default: "Việt Nam"})
+  country!: string;
 @OneToOne(() => User, (user) => user.profile)
 @JoinColumn({ name: 'user_id' })
 user!: User;

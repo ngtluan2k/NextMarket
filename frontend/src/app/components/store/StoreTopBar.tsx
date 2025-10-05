@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { API_BASE_URL } from "../../api/api";
 
 export type StoreInfo = {
   id: string | number;
   name: string;
-  logo_url?: string | null;
+  avatarUrl?: string | null;
   isOfficial?: boolean;
   rating?: number | null;
   followers?: number | null;
@@ -24,7 +23,7 @@ export type StoreTopBarProps = {
 
 const IconSearch = ({ className = "h-5 w-5 text-slate-700" }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-    strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+       strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
     <circle cx="11" cy="11" r="7" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
@@ -53,11 +52,11 @@ export default function StoreTopBar({
       return tabs.map(t => ({ ...t, href: t.href ?? `${computedBase}${t.key === "home" ? "" : `/${t.key}`}` }));
     }
     return [
-      { key: "home", label: "Cửa Hàng", href: `${computedBase}` },
-      { key: "all", label: "Tất Cả Sản Phẩm", href: `${computedBase}/all` },
-      { key: "collections", label: "Bộ Sưu Tập", href: `${computedBase}/collections` },
-      { key: "deals", label: "Giá Sốc Hôm Nay", href: `${computedBase}/deals` },
-      { key: "profile", label: "Hồ Sơ Cửa Hàng", href: `${computedBase}/profile` },
+      { key: "home",        label: "Cửa Hàng",        href: `${computedBase}` },
+      { key: "all",         label: "Tất Cả Sản Phẩm", href: `${computedBase}/all` },
+      { key: "collections", label: "Bộ Sưu Tập",      href: `${computedBase}/collections` },
+      { key: "deals",       label: "Giá Sốc Hôm Nay", href: `${computedBase}/deals` },
+      { key: "profile",     label: "Hồ Sơ Cửa Hàng",  href: `${computedBase}/profile` },
     ];
   }, [tabs, computedBase]);
 
@@ -99,8 +98,8 @@ export default function StoreTopBar({
               {/* Avatar + Info */}
               <div className="flex min-w-0 items-center gap-3">
                 <div className="h-12 w-12 overflow-hidden rounded-full ring-1 ring-slate-200 bg-slate-50">
-                  {info?.logo_url ? (
-                    <img src={info.logo_url} alt={info?.name ?? "store"} className="h-full w-full object-cover" />
+                  {info?.avatarUrl ? (
+                    <img src={info.avatarUrl} alt={info?.name ?? "store"} className="h-full w-full object-cover" />
                   ) : (
                     <div className={`h-full w-full ${loading ? "animate-pulse bg-slate-100" : ""}`} />
                   )}
@@ -187,21 +186,6 @@ export default function StoreTopBar({
   );
 }
 
-function toAbs(p?: string) {
-  if (!p) return '';
-  let s = p.trim();
-
-  if (/^data:/i.test(s)) return s;
-  if (/^https?:\/\//i.test(s)) return s;
-  s = s.replace(/\\/g, '/');
-  if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
-    const idx = s.toLowerCase().lastIndexOf('/uploads/');
-    if (idx >= 0) s = s.slice(idx + 1);
-  }
-  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
-}
-
-
 async function defaultFetchStore(slug: string): Promise<StoreInfo> {
   const res = await fetch(`http://localhost:3000/stores/slug/${slug}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -209,12 +193,12 @@ async function defaultFetchStore(slug: string): Promise<StoreInfo> {
   return {
     id: json.data.id,
     name: json.data.name,
-    logo_url: json.data.logo_url ? toAbs(json.data.logo_url) : null,
+    avatarUrl: json.data.avatarUrl,
     isOfficial: json.data.isOfficial,
     rating: json.data.rating?.length
-      ? json.data.rating.reduce((sum: number, r: any) => sum + r.value, 0) / json.data.rating.length
-      : 0, 
-    followers: json.data.follower?.length ?? 0, 
+    ? json.data.rating.reduce((sum: number, r: any) => sum + r.value, 0) / json.data.rating.length
+    : 0, // 👈
+  followers: json.data.follower?.length ?? 0, // 👈
   };
 }
 

@@ -73,6 +73,7 @@ export class StoreIdentificationService {
         type: 'CCCD',
         full_name: '',
         img_front: filePath,
+        is_draft: true,
       });
     } else {
       if (identification.img_front) {
@@ -102,6 +103,7 @@ export class StoreIdentificationService {
         type: 'CCCD',
         full_name: '',
         img_back: filePath,
+        is_draft: true,
       });
     } else {
       if (identification.img_back) {

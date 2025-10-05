@@ -15,7 +15,7 @@ export default function StoreOwnerDashboard() {
 
   const handleDeleteStore = async () => {
     Modal.confirm({
-      title: ' Xác nhận xóa cửa hàng',
+      title: '⚠️ Xác nhận xóa cửa hàng',
       content: (
         <div>
           <p>

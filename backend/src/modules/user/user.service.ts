@@ -1,5 +1,5 @@
 // user.service.ts
-import { Injectable, BadRequestException, UnauthorizedException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -17,9 +17,6 @@ import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUsernameDto } from './dto/update-username.dto';
 import { VerifyRegisterOtpDto } from './dto/register-otp.dto';
 import { MailService } from '../../common/mail/mail.service';
-import * as fs from 'fs';
-import * as path from 'path';
-
 
 @Injectable()
 export class UserService {
@@ -34,7 +31,7 @@ export class UserService {
     private readonly userProfileRepository: Repository<UserProfile>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   // In-memory OTP store
   private otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
@@ -224,46 +221,5 @@ export class UserService {
     // Tạo tài khoản tái dùng logic register sẵn có
     const { code, ...createPayload } = dto as any;
     return this.register(createPayload as CreateUserDto);
-  }
-
-  // ===== Upload Avatar =====
-  async uploadAvatar(
-    targetUserId: number,
-    currentUserId: number,
-    file: Express.Multer.File,
-  ): Promise<{ avatar_url: string }> {
-    // chỉ cho chính chủ đổi ảnh
-    if (!currentUserId || currentUserId !== targetUserId) {
-      throw new ForbiddenException('You cannot update this user');
-    }
-
-    // validate ảnh
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.mimetype)) {
-      throw new BadRequestException('Only JPG/PNG/WebP allowed');
-    }
-    const MAX = 5 * 1024 * 1024;
-    if (file.size > MAX) {
-      throw new BadRequestException('File size must be <= 5MB');
-    }
-
-    // lưu file
-    const uploadDir = path.join(process.cwd(), 'uploads', 'avatars');
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    const ext = path.extname(file.originalname) || '.jpg';
-    const filename = `user_${targetUserId}_${uuidv4()}${ext}`;
-    fs.writeFileSync(path.join(uploadDir, filename), file.buffer);
-
-    const avatarUrl = `/uploads/avatars/${filename}`;
-
-    // cập nhật profile
-    await this.userProfileRepository
-      .createQueryBuilder()
-      .update()
-      .set({ avatar_url: avatarUrl })
-      .where('user_id = :id', { id: targetUserId })
-      .execute();
-
-    return { avatar_url: avatarUrl };
   }
 }

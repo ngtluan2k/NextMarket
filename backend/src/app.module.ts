@@ -77,7 +77,7 @@ import { FilesModule } from './common/files/files.module';
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: false,
           logging: true,
         };
       },

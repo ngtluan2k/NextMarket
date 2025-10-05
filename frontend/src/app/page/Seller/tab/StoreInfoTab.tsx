@@ -1,5 +1,5 @@
 'use client';
-import React, { use, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Card,
     Descriptions,
@@ -12,10 +12,8 @@ import {
     Image,
     Form,
     Input,
-    Upload,
 } from 'antd';
-import { EditOutlined, CameraOutlined } from '@ant-design/icons';
-import { Camera, Store } from 'lucide-react';
+import { EditOutlined } from '@ant-design/icons';
 import { storeService } from '../../../../service/store.service';
 
 const API_BASE_URL = 'http://localhost:3000';
@@ -23,131 +21,15 @@ const API_BASE_URL = 'http://localhost:3000';
 function toAbs(p?: string) {
     if (!p) return '';
     let s = p.trim();
-
-    if (/^data:/i.test(s)) return s;
     if (/^https?:\/\//i.test(s)) return s;
     s = s.replace(/\\/g, '/');
     if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
         const idx = s.toLowerCase().lastIndexOf('/uploads/');
         if (idx >= 0) s = s.slice(idx + 1);
     }
+    if (!/^\/?uploads\//i.test(s)) s = `uploads/${s.replace(/^\/+/, '')}`;
     return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
 }
-
-// Component Avatar Upload
-const StoreAvatarUpload = ({
-    logoUrl,
-    onLogoChange,
-    disabled = false,
-    storeId
-}: {
-    logoUrl?: string;
-    onLogoChange: (url: string) => void;
-    disabled?: boolean;
-    storeId?: number;
-}) => {
-    const [uploading, setUploading] = useState(false);
-    const[previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const displayUrl = previewUrl || logoUrl;
-
-    useEffect(() => {
-        return () => {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
-        };
-    }, [previewUrl]);
-
-    const handleUpload = async (file: File) => {
-        setUploading(true);
-        const temURL =URL.createObjectURL(file);
-        setPreviewUrl(temURL);
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch(`${API_BASE_URL}/stores/${storeId}/upload-logo`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => null);
-                throw new Error(err?.message || 'Upload failed');
-            }
-
-            const result = await response.json();
-            onLogoChange(result.data.logo_url);
-            setPreviewUrl(null);
-            message.success('Cập nhật logo thành công!');
-        } catch (error) {
-            console.error('Upload error:', error);
-            message.error('Cập nhật logo thất bại');
-            setPreviewUrl(null);
-        } finally {
-            setUploading(false);
-        }
-    };
-    return (
-        <div className="relative h-24 w-24">
-            <div className="h-24 w-24 rounded-full bg-slate-100 border border-slate-200 grid place-items-center text-slate-400 overflow-hidden">
-                {logoUrl ? (
-                    <img
-                        src={toAbs(displayUrl)}
-                        alt="Store Logo"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                        }}
-                    />
-                ) : (
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                        <path
-                            d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                        />
-                        <path
-                            d="M3 21a9 9 0 1 1 18 0"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                        />
-                    </svg>
-                )}
-            </div>
-            <button
-                type="button"
-                disabled={disabled || uploading}
-                className="absolute bottom-0 right-0 rounded-full bg-white border border-slate-200 p-2 shadow hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Đổi logo"
-                onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) {
-                            const previewUrl = URL.createObjectURL(file);
-                            onLogoChange(previewUrl); // Show preview immediately
-                            handleUpload(file);
-                        }
-                    };
-                    input.click();
-                }}
-            >
-                {uploading ? (
-                    <Spin size="small" />
-                ) : (
-                    <Camera className="h-4 w-4 text-slate-600" />
-                )}
-            </button>
-        </div>
-    );
-};
 
 export default function StoreInfoTab() {
     const [loading, setLoading] = useState(false);
@@ -188,7 +70,6 @@ export default function StoreInfoTab() {
     useEffect(() => {
         refresh();
     }, []);
-
 
     if (loading) {
         return (
@@ -385,9 +266,6 @@ export default function StoreInfoTab() {
             message.error(e?.response?.data?.message || 'Cập nhật thất bại');
         }
     };
-    const handleLogoChange = (newLogoUrl: string) => {
-        storeForm.setFieldsValue({ logo_url: newLogoUrl });
-    };
 
     return (
         <div className="p-6">
@@ -409,86 +287,50 @@ export default function StoreInfoTab() {
 
             <Card title={`Cửa hàng ${store?.id} - ${store?.name ?? '-'}`}>
                 {!storeEdit ? (
-                    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-6 items-start">
-                        {/* Avatar Section */}
-                        <div className="flex flex-col items-center">
-                            <StoreAvatarUpload
-                                logoUrl={store?.logo_url}
-                                onLogoChange={handleLogoChange}
-                                disabled={true}
-                                storeId={store?.id}
-                            />
-                            <p className="text-xs text-gray-500 mt-2 text-center">
-                                Logo cửa hàng
-                            </p>
-                        </div>
-
-                        {/* Store Info */}
-                        <div className="flex-1">
-                            <Descriptions bordered column={2} size="middle">
-                                <Descriptions.Item label="ID">{store?.id}</Descriptions.Item>
-                                <Descriptions.Item label="Trạng thái">
-                                    <Tag color={store?.status === 'active' ? 'green' : store?.status === 'suspended' ? 'red' : 'orange'}>
-                                        {store?.status}
-                                    </Tag>
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Email">{store?.email || '-'}</Descriptions.Item>
-                                <Descriptions.Item label="SĐT">{store?.phone || '-'}</Descriptions.Item>
-                                <Descriptions.Item label="Slug">{store?.slug || '-'}</Descriptions.Item>
-                                <Descriptions.Item label="Followers">{followers ?? 0}</Descriptions.Item>
-                                <Descriptions.Item label="Mô tả" span={2}>{store?.description || '-'}</Descriptions.Item>
-                                <Descriptions.Item label="Rating TB">{rating?.average?.toFixed?.(2) ?? 0}</Descriptions.Item>
-                                <Descriptions.Item label="Số lượt đánh giá">{rating?.total ?? 0}</Descriptions.Item>
-                                <Descriptions.Item label="Tạo lúc">
-                                    {store?.created_at ? new Date(store.created_at).toLocaleString() : '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Cập nhật">
-                                    {store?.updated_at ? new Date(store.updated_at).toLocaleString() : '-'}
-                                </Descriptions.Item>
-                            </Descriptions>
-                        </div>
-                    </div>
+                    <Descriptions bordered column={2} size="middle">
+                        <Descriptions.Item label="ID">{store?.id}</Descriptions.Item>
+                        <Descriptions.Item label="Trạng thái">
+                            <Tag color={store?.status === 'active' ? 'green' : store?.status === 'suspended' ? 'red' : 'orange'}>
+                                {store?.status}
+                            </Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Email">{store?.email || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="SĐT">{store?.phone || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="Slug">{store?.slug || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="Followers">{followers ?? 0}</Descriptions.Item>
+                        <Descriptions.Item label="Mô tả" span={2}>{store?.description || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="Rating TB">{rating?.average?.toFixed?.(2) ?? 0}</Descriptions.Item>
+                        <Descriptions.Item label="Số lượt đánh giá">{rating?.total ?? 0}</Descriptions.Item>
+                        <Descriptions.Item label="Tạo lúc">
+                            {store?.created_at ? new Date(store.created_at).toLocaleString() : '-'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Cập nhật">
+                            {store?.updated_at ? new Date(store.updated_at).toLocaleString() : '-'}
+                        </Descriptions.Item>
+                    </Descriptions>
                 ) : (
-                    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-6 items-start">
-                        {/* Avatar Section */}
-                        <div className="flex flex-col items-center">
-                            <StoreAvatarUpload
-                                logoUrl={storeForm.getFieldValue('logo_url') || store?.logo_url}
-                                onLogoChange={handleLogoChange}
-                                disabled={false}
-                                storeId={store?.id}
-                            />
-                            <p className="text-xs text-gray-500 mt-2 text-center">
-                                Nhấn để đổi logo
-                            </p>
+                    <Form form={storeForm} layout="vertical">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Form.Item name="name" label="Tên cửa hàng" rules={[{ required: true, message: 'Nhập tên' }]}>
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="slug" label="Slug" rules={[{ required: true, message: 'Nhập slug' }]}>
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="email" label="Email">
+                                <Input type="email" disabled />
+                            </Form.Item>
+                            <Form.Item name="phone" label="SĐT">
+                                <Input disabled />
+                            </Form.Item>
+                            <Form.Item name="logo_url" label="Logo URL">
+                                <Input />
+                            </Form.Item>
+                            <Form.Item className="md:col-span-2" name="description" label="Mô tả">
+                                <Input.TextArea rows={3} />
+                            </Form.Item>
                         </div>
-
-                        {/* Form Section */}
-                        <div className="flex-1">
-                            <Form form={storeForm} layout="vertical">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Form.Item name="name" label="Tên cửa hàng" rules={[{ required: true, message: 'Nhập tên' }]}>
-                                        <Input />
-                                    </Form.Item>
-                                    <Form.Item name="slug" label="Slug" rules={[{ required: true, message: 'Nhập slug' }]}>
-                                        <Input />
-                                    </Form.Item>
-                                    <Form.Item name="email" label="Email">
-                                        <Input type="email" disabled />
-                                    </Form.Item>
-                                    <Form.Item name="phone" label="SĐT">
-                                        <Input disabled />
-                                    </Form.Item>
-                                    <Form.Item name="logo_url" label="Logo URL" className="hidden">
-                                        <Input />
-                                    </Form.Item>
-                                    <Form.Item className="md:col-span-2" name="description" label="Mô tả">
-                                        <Input.TextArea rows={3} />
-                                    </Form.Item>
-                                </div>
-                            </Form>
-                        </div>
-                    </div>
+                    </Form>
                 )}
 
                 <Divider />
@@ -497,7 +339,7 @@ export default function StoreInfoTab() {
                 <div className="flex items-center justify-between mb-2">
                     <h4 className="text-base font-semibold">Thông tin pháp lý</h4>
                     {!bizEdit ? (
-                        <Button type="primary" icon={<EditOutlined />} onClick={startBizEdit}>Sửa</Button>
+                        <Button type="primary" icon={<EditOutlined />}>Sửa</Button>
                     ) : (
                         <Space>
                             <Button size="small" onClick={() => setBizEdit(false)}>Hủy</Button>
@@ -533,7 +375,7 @@ export default function StoreInfoTab() {
                 <div className="flex items-center justify-between mb-2">
                     <h4 className="text-base font-semibold">Định danh</h4>
                     {!idenEdit ? (
-                        <Button type="primary" icon={<EditOutlined />} onClick={startIdenEdit}>Sửa</Button>
+                        <Button type="primary" icon={<EditOutlined />}>Sửa</Button>
                     ) : (
                         <Space>
                             <Button size="small" onClick={() => setIdenEdit(false)}>Hủy</Button>
@@ -573,7 +415,7 @@ export default function StoreInfoTab() {
                 <div className="flex items-center justify-between mb-2">
                     <h4 className="text-base font-semibold">Địa chỉ</h4>
                     {!addrEdit ? (
-                        <Button type="primary" icon={<EditOutlined />} onClick={startAddrEdit}>Sửa</Button>
+                        <Button type="primary" icon={<EditOutlined />}>Sửa</Button>
                     ) : (
                         <Space>
                             <Button size="small" onClick={() => setAddrEdit(false)}>Hủy</Button>
@@ -624,7 +466,7 @@ export default function StoreInfoTab() {
                 <div className="flex items-center justify-between mb-2">
                     <h4 className="text-base font-semibold">Tài khoản ngân hàng</h4>
                     {!bankEdit ? (
-                        <Button type="primary" icon={<EditOutlined />} onClick={startBankEdit}>Sửa</Button>
+                        <Button type="primary" icon={<EditOutlined />}>Sửa</Button>
                     ) : (
                         <Space>
                             <Button size="small" onClick={() => setBankEdit(false)}>Hủy</Button>
