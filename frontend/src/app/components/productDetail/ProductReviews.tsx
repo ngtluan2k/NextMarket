@@ -100,6 +100,14 @@ const filtered = useMemo(() => {
     !url ? 'https://via.placeholder.com/220x220?text=No+Image' :
     url.startsWith('http') ? url : `http://localhost:3000/${url.replace(/^\/+/, '')}`;
 
+    const getInitials = (name?: string) => {
+  if (!name) return 'NA';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase(); // tên 1 từ, lấy 2 ký tự đầu
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase(); // tên nhiều từ, lấy chữ cái đầu và cuối
+};
+
+
  return (
   <section className={`rounded-2xl bg-white p-5 ring-1 ring-slate-200 ${className}`}>
     <h3 className="text-lg font-semibold text-slate-900">Khách hàng đánh giá</h3>
@@ -207,16 +215,21 @@ const filtered = useMemo(() => {
 
       {!loading && filtered.map(r => (
         <article key={r.id} className="grid grid-cols-[40px,1fr] gap-3 py-4">
-          {/* Avatar */}
-          <div className="mt-1">
-            {r.author?.avatarUrl ? (
-              <img src={r.author.avatarUrl} className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200" alt="" />
-            ) : (
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-[13px] font-semibold text-slate-500">
-                {(r.author?.name || 'NA').slice(0, 2).toUpperCase()}
-              </div>
-            )}
-          </div>
+{/* Avatar */}
+<div className="mt-1">
+  {r.author?.avatarUrl ? (
+    <img
+      src={r.author.avatarUrl}
+      className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200"
+      alt={r.author?.name || 'User'}
+    />
+  ) : (
+    <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-[13px] font-semibold text-slate-500">
+      {getInitials(r.author?.name)}
+    </div>
+  )}
+</div>
+
 
           {/* Content */}
           <div className="min-w-0">

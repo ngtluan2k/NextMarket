@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { API_BASE_URL } from '../../api/api';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { API_BASE_URL } from "../../api/api";
+import { storeService } from "../../../service/store.service";
 
 export type StoreInfo = {
   id: string | number;
@@ -54,7 +55,8 @@ export default function StoreTopBar({
   const [q, setQ] = useState('');
   const { pathname } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
-
+  const [following, setFollowing] = useState<boolean>(false);
+  const [followers, setFollowers] = useState<number | null>(null);
   const computedBase = basePath ?? `/stores/slug/${storeSlug}`;
   const computedTabs = useMemo(() => {
     if (tabs?.length) {
@@ -79,6 +81,43 @@ export default function StoreTopBar({
       },
     ];
   }, [tabs, computedBase]);
+
+
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!info?.id) return;
+      try {
+        const [{ followed }, { count }] = await Promise.all([
+          storeService.isFollowing(Number(info.id)).catch(() => ({ followed: false })),
+          storeService.followersCount(Number(info.id)).catch(() => ({ count: info?.followers ?? 0 })),
+        ]);
+        if (alive) {
+          setFollowing(!!followed);
+          setFollowers(typeof count === "number" ? count : (info?.followers ?? 0));
+        }
+      } catch { }
+    })();
+    return () => { alive = false; };
+  }, [info?.id]);
+
+  const handleToggleFollow = async () => {
+    if (!info?.id) return;
+    try {
+      const { followed } = await storeService.toggleFollow(Number(info.id));
+      setFollowing(!!followed);
+      setFollowers((prev) => {
+        const base = typeof prev === "number" ? prev : (info?.followers ?? 0);
+        return followed ? base + 1 : Math.max(base - 1, 0);
+      });
+    } catch (e) {
+      // có thể hiện message lỗi nếu muốn
+    }
+  };
+
+
+
 
   useEffect(() => {
     let alive = true;
@@ -155,31 +194,22 @@ export default function StoreTopBar({
                     )}
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    {typeof info?.rating === 'number' ? (
-                      <span>⭐ {info.rating.toFixed(1)} / 5</span>
-                    ) : loading ? (
-                      <span className="inline-block h-3 w-20 animate-pulse rounded bg-slate-100" />
-                    ) : null}
-                    {typeof info?.followers === 'number' ? (
-                      <span>
-                        •{' '}
-                        {new Intl.NumberFormat('vi-VN', {
-                          notation: 'compact',
-                        }).format(info.followers)}{' '}
-                        người theo dõi
-                      </span>
-                    ) : loading ? (
-                      <span className="inline-block h-3 w-24 animate-pulse rounded bg-slate-100" />
-                    ) : null}
+                    {typeof followers === "number"
+                      ? <span>• {new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(followers)} người theo dõi</span>
+                      : loading ? <span className="inline-block h-3 w-24 animate-pulse rounded bg-slate-100" /> : null}
                   </div>
                 </div>
               </div>
 
               <button
                 type="button"
-                className="hidden shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 sm:block"
+                onClick={handleToggleFollow}
+                className={[
+                  "hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block",
+                  following ? "bg-slate-200 text-slate-800 hover:bg-slate-300" : "bg-blue-600 text-white hover:bg-blue-700",
+                ].join(" ")}
               >
-                + Theo Dõi
+                {following ? "Đang Theo Dõi" : "+ Theo Dõi"}
               </button>
 
               {showSearch && (
@@ -264,9 +294,11 @@ async function defaultFetchStore(slug: string): Promise<StoreInfo> {
     logo_url: json.data.logo_url ? toAbs(json.data.logo_url) : null,
     isOfficial: json.data.isOfficial,
     rating: json.data.rating?.length
-      ? json.data.rating.reduce((sum: number, r: any) => sum + r.value, 0) /
-        json.data.rating.length
+      ? json.data.rating.reduce((sum: number, r: any) => sum + r.value, 0) / json.data.rating.length
       : 0,
-    followers: json.data.follower?.length ?? 0,
+    followers: json.data.followers?.length ?? 0,
   };
 }
+
+
+  
