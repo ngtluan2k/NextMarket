@@ -44,6 +44,7 @@ import { PaymentTransactionsModule } from './modules/payment-transactions/paymen
 import { ProductReviewsModule } from './modules/product_reviews/product_reviews.module';
 import { FilesModule } from './common/files/files.module';
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
+import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.module';
 
 @Module({
   imports: [
@@ -123,6 +124,7 @@ import { StoreFollowersModule } from './modules/store-follower/store-followers.m
     ProductReviewsModule,
     FilesModule,
     StoreFollowersModule,
+    AffiliateLinksModule,
   ],
 })
 export class AppModule {}
