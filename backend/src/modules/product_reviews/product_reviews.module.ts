@@ -11,9 +11,11 @@ import { Order } from '../orders/order.entity';
 import { Store } from '../store/store.entity';
 import { UserModule } from '../user/user.module';
 import { ProductReviewMedia } from './product_review_media.entity';
+import { Wallet } from '../wallet/wallet.entity';
+import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ProductReview, Product, Order, User, Store, ProductReviewMedia]),
+    TypeOrmModule.forFeature([ProductReview, Product, Order, User, Store, ProductReviewMedia, Wallet, WalletTransaction,]),
     forwardRef(() => UserModule),
     forwardRef(() => ProductModule),
     forwardRef(() => OrdersModule),
