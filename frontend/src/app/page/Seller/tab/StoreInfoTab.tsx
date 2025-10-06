@@ -47,7 +47,7 @@ const StoreAvatarUpload = ({
     storeId?: number;
 }) => {
     const [uploading, setUploading] = useState(false);
-    const[previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const displayUrl = previewUrl || logoUrl;
 
     useEffect(() => {
@@ -60,7 +60,7 @@ const StoreAvatarUpload = ({
 
     const handleUpload = async (file: File) => {
         setUploading(true);
-        const temURL =URL.createObjectURL(file);
+        const temURL = URL.createObjectURL(file);
         setPreviewUrl(temURL);
         try {
             const formData = new FormData();
@@ -432,6 +432,19 @@ export default function StoreInfoTab() {
                                         {store?.status}
                                     </Tag>
                                 </Descriptions.Item>
+
+                                <Descriptions.Item label="Cấp độ">
+                                    <Tag color={
+                                        storeLevel?.level === 'premium' ? 'gold' :
+                                            storeLevel?.level === 'trusted' ? 'blue' : 'green'
+                                    }>
+                                        {storeLevel?.level ?? 'basic'}
+                                    </Tag>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Nâng cấp lúc">
+                                    {storeLevel?.upgraded_at ? new Date(storeLevel.upgraded_at).toLocaleString() : '-'}
+                                </Descriptions.Item>
+
                                 <Descriptions.Item label="Email">{store?.email || '-'}</Descriptions.Item>
                                 <Descriptions.Item label="SĐT">{store?.phone || '-'}</Descriptions.Item>
                                 <Descriptions.Item label="Slug">{store?.slug || '-'}</Descriptions.Item>

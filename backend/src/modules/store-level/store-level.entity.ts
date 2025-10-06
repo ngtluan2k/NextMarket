@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Store } from './../store/store.entity';
+import { StoreLevelEnum } from './store-level.enum';
 
 @Entity('store_levels')
 export class StoreLevel {
@@ -18,7 +19,7 @@ export class StoreLevel {
     enum: ['basic', 'trusted', 'premium'],
     default: 'basic',
   })
-  level!: 'basic' | 'trusted' | 'premium';
+  level!: StoreLevelEnum;
 
   @Column({ type: 'datetime', nullable: true })
   upgraded_at!: Date;

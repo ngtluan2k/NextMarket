@@ -39,7 +39,7 @@ export type RegisterSellerPayload = {
     province?: string;
     country?: string;
     postal_code?: string;
-     type?: string;  
+    type?: string;
     detail?: string;
   };
   bank_account?: {
@@ -98,6 +98,39 @@ class StoreService {
       headers: this.getAuthHeaders(),
     });
     return res.data?.data;
+  }
+
+  async followStore(id: number) {
+    const res = await axios.post(`${API_BASE_URL}/store-followers/${id}/follow`, null, {
+      headers: this.getAuthHeaders(),
+    });
+    return res.data.data; // { followed: true }
+  }
+
+  async unfollowStore(id: number) {
+    const res = await axios.delete(`${API_BASE_URL}/store-followers/${id}/follow`, {
+      headers: this.getAuthHeaders(),
+    });
+    return res.data.data; // { followed: false }
+  }
+
+  async toggleFollow(id: number) {
+    const res = await axios.post(`${API_BASE_URL}/store-followers/${id}/toggle`, null, {
+      headers: this.getAuthHeaders(),
+    });
+    return res.data.data; // { followed: boolean }
+  }
+
+  async isFollowing(id: number) {
+    const res = await axios.get(`${API_BASE_URL}/store-followers/${id}/is-following`, {
+      headers: this.getAuthHeaders(),
+    });
+    return res.data.data; // { followed: boolean }
+  }
+
+  async followersCount(id: number) {
+    const res = await axios.get(`${API_BASE_URL}/store-followers/${id}/count`);
+    return res.data.data; // { count: number }
   }
 
 }

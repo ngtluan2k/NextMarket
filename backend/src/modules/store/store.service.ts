@@ -33,7 +33,8 @@ import { ProductMedia } from '../product_media/product_media.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import * as fs from 'fs';
 import * as path from 'path';
-
+import { DataSource } from 'typeorm';
+import { StoreLevelEnum } from '../store-level/store-level.enum';
 
 @Injectable()
 export class StoreService {
@@ -44,6 +45,7 @@ export class StoreService {
     @InjectRepository(UserRole) private userRoleRepo: Repository<UserRole>,
     @InjectRepository(StoreLevel)
     private storeLevelRepo: Repository<StoreLevel>,
+    private readonly dataSource: DataSource,
     @InjectRepository(StoreBankAccount)
     private bankAccountRepo: Repository<StoreBankAccount>,
     @InjectRepository(StoreAddress)
@@ -208,7 +210,16 @@ export class StoreService {
       // Gán role nếu submit final
       if (!dto.is_draft) {
         await this.assignSellerRole(userId);
+        await this.storeLevelRepo.upsert(
+          {
+            store_id: savedStore.id,
+            level: StoreLevelEnum.BASIC,
+            upgraded_at: new Date(),
+          },
+          ['store_id'], // unique theo store_id
+        );
       }
+
 
       return {
         store: savedStore,
@@ -300,6 +311,14 @@ export class StoreService {
     // Gán role seller nếu submit final
     if (!dto.is_draft) {
       await this.assignSellerRole(userId);
+      await this.storeLevelRepo.upsert(
+        {
+          store_id: storeId,
+          level: StoreLevelEnum.BASIC,
+          upgraded_at: new Date(),
+        },
+        ['store_id'], 
+      );
     }
 
     const updatedStore = await this.storeRepo.findOne({
@@ -484,6 +503,7 @@ export class StoreService {
     }
 
     store.is_deleted = false;
+    store.deleted_at = null;
     // Tùy chính sách: đưa về 'inactive' để admin/seller kích hoạt lại
     if (store.status === 'closed') {
       store.status = 'active';
