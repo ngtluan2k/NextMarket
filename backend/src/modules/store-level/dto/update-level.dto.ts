@@ -1,14 +1,16 @@
 import { IsEnum, IsOptional, IsDateString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { StoreLevelEnum } from '../../store-level/store-level.enum';
 
 export class UpdateLevelDto {
-  @ApiPropertyOptional({
-    description: 'Cấp độ store',
-    enum: ['basic', 'trusted', 'premium'],
+  @ApiPropertyOptional({ 
+    description: 'Cấp độ store', 
+    enum: StoreLevelEnum,
+    example: StoreLevelEnum.BASIC  
   })
   @IsOptional()
-  @IsEnum(['basic', 'trusted', 'premium'])
-  level?: 'basic' | 'trusted' | 'premium';
+  @IsEnum(StoreLevelEnum)
+  level?: StoreLevelEnum;
 
   @ApiPropertyOptional({ description: 'Thời gian nâng cấp' })
   @IsOptional()

@@ -1,15 +1,9 @@
 import { Store } from './../store/store.entity';
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  Generated,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated,Unique } from 'typeorm';
 import { User } from './../user/user.entity';
 
 @Entity('store_followers')
+@Unique(['user_id', 'store_id'])
 export class StoreFollower {
   @PrimaryGeneratedColumn()
   id!: number;
