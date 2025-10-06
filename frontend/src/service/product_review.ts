@@ -20,6 +20,11 @@ export interface CreateProductReviewDto {
   comment?: string;
 }
 
+export interface UpdateProductReviewDto {
+  rating?: number;
+  comment?: string;
+}
+
 export interface ReviewMedia {
   file: File;
   type?: "image" | "video"; // optional, backend tự detect
@@ -68,6 +73,38 @@ export async function createProductReview(
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.message || "Failed to create review");
+  }
+
+  return res.json();
+}
+
+export async function updateProductReview(
+  reviewId: number,
+  dto: UpdateProductReviewDto,
+  mediaFiles?: File[]
+) {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("No access token found");
+
+  const formData = new FormData();
+  if (dto.rating !== undefined) formData.append("rating", String(dto.rating));
+  if (dto.comment !== undefined) formData.append("comment", dto.comment);
+
+  if (mediaFiles && mediaFiles.length > 0) {
+    mediaFiles.forEach((file) => formData.append("media", file));
+  }
+
+  const res = await fetch(`http://localhost:3000/product-reviews/${reviewId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || "Failed to update review");
   }
 
   return res.json();

@@ -100,6 +100,60 @@ export class ProductReviewsService {
     return savedReview;
   }
 
+  async updateReview(
+    userId: number,
+    reviewId: number,
+    dto: { rating?: number; comment?: string },
+    media?: { url: string; type: 'image' | 'video' }[]
+  ): Promise<ProductReview> {
+    // 1. Lấy review
+    const review = await this.reviewRepo.findOne({
+      where: { id: reviewId },
+      relations: ['user', 'product', 'media'],
+    });
+    if (!review) throw new NotFoundException('Review không tồn tại');
+    if (review.user.id !== userId)
+      throw new BadRequestException('Bạn không có quyền sửa review này');
+
+    // 2. Cập nhật rating và comment nếu có
+    if (dto.rating !== undefined) review.rating = dto.rating;
+    if (dto.comment !== undefined) review.comment = dto.comment;
+
+    // 3. Cập nhật media nếu có
+    if (media) {
+      // Xóa media cũ
+      if (review.media?.length) {
+        await this.reviewMediaRepo.delete({ review: { id: reviewId } });
+      }
+
+      // Thêm media mới
+      const mediaEntities = media.map((m) =>
+        this.reviewMediaRepo.create({ review, url: m.url, type: m.type })
+      );
+      await this.reviewMediaRepo.save(mediaEntities);
+      review.media = mediaEntities;
+    }
+
+    // 4. Lưu review
+    const savedReview = await this.reviewRepo.save(review);
+
+    // 5. Update rating trung bình cho product
+    await this.updateProductStats(review.product.id);
+
+    // 6. Lấy lại product kèm store
+    const product = await this.productRepo.findOne({
+      where: { id: review.product.id },
+      relations: ['store'],
+    });
+
+    // 7. Update store stats nếu có
+    if (product?.store?.id) {
+      await this.updateStoreStats(product.store.id);
+    }
+
+    return savedReview;
+  }
+
   private async updateProductStats(productId: number) {
     const { avg, count } = await this.reviewRepo
       .createQueryBuilder('r')
@@ -137,31 +191,34 @@ export class ProductReviewsService {
     });
   }
 
-   async getReviews(productId: number, page: number, pageSize: number) {
-  const [reviews, total] = await this.reviewRepo.findAndCount({
-    where: { product: { id: productId } },
-    relations: ['user', 'user.profile', 'media'],
-    order: { createdAt: 'DESC' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+  async getReviews(productId: number, page: number, pageSize: number) {
+    const [reviews, total] = await this.reviewRepo.findAndCount({
+      where: { product: { id: productId } },
+      relations: ['user', 'user.profile', 'media'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
 
-  const mapped = reviews.map((r) => ({
-    id: r.id,
-    rating: r.rating,
-    title: undefined, // entity hiện tại không có
-    body: r.comment,
-    images: r.media?.map((m) => m.url) || [],
-    author: r.user?.profile
-      ? { name: r.user.profile.full_name, avatarUrl: r.user.profile.avatar_url }
-      : undefined,    variantText: undefined, // chưa có variant
-    verifiedPurchase: undefined, // chưa có
-    createdAt: r.createdAt,
-    helpfulCount: undefined, // chưa có
-    commentCount: undefined, // chưa có
-  }));
+    const mapped = reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      title: undefined, // entity hiện tại không có
+      body: r.comment,
+      images: r.media?.map((m) => m.url) || [],
+      author: r.user?.profile
+        ? {
+            name: r.user.profile.full_name,
+            avatarUrl: r.user.profile.avatar_url,
+          }
+        : undefined,
+      variantText: undefined, // chưa có variant
+      verifiedPurchase: undefined, // chưa có
+      createdAt: r.createdAt,
+      helpfulCount: undefined, // chưa có
+      commentCount: undefined, // chưa có
+    }));
 
-  return { reviews: mapped, total };
-}
-
+    return { reviews: mapped, total };
+  }
 }

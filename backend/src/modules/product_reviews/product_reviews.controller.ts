@@ -6,7 +6,11 @@ import {
   Req,
   UploadedFiles,
   UseInterceptors,
-   Get, Param, Query, ParseIntPipe
+  Get,
+  Param,
+  Query,
+  ParseIntPipe,
+  Patch,
 } from '@nestjs/common';
 import { ProductReviewsService } from './product_reviews.service';
 import { CreateProductReviewDto } from './dto/create-product_review.dto';
@@ -63,13 +67,53 @@ export class ProductReviewsController {
   async getReviews(
     @Param('id', ParseIntPipe) productId: number,
     @Query('page') page = '1',
-    @Query('pageSize') pageSize = '5',
+    @Query('pageSize') pageSize = '5'
   ) {
     const pageNum = parseInt(page, 10);
     const size = parseInt(pageSize, 10);
 
-    const { reviews, total } = await this.reviewsService.getReviews(productId, pageNum, size);
+    const { reviews, total } = await this.reviewsService.getReviews(
+      productId,
+      pageNum,
+      size
+    );
 
     return { data: reviews, total };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':reviewId')
+  @UseInterceptors(
+    FilesInterceptor('media', 10, {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/product_review';
+          if (!existsSync(uploadPath))
+            mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    })
+  )
+  async update(
+    @Req() req: any,
+    @Param('reviewId', ParseIntPipe) reviewId: number,
+    @Body() dto: { rating?: number; comment?: string },
+    @UploadedFiles() files: Express.Multer.File[]
+  ) {
+    const user = req.user as any;
+    const media = files?.map((file) => ({
+      url: `/uploads/product_review/${file.filename}`,
+      type: (file.mimetype.startsWith('video') ? 'video' : 'image') as
+        | 'image'
+        | 'video',
+    }));
+
+    return this.reviewsService.updateReview(user.userId, reviewId, dto, media);
   }
 }

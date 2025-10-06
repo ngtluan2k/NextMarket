@@ -61,6 +61,7 @@ export type OrderSummary = {
     qty: number;
     price?: number;
     isReviewed?: boolean;
+    reviewId?: number | null;
   }>;
   orderItem?: Array<{
     id: string;
@@ -69,6 +70,7 @@ export type OrderSummary = {
       id: number;
       name: string;
       media?: Array<{ url: string; is_primary: boolean }>;
+      reviews?: Array<{ id: number; user: { id: number }; order: { id: string | number } }>;
     };
   }>;
 };
@@ -98,6 +100,7 @@ const getUserIdFromStorage = (): number | null => {
 
 export default function OrdersPage() {
   const [tab, setTab] = useState<OrderTab>('all');
+  const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null
@@ -144,8 +147,12 @@ export default function OrdersPage() {
 
             // check review **cùng order + cùng product**
             const isReviewed = (product?.reviews ?? []).some(
-      (r:any) => r.user.id === userId && r.order.id === o.id
-    );
+              (r: any) => r.user.id === userId && r.order.id === o.id
+            );
+            const existingReview = (product?.reviews ?? []).find(
+              (r: any) => r.user.id === userId && r.order.id === o.id
+            );
+
             return {
               orderItemId: String(it.id),
               productId: product?.id,
@@ -154,6 +161,7 @@ export default function OrdersPage() {
               qty: it.quantity,
               price: Number(it.price ?? 0),
               isReviewed,
+              reviewId: existingReview?.id, 
             };
           }),
         }));
@@ -360,10 +368,11 @@ export default function OrdersPage() {
                           qty: item.qty,
                           price: item.price,
                           isReviewed: item.isReviewed,
+                          reviewId: item.reviewId ?? null,
                         });
                       }
                       return map;
-                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean }>())
+                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean; reviewId?: number | null }>())
                   ).map(([_, v]) => v);
 
                   return (
@@ -422,6 +431,7 @@ export default function OrdersPage() {
                                       it.productId?.toString() ?? null
                                     );
                                     setSelectedOrderId(o.id);
+                                     setSelectedReviewId(it.reviewId ?? null); 
                                   }}
                                 >
                                   {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
@@ -502,6 +512,7 @@ export default function OrdersPage() {
               onClose={() => setOpenReview(false)}
               orderId={Number(selectedOrderId)} // <--- convert sang number
               productId={Number(selectedProductId)} // <--- convert sang number
+              reviewId={selectedReviewId ?? undefined}
               onSubmitted={() => {
                 // Sau khi đánh giá xong có thể refresh danh sách hoặc update item
                 setOpenReview(false);
