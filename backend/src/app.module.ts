@@ -46,6 +46,7 @@ import { FilesModule } from './common/files/files.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { WalletTransactionModule } from './modules/wallet_transaction/wallet_transaction.module';
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
+import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.module';
 
 @Module({
   imports: [
@@ -127,6 +128,7 @@ import { StoreFollowersModule } from './modules/store-follower/store-followers.m
     WalletModule,
     WalletTransactionModule,
     StoreFollowersModule,
+    AffiliateLinksModule,
   ],
 })
 export class AppModule {}

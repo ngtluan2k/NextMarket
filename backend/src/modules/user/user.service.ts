@@ -7,7 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcryptjs';
@@ -281,5 +281,51 @@ export class UserService {
       .execute();
 
     return { avatar_url: avatarUrl };
+  }
+
+  async updateAffiliateStatus(
+    userId: number,
+    isAffiliate: boolean
+  ): Promise<User> {
+    const res: UpdateResult = await this.userRepository.update(userId, {
+      is_affiliate: isAffiliate,
+    });
+    if (res.affected === 0) {
+      throw new NotFoundException(
+        `User with id ${userId} not found or status not changed.`
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user)
+      throw new NotFoundException(
+        `User with id ${userId} not found after update`
+      );
+    return user;
+  }
+
+  async findOne(id: number): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['roles', 'roles.role'],
+    });
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+    return user;
+  }
+
+  async update(id: number, updateData: Partial<User>): Promise<User> {
+    const result = await this.userRepository.update(id, updateData);
+    if (result.affected === 0) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+    return this.findOne(id);
+  }
+
+  async isUserAffiliate(userId: number): Promise<boolean> {
+    const user = await this.findOne(userId);
+    return user.is_affiliate;
   }
 }

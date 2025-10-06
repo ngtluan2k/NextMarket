@@ -44,6 +44,9 @@ export class User {
   @Column({ type: 'datetime', nullable: true })
   updated_at!: Date;
 
+  @Column({ default: false })
+  is_affiliate!: boolean;
+
   @OneToOne(() => Store, (store) => store.user, { cascade: true })
   store!: Store;
 
