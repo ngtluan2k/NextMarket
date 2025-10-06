@@ -1,0 +1,24 @@
+// service/wallet.service.ts
+import axios from 'axios';
+
+export type Wallet = {
+  id: number;
+  balance: number;
+  currency: string;
+  updated_at: string;
+};
+
+export const fetchMyWallet = async (): Promise<Wallet> => {
+  try {
+    const token ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInVzZXJuYW1lIjoidHJ1bmcxMjMxMSIsImVtYWlsIjoidHJ1bmdAZXhhbXBsZS5jb20iLCJyb2xlcyI6WyJBZG1pbiIsInVzZXIiLCJhYmMiLCJTZWxsZXIiXSwicGVybWlzc2lvbnMiOlsiYWRtaW4iLCJhZGRfcGVybWlzc2lvbiIsImFkZF9wZXJtaXNzaW9uX3RvX3JvbGUiLCJhZGRfcm9sZSIsImFzc2lnbl9yb2xlX3RvX3VzZXIiLCJjb3VudF9wZXJtaXNzaW9uX2J5X3JvbGUiLCJkZWxldGVfcGVybWlzc2lvbiIsImRlbGV0ZV9wZXJtaXNzaW9uX2Zyb21fcm9sZSIsImRlbGV0ZV9yb2xlIiwiZGVsZXRlX3JvbGVfZnJvbV91c2VyIiwidXBkYXRlX3Blcm1pc3Npb24iLCJ1cGRhdGVfcm9sZSIsInZpZXdfcGVybWlzc2lvbiIsInZpZXdfcm9sZSIsInZpZXdfdXNlcl9yb2xlIiwidmlld19wcm9kdWN0Iiwidmlld19jYXRlZ29yeSIsImNyZWF0ZV9jYXRlZ29yeSIsImRlbGV0ZV9jYXRlZ29yeSIsInVwZGF0ZV9jYXRlZ29yeSIsImNyZWF0ZV9zdG9yZSIsInZpZXdfc3RvcmUiLCJ1cGRhdGVfc3RvcmUiLCJkZWxldGVfc3RvcmUiLCJ2aWV3X3VzZXIiLCJkZWxldGVfcHJvZHVjdCIsInZpZXdfYnJhbmQiLCJjcmVhdGVfYnJhbmQiLCJ1cGRhdGVfYnJhbmQiLCJkZWxldGVfYnJhbmQiLCJjcmVhdGVfcHJvZHVjdCIsInVwZGF0ZV9wcm9kdWN0Iiwidmlld19vd25fc3RvcmUiLCJyZXN0b3JlX3N0b3JlIiwidmlld19wcm9kdWN0IiwiZGVsZXRlX3Byb2R1Y3QiLCJ2aWV3X3Byb2R1Y3QiLCJkZWxldGVfcHJvZHVjdCIsImFkbWluIiwidmlld19yb2xlIiwiYWRkX3JvbGUiLCJ1cGRhdGVfcm9sZSIsImRlbGV0ZV9yb2xlIiwidmlld19wZXJtaXNzaW9uIiwiYWRkX3Blcm1pc3Npb24iLCJ1cGRhdGVfcGVybWlzc2lvbiIsImRlbGV0ZV9wZXJtaXNzaW9uIiwiY291bnRfcGVybWlzc2lvbl9ieV9yb2xlIiwiYWRkX3Blcm1pc3Npb25fdG9fcm9sZSIsImRlbGV0ZV9wZXJtaXNzaW9uX2Zyb21fcm9sZSIsInZpZXdfdXNlcl9yb2xlIiwiYXNzaWduX3JvbGVfdG9fdXNlciIsImRlbGV0ZV9yb2xlX2Zyb21fdXNlciIsImNyZWF0ZV9zdG9yZSIsInZpZXdfc3RvcmUiLCJ1cGRhdGVfc3RvcmUiLCJkZWxldGVfc3RvcmUiLCJ2aWV3X3Byb2R1Y3QiLCJkZWxldGVfcHJvZHVjdCIsInZpZXdfb3duX3N0b3JlIiwiY3JlYXRlX3Byb2R1Y3QiLCJ1cGRhdGVfcHJvZHVjdCJdLCJpYXQiOjE3NTk3MzIxMTgsImV4cCI6MTc1OTczNTcxOH0.QEMSv-aECeqZ5tt1r1OvdmughWQd6d9mY1M9kr4IDxU"; // hoặc cookie
+    const res = await axios.get('http://localhost:3000/wallets/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  } catch (err) {
+    console.error('Failed to fetch wallet:', err);
+    throw err;
+  }
+};

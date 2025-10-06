@@ -96,16 +96,20 @@ const filtered = useMemo(() => {
     return { total, buckets, avg };
   }, [reviews]);
 
-  const getImageUrl = (url?: string) =>
-    !url ? 'https://via.placeholder.com/220x220?text=No+Image' :
-    url.startsWith('http') ? url : `http://localhost:3000/${url.replace(/^\/+/, '')}`;
-
+const getImageUrl = (url?: string) =>
+  !url
+    ? 'https://via.placeholder.com/220x220?text=No+Image'
+    : url.startsWith('http')
+    ? url
+    : `http://localhost:3000/${url.replace(/^\/+/, '')}`;
     const getInitials = (name?: string) => {
   if (!name) return 'NA';
   const parts = name.trim().split(' ');
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase(); // tên 1 từ, lấy 2 ký tự đầu
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase(); // tên nhiều từ, lấy chữ cái đầu và cuối
 };
+
+
 
 
  return (
@@ -219,16 +223,17 @@ const filtered = useMemo(() => {
 <div className="mt-1">
   {r.author?.avatarUrl ? (
     <img
-      src={r.author.avatarUrl}
-      className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200"
-      alt={r.author?.name || 'User'}
-    />
+  src={getImageUrl(r.author?.avatarUrl)}
+  className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200"
+  alt={r.author?.name || 'User'}
+/>
   ) : (
     <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-[13px] font-semibold text-slate-500">
       {getInitials(r.author?.name)}
     </div>
   )}
 </div>
+
 
 
           {/* Content */}

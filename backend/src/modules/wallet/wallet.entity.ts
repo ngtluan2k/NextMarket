@@ -13,7 +13,16 @@ export class Wallet {
   @Column()
   user_id!: number;
 
-  @Column({ type: 'decimal', default: 0 })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string): number => parseFloat(value),
+    },
+  })
   balance!: number;
 
   @Column({ type: 'varchar', default: 'VND' })

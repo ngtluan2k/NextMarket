@@ -220,7 +220,7 @@ export default function AccountProfileForm({
   const body = (
     <div className={className}>
       <h2 className="text-lg font-semibold text-slate-900 mb-4">
-        Thông tin tài
+        Thông tin tài khoản
       </h2>
 
       {/* Error message */}

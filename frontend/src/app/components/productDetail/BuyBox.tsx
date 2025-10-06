@@ -197,25 +197,38 @@ export default function BuyBox({
           className="flex items-center gap-2 cursor-pointer"
           onClick={handleClickStore}
         >
-          <img
-            src={
-              product.store?.logo_url
-                ? toAbs(product.store.logo_url)
-                : 'https://via.placeholder.com/24'
-            }
-            className="h-12 w-12 rounded-full"
-            alt={product.store?.name ?? 'Store'}
-            onError={(e) => {
-              console.log(
-                'Image load error',
-                e,
-                'URL:',
-                product.store?.logo_url
-              );
-              const target = e.target as HTMLImageElement;
-              target.src = 'https://via.placeholder.com/24'; // fallback chắc chắn hiển thị
-            }}
-          />
+<div className="h-13 w-13 rounded-full ring-1 ring-slate-200 overflow-hidden">
+  {product.store?.logo_url ? (
+    <img
+      src={toAbs(product.store.logo_url)}
+      alt={product.store?.name ?? 'Store'}
+      className="h-full w-full object-cover"
+      onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        target.style.display = 'none'; // hoặc target.src = '' để fallback
+      }}
+    />
+  ) : (
+    <svg
+      className="h-10 w-full text-slate-400 bg-white"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M3 21a9 9 0 1 1 18 0"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  )}
+</div>
+
+
           <div>
             <div className="text-sm font-semibold">
               {product.store?.name ?? 'Official Store'}
