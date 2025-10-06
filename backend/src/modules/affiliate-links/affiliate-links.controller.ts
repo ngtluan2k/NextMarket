@@ -66,12 +66,6 @@ export class AffiliateLinksController {
     return this.service.unregister(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('status/:id')
-  async getStatus(@Request() req: AuthRequest) {
-    const userId = req.user.id;
-    return this.service.getStatus(userId);
-  }
 
   @UseGuards(JwtAuthGuard)
   @Post('create-link')

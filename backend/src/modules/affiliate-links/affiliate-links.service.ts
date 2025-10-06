@@ -125,43 +125,6 @@ export class AffiliateLinksService {
     return { message: 'Successfully unregistered from affiliate program' };
   }
 
-  async getStatus(userId: number) {
-    try {
-      const user = await this.userService.findOne(userId);
-      if (!user) return { error: 'User not found' };
-
-      const affiliateLinks = await this.repository.find({
-        where: { user_id: { id: userId } },
-        relations: ['program_id'],
-      });
-
-      const linkIds = affiliateLinks.map(l => l.id);
-      let commissionsTotal = 0;
-
-      if (linkIds.length > 0) {
-        const commissions = await this.commissionRepository
-          .createQueryBuilder('commission')
-          .select('SUM(commission.amount)', 'total')
-          .where(
-            'commission.link_id IN (:...linkIds) AND commission.status = :status',
-            { linkIds, status: 'paid' }
-          )
-          .getRawOne();
-        commissionsTotal = commissions?.total || 0;
-      }
-
-      return {
-        is_affiliate: user.is_affiliate,
-        affiliate_code: user.code,
-        program_name: affiliateLinks.length > 0 ? affiliateLinks[0].program_id?.name : null,
-        commissions_earned: commissionsTotal,
-      };
-    } catch (error) {
-      console.error('Error in getStatus:', error);
-      return { error: 'Internal server error' };
-    }
-  }
-
   async createAffiliateLink(
     userId: number,
     productId: number,

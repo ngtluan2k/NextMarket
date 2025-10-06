@@ -323,4 +323,9 @@ export class UserService {
     }
     return this.findOne(id);
   }
+
+  async isUserAffiliate(userId: number): Promise<boolean> {
+    const user = await this.findOne(userId);
+    return user.is_affiliate;
+  }
 }
