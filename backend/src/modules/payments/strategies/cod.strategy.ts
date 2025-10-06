@@ -27,14 +27,14 @@ export class CodStrategy {
         order,
         paymentMethod,
         amount: order.totalAmount,
-        status: PaymentStatus.Completed, // Đặt trạng thái thành công
+        status: PaymentStatus.Pending, // Đặt trạng thái thành công
         paidAt: new Date(),
       });
       await manager.save(payment);
 
       // Cập nhật trạng thái đơn hàng
       const oldStatus = order.status;
-      order.status = 1; // Đặt trạng thái đơn hàng là "Đã thanh toán"
+      order.status = 0; // Đặt trạng thái đơn hàng là "Đã thanh toán"
       await manager.save(order);
 
       // Tạo lịch sử trạng thái đơn hàng

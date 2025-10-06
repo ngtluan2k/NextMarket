@@ -57,7 +57,7 @@ export class PaymentsService {
     });
     if (!order) throw new NotFoundException('Order not found');
 
-    if (order.status === 1) {
+    if (order.status === 0) {
       throw new ConflictException('Order already paid');
     }
 

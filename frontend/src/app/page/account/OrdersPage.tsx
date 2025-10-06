@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
+import ReviewModal from '../../components/account/ReviewModal';
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -53,11 +54,22 @@ export type OrderSummary = {
   createdAt?: string | number | Date;
   totalPrice?: number;
   items: Array<{
+    productId?: number;
     id: string;
     name: string;
     image?: string;
     qty: number;
     price?: number;
+    isReviewed?: boolean;
+  }>;
+  orderItem?: Array<{
+    id: string;
+    quantity: number;
+    product?: {
+      id: number;
+      name: string;
+      media?: Array<{ url: string; is_primary: boolean }>;
+    };
   }>;
 };
 
@@ -86,6 +98,12 @@ const getUserIdFromStorage = (): number | null => {
 
 export default function OrdersPage() {
   const [tab, setTab] = useState<OrderTab>('all');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null
+  );
+
+  const [openReview, setOpenReview] = useState(false);
   const [q, setQ] = useState('');
   const [submittedQ, setSubmittedQ] = useState('');
   const [loading, setLoading] = useState(true);
@@ -108,7 +126,7 @@ export default function OrdersPage() {
       try {
         // Lấy dữ liệu từ backend
         const res = await orderService.getOrdersByUser(userId);
-
+        console.log('Orders fetched:', res);
         // Map dữ liệu backend về OrderSummary
         const items: OrderSummary[] = (res as any[]).map((o) => ({
           id: String(o.id),
@@ -117,14 +135,29 @@ export default function OrdersPage() {
           status: mapStatus(Number(o.status)),
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
-          items: (o.orderItem ?? []).map((it: any) => ({
-            id: String(it.id),
-            name: it.name,
-            image: it.image_url,
-            qty: it.quantity,
-            price: Number(it.price ?? 0),
-          })),
+          items: (o.orderItem ?? []).map((it: any) => {
+            const product = it.product;
+            const image =
+              product?.media?.find((m: any) => m.is_primary)?.url ||
+              product?.media?.[0]?.url ||
+              undefined;
+
+            // check review **cùng order + cùng product**
+            const isReviewed = (product?.reviews ?? []).some(
+      (r:any) => r.user.id === userId && r.order.id === o.id
+    );
+            return {
+              orderItemId: String(it.id),
+              productId: product?.id,
+              name: product?.name ?? it.name,
+              image: image ? `http://localhost:3000${image}` : undefined,
+              qty: it.quantity,
+              price: Number(it.price ?? 0),
+              isReviewed,
+            };
+          }),
         }));
+
         // Filter theo tab
         let filteredItems = items;
         if (tab !== 'all') {
@@ -312,107 +345,141 @@ export default function OrdersPage() {
           {!loading && orders.length > 0 && (
             <>
               <ul className="space-y-3">
-                {orders.map((o) => (
-                  <li
-                    key={o.id}
-                    className="rounded-xl border border-slate-200 p-4"
-                  >
-                    {/* Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm text-slate-700">
-                        <span className="font-medium">Mã đơn:</span> {o.code}
-                        {o.storeName ? (
-                          <span className="ml-3 text-slate-500">
-                            | {o.storeName}
-                          </span>
-                        ) : null}
-                        {o.createdAt ? (
-                          <span className="ml-3 text-slate-500">
-                            {new Date(o.createdAt).toLocaleString('vi-VN')}
-                          </span>
-                        ) : null}
-                      </div>
-                      {statusPill(o.status)}
-                    </div>
+                {orders.map((o) => {
+                  const mergedProducts = Array.from(
+                    o.items.reduce((map, item) => {
+                      if (!item.productId) return map;
+                      const existing = map.get(item.productId);
+                      if (existing) {
+                        existing.qty += item.qty;
+                      } else {
+                        map.set(item.productId, {
+                          productId: item.productId, // chính xác
+                          name: item.name,
+                          image: item.image,
+                          qty: item.qty,
+                          price: item.price,
+                          isReviewed: item.isReviewed,
+                        });
+                      }
+                      return map;
+                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean }>())
+                  ).map(([_, v]) => v);
 
-                    {/* Items (hiển thị tối đa 3 ảnh) */}
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {o.items?.slice(0, 3).map((it) => (
-                        <div key={it.id} className="flex gap-3">
-                          <div className="h-16 w-16 overflow-hidden rounded bg-slate-100 ring-1 ring-slate-200">
-                            {it.image ? (
+                  return (
+                    <li
+                      key={o.id}
+                      className="rounded-xl border border-slate-200 p-4"
+                    >
+                      {/* Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm text-slate-700">
+                          <span className="font-medium">Mã đơn:</span> {o.code}
+                          {o.storeName && (
+                            <span className="ml-3 text-slate-500">
+                              | {o.storeName}
+                            </span>
+                          )}
+                          {o.createdAt && (
+                            <span className="ml-3 text-slate-500">
+                              {new Date(o.createdAt).toLocaleString('vi-VN')}
+                            </span>
+                          )}
+                        </div>
+                        {statusPill(o.status)}
+                      </div>
+
+                      {/* Products */}
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {mergedProducts.slice(0, 3).map((it) => (
+                          <div key={it.name} className="flex gap-3">
+                            <div className="h-16 w-16 overflow-hidden rounded bg-slate-100 ring-1 ring-slate-200">
                               <img
-                                src={it.image}
-                                alt=""
+                                src={it.image || '/placeholder.png'}
+                                alt={it.name}
                                 className="h-full w-full object-cover"
                               />
-                            ) : null}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm text-slate-900 line-clamp-2">
-                              {it.name}
                             </div>
-                            <div className="text-xs text-slate-500">
-                              SL: {it.qty}
+                            <div className="min-w-0 flex flex-col">
+                              <div className="text-sm text-slate-900 line-clamp-2">
+                                {it.name}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                SL: {it.qty}
+                              </div>
+
+                              {(o.status === 'delivered' ||
+                                o.status === 'completed') && (
+                                <button
+                                  className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${
+                                    it.isReviewed
+                                      ? 'bg-sky-600 hover:bg-sky-700'
+                                      : 'bg-emerald-600 hover:bg-emerald-700'
+                                  }`}
+                                  onClick={() => {
+                                    setOpenReview(true);
+                                    setSelectedProductId(
+                                      it.productId?.toString() ?? null
+                                    );
+                                    setSelectedOrderId(o.id);
+                                  }}
+                                >
+                                  {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
+                                </button>
+                              )}
                             </div>
                           </div>
+                        ))}
+                      </div>
+
+                      {/* Footer: tổng tiền + hành động */}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                        <div className="text-sm text-slate-600">
+                          Tổng tiền:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {formatVND(o.totalPrice ?? 0)}
+                          </span>
                         </div>
-                      ))}
-                    </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`/account/orders/${o.id}`}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                          >
+                            Chi tiết
+                          </a>
+                          {o.status === 'pending' && (
+                            <a
+                              href={`/checkout?orderId=${o.id}`}
+                              className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
+                            >
+                              Thanh toán
+                            </a>
+                          )}
+                          {o.status === 'shipping' && (
+                            <a
+                              href={`/account/orders/${o.id}#tracking`}
+                              className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
+                            >
+                              Theo dõi
+                            </a>
+                          )}
 
-                    {/* Footer: tổng tiền + hành động */}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                      <div className="text-sm text-slate-600">
-                        Tổng tiền:{' '}
-                        <span className="font-semibold text-slate-900">
-                          {formatVND(o.totalPrice ?? 0)}
-                        </span>
+                          {/* Nút Hủy đơn */}
+                          {['pending'].includes(o.status) && (
+                            <button
+                              onClick={() =>
+                                setCancelModalOrderId(Number(o.id))
+                              }
+                              className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
+                            >
+                              Hủy đơn
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`/account/orders/${o.id}`}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
-                        >
-                          Chi tiết
-                        </a>
-                        {o.status === 'pending' && (
-                          <a
-                            href={`/checkout?orderId=${o.id}`}
-                            className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
-                          >
-                            Thanh toán
-                          </a>
-                        )}
-                        {o.status === 'shipping' && (
-                          <a
-                            href={`/account/orders/${o.id}#tracking`}
-                            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
-                          >
-                            Theo dõi
-                          </a>
-                        )}
-                        {o.status === 'delivered' && (
-                          <a
-                            href={`/account/orders/${o.id}#review`}
-                            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                          >
-                            Đánh giá
-                          </a>
-                        )}
-
-                        {/* Nút Hủy đơn */}
-                        {['pending'].includes(o.status) && (
-                          <button
-                            onClick={() => setCancelModalOrderId(Number(o.id))}
-                            className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
-                          >
-                            Hủy đơn
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
 
               {hasMore && (
@@ -427,6 +494,21 @@ export default function OrdersPage() {
               )}
             </>
           )}
+
+          {/* Review Modal */}
+          {openReview && selectedOrderId && selectedProductId && (
+            <ReviewModal
+              open={openReview}
+              onClose={() => setOpenReview(false)}
+              orderId={Number(selectedOrderId)} // <--- convert sang number
+              productId={Number(selectedProductId)} // <--- convert sang number
+              onSubmitted={() => {
+                // Sau khi đánh giá xong có thể refresh danh sách hoặc update item
+                setOpenReview(false);
+              }}
+            />
+          )}
+
           {/* Modal hủy đơn */}
           {cancelModalOrderId && (
             <CancelReasonModal

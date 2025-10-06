@@ -400,6 +400,8 @@ async findBySlug(slug: string): Promise<ProductResponseDto> {
     description: product.description,
     status: product.status,
     base_price: product.base_price,
+    avg_rating: product.avg_rating,
+    review_count: product.review_count,
     media: product.media.map((m) => ({
       url: m.url,
     })),
