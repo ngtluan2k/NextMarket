@@ -40,8 +40,9 @@ export default function Info({
 
   if (!product) return null;
 
-  const rating = product.rating?.average ?? product.rating ?? 0;
-  const reviewsCount = product.rating?.count ?? product.reviewsCount ?? 0;
+  const rating = Number(product.avg_rating) || 0;
+const reviewsCount = product.review_count ?? 0;
+
   const brand = product.brand?.name ?? product.author_name ?? product.author;
 
   return (

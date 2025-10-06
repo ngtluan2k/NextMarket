@@ -878,7 +878,6 @@ export class StoreService {
         'products.media',
         'orders',
         'followers',
-        'rating',
       ],
     });
 

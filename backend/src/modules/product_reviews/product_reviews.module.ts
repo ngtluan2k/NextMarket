@@ -10,9 +10,10 @@ import { Product } from '../product/product.entity';
 import { Order } from '../orders/order.entity';
 import { Store } from '../store/store.entity';
 import { UserModule } from '../user/user.module';
+import { ProductReviewMedia } from './product_review_media.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ProductReview, Product, Order, User, Store]),
+    TypeOrmModule.forFeature([ProductReview, Product, Order, User, Store, ProductReviewMedia]),
     forwardRef(() => UserModule),
     forwardRef(() => ProductModule),
     forwardRef(() => OrdersModule),

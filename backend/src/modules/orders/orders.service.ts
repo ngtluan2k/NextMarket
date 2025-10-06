@@ -358,9 +358,17 @@ export class OrdersService {
       where: { user: { id: userId } },
       relations: [
         'store',
+        'user',
         'userAddress',
         'voucherUsages',
         'voucherUsages.voucher',
+        'orderItem',
+        'orderItem.product',
+        'orderItem.product.media',
+        'orderItem.variant',
+        'orderItem.product.reviews',       // relation đúng từ entity Product
+        'orderItem.product.reviews.user',  // để biết reviewer là ai
+        'orderItem.product.reviews.order',
       ],
       order: { id: 'DESC' },
     });

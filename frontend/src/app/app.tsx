@@ -17,22 +17,22 @@ import OrdersPage from './page/account/OrdersPage';
 import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
-import { ProductForm } from './components/AddProduct';
-import StoreManagerDetail from './components/admin/StoreManagerDetail';
-import AddressBook from './components/account/AddressBook';
-import AddressCreatePage from './page/account/AddressCreatePage';
-import StoreLayout from './page/StoreLayout';
-import StoreAllProductsTab from './components/store/storetab/StoreAllProductsTab';
-import StoreHomeTab from './components/store/storetab/StoreHomeTab';
-import StoreProfileTab from './components/store/storetab/StoreProfileTab';
-import CheckoutPayment from './page/CheckoutPayment';
-import OrderSuccess from './page/OrderSuccess';
-import FeaturedBrandsPage from './components/FeaturedBrands';
-import BrandPage from './page/BrandPage';
-import SearchPage from './page/SearchPage';
-import CartPage from './page/CartPage';
-import OtpVerifyPage from './page/OtpVerify';
-
+import { ProductForm } from "./components/AddProduct";
+import StoreManagerDetail from "./components/admin/StoreManagerDetail";
+import AddressBook from "./components/account/AddressBook";
+import AddressCreatePage from "./page/account/AddressCreatePage";
+import StoreLayout from "./page/StoreLayout";
+import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
+import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
+import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
+import CheckoutPayment from "./page/CheckoutPayment";
+import OrderSuccess from "./page/OrderSuccess";
+import FeaturedBrandsPage from "./components/FeaturedBrands";
+import BrandPage from "./page/BrandPage";
+import SearchPage from "./page/SearchPage";
+import CartPage from "./page/CartPage";
+import OtpVerifyPage from "./page/OtpVerify";
+import ReviewForm from "./test";
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -120,7 +120,7 @@ const App: React.FC = () => {
 
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
-
+<Route path="/test" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/verify-otp" element={<OtpVerifyPage />} />

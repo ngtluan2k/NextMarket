@@ -97,6 +97,12 @@ export class ProductResponseDto {
   @ApiProperty({ description: 'Base price of the product' })
   base_price?: number;
 
+  @ApiProperty({ description: 'Base price of the product' })
+  avg_rating?: number;
+
+  @ApiProperty({ description: 'Base price of the product' })
+  review_count?: number;
+
   @ApiProperty({
     type: [MediaDto],
     description: 'Product media (images/videos)',

@@ -7,10 +7,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Unique,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
 import { Order } from '../orders/order.entity';
+import { ProductReviewMedia } from './product_review_media.entity';
 
 @Entity('product_reviews')
 @Unique(['order', 'product']) // ✅ chỉ cho 1 review/product trong 1 order
@@ -41,4 +43,7 @@ export class ProductReview {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => ProductReviewMedia, (media) => media.review, { cascade: true })
+  media!: ProductReviewMedia[];
 }
