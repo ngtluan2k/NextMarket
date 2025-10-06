@@ -400,6 +400,8 @@ export class ProductService {
       description: product.description,
       status: product.status,
       base_price: product.base_price,
+      avg_rating: product.avg_rating, // thêm dòng này
+      review_count: product.review_count, // thêm dòng này
       media: product.media.map((m) => ({
         url: m.url,
       })),

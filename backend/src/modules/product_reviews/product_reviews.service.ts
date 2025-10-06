@@ -12,6 +12,9 @@ import { CreateProductReviewDto } from './dto/create-product_review.dto';
 import { User } from '../user/user.entity';
 import { Store } from '../store/store.entity';
 import { ProductReviewMedia } from './product_review_media.entity';
+import { Wallet } from '../wallet/wallet.entity';
+import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class ProductReviewsService {
@@ -25,7 +28,11 @@ export class ProductReviewsService {
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(Store)
-    private readonly storeRepo: Repository<Store>
+    private readonly storeRepo: Repository<Store>,
+    @InjectRepository(Wallet)
+    private readonly walletRepo: Repository<Wallet>,
+    @InjectRepository(WalletTransaction)
+    private readonly walletTransactionRepo: Repository<WalletTransaction>
   ) {}
 
   async create(
@@ -97,6 +104,9 @@ export class ProductReviewsService {
     if (product?.store?.id) {
       await this.updateStoreStats(product.store.id);
     }
+
+    // 7. Thưởng xu cho user vì đã review
+    await this.rewardUserForReview(userId, savedReview.id, 100); // thưởng 100 xu
     return savedReview;
   }
 
@@ -221,4 +231,33 @@ export class ProductReviewsService {
 
     return { reviews: mapped, total };
   }
+
+  async rewardUserForReview(userId: number, reviewId: number, rewardAmount: number) {
+  let wallet = await this.walletRepo.findOne({ where: { user_id: userId } });
+
+  if (!wallet) {
+    wallet = this.walletRepo.create({
+      uuid: crypto.randomUUID(),
+      user_id: userId,
+      balance: 0,
+      currency: 'VND',
+      updated_at: new Date(),
+    });
+    wallet = await this.walletRepo.save(wallet);
+  }
+
+  wallet.balance += rewardAmount;
+  wallet.updated_at = new Date();
+  await this.walletRepo.save(wallet);
+
+  const transaction = this.walletTransactionRepo.create({
+    uuid: crypto.randomUUID(),
+    wallet_id: wallet.id,
+    type: 'review_reward',
+    amount: rewardAmount,
+    reference: `review:${reviewId}`,
+    created_at: new Date(),
+  });
+  await this.walletTransactionRepo.save(transaction);
+}
 }

@@ -43,6 +43,8 @@ import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.
 import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
 import { ProductReviewsModule } from './modules/product_reviews/product_reviews.module';
 import { FilesModule } from './common/files/files.module';
+import { WalletModule } from './modules/wallet/wallet.module';
+import { WalletTransactionModule } from './modules/wallet_transaction/wallet_transaction.module';
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
 import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.module';
 
@@ -123,6 +125,8 @@ import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.
     PaymentTransactionsModule,
     ProductReviewsModule,
     FilesModule,
+    WalletModule,
+    WalletTransactionModule,
     StoreFollowersModule,
     AffiliateLinksModule,
   ],

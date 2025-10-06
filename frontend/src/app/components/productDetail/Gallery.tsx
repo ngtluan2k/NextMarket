@@ -58,8 +58,7 @@ export default function Gallery({
             alt=""
             className="h-full w-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                'https://via.placeholder.com/300x300?text=No+Image';
+              (e.target as HTMLImageElement).src =""
             }}
           />
         ) : (
@@ -93,8 +92,7 @@ export default function Gallery({
                 alt=""
                 className="h-full w-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'https://via.placeholder.com/100x100?text=No+Img';
+                  (e.target as HTMLImageElement).src =""
                 }}
               />
             </button>
