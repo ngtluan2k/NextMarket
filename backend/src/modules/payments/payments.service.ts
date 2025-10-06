@@ -57,9 +57,9 @@ export class PaymentsService {
     });
     if (!order) throw new NotFoundException('Order not found');
 
-    if (order.status === 1) {
-      throw new ConflictException('Order already paid');
-    }
+    // if (order.status === 0) {
+    //   throw new ConflictException('Order already paid');
+    // }
 
     const method = await this.methodsRepo.findOne({
       where: { uuid: dto.paymentMethodUuid },
@@ -163,7 +163,7 @@ export class PaymentsService {
       // 6. Update order status + history
       const order = payment.order;
       const oldStatus = order.status;
-      order.status = 1; // đã thanh toán
+      order.status = 0; // đã thanh toán
       await manager.save(order);
 
       const history = manager.create(OrderStatusHistory, {

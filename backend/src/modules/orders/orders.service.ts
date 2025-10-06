@@ -21,6 +21,7 @@ import {
   historyStatus,
 } from '../order-status-history/order-status-history.entity';
 import { Variant } from '../variant/variant.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 @Injectable()
 export class OrdersService {
   constructor(
@@ -96,7 +97,7 @@ export class OrdersService {
                 createOrderDto.items,
                 createOrderDto.storeId
               );
-            discountTotal += discount;
+            discountTotal += Number(discount) || 0;
             appliedVouchers.push({ voucherId: voucher.id, discount });
           } catch (error) {
             console.error(`❌ Voucher error (${code}):`, error);
@@ -172,6 +173,20 @@ export class OrdersService {
             );
           }
         }
+        // Kiểm tra pricing rules
+      const pricingRule = await manager
+        .createQueryBuilder(PricingRules, 'pricing_rule')
+        .where('pricing_rule.product_id = :productId', { productId: itemDto.productId })
+        .andWhere('pricing_rule.min_quantity <= :quantity', { quantity: itemDto.quantity })
+        .andWhere('pricing_rule.starts_at <= :now', { now: new Date() })
+        .andWhere('pricing_rule.ends_at >= :now', { now: new Date() })
+        .orderBy('pricing_rule.min_quantity', 'DESC') // Ưu tiên quy tắc với số lượng tối thiểu cao hơn
+        .getOne();
+
+      if (pricingRule) {
+        itemPrice = Number(pricingRule.price); // Ghi đè giá bằng pricing rule
+        console.log(`Áp dụng pricing rule cho sản phẩm #${itemDto.productId}: price=${itemPrice}`);
+      }
 
         // Kiểm tra tồn kho trong Inventory
         const inventory = await manager.findOne(Inventory, {
@@ -199,8 +214,8 @@ export class OrdersService {
           variant: variant ?? null,
           quantity: itemDto.quantity,
           price: itemPrice,
-          discount: discountTotal,
-          subtotal: itemDto.quantity * itemPrice - (discountTotal ?? 0),
+          discount: discountTotal / createOrderDto.items.length,
+          subtotal: itemDto.quantity * itemPrice - (discountTotal / createOrderDto.items.length || 0),
         });
 
         console.log('OrderItem created:', orderItem);

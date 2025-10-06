@@ -1,4 +1,6 @@
-interface Voucher {
+// src/types/voucher.ts
+
+export interface Voucher {
   id: number;
   uuid: string;
   code: string;
@@ -26,4 +28,26 @@ interface Voucher {
     id: number;
     name: string;
   };
+}
+
+export interface OrderItem {
+  productId: number;
+  quantity: number;
+  price: number;
+}
+
+// 🏷 Enum mô tả loại giảm giá
+export enum VoucherDiscountType {
+  PERCENTAGE = 0,
+  FIXED = 1,
+  CASH_BACK = 2,
+}
+
+// 🏷 Enum mô tả loại voucher
+export enum VoucherType {
+  SHIPPING = 0,
+  PRODUCT = 1,
+  STORE = 2,
+  CATEGORY = 3,
+  PLATFORM = 4,
 }
