@@ -5,7 +5,7 @@ export class CreateAffiliateCommissionDto {
   linkId!: number;
 
   @IsNumber()
-  orderId!: number;
+  orderItemId!: number;
 
   @IsNumber()
   amount!: number;

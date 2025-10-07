@@ -8,10 +8,12 @@ import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-c
 import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
 import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.module';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
+import { Product } from '../product/product.entity';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AffiliateLink, AffiliateCommission, AffiliateProgram]),
+    TypeOrmModule.forFeature([AffiliateLink, AffiliateCommission, AffiliateProgram, Product, OrderItem]),
     UserModule,
     AffiliateCommissionsModule,
     AffiliateProgramsModule,
