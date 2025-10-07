@@ -21,5 +21,4 @@ export class CreateStoreDto {
   @IsOptional()
   @IsString()
   logo_url?: string;
-
 }

@@ -19,7 +19,9 @@ export default function StoreLayout() {
     const fetchStore = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`http://localhost:3000/stores/slug/${slug}`);
+        const res = await axios.get(
+          `http://localhost:3000/stores/slug/${slug}`
+        );
         setStore(res.data.data); // store object từ backend
       } catch (err) {
         console.error(err);

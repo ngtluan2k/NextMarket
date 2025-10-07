@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import StoreCategorySidebar, { StoreCategory } from "../StoreCategorySidebar";
-import StoreProductsGrid from "../StoreProductsGrid";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import StoreCategorySidebar, { StoreCategory } from '../StoreCategorySidebar';
+import StoreProductsGrid from '../StoreProductsGrid';
 
 export default function StoreAllProductsTab() {
-  const { slug = "" } = useParams<{ slug: string }>();
+  const { slug = '' } = useParams<{ slug: string }>();
   const { search, pathname } = useLocation();
   const navigate = useNavigate();
 
   const params = new URLSearchParams(search);
-  const categorySlug = params.get("category");
+  const categorySlug = params.get('category');
 
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,7 @@ export default function StoreAllProductsTab() {
         const json = await res.json();
         if (alive) setCategories(json.data ?? []);
       } catch (err) {
-        console.error("Failed to fetch categories:", err);
+        console.error('Failed to fetch categories:', err);
       } finally {
         if (alive) setLoading(false);
       }
@@ -37,17 +37,16 @@ export default function StoreAllProductsTab() {
     };
   }, [slug]);
 
-const selectCategory = (newSlug: string | null) => {
-  const p = new URLSearchParams();
+  const selectCategory = (newSlug: string | null) => {
+    const p = new URLSearchParams();
 
-  if (newSlug) {
-    p.set("category", newSlug);
-  }
+    if (newSlug) {
+      p.set('category', newSlug);
+    }
 
-  const query = p.toString();
-  navigate(query ? `${pathname}?${query}` : pathname);
-};
-
+    const query = p.toString();
+    navigate(query ? `${pathname}?${query}` : pathname);
+  };
 
   return (
     <div className="grid grid-cols-1 gap-1 lg:grid-cols-[260px_1fr]">

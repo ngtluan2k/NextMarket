@@ -80,7 +80,7 @@ export interface Product {
       used_quantity?: number;
     }>;
   }>;
-  
+
   pricing_rules?: Array<{
     id: number;
     uuid: string;
@@ -157,8 +157,6 @@ class ProductService {
     return response.data;
   }
 
-
-
   async softDeleteProduct(id: number): Promise<void> {
     await axios.delete(`${API_BASE_URL}/products/${id}`, {
       headers: this.getAuthHeaders(),
@@ -183,29 +181,22 @@ class ProductService {
   }
 
   // Cập nhật draft
-// Cập nhật draft
-async updateProduct(id: number, dto: FormData) {
-  const res = await axios.put(
-    `${API_BASE_URL}/products/${id}`,
-    dto,
-    { headers: this.getAuthHeaders() } // KHÔNG thêm Content-Type
-  );
-  return res.data;
-}
+  // Cập nhật draft
+  async updateProduct(id: number, dto: FormData) {
+    const res = await axios.put(
+      `${API_BASE_URL}/products/${id}`,
+      dto,
+      { headers: this.getAuthHeaders() } // KHÔNG thêm Content-Type
+    );
+    return res.data;
+  }
 
-async updateAndPublishProduct(id: number, dto: FormData) {
-  const res = await axios.put(
-    `${API_BASE_URL}/products/${id}/publish`,
-    dto,
-    { headers: this.getAuthHeaders() }
-  );
-  return res.data;
-}
-
-
-
-
-
+  async updateAndPublishProduct(id: number, dto: FormData) {
+    const res = await axios.put(`${API_BASE_URL}/products/${id}/publish`, dto, {
+      headers: this.getAuthHeaders(),
+    });
+    return res.data;
+  }
 }
 
 export const productService = new ProductService();

@@ -13,7 +13,7 @@ export class ProvincesController {
   @Get(':provinceCode/districts')
   async getDistricts(
     @Param('provinceCode', ParseIntPipe) provinceCode: number,
-    @Query('version') version: 'v1' | 'v2' = 'v1',
+    @Query('version') version: 'v1' | 'v2' = 'v1'
   ) {
     return this.provincesService.getDistricts(provinceCode, version);
   }
@@ -21,7 +21,7 @@ export class ProvincesController {
   @Get('districts/:districtCode/wards')
   async getWards(
     @Param('districtCode', ParseIntPipe) districtCode: number,
-    @Query('version') version: 'v1' | 'v2' = 'v1',
+    @Query('version') version: 'v1' | 'v2' = 'v1'
   ) {
     return this.provincesService.getWards(districtCode, version);
   }

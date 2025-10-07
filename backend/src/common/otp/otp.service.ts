@@ -11,7 +11,11 @@ export class OtpService {
 
   generate(email: string): string {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    this.store.set(email, { code, expiresAt: Date.now() + this.ttlMs, attempts: 0 });
+    this.store.set(email, {
+      code,
+      expiresAt: Date.now() + this.ttlMs,
+      attempts: 0,
+    });
     return code;
   }
 

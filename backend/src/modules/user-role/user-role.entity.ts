@@ -1,7 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { Role } from '../role/role.entity';
-
 
 @Entity('user_roles')
 export class UserRole {
@@ -12,11 +18,11 @@ export class UserRole {
   @Generated('uuid')
   uuid!: string;
 
-  @ManyToOne(() => User, user => user.roles)
+  @ManyToOne(() => User, (user) => user.roles)
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @ManyToOne(() => Role, role => role.userRoles)
+  @ManyToOne(() => Role, (role) => role.userRoles)
   @JoinColumn({ name: 'role_id' })
   role!: Role;
 

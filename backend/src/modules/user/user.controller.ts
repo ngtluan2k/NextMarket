@@ -1,5 +1,15 @@
-import { Controller, Post, Body, Get, Put, Param, ParseIntPipe, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth, } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Put,
+  Param,
+  ParseIntPipe,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
@@ -7,16 +17,21 @@ import { JwtService } from '@nestjs/jwt';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateUsernameDto } from './dto/update-username.dto';
-import { RequestRegisterOtpDto, VerifyRegisterOtpDto } from './dto/register-otp.dto';
-
+import {
+  RequestRegisterOtpDto,
+  VerifyRegisterOtpDto,
+} from './dto/register-otp.dto';
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from '../../common/utils/multer.config';
 
 @ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(
     private readonly userService: UserService,
-    private readonly jwtService: JwtService,
-  ) { }
+    private readonly jwtService: JwtService
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all users' })
@@ -42,7 +57,13 @@ export class UserController {
     const userData = await this.userService.login(dto);
 
     // Tạo JWT
-    const payload = { sub: userData.id, username: userData.username, email: userData.email, roles: userData.roles, permissions: userData.permissions };
+    const payload = {
+      sub: userData.id,
+      username: userData.username,
+      email: userData.email,
+      roles: userData.roles,
+      permissions: userData.permissions,
+    };
     const token = await this.jwtService.signAsync(payload);
 
     return {
@@ -71,7 +92,7 @@ export class UserController {
   @ApiBody({ type: UpdateUserProfileDto })
   async updateUserProfile(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateUserProfileDto,
+    @Body() dto: UpdateUserProfileDto
   ) {
     const updated = await this.userService.updateProfile(id, dto);
     return {
@@ -98,7 +119,7 @@ export class UserController {
   @Put(':id/username')
   async updateUsername(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateUsernameDto,
+    @Body() dto: UpdateUsernameDto
   ) {
     const data = await this.userService.updateUsername(id, dto);
     return { status: 200, message: 'Username updated', data };
@@ -116,5 +137,35 @@ export class UserController {
   async verifyRegisterOtp(@Body() dto: VerifyRegisterOtpDto) {
     const user = await this.userService.verifyRegisterOtp(dto);
     return { message: 'Tạo tài khoản thành công', data: user };
+  }
+  @Post(':id/upload-avatar')
+  @ApiOperation({ summary: 'Upload user avatar' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('file', multerConfig))
+  async uploadAvatar(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any
+  ) {
+    if (!file) {
+      return { status: 400, message: 'No file provided' };
+    }
+    const currentUserId = req.user?.userId ?? req.user?.sub;
+    const data = await this.userService.uploadAvatar(id, currentUserId, file);
+    return { status: 200, message: 'Avatar uploaded', data };
+  }
+
+  @Get(':id/is-affiliate')
+  @ApiOperation({ summary: 'Check if user is an affiliate by ID' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  async checkIsAffiliate(@Param('id', ParseIntPipe) id: number) {
+    const isAffiliate = await this.userService.isUserAffiliate(id);
+    return {
+      status: 200,
+      message: 'Affiliate status checked',
+      data: { is_affiliate: isAffiliate },
+    };
   }
 }

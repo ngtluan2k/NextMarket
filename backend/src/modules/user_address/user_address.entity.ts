@@ -1,5 +1,13 @@
 // user-address.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Generated, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+  OneToMany,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { Order } from '../orders/order.entity';
 
@@ -34,7 +42,6 @@ export class UserAddress {
   @Column()
   district!: string;
 
-
   @Column()
   province!: string;
 
@@ -44,12 +51,16 @@ export class UserAddress {
   @Column({ name: 'postal_code' })
   postalCode!: string;
 
-  @Column({name: 'is_default' , default: true})
+  @Column({ name: 'is_default', default: true })
   isDefault!: boolean;
 
-  @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    name: 'created_at',
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   createdAt!: Date;
 
-  @OneToMany(() => Order, (order) => order.userAddress, {cascade:true})
-  orders!: Order
+  @OneToMany(() => Order, (order) => order.userAddress, { cascade: true })
+  orders!: Order;
 }

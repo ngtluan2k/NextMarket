@@ -17,7 +17,19 @@ import { Inventory } from '../inventory/inventory.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, PaymentMethod, PaymentTransaction, Refund, Order, OrderItem, Variant, Inventory, OrderStatusHistory])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Payment,
+      PaymentMethod,
+      PaymentTransaction,
+      Refund,
+      Order,
+      OrderItem,
+      Variant,
+      Inventory,
+      OrderStatusHistory,
+    ]),
+  ],
   providers: [PaymentsService, CodStrategy, VnpayStrategy, MomoStrategy],
   controllers: [PaymentsController, PaymentsWebhookController],
   exports: [PaymentsService],

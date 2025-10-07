@@ -95,10 +95,10 @@ export const useAddressManagement = () => {
         prev.map((addr) =>
           addr.id === editingAddress.id
             ? {
-              ...addressFormData,
-              id: editingAddress.id,
-              is_default: editingAddress.is_default,
-            }
+                ...addressFormData,
+                id: editingAddress.id,
+                is_default: editingAddress.is_default,
+              }
             : addr
         )
       );
@@ -109,7 +109,7 @@ export const useAddressManagement = () => {
       const newAddress = {
         ...addressFormData,
         // Nếu V2: đảm bảo district rỗng để không lưu sai
-        district: version === 'v2' ? '' : addressFormData.district,
+        district: version === 'v2' ? addressFormData.district : '',
         id: Date.now(),
         is_default: isFirstAddress,
       };
@@ -122,7 +122,7 @@ export const useAddressManagement = () => {
       recipient_name: '',
       phone: '',
       street: '',
-        district: '',
+      district: '',
       province: '',
       ward: '',
       country: 'Vietnam',

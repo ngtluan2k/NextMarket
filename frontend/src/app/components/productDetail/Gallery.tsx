@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Image as ImageIcon } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Image as ImageIcon } from 'lucide-react';
 
 export default function Gallery({
   images,
@@ -24,20 +24,24 @@ export default function Gallery({
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    if (selectedVariantId !== null && variantMap && variantMap[selectedVariantId] !== undefined) {
+    if (
+      selectedVariantId !== null &&
+      variantMap &&
+      variantMap[selectedVariantId] !== undefined
+    ) {
       setIdx(variantMap[selectedVariantId]);
     } else if (list.length > 0) {
-      setIdx(0); 
+      setIdx(0);
     }
   }, [selectedVariantId, variantMap, list]);
 
   const resolveUrl = (u: string) =>
-    u.startsWith("http")
-      ? u
-      : `http://localhost:3000/${u.replace(/^\/+/, "")}`;
+    u.startsWith('http') ? u : `http://localhost:3000/${u.replace(/^\/+/, '')}`;
 
   const current =
-    list.length > 0 ? resolveUrl(list[Math.min(idx, list.length - 1)]) : undefined;
+    list.length > 0
+      ? resolveUrl(list[Math.min(idx, list.length - 1)])
+      : undefined;
 
   return (
     <section
@@ -54,8 +58,7 @@ export default function Gallery({
             alt=""
             className="h-full w-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                "https://via.placeholder.com/300x300?text=No+Image";
+              (e.target as HTMLImageElement).src =""
             }}
           />
         ) : (
@@ -79,7 +82,7 @@ export default function Gallery({
                 }
               }}
               className={`overflow-hidden rounded-lg ring-1 ${
-                idx === i ? "ring-sky-500" : "ring-slate-200"
+                idx === i ? 'ring-sky-500' : 'ring-slate-200'
               }`}
               style={{ height: thumbHeight }}
               aria-label={`Ảnh ${i + 1}`}
@@ -89,8 +92,7 @@ export default function Gallery({
                 alt=""
                 className="h-full w-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://via.placeholder.com/100x100?text=No+Img";
+                  (e.target as HTMLImageElement).src =""
                 }}
               />
             </button>

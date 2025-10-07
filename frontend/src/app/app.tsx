@@ -1,20 +1,20 @@
-"use client"
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { message } from "antd";
-import { SellerRegistration } from "./components/register_seller/SellerRegistration";
-import { AdminDashboard } from "./components/admin/AdminDashboard";
-import { CartProvider } from "./context/CartContext";
-import { AuthProvider } from "./context/AuthContext";
-import Home from "./page/Home";
-import CategoryPage from "./page/CategoryPage";
-import AccountLayout from "./page/account/AccountLayout";
+'use client';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { message } from 'antd';
+import { SellerRegistration } from './components/register_seller/SellerRegistration';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
+import Home from './page/Home';
+import CategoryPage from './page/CategoryPage';
+import AccountLayout from './page/account/AccountLayout';
 // import {SellerDashboard }from './components/register_seller/SellerDashboard';
-import ProductDetailPage from "./page/ProductDetailPage";
-import NotificationsPage from "./page/account/NotificationsPage";
-import ReturnsPage from "./page/account/ReturnsPage";
-import OrdersPage from "./page/account/OrdersPage";
-import ProfilePage from "./page/account/ProfilePage";
+import ProductDetailPage from './page/ProductDetailPage';
+import NotificationsPage from './page/account/NotificationsPage';
+import ReturnsPage from './page/account/ReturnsPage';
+import OrdersPage from './page/account/OrdersPage';
+import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 import { ProductForm } from "./components/AddProduct";
@@ -34,18 +34,27 @@ import CartPage from "./page/CartPage";
 import OtpVerifyPage from "./page/OtpVerify";
 
 
-import UserAddress from './page/UserAddress';
-import ShopXuPage from './components/account/ShopXuPage';
+
 import OrderDetailPage from "./page/account/OrderDetailPage";
 
+import ReviewForm from './test';
+import AffiliateGate from './page/affiliate';
+import AffiliateRegister from './page/affiliate/register';
+import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
+import AffiliatePayment from './page/affiliate/dashboard/tab/affiliatePayment';
+import { AffiliateDashboardLayout } from './page/affiliate/dashboard/MainLayout';
+import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDashboard';
+import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
+import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
+import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
 interface CartProps {
-  showMessage: (type: "success" | "error" | "warning", content: string) => void;
+  showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
 
-  const showMessage: CartProps["showMessage"] = (type, content) => {
+  const showMessage: CartProps['showMessage'] = (type, content) => {
     const localizedContent = {
       success: content,
       error: `Lỗi: ${content}`,
@@ -64,13 +73,18 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/catepage" element={<CategoryPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/products/slug/:slug" element={<ProductDetailPage showMessage={showMessage}/>} />
-          <Route path="/cart" element={<CartPage showMessage={showMessage} />} />
+          <Route
+            path="/products/slug/:slug"
+            element={<ProductDetailPage showMessage={showMessage} />}
+          />
+          <Route
+            path="/cart"
+            element={<CartPage showMessage={showMessage} />}
+          />
           <Route path="/test/home" element={<ProductList />} />
           <Route path="/checkout" element={<CheckoutPayment />} />
-          <Route path="/order/success" element={<OrderSuccess />} />
+          <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/add_product" element={<ProductForm />} />
-          <Route path="/user/address" element={<UserAddress />} />
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -90,39 +104,68 @@ const App: React.FC = () => {
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />
             <Route path="addresses/create" element={<AddressCreatePage />} />
-            <Route path="shop-xu" element={<ShopXuPage />} />
-            
           </Route>
 
           {/* Store Routes */}
           <Route path="/stores/slug/:slug" element={<StoreLayout />}>
             <Route index element={<StoreHomeTab />} />
-            <Route path="/stores/slug/:slug/all" element={<StoreAllProductsTab />} />
-            <Route path="/stores/slug/:slug/profile" element={<StoreProfileTab />} /> 
+            <Route
+              path="/stores/slug/:slug/all"
+              element={<StoreAllProductsTab />}
+            />
+            <Route
+              path="/stores/slug/:slug/profile"
+              element={<StoreProfileTab />}
+            />
           </Route>
 
-        {/* Catch-all Route */}
-        {/* <Route path="/" element={<Home />} /> */}
-        {/* <Route path="/home" element={<Home />} /> */}
-        {/* <Route path="/seller-registration" element={<SellerRegistration />} /> */}
-        {/* <Route path="/category/:slug" element={<CategoryPage />} /> */}
-        {/* <Route path="/admin" element={<AdminDashboard />} /> */}
-        {/* <Route path="/products/slug/:slug" element={<ProductDetailPage />} /> */}
-        {/* <Route path="/cart" element={<Cart showMessage={showMessage} />} /> */}
-        {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
-        <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
-        {/* Brands */}
+          <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
+          {/* Brands */}
           <Route path="/brands" element={<FeaturedBrandsPage />} />
           <Route path="/brands/:brandId" element={<BrandPage />} />
 
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
-
+          <Route path="/test" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/verify-otp" element={<OtpVerifyPage />} />
-      </Routes>
-    </CartProvider>
+
+          <Route path="/affiliate" element={<AffiliateGate />} />
+          <Route path="/affiliate/register" element={<AffiliateRegister />} />
+          <Route element={<AffiliateDashboardLayout />}>
+            <Route
+              path="/affiliate/dashboard"
+              element={<AffiliateDashboard />}
+            />
+            <Route
+              path="/affiliate/dashboard/links"
+              element={<AffiliateLinks />}
+            />
+            <Route
+              path="/affiliate/dashboard/payments"
+              element={<AffiliatePayment />}
+            />
+            <Route
+              path="/affiliate/dashboard/resource"
+              element={<AffiliateResource />}
+            />
+            <Route
+              path="/affiliate/dashboard/setting"
+              element={<AffiliateSettings />}
+            />
+            <Route
+              path="/affiliate/dashboard/notifications"
+              element={<AffiliateNoti />}
+            />
+
+            <Route
+              path="/affiliate/dashboard/support"
+              element={<AffiliatePayment />}
+            />
+          </Route>
+        </Routes>
+      </CartProvider>
     </AuthProvider>
   );
 };

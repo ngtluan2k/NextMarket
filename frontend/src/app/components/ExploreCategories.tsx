@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 
 export type ExploreItem = {
   id: string | number;
@@ -17,12 +17,12 @@ type Props = {
 };
 
 export default function ExploreCategories({
-  title = "Khám phá",
+  title = 'Khám phá',
   items,
   fetchItems,
   onSelect,
   selectedIds = [],
-  className = "",
+  className = '',
 }: Props) {
   const [list, setList] = useState<ExploreItem[]>(items ?? []);
   const [loading, setLoading] = useState<boolean>(!!fetchItems);
@@ -70,14 +70,14 @@ export default function ExploreCategories({
                     key={c.id}
                     className={`px-3 py-1 rounded-full cursor-pointer border-2 ${
                       isSelected
-                        ? "border-[#0a68ff] bg-blue-50"
-                        : "border-slate-300"
+                        ? 'border-[#0a68ff] bg-blue-50'
+                        : 'border-slate-300'
                     }`}
                     onClick={() => onSelect?.(c)}
                   >
                     <span
                       className={`text ${
-                        isSelected ? "text-[#0a68ff]" : "text-slate-800"
+                        isSelected ? 'text-[#0a68ff]' : 'text-slate-800'
                       }`}
                     >
                       {c.name}

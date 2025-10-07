@@ -17,12 +17,23 @@ export class UserAddressController {
   constructor(private readonly userAddressService: UserAddressService) {}
 
   @Post()
-  create(@Param('userId') userId: string, @Body() createUserAddressDto: CreateUserAddressDto) {
+  create(
+    @Param('userId') userId: string,
+    @Body() createUserAddressDto: CreateUserAddressDto
+  ) {
     // Đảm bảo user_id trong DTO khớp với userId từ URL
-    if (createUserAddressDto.user_id && createUserAddressDto.user_id !== +userId) {
-      throw new ForbiddenException('user_id trong payload không khớp với userId trong URL');
+    if (
+      createUserAddressDto.user_id &&
+      createUserAddressDto.user_id !== +userId
+    ) {
+      throw new ForbiddenException(
+        'user_id trong payload không khớp với userId trong URL'
+      );
     }
-    return this.userAddressService.create({ ...createUserAddressDto, userId: +userId });
+    return this.userAddressService.create({
+      ...createUserAddressDto,
+      userId: +userId,
+    });
   }
 
   @Get()

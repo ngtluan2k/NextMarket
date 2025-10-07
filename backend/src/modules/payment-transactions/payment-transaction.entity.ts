@@ -28,7 +28,12 @@ export class PaymentTransaction {
   @JoinColumn({ name: 'payment_id' })
   payment!: Payment;
 
-  @Column({ name: 'provider_transaction_id', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'provider_transaction_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   providerTransactionId?: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })

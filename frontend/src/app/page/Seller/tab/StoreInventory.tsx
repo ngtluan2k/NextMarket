@@ -121,10 +121,10 @@ export default function StoreInventory() {
 
   const [isAddWizardVisible, setAddWizardVisible] = useState(false);
   const handleProductUpdated = (updatedProduct: Product) => {
-  setProducts((prev) =>
-    prev.map((p) => (p.apiId === updatedProduct.apiId ? updatedProduct : p))
-  );
-};
+    setProducts((prev) =>
+      prev.map((p) => (p.apiId === updatedProduct.apiId ? updatedProduct : p))
+    );
+  };
 
   useEffect(() => {
     fetchStores();
@@ -175,9 +175,7 @@ export default function StoreInventory() {
       );
 
       const mappedProducts: Product[] = activeProducts.map(
-        
         (apiProduct: ApiProduct) => {
-          
           // Lấy ảnh chính
           const primaryImage =
             apiProduct.media?.find(
@@ -250,7 +248,6 @@ export default function StoreInventory() {
             
             variants:
               apiProduct.variants?.map((v) => ({
-                
                 id: v.id,
                 sku: v.sku,
                 variant_name: v.variant_name,
@@ -762,12 +759,9 @@ export default function StoreInventory() {
             width={800}
           >
             <EditProductForm
-            
               product={editingProduct}
-              
               onClose={() => setEditingProduct(null)}
-                onProductUpdated={handleProductUpdated}
-
+              onProductUpdated={handleProductUpdated}
             />
           </Modal>
         )}

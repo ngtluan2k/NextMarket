@@ -278,8 +278,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       const existingMedia = form.media.filter((m) => m.url && !m.file); // chỉ media đã có url
       const newMedia = form.media.filter((m) => m.file); // media mới upload
 
-      
-
       // --- Tạo FormData ---
       const formData = new FormData();
       formData.append('name', form.name);
@@ -295,30 +293,30 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
 
       // --- Chỉ gửi media cũ trong media_meta ---
       // media_meta gồm cả cũ + mới
-formData.append(
-  'media_meta',
-  JSON.stringify([
-    ...existingMedia.map((m, idx) => ({
-      id: m.id || null,
-      url: m.url,
-      media_type: m.media_type,
-      is_primary: m.is_primary || false,
-      sort_order: m.sort_order || idx + 1,
-    })),
-    ...newMedia.map((m, idx) => ({
-      id: null,
-      url: '',
-      media_type: m.media_type || 'image',
-      is_primary: m.is_primary || false, // quan trọng
-      sort_order: (existingMedia.length + idx + 1),
-    }))
-  ])
-);
+      formData.append(
+        'media_meta',
+        JSON.stringify([
+          ...existingMedia.map((m, idx) => ({
+            id: m.id || null,
+            url: m.url,
+            media_type: m.media_type,
+            is_primary: m.is_primary || false,
+            sort_order: m.sort_order || idx + 1,
+          })),
+          ...newMedia.map((m, idx) => ({
+            id: null,
+            url: '',
+            media_type: m.media_type || 'image',
+            is_primary: m.is_primary || false, // quan trọng
+            sort_order: existingMedia.length + idx + 1,
+          })),
+        ])
+      );
 
-// gửi file riêng
-newMedia.forEach((m) => {
-  if (m.file) formData.append('media', m.file);
-});
+      // gửi file riêng
+      newMedia.forEach((m) => {
+        if (m.file) formData.append('media', m.file);
+      });
 
       // --- Gửi các media bị xóa nếu có ---
       if (deletedMediaIds.length) {
@@ -487,6 +485,7 @@ newMedia.forEach((m) => {
               {/* Input file */}
               <input
                 type="file"
+                multiple
                 accept="image/*"
                 onChange={(e) => handleFileChange(e, i)}
                 className="flex-1"

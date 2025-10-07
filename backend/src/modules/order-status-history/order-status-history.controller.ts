@@ -13,9 +13,7 @@ import { UpdateOrderStatusHistoryDto } from './dto/update-order-status-history.d
 
 @Controller('order-status-history')
 export class OrderStatusHistoryController {
-  constructor(
-    private readonly historyService: OrderStatusHistoryService,
-  ) {}
+  constructor(private readonly historyService: OrderStatusHistoryService) {}
 
   @Post()
   create(@Body() dto: CreateOrderStatusHistoryDto) {

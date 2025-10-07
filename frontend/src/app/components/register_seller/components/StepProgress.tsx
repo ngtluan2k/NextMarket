@@ -21,7 +21,9 @@ const StepProgress: React.FC<StepProgressProps> = ({ steps, currentStep }) => {
               <div className="text-center">
                 <div
                   className={`rounded-circle d-flex align-items-center justify-content-center ${
-                    currentStep >= step.id ? 'bg-danger text-white' : 'bg-light text-muted'
+                    currentStep >= step.id
+                      ? 'bg-danger text-white'
+                      : 'bg-light text-muted'
                   }`}
                   style={{ width: '40px', height: '40px' }}
                 >
@@ -35,7 +37,9 @@ const StepProgress: React.FC<StepProgressProps> = ({ steps, currentStep }) => {
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`mx-4 ${currentStep > step.id ? 'bg-danger' : 'bg-light'}`}
+                  className={`mx-4 ${
+                    currentStep > step.id ? 'bg-danger' : 'bg-light'
+                  }`}
                   style={{ height: '2px', width: '100px' }}
                 />
               )}

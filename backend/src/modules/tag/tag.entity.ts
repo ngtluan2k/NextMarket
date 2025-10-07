@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  Generated,
+} from 'typeorm';
 import { ProductTag } from '../product_tag/product_tag.entity';
 
 @Entity('tags')

@@ -14,7 +14,7 @@ export default function Info({
   maxQuantity,
 }: {
   product?: any;
-  selectedVariantId: number | null; 
+  selectedVariantId: number | null;
   setSelectedVariantId: (id: number) => void;
   quantity: number;
   setQuantity: (qty: number) => void;
@@ -40,8 +40,9 @@ export default function Info({
 
   if (!product) return null;
 
-  const rating = product.rating?.average ?? product.rating ?? 0;
-  const reviewsCount = product.rating?.count ?? product.reviewsCount ?? 0;
+  const rating = Number(product.avg_rating) || 0;
+  const reviewsCount = product.review_count ?? 0;
+
   const brand = product.brand?.name ?? product.author_name ?? product.author;
 
   return (
@@ -132,11 +133,11 @@ export default function Info({
           onChange={(e) => setQuantity(Number(e.target.value))}
           className="border px-2 py-1 rounded w-20"
         />
-      {quantity === maxQty && maxQty > 0 && (
-        <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">
-          Đã đạt tối đa
-        </span>
-      )}
+        {quantity === maxQty && maxQty > 0 && (
+          <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">
+            Đã đạt tối đa
+          </span>
+        )}
       </div>
       {/* Bảng giá sỉ */}
       {product.pricing_rules?.length > 0 && (

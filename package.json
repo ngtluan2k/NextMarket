@@ -90,8 +90,10 @@
     "count-up": "^1.0.4",
     "express-session": "^1.18.2",
     "i": "^0.3.7",
+    "jsonc-parser": "^3.3.1",
     "lucide-react": "^0.544.0",
     "mysql2": "^3.14.5",
+    "nodemailer": "^7.0.6",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -108,6 +110,7 @@
     "uuid": "^11.1.0"
   },
   "scripts": {
-    "serve:all": "nx run-many --target=serve --projects=frontend,backend --parallel"
+    "serve:all": "nx run-many --target=serve --projects=frontend,backend --parallel",
+    "format": "prettier --write ."
   }
 }

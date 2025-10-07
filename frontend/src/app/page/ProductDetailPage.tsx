@@ -1,4 +1,11 @@
-import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import React, {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from 'react';
 import { useParams } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -15,7 +22,8 @@ import {
   Shipping,
   ComboStrip,
 } from '../components/productDetail';
-import { VariantInfo } from "../types/product"
+import { VariantInfo } from '../types/product';
+import { fetchProductReviews, Review } from '../../service/product_review';
 
 interface Props {
   showMessage?: (
@@ -47,9 +55,11 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
-
-  console.log("product in product detail page: "+JSON.stringify(product));
-
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [hasMoreReviews, setHasMoreReviews] = useState(true);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  console.log('product in product detail page: ' + JSON.stringify(product));
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
@@ -64,6 +74,36 @@ export default function ProductDetailPage({ showMessage }: Props) {
     );
     return v?.stock ?? 0;
   }, [product, selectedVariantId]);
+
+  const loadReviews = useCallback(
+    async (page = reviewPage, reset = false) => {
+      if (!product?.id) return;
+      try {
+        setLoadingReviews(true);
+        const data = await fetchProductReviews(product.id, page, 5);
+        if (reset) {
+          setReviews(data.data);
+        } else {
+          setReviews((prev) => [...prev, ...data.data]);
+        }
+        setHasMoreReviews(data.data.length === 5);
+        setReviewPage(page);
+      } catch (err) {
+        console.error('Failed to fetch reviews', err);
+      } finally {
+        setLoadingReviews(false);
+      }
+    },
+    [product?.id] // dependency thật sự cần thiết
+  );
+
+  useEffect(() => {
+    if (!product?.id) return;
+    setReviews([]);
+    setReviewPage(1);
+    setHasMoreReviews(true);
+    loadReviews(1, true);
+  }, [product?.id, loadReviews]); // thêm loadReviews vào đây
 
   useEffect(() => {
     if (quantity > stock) setQuantity(stock || 1);
@@ -115,18 +155,15 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
     const now = new Date();
     const validRules = (product.pricing_rules ?? [])
-  .filter((r: any) => {
-    const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
-    const end = r.ends_at ? new Date(r.ends_at) : null;
+      .filter((r: any) => {
+        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
+        const end = r.ends_at ? new Date(r.ends_at) : null;
 
-    return (
-      quantity >= r.min_quantity &&
-      now >= start &&
-      (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
-    );
-  })
-  .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
-
+        return (
+          quantity >= r.min_quantity && now >= start && (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
+        );
+      })
+      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
 
     if (validRules.length) currentPrice = Number(validRules[0].price);
 
@@ -243,7 +280,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <Suspense fallback={<div>Loading reviews...</div>}>
-                <LazyProductReviews />
+                <LazyProductReviews productId={0} />
               </Suspense>
             </div>
             <div className="lg:col-span-3 mt-2">

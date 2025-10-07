@@ -13,20 +13,23 @@ export class ProductCategoryService {
     @InjectRepository(ProductCategory)
     private readonly repo: Repository<ProductCategory>,
     @InjectRepository(Product)
-    private readonly productRepo: Repository<Product>,
+    private readonly productRepo: Repository<Product>
   ) {}
 
   async addCategory(dto: CreateProductCategoryDto, userId: number) {
-  const product = await this.productRepo.findOne({ where: { id: dto.productId }, relations: ['store'] });
-  if (!product) throw new NotFoundException('Product not found');
-  if (product.store.user_id !== userId) throw new ForbiddenException('You do not own this product');
+    const product = await this.productRepo.findOne({
+      where: { id: dto.productId },
+      relations: ['store'],
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    if (product.store.user_id !== userId)
+      throw new ForbiddenException('You do not own this product');
 
-  const pc = this.repo.create({
-    product: { id: dto.productId } as Product,
-    category_id: dto.categoryId,
-  });
+    const pc = this.repo.create({
+      product: { id: dto.productId } as Product,
+      category_id: dto.categoryId,
+    });
 
-  return this.repo.save(pc);
-}
-
+    return this.repo.save(pc);
+  }
 }

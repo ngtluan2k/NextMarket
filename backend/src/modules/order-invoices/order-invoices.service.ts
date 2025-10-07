@@ -9,7 +9,7 @@ import { UpdateOrderInvoiceDto } from './dto/update-order-invoice.dto';
 export class OrderInvoicesService {
   constructor(
     @InjectRepository(OrderInvoice)
-    private readonly invoiceRepo: Repository<OrderInvoice>,
+    private readonly invoiceRepo: Repository<OrderInvoice>
   ) {}
 
   async create(dto: CreateOrderInvoiceDto): Promise<OrderInvoice> {

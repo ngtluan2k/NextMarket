@@ -1,13 +1,13 @@
 // src/hooks/useCategoryBreadcrumbs.ts
-import { useEffect, useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
-import { getCategoryBySlug } from "../../service/category.service";
-import { Category, Crumb } from "../types/categories";
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import { getCategoryBySlug } from '../../service/category.service';
+import { Category, Crumb } from '../types/categories';
 
 export function useCategoryBreadcrumbs(category?: Category): Crumb[] {
   const { slug } = useParams<{ slug: string }>();
   const { pathname } = useLocation();
-  const isExplore = pathname.endsWith("/explore");
+  const isExplore = pathname.endsWith('/explore');
 
   const [fetchedCat, setFetchedCat] = useState<Category | null>(null);
 
@@ -15,7 +15,7 @@ export function useCategoryBreadcrumbs(category?: Category): Crumb[] {
     if (!category && slug) {
       getCategoryBySlug(slug)
         .then((data) => setFetchedCat({ slug, name: data.name }))
-        .catch(() => setFetchedCat({ slug, name: slug.replace(/-/g, " ") }));
+        .catch(() => setFetchedCat({ slug, name: slug.replace(/-/g, ' ') }));
     }
   }, [category, slug]);
 
@@ -26,7 +26,7 @@ export function useCategoryBreadcrumbs(category?: Category): Crumb[] {
 
     const base: Crumb[] = [
       {
-        label: activeCategory?.name || "Danh mục",
+        label: activeCategory?.name || 'Danh mục',
         name: activeCategory?.name, // giữ name để truyền ngược
         to: `/category/${slug}`,
         current: !isExplore,
@@ -34,7 +34,7 @@ export function useCategoryBreadcrumbs(category?: Category): Crumb[] {
     ];
 
     return isExplore
-      ? [...base, { label: "Khám phá danh mục", current: true }]
+      ? [...base, { label: 'Khám phá danh mục', current: true }]
       : base;
   }, [activeCategory, slug, isExplore]);
 }

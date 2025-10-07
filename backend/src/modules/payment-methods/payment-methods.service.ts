@@ -2,7 +2,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentMethod } from  './payment-method.entity'
+import { PaymentMethod } from './payment-method.entity';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 
@@ -10,7 +10,7 @@ import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 export class PaymentMethodsService {
   constructor(
     @InjectRepository(PaymentMethod)
-    private paymentMethodRepo: Repository<PaymentMethod>,
+    private paymentMethodRepo: Repository<PaymentMethod>
   ) {}
 
   async create(createPaymentMethodDto: CreatePaymentMethodDto) {

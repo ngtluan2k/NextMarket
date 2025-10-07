@@ -2,7 +2,6 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Store } from './store.entity';
 import { StoreFollower } from './../store-follower/store-follower.entity';
-import { StoreRating } from './../store-rating/store-rating.entity';
 import { StoreDocument } from './../store-document/store-document.entity';
 import { StoreBankAccount } from './../store-bank-account/store-bank-account.entity';
 import { Payout } from './../payout/payout.entity';
@@ -32,7 +31,6 @@ import { Tag } from '../tag/tag.entity';
     TypeOrmModule.forFeature([
       Store,
       StoreFollower,
-      StoreRating,
       StoreDocument,
       StoreBankAccount,
       Payout,

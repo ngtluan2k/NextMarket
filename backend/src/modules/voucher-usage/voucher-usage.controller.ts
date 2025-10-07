@@ -13,7 +13,12 @@ import { CreateVoucherUsageDto } from './dto/create-voucher-usage.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 @ApiTags('voucher-usage')
 @ApiBearerAuth()
@@ -26,7 +31,10 @@ export class VoucherUsageController {
   @Post()
   @Permissions('add_voucher_usage')
   @ApiOperation({ summary: 'Tạo bản ghi sử dụng voucher (chỉ admin)' })
-  @ApiResponse({ status: 201, description: 'Bản ghi sử dụng voucher được tạo thành công' })
+  @ApiResponse({
+    status: 201,
+    description: 'Bản ghi sử dụng voucher được tạo thành công',
+  })
   create(@Body() dto: CreateVoucherUsageDto, @Req() req: any) {
     const userId = req.user?.userId;
     const role = req.user?.role;
@@ -39,7 +47,10 @@ export class VoucherUsageController {
   @Get()
   @Permissions('view_voucher_usage')
   @ApiOperation({ summary: 'Lấy danh sách bản ghi sử dụng voucher' })
-  @ApiResponse({ status: 200, description: 'Danh sách bản ghi sử dụng voucher' })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách bản ghi sử dụng voucher',
+  })
   findAll(@Req() req: any) {
     const userId = req.user?.userId;
     const role = req.user?.role;
@@ -52,7 +63,10 @@ export class VoucherUsageController {
   @Get(':id')
   @Permissions('view_voucher_usage')
   @ApiOperation({ summary: 'Lấy chi tiết bản ghi sử dụng voucher' })
-  @ApiResponse({ status: 200, description: 'Thông tin bản ghi sử dụng voucher' })
+  @ApiResponse({
+    status: 200,
+    description: 'Thông tin bản ghi sử dụng voucher',
+  })
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     const userId = req.user?.userId;
     const role = req.user?.role;

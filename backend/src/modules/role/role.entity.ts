@@ -9,8 +9,7 @@ export class Role {
   id!: number;
 
   @Column()
-  @Generated('uuid')   // ✅ Tự generate uuid
-
+  @Generated('uuid') // ✅ Tự generate uuid
   uuid!: string;
 
   @Column()
@@ -22,9 +21,9 @@ export class Role {
   @Column()
   created_at!: Date;
 
-  @OneToMany(() => UserRole, ur => ur.role)
+  @OneToMany(() => UserRole, (ur) => ur.role)
   userRoles!: UserRole[];
 
-  @OneToMany(() => RolePermission, rp => rp.role, { cascade: true })
+  @OneToMany(() => RolePermission, (rp) => rp.role, { cascade: true })
   rolePermissions!: RolePermission[];
 }

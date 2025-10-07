@@ -1,4 +1,10 @@
-import { IsNumber, IsString, IsArray, ValidateNested, IsOptional, IsInt} from 'class-validator';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
@@ -17,32 +23,25 @@ class OrderItemDto {
 }
 
 export class CreateOrderDto {
-  @IsInt()
-  @Type(() => Number)
+  @IsNumber()
   userId!: number;
 
-  @IsInt()
-  @Type(() => Number)
+  @IsNumber()
   storeId!: number;
 
-  @IsInt()
-  @Type(() => Number)
+  @IsNumber()
   addressId!: number;
 
-  @IsOptional()
   @IsNumber()
-  shippingFee?: number;
-
-  @IsOptional()
-  @IsNumber()
-  discountTotal?: number;
+  subtotal!: number;
 
   @IsNumber()
-  totalAmount!: number;
+  shippingFee!: number;
 
   @IsOptional()
-  @IsString()
-  currency?: string;
+  @IsArray()
+  @IsString({ each: true })
+  voucherCodes?: string[];
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -50,7 +49,6 @@ export class CreateOrderDto {
   items!: OrderItemDto[];
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  voucherCodes?: string[];
+  @IsString()
+  currency?: string = 'VND';
 }

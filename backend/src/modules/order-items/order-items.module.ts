@@ -8,14 +8,7 @@ import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      OrderItem,
-      Order,
-      Product,
-      Variant,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([OrderItem, Order, Product, Variant])],
   controllers: [OrderItemsController],
   providers: [OrderItemsService],
   exports: [OrderItemsService],

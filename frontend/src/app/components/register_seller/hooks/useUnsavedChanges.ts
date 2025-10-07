@@ -16,7 +16,7 @@ export const useUnsavedChanges = (
       formData,
       currentStep,
       addresses,
-      emails
+      emails,
     });
     return currentData !== lastSavedData;
   }, [formData, currentStep, addresses, emails, lastSavedData]);
@@ -32,14 +32,14 @@ export const useUnsavedChanges = (
       formData,
       currentStep,
       addresses,
-      emails
+      emails,
     });
     setLastSavedData(currentData);
     setHasUnsavedChanges(false);
   };
 
-  return { 
-    hasUnsavedChanges, 
-    markAsSaved 
+  return {
+    hasUnsavedChanges,
+    markAsSaved,
   };
 };

@@ -2,36 +2,51 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthContextType } from '../types/auth';
 import { Me } from '../types/user';
 
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  // 🔹 Hàm gọi /me để verify token
-  const fetchMe = async (token: string) => {
+  // Hàm lấy thông tin người dùng và địa chỉ
+  const fetchUserData = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:3000/users/me', {
+      // Lấy thông tin người dùng từ /users/me
+      const userRes = await fetch('http://localhost:3000/users/me', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!res.ok) throw new Error('Token expired');
-      const json = await res.json();
-      setMe(json.data); // lấy dữ liệu profile từ backend
+      if (!userRes.ok) throw new Error('Token expired');
+      const userJson = await userRes.json();
+      const user = userJson.data;
+
+      // Lấy danh sách địa chỉ từ /users/:id/addresses
+      const addressRes = await fetch(
+        `http://localhost:3000/users/${user.id}/addresses`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const addresses = (await addressRes.json()) || [];
+
+      // Cập nhật me với thông tin người dùng và địa chỉ
+      setMe({ ...user, addresses });
       setToken(token);
+      localStorage.setItem('user', JSON.stringify({ ...user, addresses }));
     } catch (err) {
-      console.warn('fetchMe error', err);
-      logout(); // xoá nếu token hết hạn hoặc lỗi
+      console.warn('fetchUserData error', err);
+      logout(); // Xóa nếu token hết hạn hoặc lỗi
     }
   };
 
-  // 🔹 Khi app load, thử lấy token từ localStorage và gọi /me để kiểm tra
+  // Kiểm tra token khi app khởi động
   useEffect(() => {
     const tokenStr = localStorage.getItem('token');
     if (tokenStr) {
-      fetchMe(tokenStr);
+      fetchUserData(tokenStr);
     }
   }, []);
 
@@ -40,6 +55,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('token', token);
     setMe(user);
     setToken(token);
+    // Gọi fetchUserData để đảm bảo thông tin đầy đủ (bao gồm địa chỉ)
+    fetchUserData(token);
   };
 
   const logout = () => {

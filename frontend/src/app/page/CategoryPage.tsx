@@ -63,18 +63,17 @@ const CategoryPage: React.FC = () => {
       <EveryMartHeader />
 
       <main className="flex-1 mx-auto w-full max-w-screen-2xl px-4 py-6">
-       <Breadcrumb
-  items={crumbs}
-  className="mb-4"
-  onItemClick={(crumb) => {
-    if (crumb.name) {
-      setTitle(crumb.name); // luôn lấy name từ crumb
-    } else {
-      setTitle(crumb.label);
-    }
-  }}
-/>
-
+        <Breadcrumb
+          items={crumbs}
+          className="mb-4"
+          onItemClick={(crumb) => {
+            if (crumb.name) {
+              setTitle(crumb.name); // luôn lấy name từ crumb
+            } else {
+              setTitle(crumb.label);
+            }
+          }}
+        />
 
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 lg:col-span-3">

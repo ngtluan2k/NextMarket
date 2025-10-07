@@ -21,7 +21,7 @@ export class InventoryService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @InjectRepository(Variant)
-    private readonly variantRepo: Repository<Variant>,
+    private readonly variantRepo: Repository<Variant>
   ) {}
 
   async findAll(userId: number) {
@@ -62,7 +62,7 @@ export class InventoryService {
         });
         if (!variant) {
           throw new NotFoundException(
-            'Variant not found or does not belong to this product',
+            'Variant not found or does not belong to this product'
           );
         }
       }
@@ -94,7 +94,7 @@ export class InventoryService {
     id: number,
     dto: UpdateInventoryDto,
     userId: number,
-    role: string,
+    role: string
   ) {
     try {
       const inventory = await this.repo.findOne({
@@ -106,8 +106,6 @@ export class InventoryService {
         throw new NotFoundException('Inventory not found');
       }
 
-      
-
       // Update product
       if (dto.productId && dto.productId !== inventory.product.id) {
         const product = await this.productRepo.findOne({
@@ -118,7 +116,6 @@ export class InventoryService {
         if (!product) {
           throw new NotFoundException('Product not found');
         }
-
 
         inventory.product = product;
       }
@@ -134,7 +131,7 @@ export class InventoryService {
 
           if (!variant) {
             throw new NotFoundException(
-              'Variant not found or does not belong to this product',
+              'Variant not found or does not belong to this product'
             );
           }
 
@@ -155,7 +152,10 @@ export class InventoryService {
 
       return await this.repo.save(inventory);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       console.error('Error updating inventory:', error);
@@ -174,11 +174,13 @@ export class InventoryService {
         throw new NotFoundException('Inventory not found');
       }
 
-      
       await this.repo.delete(id);
       return { message: 'Inventory deleted successfully' };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       console.error('Error deleting inventory:', error);

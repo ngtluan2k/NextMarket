@@ -1,11 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
-import { vnd, TIKI_RED} from "../../types/productDetail";
+import { vnd, TIKI_RED } from '../../types/productDetail';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import LoginModal from '../LoginModal';
 import { Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
+import { API_BASE_URL } from '../../api/api';
+import { log } from 'console';
+
+function toAbs(p?: string) {
+  if (!p) return '';
+  let s = p.trim();
+
+  if (/^data:/i.test(s)) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  s = s.replace(/\\/g, '/');
+  if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
+    const idx = s.toLowerCase().lastIndexOf('/uploads/');
+    if (idx >= 0) s = s.slice(idx + 1);
+  }
+  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+}
 
 export default function BuyBox({
   product,
@@ -134,7 +150,7 @@ export default function BuyBox({
     navigate('/checkout', { state: checkoutState });
   };
 
-  
+  // --- tính giá dựa trên variant + pricing_rules ---
 
   const totalPrice = useMemo(
     () => calculatedPrice * quantity,
@@ -181,11 +197,38 @@ export default function BuyBox({
           className="flex items-center gap-2 cursor-pointer"
           onClick={handleClickStore}
         >
-          <img
-            src={product.store?.logo_url ?? 'https://via.placeholder.com/24'}
-            className="h-6 w-6 rounded-full"
-            alt={product.store?.name ?? 'Store'}
-          />
+<div className="h-13 w-13 rounded-full ring-1 ring-slate-200 overflow-hidden">
+  {product.store?.logo_url ? (
+    <img
+      src={toAbs(product.store.logo_url)}
+      alt={product.store?.name ?? 'Store'}
+      className="h-full w-full object-cover"
+      onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        target.style.display = 'none'; // hoặc target.src = '' để fallback
+      }}
+    />
+  ) : (
+    <svg
+      className="h-10 w-full text-slate-400 bg-white"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M3 21a9 9 0 1 1 18 0"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  )}
+</div>
+
+
           <div>
             <div className="text-sm font-semibold">
               {product.store?.name ?? 'Official Store'}

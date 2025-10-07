@@ -2,9 +2,17 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem } from '../types/cart';
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (productId: number, quantity?: number, variantId?: number) => Promise<void>;
+  addToCart: (
+    productId: number,
+    quantity?: number,
+    variantId?: number
+  ) => Promise<void>;
   removeFromCart: (productId: number, variantId?: number) => Promise<void>;
-  updateQuantity: (productId: number, quantity: number, variantId?: number) => Promise<void>;
+  updateQuantity: (
+    productId: number,
+    quantity: number,
+    variantId?: number
+  ) => Promise<void>;
   clearCart: () => void;
   loadCart: () => void;
 }
@@ -23,7 +31,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() =>
+    localStorage.getItem('token')
+  );
 
   const loadCart = async () => {
     const currentToken = localStorage.getItem('token');
@@ -53,7 +63,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     loadCart();
   }, [token]);
 
- 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'token') {
@@ -74,7 +83,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(interval);
   }, [token]);
 
-  const addToCart = async (productId: number, quantity = 1, variantId?: number) => {
+  const addToCart = async (
+    productId: number,
+    quantity = 1,
+    variantId?: number
+  ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       throw new Error('Vui lòng đăng nhập để thêm vào giỏ hàng');
@@ -90,12 +103,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         await loadCart();
-      }else{
+      } else {
         throw new Error('Không thể thêm vào giỏ hàng');
       }
     } catch (error) {
       console.error('Không thể thêm vào giỏ hàng:', error);
-     throw new Error('Không thể thêm vào giỏ hàng');
+      throw new Error('Không thể thêm vào giỏ hàng');
     }
   };
 
@@ -126,7 +139,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const updateQuantity = async (productId: number, quantity: number, variantId?: number) => {
+  const updateQuantity = async (
+    productId: number,
+    quantity: number,
+    variantId?: number
+  ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       alert('Vui lòng đăng nhập để cập nhật số lượng');

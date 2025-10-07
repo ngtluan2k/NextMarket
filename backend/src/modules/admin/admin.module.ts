@@ -10,7 +10,13 @@ import { RolePermission } from '../role-permission/role-permission.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Role, Permission, UserRole, User, RolePermission]),
+    TypeOrmModule.forFeature([
+      Role,
+      Permission,
+      UserRole,
+      User,
+      RolePermission,
+    ]),
   ],
   providers: [AdminService],
   controllers: [AdminController],

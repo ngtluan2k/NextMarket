@@ -22,7 +22,7 @@ export default function SellerHeader() {
         if (userData.full_name) {
           setFullname(userData.full_name);
         }
-        if(!userData.avatar){
+        if (!userData.avatar) {
           setUseravatar('https://api.dicebear.com/7.x/miniavs/svg?seed=1');
         }
       } catch (error) {

@@ -1,6 +1,6 @@
-import React from "react";
-import { Card, Typography, Button, Image } from "antd";
-import { Product } from "../../types/product";
+import React from 'react';
+import { Card, Typography, Button, Image } from 'antd';
+import { Product } from '../../types/product';
 
 const { Title, Text } = Typography;
 
@@ -20,19 +20,19 @@ export const CartRecommendation: React.FC<CartRecommendationProps> = ({
       {products.length === 0 ? (
         <Text type="secondary">Chưa có sản phẩm gợi ý</Text>
       ) : (
-        <div style={{ display: "flex", gap: 16, overflowX: "auto" }}>
+        <div style={{ display: 'flex', gap: 16, overflowX: 'auto' }}>
           {products.map((p) => (
-            <Card key={p.id} style={{ minWidth: 160, textAlign: "center" }}>
+            <Card key={p.id} style={{ minWidth: 160, textAlign: 'center' }}>
               <Image
                 // src={p.media.}
                 width={120}
                 height={120}
                 preview={false}
-                style={{ borderRadius: 6, objectFit: "cover" }}
+                style={{ borderRadius: 6, objectFit: 'cover' }}
               />
               <Text>{p.name}</Text>
               <br />
-              <Text strong style={{ color: "red" }}>
+              <Text strong style={{ color: 'red' }}>
                 {p.listPrice}đ
               </Text>
               <Button

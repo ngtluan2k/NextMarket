@@ -17,10 +17,8 @@ export class ProductCategoryController {
   ) {}
 
   @Post()
-async add(@Body() dto: CreateProductCategoryDto, @Req() req: any) {
-  const userId = req.user.id;
-  return this.productCategoryService.addCategory(dto, userId);
-}
-
-
+  async add(@Body() dto: CreateProductCategoryDto, @Req() req: any) {
+    const userId = req.user.id;
+    return this.productCategoryService.addCategory(dto, userId);
+  }
 }

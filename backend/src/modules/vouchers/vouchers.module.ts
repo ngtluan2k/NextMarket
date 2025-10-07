@@ -16,7 +16,11 @@ import { VoucherUsageModule } from '../voucher-usage/voucher-usage.module';
     TypeOrmModule.forFeature([Voucher, VoucherUsage, User, Order, Store]),
     VoucherUsageModule,
   ],
-  controllers: [AdminVouchersController, UserVouchersController, StoreOwnerVouchersController],
+  controllers: [
+    AdminVouchersController,
+    UserVouchersController,
+    StoreOwnerVouchersController,
+  ],
   providers: [VouchersService],
   exports: [VouchersService],
 })

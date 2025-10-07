@@ -3,12 +3,18 @@ import { SellerFormData, defaultSellerFormData } from '../../types';
 
 export const useSellerRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<SellerFormData>(defaultSellerFormData);
+  const [formData, setFormData] = useState<SellerFormData>(
+    defaultSellerFormData
+  );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'info' | 'error' | 'warning'>('info');
+  const [messageType, setMessageType] = useState<
+    'success' | 'info' | 'error' | 'warning'
+  >('info');
   const [storeId, setStoreId] = useState<number | null>(null);
-  const [storeInformationId, setStoreInformationId] = useState<number | null>(null);
+  const [storeInformationId, setStoreInformationId] = useState<number | null>(
+    null
+  );
 
   // Keys cho localStorage
   const FORM_DATA_KEY = 'seller_registration_form_data';

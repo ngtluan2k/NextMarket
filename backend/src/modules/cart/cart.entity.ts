@@ -5,7 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
-  OneToOne
+  OneToOne,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
@@ -20,9 +20,8 @@ export class ShoppingCart {
   uuid!: string;
 
   @OneToOne(() => User, (user) => user.cart)
-@JoinColumn({ name: 'user_id' })
-user!: User;
-
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 
   @Column()
   user_id!: number;
@@ -30,10 +29,14 @@ user!: User;
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
+  })
   updated_at!: Date;
 
-  @OneToMany(() => CartItem, cartItem => cartItem.cart)
+  @OneToMany(() => CartItem, (cartItem) => cartItem.cart)
   items!: CartItem[];
 }
 

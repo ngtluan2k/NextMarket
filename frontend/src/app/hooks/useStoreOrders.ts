@@ -30,5 +30,3 @@ export function useMyStoreOrders() {
 
   return { sales, loading, error };
 }
-
-

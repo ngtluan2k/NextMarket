@@ -1,5 +1,5 @@
 'use client';
-import { Layout, Typography, Select, Button, Modal,message } from 'antd';
+import { Layout, Typography, Select, Button, Modal, message } from 'antd';
 import { ExportOutlined, DeleteOutlined } from '@ant-design/icons';
 import SalesOverview from '../../../components/seller/SaleOverview';
 import StatsCards from '../../../components/seller/StartCard';
@@ -11,17 +11,14 @@ import { useState } from 'react';
 const { Title, Text } = Typography;
 
 export default function StoreOwnerDashboard() {
-  const [loading , setLoading]= useState (false);
+  const [loading, setLoading] = useState(false);
 
   const handleDeleteStore = async () => {
     Modal.confirm({
-      title: '⚠️ Xác nhận xóa cửa hàng',
+      title: ' Xác nhận xóa cửa hàng',
       content: (
         <div>
-          <p>
-            Bạn có chắc chắn muốn xóa cửa hàng này?
-          </p>
-          
+          <p>Bạn có chắc chắn muốn xóa cửa hàng này?</p>
         </div>
       ),
       okText: 'Xóa Ngay',
@@ -49,7 +46,9 @@ export default function StoreOwnerDashboard() {
               window.location.href = '/';
             }, 1500);
           } else {
-            message.error(`❌ Lỗi: ${data.message || 'Không thể xóa cửa hàng'}`);
+            message.error(
+              `❌ Lỗi: ${data.message || 'Không thể xóa cửa hàng'}`
+            );
           }
         } catch (error) {
           message.error('❌ Lỗi kết nối. Vui lòng thử lại.');

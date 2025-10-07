@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "antd": "^5.27.3",
+    "i": "^0.3.7",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.544.0",
     "react-countup": "^6.5.3",
@@ -13,5 +14,4 @@
   "devDependencies": {
     "@types/lodash.debounce": "^4.0.9"
   }
-  
 }

@@ -19,9 +19,9 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
 }) => {
   return (
     <div className="d-flex justify-content-between align-items-center mt-4">
-      <button 
-        className="btn btn-outline-secondary" 
-        onClick={onPrevStep} 
+      <button
+        className="btn btn-outline-secondary"
+        onClick={onPrevStep}
         disabled={currentStep === 1}
       >
         Quay lại
@@ -31,7 +31,9 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
         <button
           className="btn btn-outline-danger btn-sm"
           onClick={() => {
-            if (window.confirm('Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?')) {
+            if (
+              window.confirm('Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?')
+            ) {
               onClearData();
             }
           }}
@@ -42,9 +44,9 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
       </div>
 
       {currentStep < totalSteps && (
-        <button 
-          className="btn btn-danger" 
-          onClick={onNextStep} 
+        <button
+          className="btn btn-danger"
+          onClick={onNextStep}
           disabled={currentStep === totalSteps || loading}
         >
           {loading ? 'Đang xử lý...' : 'Tiếp theo'}

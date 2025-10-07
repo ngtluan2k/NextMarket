@@ -14,7 +14,6 @@ import { User } from '../user/user.entity';
 import { OneToMany } from 'typeorm';
 import { Product } from '../product/product.entity';
 import { Order } from '../orders/order.entity';
-import { StoreRating } from '../store-rating/store-rating.entity';
 import { StoreInformation } from '../store-information/store-information.entity';
 import { StoreIdentification } from '../store-identification/store-identification.entity';
 import { StoreLevel } from '../store-level/store-level.entity';
@@ -79,6 +78,12 @@ export class Store {
   @UpdateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
+  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
+  avg_rating!: number;
+
+  @Column({ type: 'int', default: 0 })
+  review_count!: number;
+
   @OneToMany(() => Product, (product) => product.store)
   products!: Product[];
 
@@ -114,9 +119,6 @@ export class Store {
 
   @OneToMany(() => StoreFollower, (StoreFollower) => StoreFollower.store)
   followers!: StoreFollower[];
-
-  @OneToMany(() => StoreRating, (StoreRating) => StoreRating.store)
-  rating!: StoreRating[];
 
   @OneToMany(() => Voucher, (Voucher) => Voucher.store)
   vouchers?: Voucher[];

@@ -44,7 +44,8 @@ export const useEmailManagement = () => {
 
     // Check duplicate
     const isDuplicate = emails.some(
-      (email) => email.email === emailFormData.email &&
+      (email) =>
+        email.email === emailFormData.email &&
         (!editingEmail || email.id !== editingEmail.id)
     );
     if (isDuplicate) {
@@ -63,10 +64,10 @@ export const useEmailManagement = () => {
         prev.map((email) =>
           email.id === editingEmail.id
             ? {
-              ...emailFormData,
-              id: editingEmail.id,
-              is_default: editingEmail.is_default,
-            }
+                ...emailFormData,
+                id: editingEmail.id,
+                is_default: editingEmail.is_default,
+              }
             : email
         )
       );

@@ -76,7 +76,7 @@ export class StoreOwnerVouchersController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateVoucherDto: UpdateVoucherDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
     const userId = req.user?.userId;
     const role = req.user?.role;

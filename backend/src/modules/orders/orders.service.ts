@@ -20,6 +20,7 @@ import {
   OrderStatusHistory,
   historyStatus,
 } from '../order-status-history/order-status-history.entity';
+import { Variant } from '../variant/variant.entity';
 @Injectable()
 export class OrdersService {
   constructor(
@@ -45,15 +46,12 @@ export class OrdersService {
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     return this.ordersRepository.manager.transaction(async (manager) => {
       const user = await manager.findOneBy(User, { id: createOrderDto.userId });
-      console.log('User:', user);
       const store = await manager.findOneBy(Store, {
         id: createOrderDto.storeId,
       });
-      console.log('Store:', store);
       const address = await manager.findOneBy(UserAddress, {
         id: createOrderDto.addressId,
       });
-      console.log('Address:', address);
 
       if (!user || !store || !address) {
         throw new BadRequestException(
@@ -61,50 +59,71 @@ export class OrdersService {
         );
       }
 
-      const subtotal = createOrderDto.items.reduce(
+      // BE TỰ TÍNH TOÁN subtotal (kiểm tra tính đúng đắn)
+      const calculatedSubtotal = createOrderDto.items.reduce(
         (sum, item) => sum + item.quantity * item.price,
         0
       );
 
+      // Cho phép sai số nhỏ do floating point
+      const subtotalTolerance = 100; // 100 VND
+      if (
+        Math.abs(calculatedSubtotal - createOrderDto.subtotal) >
+        subtotalTolerance
+      ) {
+        console.warn(
+          `Subtotal difference: ${Math.abs(
+            calculatedSubtotal - createOrderDto.subtotal
+          )}`
+        );
+        // Có thể throw error hoặc sử dụng calculatedSubtotal tùy nghiệp vụ
+      }
+
+      //  BE TỰ TÍNH DISCOUNT
       let discountTotal = 0;
       const appliedVouchers: { voucherId: number; discount: number }[] = [];
+
       if (
         createOrderDto.voucherCodes &&
         createOrderDto.voucherCodes.length > 0
       ) {
         for (const code of createOrderDto.voucherCodes) {
-          const { voucher, discount } =
-            await this.vouchersService.validateVoucher(
-              code,
-              createOrderDto.userId,
-              createOrderDto.items,
-              createOrderDto.storeId
-            );
-
-          if (!voucher.stackable && createOrderDto.voucherCodes.length > 1) {
-            throw new BadRequestException(
-              `Voucher ${code} không thể kết hợp với các voucher khác`
-            );
+          try {
+            const { voucher, discount } =
+              await this.vouchersService.validateVoucher(
+                code,
+                createOrderDto.userId,
+                createOrderDto.items,
+                createOrderDto.storeId
+              );
+            discountTotal += discount;
+            appliedVouchers.push({ voucherId: voucher.id, discount });
+          } catch (error) {
+            console.error(`❌ Voucher error (${code}):`, error);
+            throw new BadRequestException(`Voucher ${code} không hợp lệ`);
           }
-
-          discountTotal += discount;
-          appliedVouchers.push({ voucherId: voucher.id, discount });
         }
       }
 
+      //  BE TỰ TÍNH TOTAL AMOUNT
       const totalAmount =
-        subtotal + (createOrderDto.shippingFee || 0) - discountTotal;
+        calculatedSubtotal + createOrderDto.shippingFee - discountTotal;
 
-      if (totalAmount !== createOrderDto.totalAmount) {
-        throw new BadRequestException('Tổng số tiền không khớp');
-      }
-
-      const order = manager.create(Order, {
-        status: OrderStatuses.Pending,
-        subtotal,
-        shippingFee: createOrderDto.shippingFee ?? 0,
+      console.log('💰 BE Calculation:', {
+        subtotalFromFE: createOrderDto.subtotal,
+        subtotalCalculated: calculatedSubtotal,
+        shippingFee: createOrderDto.shippingFee,
         discountTotal,
         totalAmount,
+      });
+
+      // Tạo order với các giá trị BE đã tính
+      const order = manager.create(Order, {
+        status: OrderStatuses.pending,
+        subtotal: calculatedSubtotal, // Sử dụng giá trị BE tính
+        shippingFee: createOrderDto.shippingFee,
+        discountTotal, // BE tính
+        totalAmount, // BE tính
         currency: createOrderDto.currency ?? 'VND',
         user,
         store,
@@ -113,71 +132,94 @@ export class OrdersService {
 
       const savedOrder = await manager.save(order);
 
-      for (const item of createOrderDto.items) {
+      // === Tạo OrderItems và cập nhật Inventory / Variant ===
+      for (const itemDto of createOrderDto.items) {
+        console.log('📦 Creating order item:', itemDto);
+
+        // Lấy sản phẩm
         const product = await manager.findOneBy(Product, {
-          id: item.productId,
+          id: itemDto.productId,
         });
-        console.log('Product:', product);
-
         if (!product) {
+          console.error(`❌ Product #${itemDto.productId} not found`);
           throw new BadRequestException(
-            `Không tìm thấy sản phẩm ${item.productId}`
+            `Sản phẩm #${itemDto.productId} không tồn tại`
           );
         }
 
-        let inventory = null;
-        // Nếu có variantId, ưu tiên tìm với variantId
-        if (item.variantId) {
-          inventory = await manager.findOne(Inventory, {
-            where: {
-              product: { id: item.productId },
-              variant: { id: item.variantId },
-            },
-          });
-        }
-        // Nếu không tìm thấy với variantId hoặc không có variantId, tìm với variant_id IS NULL
-        if (!inventory) {
-          inventory = await manager.findOne(Inventory, {
-            where: {
-              product: { id: item.productId },
-              variant: IsNull(),
-            },
-          });
+        let variant: Variant | null = null;
+        let itemPrice = itemDto.price;
+
+        // Lấy biến thể nếu có
+        if (itemDto.variantId) {
+          variant = await manager.findOneBy(Variant, { id: itemDto.variantId });
+          if (!variant) {
+            console.error(`❌ Variant #${itemDto.variantId} not found`);
+            throw new BadRequestException(
+              `Biến thể #${itemDto.variantId} không tồn tại`
+            );
+          }
+          // Chuyển price của variant sang number
+          itemPrice = Number(variant.price);
+          console.log(`Variant price: ${itemPrice}`);
+
+          if ((variant.stock ?? 0) < itemDto.quantity) {
+            console.error(
+              `❌ Not enough variant stock: ${variant.stock}, required: ${itemDto.quantity}`
+            );
+            throw new BadRequestException(
+              `Không đủ tồn kho cho biến thể #${itemDto.variantId}`
+            );
+          }
         }
 
-        console.log('Inventory:', inventory);
-
-        if (!inventory) {
+        // Kiểm tra tồn kho trong Inventory
+        const inventory = await manager.findOne(Inventory, {
+          where: {
+            product: { id: itemDto.productId },
+            variant: itemDto.variantId ? { id: itemDto.variantId } : IsNull(),
+          },
+        });
+        if (
+          !inventory ||
+          inventory.quantity - inventory.used_quantity < itemDto.quantity
+        ) {
+          console.error(
+            `❌ Not enough inventory for product #${itemDto.productId}`
+          );
           throw new BadRequestException(
-            `Không tìm thấy kho cho sản phẩm ${item.productId}`
+            `Không đủ hàng trong kho cho sản phẩm #${itemDto.productId}`
           );
         }
 
-        if ((inventory.quantity ?? 0) < item.quantity) {
-          throw new BadRequestException(
-            `Không đủ hàng cho sản phẩm ${item.productId}`
-          );
-        }
-
-        await manager.save(inventory);
-
+        // Tạo OrderItem
         const orderItem = manager.create(OrderItem, {
           order: savedOrder,
           product,
-          variant: item.variantId ? { id: item.variantId } : null,
-          quantity: item.quantity,
-          price: item.price,
-          discount: 0,
-          subtotal: item.quantity * item.price,
+          variant: variant ?? null,
+          quantity: itemDto.quantity,
+          price: itemPrice,
+          discount: discountTotal,
+          subtotal: itemDto.quantity * itemPrice - (discountTotal ?? 0),
         });
+
+        console.log('OrderItem created:', orderItem);
+
         await manager.save(orderItem);
+
+        // Cập nhật tạm thời tồn kho
+        inventory.used_quantity =
+          (inventory.used_quantity || 0) + itemDto.quantity;
+        await manager.save(inventory);
       }
 
+      // Áp dụng voucher sau khi tạo order thành công
       for (const { voucherId } of appliedVouchers) {
         await this.vouchersService.applyVoucher(
           voucherId,
           createOrderDto.userId,
-          savedOrder.id
+          savedOrder,
+          manager
         );
       }
 
@@ -210,6 +252,7 @@ export class OrdersService {
         'orderItem.variant',
         'voucherUsages',
         'voucherUsages.voucher',
+        'orderItem.product.reviews',
       ],
     });
 
@@ -232,27 +275,62 @@ export class OrdersService {
 
   async changeStatus(
     id: number,
-    status: OrderStatuses,
+    status: string, // 👈 nhận string
     user: User,
     note?: string
   ): Promise<Order> {
     const order = await this.findOne(id);
+    console.log('--- DEBUG store ---');
+    console.log('order.status (number):', order.status);
+    console.log('OrderStatuses.pending:', OrderStatuses.pending);
+    console.log('order.store.user_id:', order.store?.user_id);
+    console.log('current user.id:', user.id);
 
-    if (order.status === OrderStatuses.cancelled) {
-      throw new BadRequestException('Không thể cập nhật đơn hàng đã bị hủy');
+    const statusMap: Record<string, OrderStatuses> = {
+      pending: OrderStatuses.pending,
+      confirmed: OrderStatuses.confirmed,
+      processing: OrderStatuses.processing,
+      shipped: OrderStatuses.shipped,
+      delivered: OrderStatuses.delivered,
+      completed: OrderStatuses.completed,
+      cancelled: OrderStatuses.cancelled,
+      returned: OrderStatuses.returned,
+    };
+
+    const newStatus = statusMap[status];
+    if (newStatus === undefined) {
+      throw new BadRequestException('Trạng thái không hợp lệ');
     }
 
-    // Phân quyền cơ bản
+    // check quyền y chang bạn đang làm
     const isCustomer = Number(user.id) === order.user.id;
-    const isStore = Number(user.id) === order.store.id;
+    const isStore = Number(user.id) === order.store.user_id;
 
-    if (isCustomer && status !== OrderStatuses.cancelled) {
-      throw new BadRequestException('Khách hàng chỉ có thể hủy đơn');
+    if (isCustomer) {
+      if (Number(order.status) !== OrderStatuses.pending) {
+        throw new BadRequestException('Khách hàng chỉ có thể hủy đơn');
+      }
+      if (Number(order.status) !== OrderStatuses.pending) {
+        throw new BadRequestException(
+          'Khách hàng chỉ có thể hủy đơn khi đơn hàng đang chờ'
+        );
+      }
     }
-    if (order.status !== OrderStatuses.Pending) {
-      throw new BadRequestException(
-        'Khách hàng chỉ có thể hủy đơn khi đơn hàng đang chờ'
-      );
+
+    if (isStore) {
+      if (Number(order.status) !== OrderStatuses.pending) {
+        throw new BadRequestException(
+          'Cửa hàng chỉ có thể xác nhận đơn đang chờ'
+        );
+      }
+      // store chỉ cho phép confirm hoặc cancel
+      if (
+        ![OrderStatuses.confirmed, OrderStatuses.cancelled].includes(newStatus)
+      ) {
+        throw new BadRequestException(
+          'Cửa hàng không thể đổi sang trạng thái này'
+        );
+      }
     }
 
     if (!isCustomer && !isStore) {
@@ -260,14 +338,14 @@ export class OrdersService {
     }
 
     const oldStatus = order.status;
-    order.status = status;
+    order.status = newStatus;
     const updatedOrder = await this.ordersRepository.save(order);
 
-    // Lưu lịch sử status
+    // Lưu lịch sử
     const history = new OrderStatusHistory();
     history.order = updatedOrder;
     history.oldStatus = oldStatus as unknown as historyStatus;
-    history.newStatus = status as unknown as historyStatus;
+    history.newStatus = newStatus as unknown as historyStatus;
     history.changedBy = user;
     history.note = note ?? '';
     await this.orderStatusHistoryRepository.save(history);
@@ -280,13 +358,22 @@ export class OrdersService {
       where: { user: { id: userId } },
       relations: [
         'store',
+        'user',
         'userAddress',
         'orderItem',            
         'orderItem.product', 
         'orderItem.product.media',
         'voucherUsages',
         'voucherUsages.voucher',
+        'orderItem',
+        'orderItem.product',
+        'orderItem.product.media',
+        'orderItem.variant',
+        'orderItem.product.reviews',       // relation đúng từ entity Product
+        'orderItem.product.reviews.user',  // để biết reviewer là ai
+        'orderItem.product.reviews.order',
       ],
+      order: { id: 'DESC' },
     });
   }
 
@@ -294,7 +381,7 @@ export class OrdersService {
     const { sum } = await this.ordersRepository
       .createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'sum')
-      .where('order.status = :status', { status: OrderStatuses.Completed })
+      .where('order.status = :status', { status: OrderStatuses.completed })
       .getRawOne();
 
     return Number(sum) || 0;
@@ -345,19 +432,26 @@ export class OrdersService {
     };
   }
   async findByStore(storeId: number): Promise<Order[]> {
-    return this.ordersRepository.find({
-      where: { store: { id: storeId } },
-      relations: [
-        'user',
-        'userAddress',
-        'orderItem',
-        'orderItem.product',
-        'orderItem.variant',
-        'voucherUsages',
-        'voucherUsages.voucher',
-        'payment',
-      ],
-      order: { id: 'DESC' }, // sắp xếp đơn mới nhất trước
-    });
+    return (
+      this.ordersRepository
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.user', 'user')
+        .leftJoinAndSelect('order.userAddress', 'userAddress')
+        .leftJoinAndSelect('order.orderItem', 'orderItem')
+        .leftJoinAndSelect('orderItem.product', 'product')
+        .leftJoinAndSelect('orderItem.variant', 'variant')
+        .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+        .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+        .leftJoinAndSelect('order.payment', 'payment')
+        // join reviews nhưng có điều kiện order_id = order.id
+        .leftJoinAndSelect(
+          'product.reviews',
+          'reviews',
+          'reviews.order_id = order.id'
+        )
+        .where('order.store_id = :storeId', { storeId })
+        .orderBy('order.id', 'DESC')
+        .getMany()
+    );
   }
 }

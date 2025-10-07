@@ -19,6 +19,8 @@ import { StoreModule } from '../store/store.module';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
 import { Brand } from '../brands/brand.entity';
+import { ProductReview } from '../product_reviews/product_review.entity';
+import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { Brand } from '../brands/brand.entity';
       ProductCategory,
       ProductTag,
       Tag,
+      ProductReview,
     ]),
     forwardRef(() => ProductMediaModule),
     forwardRef(() => VariantModule),
@@ -40,6 +43,7 @@ import { Brand } from '../brands/brand.entity';
     forwardRef(() => PricingRuleModule),
     forwardRef(() => ProductCategoryModule),
     forwardRef(() => StoreModule),
+    forwardRef(() => ProductReviewsModule), 
   ],
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],

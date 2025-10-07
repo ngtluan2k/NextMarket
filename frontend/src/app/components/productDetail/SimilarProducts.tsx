@@ -1,7 +1,12 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Star } from "lucide-react";
-import { Link } from "react-router-dom";
-import { productService, Product } from "../../../service/product.service"; 
+import React, { useMemo, useState, useEffect } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Image as ImageIcon,
+  Star,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { productService, Product } from '../../../service/product.service';
 
 export type SimilarItem = {
   id?: string;
@@ -25,9 +30,9 @@ type Props = {
 };
 
 const fmt = (n?: number) =>
-  (n ?? 0).toLocaleString("vi-VN", {
-    style: "currency",
-    currency: "VND",
+  (n ?? 0).toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
     maximumFractionDigits: 0,
   });
 
@@ -36,14 +41,17 @@ function Stars({ value = 0 }: { value?: number }) {
   return (
     <div className="flex items-center gap-0.5 text-amber-500">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} className={`h-3.5 w-3.5 ${i < full ? "fill-current" : ""}`} />
+        <Star
+          key={i}
+          className={`h-3.5 w-3.5 ${i < full ? 'fill-current' : ''}`}
+        />
       ))}
     </div>
   );
 }
 
 export default function SimilarProductsCarousel({
-  title: initialTitle = "Sản phẩm tương tự",
+  title: initialTitle = 'Sản phẩm tương tự',
   productId,
   items: propItems,
   loading: propLoading = false,
@@ -66,8 +74,8 @@ export default function SimilarProductsCarousel({
           setError(null);
         })
         .catch((err) => {
-          console.error("Failed to fetch similar products:", err);
-          setError("Failed to load similar products");
+          console.error('Failed to fetch similar products:', err);
+          setError('Failed to load similar products');
         })
         .finally(() => setLoading(false));
     }
@@ -80,7 +88,10 @@ export default function SimilarProductsCarousel({
       id: p.id.toString(),
       name: p.name,
       image: p.media?.find((m) => m.is_primary)?.url || p.media?.[0]?.url,
-      price: typeof p.base_price === "string" ? parseFloat(p.base_price) : p.base_price,
+      price:
+        typeof p.base_price === 'string'
+          ? parseFloat(p.base_price)
+          : p.base_price,
       href: `/products/slug/${p.slug}`, // ✅ matches route in App.tsx
     }));
 
@@ -143,7 +154,7 @@ export default function SimilarProductsCarousel({
                 {x.image ? (
                   <img
                     src={x.image}
-                    alt={x.name ?? ""}
+                    alt={x.name ?? ''}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -187,8 +198,8 @@ export default function SimilarProductsCarousel({
         className={`absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white p-2 shadow ring-1 ring-slate-200
                     ${
                       !canPrev
-                        ? "opacity-40 cursor-not-allowed"
-                        : "hover:bg-slate-50"
+                        ? 'opacity-40 cursor-not-allowed'
+                        : 'hover:bg-slate-50'
                     }`}
       >
         <ChevronLeft className="h-5 w-5" />
@@ -202,8 +213,8 @@ export default function SimilarProductsCarousel({
         className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white p-2 shadow ring-1 ring-slate-200
                     ${
                       !canNext
-                        ? "opacity-40 cursor-not-allowed"
-                        : "hover:bg-slate-50"
+                        ? 'opacity-40 cursor-not-allowed'
+                        : 'hover:bg-slate-50'
                     }`}
       >
         <ChevronRight className="h-5 w-5" />
@@ -215,7 +226,7 @@ export default function SimilarProductsCarousel({
           <span
             key={i}
             className={`h-1.5 w-6 rounded-full ${
-              i === page ? "bg-slate-600" : "bg-slate-300"
+              i === page ? 'bg-slate-600' : 'bg-slate-300'
             }`}
           />
         ))}

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Trash2 } from "lucide-react";
 import { validateProduct, mapErrors, firstErrorStep } from "../../../validation/productValidator";
@@ -532,8 +530,7 @@ export const ProductForm: React.FC = () => {
           {form.variants.map((v, i) => {
             const totalStock = form.inventory
               .filter((inv) => inv.variant_sku === v.sku)
-              .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0);
-
+              .reduce((sum, inv) => sum + inv.quantity, 0);
             return (
               <div key={i} className="mb-3 grid grid-cols-1 gap-4 md:grid-cols-5">
                 <div className="space-y-1">
@@ -634,7 +631,6 @@ export const ProductForm: React.FC = () => {
               </div>
             );
           })}
-
           <button
             type="button"
             onClick={addVariant}
@@ -722,7 +718,6 @@ export const ProductForm: React.FC = () => {
               </div>
             </div>
           ))}
-
           <button
             type="button"
             onClick={addInventory}
@@ -1134,7 +1129,7 @@ export const ProductForm: React.FC = () => {
             Next
           </button>
         )}
-        {step === 5 && (
+        {step === 4 && (
           <div className="flex gap-2">
             {/* Chỉ submit qua onSubmit để tránh double submit */}
             <button type="submit" className="rounded-md bg-green-600 px-6 py-2 text-white hover:bg-green-700">

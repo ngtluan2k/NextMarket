@@ -1,4 +1,4 @@
-import { StoreInfo } from "./product";
+import { StoreInfo } from './product';
 
 export interface CartItem {
   id: number;

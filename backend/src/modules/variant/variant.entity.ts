@@ -12,6 +12,7 @@ import {
 import { Product } from '../product/product.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { OrderItem } from '../order-items/order-item.entity';
+import { ProductReview } from '../product_reviews/product_review.entity';
 
 @Entity('variants')
 export class Variant {
@@ -25,7 +26,9 @@ export class Variant {
   @Column()
   product_id!: number;
 
-  @ManyToOne(() => Product, (product) => product.variants, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.variants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 

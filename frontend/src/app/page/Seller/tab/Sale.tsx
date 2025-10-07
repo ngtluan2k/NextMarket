@@ -1,6 +1,6 @@
 'use client';
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Layout,
   Card,
@@ -93,7 +93,7 @@ interface Payment {
   uuid: string;
 }
 
-interface Sale {
+export interface Sale {
   id: number;
   orderNumber: string; // nếu API không có, bạn có thể tự sinh dạng ORD-xxx
   orderItem: ProductItem[];
@@ -204,6 +204,7 @@ function getStatusText(status: number | string): string {
 }
 
 export default function Sale() {
+  const token = localStorage.getItem('token') || '';
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -213,13 +214,27 @@ export default function Sale() {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
     null
   );
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const handleViewDetail = (sale: Sale) => {
+    setSelectedSale(sale);
+    setIsDetailModalVisible(true);
+  };
 
   const [detailSale, setDetailSale] = useState<SaleType | null>(null);
 
   const [form] = Form.useForm();
   const generateOrderNumber = (id: number) =>
     `ORD-${String(id).padStart(3, '0')}`;
-  const { sales, loading, error } = useMyStoreOrders();
+  const { sales: salesFromAPI, loading, error } = useMyStoreOrders();
+
+  // 1. Tạo state nội bộ
+  const [sales, setSales] = useState<Sale[]>([]);
+
+  // 2. Đồng bộ khi load xong từ hook
+  useEffect(() => {
+    if (salesFromAPI) setSales(salesFromAPI);
+  }, [salesFromAPI]);
   console.log('Sales from API:', sales);
 
   const safeLower = (val?: string) => (val || '').toLowerCase();
@@ -227,7 +242,7 @@ export default function Sale() {
   // Filter sales based on search and filters
   const filteredSales = sales.filter((sale) => {
     const customerName =
-      sale.user?.userAddress?.recipientName || sale.user?.username || '';
+      sale.userAddress?.recipientName || sale.user?.username || '';
     const matchesSearch =
       customerName.toLowerCase().includes(searchText.toLowerCase()) ||
       sale.id.toString().includes(searchText.toLowerCase()) ||
@@ -253,9 +268,7 @@ export default function Sale() {
     (sum, sale) => sum + Number(sale.totalAmount || 0),
     0
   );
-  const completedSales = sales.filter(
-    (sale) => sale.status === '5'
-  ).length;
+  const completedSales = sales.filter((sale) => sale.status === '5').length;
   const pendingSales = sales.filter((sale) => sale.status === '0').length;
   const totalOrders = sales.length;
 

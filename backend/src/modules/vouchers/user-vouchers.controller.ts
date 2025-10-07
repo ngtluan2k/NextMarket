@@ -50,7 +50,10 @@ export class UserVouchersController {
   @Post('apply')
   @ApiOperation({ summary: 'Áp dụng voucher vào đơn hàng' })
   @ApiResponse({ status: 200, description: 'Voucher được áp dụng thành công' })
-  async applyVoucher(@Body() applyVoucherDto: ApplyVoucherDto, @Req() req: any) {
+  async applyVoucher(
+    @Body() applyVoucherDto: ApplyVoucherDto,
+    @Req() req: any
+  ) {
     const userId = req.user?.userId;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
@@ -59,7 +62,7 @@ export class UserVouchersController {
       applyVoucherDto.code,
       userId,
       applyVoucherDto.orderItems,
-      applyVoucherDto.storeId,
+      applyVoucherDto.storeId
     );
   }
 }

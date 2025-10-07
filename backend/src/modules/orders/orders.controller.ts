@@ -53,17 +53,12 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   changeStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Param('status') status: keyof typeof OrderStatuses,
+    @Param('status') status: string, // 👈 nhận string luôn
     @Body('note') note: string,
-    @Req() req: any // hoặc @User() nếu bạn có decorator lấy user từ JWT
+    @Req() req: any
   ) {
     const user = { ...req.user, id: req.user.sub };
-    return this.ordersService.changeStatus(
-      id,
-      OrderStatuses[status],
-      user,
-      note
-    );
+    return this.ordersService.changeStatus(id, status, user, note);
   }
 
   @Get('user/:userId')

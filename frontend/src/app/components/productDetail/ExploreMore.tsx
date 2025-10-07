@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Star, Flame, Sparkles } from "lucide-react";
+import React, { useEffect, useMemo, useState } from 'react';
+import { Star, Flame, Sparkles } from 'lucide-react';
 
-export type ExploreSectionKey = "forYou" | "trending";
+export type ExploreSectionKey = 'forYou' | 'trending';
 
 export type ExploreItem = {
   id: string | number;
@@ -9,11 +9,11 @@ export type ExploreItem = {
   imageUrl: string;
   price: number;
   originalPrice?: number;
-  rating?: number;           // 0..5
+  rating?: number; // 0..5
   reviewCount?: number;
-  sellerBadge?: "Official" | "XTRA" | "TOP" | "Mall" | string;
+  sellerBadge?: 'Official' | 'XTRA' | 'TOP' | 'Mall' | string;
   isAd?: boolean;
-  shipNote?: string;         // ví dụ: "Giao Thứ 7, 20/09"
+  shipNote?: string; // ví dụ: "Giao Thứ 7, 20/09"
   link?: string;
 };
 
@@ -26,14 +26,26 @@ export type ExploreHero = {
 
 export default function ExploreMore({
   sections = [
-    { key: "forYou" as ExploreSectionKey, title: "Dành cho bạn", icon: <Sparkles className="h-4 w-4" /> },
-    { key: "trending" as ExploreSectionKey, title: "Trending", icon: <Flame className="h-4 w-4" /> },
+    {
+      key: 'forYou' as ExploreSectionKey,
+      title: 'Dành cho bạn',
+      icon: <Sparkles className="h-4 w-4" />,
+    },
+    {
+      key: 'trending' as ExploreSectionKey,
+      title: 'Trending',
+      icon: <Flame className="h-4 w-4" />,
+    },
   ],
   fetchItems,
   hero,
-  initial = "forYou",
+  initial = 'forYou',
 }: {
-  sections?: { key: ExploreSectionKey; title: string; icon?: React.ReactNode }[];
+  sections?: {
+    key: ExploreSectionKey;
+    title: string;
+    icon?: React.ReactNode;
+  }[];
   fetchItems?: (key: ExploreSectionKey) => Promise<ExploreItem[]>;
   hero?: ExploreHero;
   initial?: ExploreSectionKey;
@@ -55,7 +67,9 @@ export default function ExploreMore({
       }
     };
     run();
-    return () => { stop = true; };
+    return () => {
+      stop = true;
+    };
   }, [tab]);
 
   const items = data[tab] ?? [];
@@ -69,11 +83,14 @@ export default function ExploreMore({
             key={s.key}
             onClick={() => setTab(s.key)}
             className={`relative -mb-px inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-sm font-medium
-              ${tab === s.key
-                ? "text-sky-700"
-                : "text-slate-600 hover:text-slate-800"}`}
+              ${
+                tab === s.key
+                  ? 'text-sky-700'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
           >
-            {s.icon}{s.title}
+            {s.icon}
+            {s.title}
             {tab === s.key && (
               <span className="absolute inset-x-0 -bottom-px h-0.5 bg-sky-600" />
             )}
@@ -86,18 +103,22 @@ export default function ExploreMore({
         {/* Hero banner (desktop chiếm 2x2) */}
         {hero && (
           <a
-            href={hero.link ?? "#"}
+            href={hero.link ?? '#'}
             className="relative col-span-2 row-span-2 hidden overflow-hidden rounded-xl ring-1 ring-slate-200 lg:block"
           >
             <img
               src={hero.imageUrl}
-              alt={hero.title ?? ""}
+              alt={hero.title ?? ''}
               className="h-full w-full object-cover"
             />
             {(hero.title || hero.subTitle) && (
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 text-white">
-                {hero.title && <div className="text-base font-semibold">{hero.title}</div>}
-                {hero.subTitle && <div className="text-xs opacity-90">{hero.subTitle}</div>}
+                {hero.title && (
+                  <div className="text-base font-semibold">{hero.title}</div>
+                )}
+                {hero.subTitle && (
+                  <div className="text-xs opacity-90">{hero.subTitle}</div>
+                )}
               </div>
             )}
           </a>
@@ -122,7 +143,11 @@ export default function ExploreMore({
 
 /* ---------- Card ---------- */
 const vnd = (n?: number) =>
-  (n ?? 0).toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
+  (n ?? 0).toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  });
 
 function Card({ item }: { item: ExploreItem }) {
   const discount =
@@ -132,7 +157,7 @@ function Card({ item }: { item: ExploreItem }) {
 
   return (
     <a
-      href={item.link ?? "#"}
+      href={item.link ?? '#'}
       className="group rounded-xl ring-1 ring-slate-200 p-2 hover:shadow-sm"
     >
       <div className="relative">
@@ -147,24 +172,36 @@ function Card({ item }: { item: ExploreItem }) {
           </span>
         )}
         <div className="aspect-[4/5] overflow-hidden rounded-md bg-slate-50">
-          <img src={item.imageUrl} alt="" className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]" />
+          <img
+            src={item.imageUrl}
+            alt=""
+            className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+          />
         </div>
       </div>
 
-      <div className="mt-2 line-clamp-2 text-sm text-slate-800">{item.name}</div>
+      <div className="mt-2 line-clamp-2 text-sm text-slate-800">
+        {item.name}
+      </div>
 
       <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-500">
         <Star className="h-3.5 w-3.5 fill-current" />
         <span className="text-slate-700">{(item.rating ?? 0).toFixed(1)}</span>
-        {item.reviewCount ? <span className="text-slate-500">({item.reviewCount})</span> : null}
+        {item.reviewCount ? (
+          <span className="text-slate-500">({item.reviewCount})</span>
+        ) : null}
       </div>
 
       <div className="mt-1 flex items-baseline gap-2">
-        <div className="text-base font-semibold text-rose-600">{vnd(item.price)}</div>
+        <div className="text-base font-semibold text-rose-600">
+          {vnd(item.price)}
+        </div>
         {item.originalPrice && item.originalPrice > item.price && (
-          <div className="text-xs text-slate-400 line-through">{vnd(item.originalPrice)}</div>
+          <div className="text-xs text-slate-400 line-through">
+            {vnd(item.originalPrice)}
+          </div>
         )}
-        {typeof discount === "number" && (
+        {typeof discount === 'number' && (
           <div className="ml-auto rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">
             -{discount}%
           </div>
@@ -190,10 +227,10 @@ async function mockFetch(key: ExploreSectionKey): Promise<ExploreItem[]> {
     originalPrice: i % 3 === 0 ? 450000 : undefined,
     rating: 4 + (i % 5) * 0.1,
     reviewCount: 20 + i,
-    sellerBadge: i % 4 === 0 ? "Official" : i % 5 === 0 ? "XTRA" : undefined,
+    sellerBadge: i % 4 === 0 ? 'Official' : i % 5 === 0 ? 'XTRA' : undefined,
     isAd: i % 7 === 0,
-    shipNote: "Giao Thứ 7, 20/09",
-    link: "#",
+    shipNote: 'Giao Thứ 7, 20/09',
+    link: '#',
   }));
   return base;
 }

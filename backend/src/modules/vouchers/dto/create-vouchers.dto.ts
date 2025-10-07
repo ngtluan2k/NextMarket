@@ -1,6 +1,20 @@
-import { IsEnum, IsString, IsNumber, IsDateString, IsOptional, IsBoolean, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsEnum,
+  IsString,
+  IsNumber,
+  IsDateString,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { VoucherType, VoucherDiscountType, VoucherStatus, VoucherCollectionType } from '../vouchers.entity';
+import {
+  VoucherType,
+  VoucherDiscountType,
+  VoucherStatus,
+  VoucherCollectionType,
+} from '../vouchers.entity';
 
 class TimeRestrictionDto {
   @IsOptional()

@@ -13,21 +13,21 @@ import { User } from '../user/user.entity';
 import { Store } from '../store/store.entity';
 import { UserAddress } from '../user_address/user_address.entity';
 import { OrderItem } from '../order-items/order-item.entity';
-import {  OrderStatusHistory } from '../order-status-history/order-status-history.entity';
+import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { OrderInvoice } from '../order-invoices/order-invoice.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
-
+import { ProductReview } from '../product_reviews/product_review.entity';
 export enum OrderStatuses {
-  Pending = 0,
-  Confirmed = 1,
-  Processing = 2,
-  Shipped = 3,
-  Delivered = 4,  
-  Completed = 5,
+  pending = 0,
+  confirmed = 1,
+  processing = 2,
+  shipped = 3,
+  delivered = 4,
+  completed = 5,
   cancelled = 6,
-  Returned = 7,
+  returned = 7,
 }
 
 @Entity('orders')
@@ -55,7 +55,7 @@ export class Order {
 
   @Column({
     type: 'tinyint',
-    default: OrderStatuses.Pending,
+    default: OrderStatuses.pending,
   })
   status!: OrderStatuses;
 
@@ -98,7 +98,7 @@ export class Order {
   @Column({ type: 'char', length: 3, default: 'VND' })
   currency!: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp', })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
@@ -106,19 +106,22 @@ export class Order {
 
   @OneToMany(() => OrderItem, (orderitem) => orderitem.order)
   orderItem!: OrderItem[];
-  
+
   @OneToMany(() => OrderStatusHistory, (history) => history.order)
   orderStatusHistory!: OrderStatusHistory[];
 
-  @OneToMany(() =>OrderInvoice,(invoice)=> invoice.order )
+  @OneToMany(() => OrderInvoice, (invoice) => invoice.order)
   orderInvoice!: OrderInvoice[];
 
   @OneToMany(() => VoucherUsage, (usage) => usage.order)
   voucherUsages!: VoucherUsage[];
-  
+
   @OneToMany(() => Payment, (payment) => payment.order)
   payment!: Payment[];
 
   @OneToMany(() => Refund, (refund) => refund.order)
   refund!: Refund[];
+
+  @OneToMany(() => ProductReview, (reviews) => reviews.order)
+  reviews!: ProductReview;
 }

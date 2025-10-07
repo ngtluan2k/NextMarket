@@ -10,6 +10,7 @@ export class ProvincesService {
   constructor(private readonly configService: ConfigService) {
     const apiV1 = this.configService.get<string>('PROVINCE_API_V1_URL')?.trim();
     const apiV2 = this.configService.get<string>('PROVINCE_API_V2_URL')?.trim();
+    console.log('ENV URL:', process.env.PROVINCE_API_V1_URL);
 
     if (!apiV1) throw new Error('PROVINCE_API_V1_URL is missing in .env');
     if (!apiV2) throw new Error('PROVINCE_API_V2_URL is missing in .env');
@@ -76,7 +77,9 @@ export class ProvincesService {
   async getWards(districtCode: number, version: 'v1' | 'v2' = 'v1') {
     try {
       if (version === 'v2') {
-        console.warn('⚠️ v2 API does not support fetching wards by districtCode');
+        console.warn(
+          '⚠️ v2 API does not support fetching wards by districtCode'
+        );
         return [];
       }
 

@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Generated,
+} from 'typeorm';
 import { Product } from '../product/product.entity';
 import { Category } from '../categories/category.entity';
 
@@ -11,17 +20,22 @@ export class ProductCategory {
   @Generated('uuid')
   uuid!: string;
 
-  @Column( {nullable: false})
+  @Column({ nullable: false })
   product_id!: number;
 
-  @ManyToOne(() => Product, (product) => product.categories, { onDelete: 'CASCADE',nullable: false })
+  @ManyToOne(() => Product, (product) => product.categories, {
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
   @JoinColumn({ name: 'product_id' })
-  product!: Product; 
+  product!: Product;
 
   @Column()
   category_id!: number;
 
-  @ManyToOne(() => Category, (category) => category.productCategories, { eager: true })
+  @ManyToOne(() => Category, (category) => category.productCategories, {
+    eager: true,
+  })
   @JoinColumn({ name: 'category_id' })
   category!: Category;
 
@@ -31,4 +45,3 @@ export class ProductCategory {
   // @UpdateDateColumn()
   // updated_at!: Date;
 }
-

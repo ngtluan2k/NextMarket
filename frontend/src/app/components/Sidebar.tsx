@@ -36,9 +36,8 @@ const items: MenuItem[] = [
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
   getItem('Invoices', 'Invoices', <FileTextOutlined />),
   getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
-  getItem('Back to home', 'HomePage', <HomeOutlined />)
+  getItem('Back to home', 'HomePage', <HomeOutlined />),
 ];
-
 
 interface SideBarProps {
   onSelect: (key: string) => void;
@@ -74,8 +73,9 @@ const Sidebar: React.FC<SideBarProps> = ({ onSelect }) => {
             <ShoppingCartOutlined className="text-white text-lg" />
           </div>
           <div
-            className={`transition-all duration-300 ease-in-out ${collapsed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-              }`}
+            className={`transition-all duration-300 ease-in-out ${
+              collapsed ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+            }`}
             style={{ display: collapsed ? 'none' : 'block' }}
           >
             <span className="text-xl font-bold text-gray-900">

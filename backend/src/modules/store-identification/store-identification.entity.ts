@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Store } from './../store/store.entity';
 
 @Entity('store_identification')
@@ -24,9 +30,6 @@ export class StoreIdentification {
 
   @Column({ length: 255, nullable: true })
   img_back!: string;
-
-  // @Column({ type: 'boolean', default: false })
-  // is_draft!: boolean;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

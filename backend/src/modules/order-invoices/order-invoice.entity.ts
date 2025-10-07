@@ -28,13 +28,29 @@ export class OrderInvoice {
   @Column({ name: 'tax_number', type: 'varchar', length: 64, nullable: true })
   taxNumber?: string;
 
-  @Column({ name: 'company_name', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'company_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   companyName?: string;
 
-  @Column({ name: 'company_address', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'company_address',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   companyAddress?: string;
 
-  @Column({name: 'total_tax', type: 'decimal', precision: 12, scale: 2, nullable: true,})
+  @Column({
+    name: 'total_tax',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
   totalTax?: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })

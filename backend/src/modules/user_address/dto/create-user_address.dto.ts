@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsBoolean, IsOptional, IsNumber } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsNumber,
+} from 'class-validator';
 
 export class CreateUserAddressDto {
   @IsNumber()
@@ -18,18 +24,22 @@ export class CreateUserAddressDto {
 
   @IsString()
   @IsNotEmpty()
-  city!: string;
+  ward!: string;
 
   @IsString()
-  @IsOptional() // Cho phép province là tùy chọn và có thể rỗng
-  province?: string;
+  @IsNotEmpty()
+  district!: string;
 
   @IsString()
-  @IsOptional() // Cho phép country là tùy chọn và có thể rỗng
-  country?: string;
+  @IsNotEmpty()
+  province!: string;
 
   @IsString()
-  @IsOptional() // Cho phép postalCode là tùy chọn và có thể rỗng
+  @IsNotEmpty()
+  country!: string;
+
+  @IsString()
+  @IsOptional()
   postalCode?: string;
 
   @IsBoolean()

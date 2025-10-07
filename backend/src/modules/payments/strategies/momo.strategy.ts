@@ -9,7 +9,7 @@ import { PaymentMethod } from '../../payment-methods/payment-method.entity';
 export class MomoStrategy {
   constructor(
     @InjectRepository(Payment)
-    private paymentRepo: Repository<Payment>,
+    private paymentRepo: Repository<Payment>
   ) {}
 
   async createPayment(order: Order, paymentMethod: PaymentMethod) {
@@ -25,6 +25,5 @@ export class MomoStrategy {
     return { payment: saved, redirectUrl };
   }
 
-  async handleCallback(payload: any) {
-  }
+  async handleCallback(payload: any) {}
 }

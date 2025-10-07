@@ -5,6 +5,7 @@ import {
   Body,
   Req,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { VouchersService } from './vouchers.service';
@@ -21,18 +22,29 @@ export class VouchersController {
   @ApiResponse({ status: 200, description: 'Danh sách các voucher hoạt động' })
   async getActiveVouchers(@Req() req: any) {
     const userId = req.user?.userId;
-    return this.vouchersService.getActiveVouchers(userId);
+    if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
+    return this.vouchersService.getAvailableVouchers(userId);
   }
 
   @Post('validate')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Xác thực mã voucher' })
+  @UseGuards(JwtAuthGuard)
   @ApiResponse({ status: 200, description: 'Kết quả xác thực voucher' })
-  async validateVoucher(@Body() validateVoucherDto: ValidateVoucherDto, @Req() req: any) {
+  async validateVoucher(
+    @Body() validateVoucherDto: ValidateVoucherDto,
+    @Req() req: any
+  ) {
     const userId = req.user?.userId;
-    if (!userId) {
-      throw new Error('Người dùng chưa được xác thực');
-    }
-    return this.vouchersService.validateVoucher(validateVoucherDto, userId);
+    if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
+
+    const { code, order_amount, store_id } = validateVoucherDto;
+    const orderItems = [{ productId: 0, quantity: 1, price: order_amount }];
+
+    return this.vouchersService.validateVoucher(
+      code,
+      userId,
+      orderItems,
+      store_id ?? 0
+    );
   }
 }

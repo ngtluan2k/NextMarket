@@ -36,7 +36,6 @@ export class InventoryDto {
   used_quantity?: number;
 }
 
-
 export class BrandDto {
   @ApiProperty({ description: 'Brand id' })
   id?: number;
@@ -69,12 +68,16 @@ export class StoreDto {
 
   @ApiProperty({ description: 'Store slug' })
   slug?: string;
+  @ApiProperty({ description: 'Store logo URL' })
+  logo_url?: string;
 }
-
 
 export class ProductResponseDto {
   @ApiProperty({ description: 'Product ID' })
   id?: number;
+
+  @ApiProperty({ description: 'Store ID' })
+  store_id?: number;
 
   @ApiProperty({ description: 'Product name' })
   name?: string;
@@ -94,6 +97,12 @@ export class ProductResponseDto {
   @ApiProperty({ description: 'Base price of the product' })
   base_price?: number;
 
+  @ApiProperty({ description: 'Base price of the product' })
+  avg_rating?: number;
+
+  @ApiProperty({ description: 'Base price of the product' })
+  review_count?: number;
+
   @ApiProperty({
     type: [MediaDto],
     description: 'Product media (images/videos)',
@@ -103,12 +112,11 @@ export class ProductResponseDto {
   @ApiProperty({ type: [VariantDto], description: 'Product variants' })
   variants?: VariantDto[];
 
-   @ApiProperty({
-  description: 'Inventories mapped by variant SKU',
-  type: Object, // object map
-})
-inventories?: Record<string, InventoryDto[]>;
-
+  @ApiProperty({
+    description: 'Inventories mapped by variant SKU',
+    type: Object, // object map
+  })
+  inventories?: Record<string, InventoryDto[]>;
 
   @ApiProperty({ type: BrandDto, description: 'Brand information' })
   brand?: BrandDto;

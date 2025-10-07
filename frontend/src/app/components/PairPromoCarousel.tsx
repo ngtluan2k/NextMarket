@@ -1,13 +1,13 @@
 // src/components/PairPromoCarousel.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 
 export type PairCard = {
   id: string | number;
   title: string;
-  sponsor?: string;    // ví dụ: "Tài trợ bởi Tiki Trading"
+  sponsor?: string; // ví dụ: "Tài trợ bởi Tiki Trading"
   ratingText?: string; // ví dụ: "5/5"
-  coverUrl?: string;   // logo/ảnh to bên trái
-  href?: string;       // nếu muốn click điều hướng
+  coverUrl?: string; // logo/ảnh to bên trái
+  href?: string; // nếu muốn click điều hướng
 };
 
 type Props = {
@@ -19,7 +19,7 @@ type Props = {
 };
 
 const ph = (w = 140, h = 140) =>
-  "data:image/svg+xml;utf8," +
+  'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
        <rect width='100%' height='100%' rx='24' fill='#F1F5F9'/>
@@ -31,7 +31,7 @@ const ph = (w = 140, h = 140) =>
 export default function PairPromoCarousel({
   items,
   fetchItems,
-  className = "",
+  className = '',
   autoPlay = true,
   interval = 6000,
 }: Props) {
@@ -71,12 +71,17 @@ export default function PairPromoCarousel({
   // autoplay
   useEffect(() => {
     if (!autoPlay || groups.length <= 1) return;
-    const t = setInterval(() => setPage((p) => (p >= max ? 0 : p + 1)), interval);
+    const t = setInterval(
+      () => setPage((p) => (p >= max ? 0 : p + 1)),
+      interval
+    );
     return () => clearInterval(t);
   }, [autoPlay, interval, groups.length, max]);
 
   return (
-    <section className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow p-3 md:p-4 ${className}`}>
+    <section
+      className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow p-3 md:p-4 ${className}`}
+    >
       <div className="relative overflow-hidden">
         {/* arrows */}
         {groups.length > 1 && (
@@ -107,7 +112,10 @@ export default function PairPromoCarousel({
           }}
         >
           {groups.map((g, idx) => (
-            <div key={idx} className="grid w-full grid-cols-1 md:grid-cols-2 gap-4 px-1">
+            <div
+              key={idx}
+              className="grid w-full grid-cols-1 md:grid-cols-2 gap-4 px-1"
+            >
               {g.map((c) => (
                 <Card key={c.id} {...c} />
               ))}
@@ -127,7 +135,7 @@ export default function PairPromoCarousel({
               aria-label={`Trang ${i + 1}`}
               onClick={() => setPage(i)}
               className={`h-1.5 rounded-full transition-all ${
-                page === i ? "w-6 bg-sky-600" : "w-2 bg-slate-300"
+                page === i ? 'w-6 bg-sky-600' : 'w-2 bg-slate-300'
               }`}
             />
           ))}
@@ -154,7 +162,9 @@ export default function PairPromoCarousel({
           />
         </div>
         <div className="flex min-w-0 flex-col justify-center">
-          <h3 className="text-base md:text-lg font-semibold text-slate-900 line-clamp-2">{c.title}</h3>
+          <h3 className="text-base md:text-lg font-semibold text-slate-900 line-clamp-2">
+            {c.title}
+          </h3>
           {(c.sponsor || c.ratingText) && (
             <div className="mt-1 text-sm text-slate-600">
               {c.sponsor && <span>{c.sponsor}</span>}
@@ -166,7 +176,9 @@ export default function PairPromoCarousel({
     );
 
     return c.href ? (
-      <a href={c.href} className="block">{Body}</a>
+      <a href={c.href} className="block">
+        {Body}
+      </a>
     ) : (
       <div>{Body}</div>
     );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 
 export type StoreCategory = {
   id: string | number;
@@ -23,7 +23,7 @@ export default function StoreCategorySidebar({
   selectedSlug = null,
   onSelect,
   className,
-  title = "Danh mục sản phẩm",
+  title = 'Danh mục sản phẩm',
   maxVisible = 10,
 }: Props) {
   const [fetched, setFetched] = useState<StoreCategory[]>([]);
@@ -40,7 +40,7 @@ export default function StoreCategorySidebar({
           const data = await fetchItems();
           if (alive) setFetched(data);
         } catch (err) {
-          console.error("Fetch categories failed:", err);
+          console.error('Fetch categories failed:', err);
         } finally {
           if (alive) setLoading(false);
         }
@@ -59,9 +59,9 @@ export default function StoreCategorySidebar({
   return (
     <aside
       className={[
-        "rounded-2xl border bg-white p-3 shadow-sm",
-        className || "",
-      ].join(" ")}
+        'rounded-2xl border bg-white p-3 shadow-sm',
+        className || '',
+      ].join(' ')}
     >
       <div className="mb-2 text-sm font-semibold">{title}</div>
 
@@ -69,8 +69,8 @@ export default function StoreCategorySidebar({
         onClick={() => onSelect?.(null)}
         className={
           selectedSlug == null
-            ? "font-medium text-slate-900 block w-full text-left py-1.5"
-            : "text-slate-700 hover:text-slate-900 block w-full text-left py-1.5"
+            ? 'font-medium text-slate-900 block w-full text-left py-1.5'
+            : 'text-slate-700 hover:text-slate-900 block w-full text-left py-1.5'
         }
       >
         Tất cả
@@ -95,14 +95,14 @@ export default function StoreCategorySidebar({
                   onClick={() => onSelect?.(c.slug)}
                   className={
                     active
-                      ? "font-medium text-slate-900 block w-full text-left py-2"
-                      : "text-slate-700 hover:text-slate-900 block w-full text-left py-2"
+                      ? 'font-medium text-slate-900 block w-full text-left py-2'
+                      : 'text-slate-700 hover:text-slate-900 block w-full text-left py-2'
                   }
                 >
                   {c.name}
-                  {typeof c.count === "number" && (
+                  {typeof c.count === 'number' && (
                     <span className="ml-1 text-xs text-slate-500">
-                      ({c.count.toLocaleString("vi-VN")})
+                      ({c.count.toLocaleString('vi-VN')})
                     </span>
                   )}
                 </button>
@@ -118,7 +118,7 @@ export default function StoreCategorySidebar({
             className="text-sm text-blue-600 hover:underline"
             onClick={() => setShowAll((v) => !v)}
           >
-            {showAll ? "Thu gọn" : "Xem thêm"}
+            {showAll ? 'Thu gọn' : 'Xem thêm'}
           </button>
         </div>
       )}

@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Row, Col, Typography, message, Spin, Button } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Thêm useAuth
+import { useAuth } from '../context/AuthContext';
 import { api } from '../api/api';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -16,22 +16,23 @@ import {
   PaymentMethodResponse,
   SavedCard,
 } from '../types/payment';
-import LoginModal from '../components/LoginModal'; // Thêm LoginModal
+import LoginModal from '../components/LoginModal';
 import { CheckoutLocationState } from '../types/buyBox';
 import { CheckoutItem } from '../types/checkout';
+import { UserAddress } from '../types/user';
 
 const { Title } = Typography;
 
 const CheckoutPayment: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { me } = useAuth(); // Sử dụng useAuth để lấy thông tin người dùng
+  const { me } = useAuth();
   const state = (location.state ?? {
     items: [],
     subtotal: 0,
   }) as CheckoutLocationState;
 
-  const [showLoginModal, setShowLoginModal] = useState(false); 
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const items = state.items ?? [];
   const subtotalNum =
     typeof state.subtotal === 'string'
@@ -90,8 +91,12 @@ const CheckoutPayment: React.FC = () => {
     []
   );
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
-  const [userAddress, setUserAddress] = useState<any>(null);
+  const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleAddressChange = (addr: UserAddress) => {
+    setUserAddress(addr);
+  };
 
   const total = useMemo(
     () => subtotalNum + (shippingFee || 0),
@@ -103,13 +108,15 @@ const CheckoutPayment: React.FC = () => {
   );
 
   useEffect(() => {
-   
     const token = localStorage.getItem('token');
-    const userId = me?.id || parseInt(localStorage.getItem('userId') || '0');
 
-    if (!token || userId === 0) {
-      // Lưu trạng thái checkout và hiển thị modal đăng nhập
-      console.log('🔐 No token or userId, saving checkout state');
+    // FIX: Đảm bảo userId luôn là số hợp lệ
+    const storedUserId = localStorage.getItem('userId');
+    const userId = me?.id || (storedUserId ? parseInt(storedUserId, 10) : 0);
+
+    // Kiểm tra userId hợp lệ
+    if (!token || !userId || isNaN(userId)) {
+      console.log('🔐 No valid token or userId, showing login modal');
       localStorage.setItem(
         'checkoutData',
         JSON.stringify({ items, subtotal: subtotalNum })
@@ -159,17 +166,37 @@ const CheckoutPayment: React.FC = () => {
 
     const fetchUserAddress = async () => {
       try {
+        console.log('📍 Fetching address for userId:', userId);
         const response = await api.get(`/users/${userId}/addresses`);
         const addresses = response.data || [];
+
         if (addresses.length > 0) {
-          const addr = addresses.find((a: any) => a.isDefault);
+          // Tìm địa chỉ mặc định hoặc lấy địa chỉ đầu tiên
+          const defaultAddr =
+            addresses.find((a: any) => a.isDefault) || addresses[0];
+
           setUserAddress({
-            id: addr.id,
-            fullAddress: `${addr.street}, ${addr.city}, ${addr.province}, ${addr.country}`,
-            name: addr.recipientName,
-            phone: addr.phone,
-            tag: addr.isDefault ? 'Mặc định' : undefined,
-            userId, // Thêm userId để kiểm tra trong CartSidebar
+            id: defaultAddr.id,
+            userId: userId, // FIX: Đảm bảo userId là số hợp lệ
+            recipientName: defaultAddr.recipientName,
+            phone: defaultAddr.phone,
+            street: defaultAddr.street,
+            ward: defaultAddr.ward,
+            district: defaultAddr.district,
+            province: defaultAddr.province,
+            country: defaultAddr.country,
+            postalCode: defaultAddr.postalCode,
+            isDefault: defaultAddr.isDefault,
+            fullAddress: [
+              defaultAddr.street,
+              defaultAddr.ward,
+              defaultAddr.district,
+              defaultAddr.province,
+              defaultAddr.country,
+            ]
+              .filter(Boolean)
+              .join(', '),
+            tag: defaultAddr.isDefault ? 'Mặc định' : undefined,
           });
         } else {
           message.warning(
@@ -186,12 +213,10 @@ const CheckoutPayment: React.FC = () => {
     Promise.all([fetchAllPaymentMethods(), fetchUserAddress()]).finally(() =>
       setLoading(false)
     );
-  }, [navigate, me]);
+  }, [navigate, me, location.pathname, items, subtotalNum]);
 
-  // Xử lý sau khi đăng nhập thành công
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
-    // Khôi phục checkout state từ localStorage
     const checkoutData = localStorage.getItem('checkoutData');
     if (checkoutData) {
       const parsedData = JSON.parse(checkoutData);
@@ -259,6 +284,7 @@ const CheckoutPayment: React.FC = () => {
               paymentMethods={paymentMethods}
               shippingMethod={shippingMethod}
               userAddress={userAddress}
+              onAddressChange={handleAddressChange}
               items={checkoutItems}
               etaLabel={etaLabel}
             />
@@ -270,7 +296,7 @@ const CheckoutPayment: React.FC = () => {
         open={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         title="Đăng nhập để tiếp tục thanh toán"
-        onSuccess={handleLoginSuccess} // Xử lý sau khi đăng nhập thành công
+        onSuccess={handleLoginSuccess}
       />
     </div>
   );

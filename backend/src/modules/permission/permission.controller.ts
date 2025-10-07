@@ -1,5 +1,14 @@
 // permission.controller.ts
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { PermissionService } from './permission.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
@@ -27,7 +36,11 @@ export class PermissionController {
 
   @Patch(':id')
   @Permissions('update_permission')
-  update(@Param('id') id: number, @Body('code') code: string, @Body('description') description: string) {
+  update(
+    @Param('id') id: number,
+    @Body('code') code: string,
+    @Body('description') description: string
+  ) {
     return this.service.update(id, code, description);
   }
 
