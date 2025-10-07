@@ -72,6 +72,8 @@ export class Product {
   @Column({ type: 'int', default: 0 })
   review_count!: number;
 
+  
+
   // === Relations ===
   @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
   categories!: ProductCategory[];
