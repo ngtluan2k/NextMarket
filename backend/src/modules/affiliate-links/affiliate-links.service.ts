@@ -125,6 +125,8 @@ export class AffiliateLinksService {
     return { message: 'Successfully unregistered from affiliate program' };
   }
 
+  /////hihi
+
   async createAffiliateLink(
     userId: number,
     productId: number,
