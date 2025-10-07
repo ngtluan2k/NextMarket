@@ -36,6 +36,7 @@ import OtpVerifyPage from "./page/OtpVerify";
 
 import UserAddress from './page/UserAddress';
 import ShopXuPage from './components/account/ShopXuPage';
+import OrderDetailPage from "./page/account/OrderDetailPage";
 
 interface CartProps {
   showMessage: (type: "success" | "error" | "warning", content: string) => void;
@@ -84,6 +85,7 @@ const App: React.FC = () => {
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="/account/orders/:id" element={<OrderDetailPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />

@@ -40,6 +40,7 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
 import 'dayjs/locale/vi'; // import locale
+import OrderDetailModal, { Sale as SaleType } from '../../../components/seller/OrderDetailModal';
 dayjs.locale('vi'); // set global locale
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -212,6 +213,8 @@ export default function Sale() {
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
     null
   );
+
+  const [detailSale, setDetailSale] = useState<SaleType | null>(null);
 
   const [form] = Form.useForm();
   const generateOrderNumber = (id: number) =>
@@ -452,6 +455,7 @@ export default function Sale() {
                 key: 'view',
                 icon: <EyeOutlined />,
                 label: 'Xem Chi Tiết',
+                onClick: () => setDetailSale(record),
               },
               {
                 key: 'edit',
@@ -786,6 +790,15 @@ export default function Sale() {
             </Form.Item>
           </Form>
         </Modal>
+        <OrderDetailModal
+            sale={detailSale}
+            onClose={() => setDetailSale(null)}
+            onEdit={(s) => {
+              // Mở form edit của bạn (nếu có)
+              setDetailSale(null);
+              // openEditModal(s);
+            }}
+          />
       </Content>
     </Layout>
   );

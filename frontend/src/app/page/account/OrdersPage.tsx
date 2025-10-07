@@ -9,6 +9,93 @@ import {
 } from 'lucide-react';
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
+import { Link } from 'react-router-dom';
+
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+/** Chuẩn hoá path thô (Windows path, public/uploads, v.v.) về 'uploads/...' */
+function normalizeRawPath(s: string) {
+  let t = s.trim().replace(/\\/g, '/');
+
+  // nếu là Windows/absolute path → cắt từ '/uploads/...'
+  const m = /\/uploads\/[^?#]*/i.exec(t);
+  if (m) t = t.slice(m.index + 1); // còn 'uploads/...'
+
+  // bỏ prefix 'public/' hoặc 'static/' nếu có
+  t = t.replace(/^\/?(public|static)\//i, '');
+
+  // đảm bảo bắt đầu bằng 'uploads/'
+  if (!/^uploads\//i.test(t)) t = `uploads/${t.replace(/^\/+/, '')}`;
+  return t;
+}
+
+/** Ghép thành absolute URL dùng BE; giữ nguyên http(s) hoặc data: */
+function toAbs(p?: string) {
+  if (!p) return '';
+  // 👇 CHỐT: chuẩn hoá slash TRƯỚC khi kiểm tra http(s)
+  let s = String(p).trim().replace(/\\/g, '/');
+
+  // nếu đã là absolute URL (sau khi đổi slash) hoặc data URL thì trả luôn
+  if (/^https?:\/\//i.test(s) || /^data:image\//i.test(s)) return s;
+
+  // absolute disk path (C:/..., file:/...) → cắt về 'uploads/...'
+  if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
+    const idx = s.toLowerCase().lastIndexOf('/uploads/');
+    if (idx >= 0) s = s.slice(idx + 1); // còn 'uploads/...'
+  }
+
+  // đảm bảo prefix uploads/
+  if (!/^\/?uploads\//i.test(s)) s = `uploads/${s.replace(/^\/+/, '')}`;
+
+  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+}
+
+/** Lấy URL ảnh đầu tiên từ mọi kiểu media: string / JSON string / array / object */
+function firstMediaUrl(media: any): string {
+  if (!media) return '';
+
+  if (typeof media === 'string') {
+    try {
+      const parsed = JSON.parse(media);
+      if (Array.isArray(parsed) && parsed.length) {
+        const m0 = parsed.find((x: any) => x?.is_primary) ?? parsed[0];
+        const url = typeof m0 === 'string' ? m0 : (m0?.url ?? m0?.path ?? '');
+        return url;
+      }
+      // string thường → trả nguyên
+      return media;
+    } catch {
+      return media; // không phải JSON → coi như path/url
+    }
+  }
+
+  if (Array.isArray(media) && media.length) {
+    const m0 = media.find((x: any) => x?.is_primary) ?? media[0];
+    return typeof m0 === 'string' ? m0 : (m0?.url ?? m0?.path ?? '');
+  }
+
+  if (typeof media === 'object') {
+    return media?.url ?? media?.path ?? '';
+  }
+
+  return '';
+}
+
+/** Gom mọi khả năng có thể chứa ảnh của product/variant */
+function getProductImage(prod: any, variant?: any): string {
+  return (
+    firstMediaUrl(prod?.media) ||
+    prod?.thumbnail ||
+    prod?.image ||
+    prod?.image_url ||
+    prod?.productMedia?.[0]?.url ||
+    variant?.image ||
+    ''
+  );
+}
+
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -97,6 +184,8 @@ export default function OrdersPage() {
     null
   );
 
+  
+
   // gọi API theo tab + q + page
   useEffect(() => {
     if (!userId) return;
@@ -117,13 +206,28 @@ export default function OrdersPage() {
           status: mapStatus(Number(o.status)),
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
-          items: (o.orderItem ?? []).map((it: any) => ({
-            id: String(it.id),
-            name: it.name,
-            image: it.image_url,
-            qty: it.quantity,
-            price: Number(it.price ?? 0),
-          })),
+          items: (o.orderItem ?? []).map((it: any) => {
+            const rawImg = getProductImage(it.product, it.variant);
+            const finalUrl = rawImg ? toAbs(rawImg) : '';
+          
+            // 👇 log 1 dòng cho mỗi item
+            console.log('[ORDER IMG]', {
+              orderId: o.id,
+              itemId: it.id,
+              rawImg,
+              finalUrl,
+              productMedia: it.product?.media,
+              productMediaList: it.product?.productMedia,
+            });
+          
+            return {
+              id: String(it.id),
+              name: it.product?.name ?? '',
+              image: finalUrl,
+              qty: it.quantity,
+              price: Number(it.price ?? 0),
+            };
+          }),
         }));
         // Filter theo tab
         let filteredItems = items;
@@ -340,13 +444,14 @@ export default function OrdersPage() {
                       {o.items?.slice(0, 3).map((it) => (
                         <div key={it.id} className="flex gap-3">
                           <div className="h-16 w-16 overflow-hidden rounded bg-slate-100 ring-1 ring-slate-200">
-                            {it.image ? (
-                              <img
-                                src={it.image}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
-                            ) : null}
+                          {it.image ? (
+                            <img
+                              src={it.image}
+                              alt={it.name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : null}
                           </div>
                           <div className="min-w-0">
                             <div className="text-sm text-slate-900 line-clamp-2">
@@ -369,12 +474,12 @@ export default function OrdersPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <a
-                          href={`/account/orders/${o.id}`}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
-                        >
-                          Chi tiết
-                        </a>
+                      <Link
+                        to={`/account/orders/${o.id}`}
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                      >
+                        Chi tiết
+                      </Link>
                         {o.status === 'pending' && (
                           <a
                             href={`/checkout?orderId=${o.id}`}

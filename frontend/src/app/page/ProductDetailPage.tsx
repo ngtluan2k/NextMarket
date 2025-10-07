@@ -240,7 +240,8 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 showMessage={showMessage}
               />
             </div>
-            <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
+          </div>
+          <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
               <Suspense fallback={<div>Loading reviews...</div>}>
                 <LazyProductReviews />
               </Suspense>
@@ -250,7 +251,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 <LazyExploreMore />
               </Suspense>
             </div>
-          </div>
         </div>
       </main>
       <Footer />

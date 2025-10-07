@@ -206,6 +206,7 @@ export class OrdersService {
         'userAddress',
         'orderItem',
         'orderItem.product',
+        'orderItem.product.media',
         'orderItem.variant',
         'voucherUsages',
         'voucherUsages.voucher',
@@ -280,6 +281,9 @@ export class OrdersService {
       relations: [
         'store',
         'userAddress',
+        'orderItem',            
+        'orderItem.product', 
+        'orderItem.product.media',
         'voucherUsages',
         'voucherUsages.voucher',
       ],

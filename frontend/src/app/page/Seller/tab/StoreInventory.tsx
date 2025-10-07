@@ -48,6 +48,7 @@ import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
 import { ProductForm } from '../../../components/seller/ProductFormWizard';
 import { EditProductForm } from '../../../components/seller/EditProductForm';
+import ProductDetailModal, { ProductDetail as ProductForDetail } from '../../../components/seller/ProductDetailModal';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
@@ -58,6 +59,7 @@ export interface Product {
   category: string;
   base_price: number;
   brandId: number;
+  brandName?: string;  
   stock: number;
   sold: number;
   revenue: number;
@@ -115,6 +117,7 @@ export default function StoreInventory() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [form] = Form.useForm();
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
 
   const [isAddWizardVisible, setAddWizardVisible] = useState(false);
   const handleProductUpdated = (updatedProduct: Product) => {
@@ -227,15 +230,14 @@ export default function StoreInventory() {
               new Date().toISOString().split('T')[0],
             apiId: apiProduct.id,
             brandId: apiProduct.brand?.id || apiProduct.brand_id || 0,
+            brandName: apiProduct.brand?.name || '', 
 
-            // ✅ categories là số
             categories:
               apiProduct.categories?.map((c) => ({
                 id: c.category_id || c.id,
                 name: c.category?.name || '',
               })) || [],
 
-            // ✅ media
             media:
               apiProduct.media?.map((m) => ({
                 media_type: m.media_type,
@@ -245,9 +247,6 @@ export default function StoreInventory() {
                 is_primary: m.is_primary || false,
                 sort_order: m.sort_order,
               })) || [],
-
-            // ✅ variants
-            // variants
             
             variants:
               apiProduct.variants?.map((v) => ({
@@ -574,12 +573,13 @@ export default function StoreInventory() {
                 key: 'view',
                 icon: <EyeOutlined />,
                 label: 'Xem Chi Tiết',
+                onClick: () => setDetailProduct(record),
               },
               {
                 key: 'edit',
                 icon: <EditOutlined />,
                 label: 'Chỉnh Sửa Sản Phẩm',
-                onClick: () => setEditingProduct(record), // mở modal EditProductForm
+                onClick: () => setEditingProduct(record), 
               },
               {
                 key: 'duplicate',
@@ -771,6 +771,16 @@ export default function StoreInventory() {
             />
           </Modal>
         )}
+
+          <ProductDetailModal
+              product={detailProduct as unknown as ProductForDetail | null}
+              onClose={() => setDetailProduct(null)}
+              onEdit={(p) => {
+                // bấm "Chỉnh sửa" trong modal chi tiết → mở modal Edit có sẵn
+                setDetailProduct(null);
+                setEditingProduct(p as unknown as Product);
+              }}
+            />
       </Content>
     </Layout>
   );

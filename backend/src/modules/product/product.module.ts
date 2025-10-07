@@ -18,12 +18,14 @@ import { ProductCategoryModule } from '../product_category/product_category.modu
 import { StoreModule } from '../store/store.module';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
+import { Brand } from '../brands/brand.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Product,
       Store,
+      Brand,
       ProductMedia,
       Variant,
       Inventory,
