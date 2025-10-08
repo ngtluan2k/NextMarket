@@ -32,21 +32,21 @@ const orderStatusStringMap: Record<number, string> = {
 function getStatusColor(status: string | number): string {
   switch (Number(status)) {
     case 0:
-      return 'orange'; // Pending
+      return 'orange'; 
     case 1:
-      return 'blue'; // Confirmed
+      return 'blue';
     case 2:
-      return 'cyan'; // Processing
+      return 'cyan'; 
     case 3:
-      return 'purple'; // Shipped
+      return 'purple'; 
     case 4:
-      return 'green'; // Delivered
+      return 'green'; 
     case 5:
-      return 'green'; // Completed
+      return 'green'; 
     case 6:
-      return 'red'; // Cancelled
+      return 'red'; 
     case 7:
-      return 'magenta'; // Returned
+      return 'magenta'; 
     default:
       return 'default';
   }

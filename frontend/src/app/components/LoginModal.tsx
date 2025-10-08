@@ -4,11 +4,12 @@ import { Mail, Lock, User, Calendar, Phone, BadgeCheck, Eye, EyeOff, Globe } fro
 import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { requestRegisterOtp } from '../../service/auth.service';
+import { requestRegisterOtp, requestPasswordOtp, verifyPasswordOtp } from '../../service/auth.service'; // UPDATED
 import {
   validateLogin as validateLoginPayload,
   validateRegister as validateRegisterPayload,
 } from '../../validation/auth.validation';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 export type LoginPayload = { email: string; password: string };
 export type RegisterPayload = {
@@ -88,9 +89,12 @@ export default function LoginModal({
   const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // ⬇️ TÁCH LỖI THEO TAB
+  // lỗi theo tab
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
   const [errorRegister, setErrorRegister] = useState<string | null>(null);
+
+  // modal "Quên mật khẩu"
+  const [showForgot, setShowForgot] = useState(false);
 
   const navigate = useNavigate();
   const emailRef = useRef<HTMLInputElement>(null);
@@ -114,7 +118,6 @@ export default function LoginModal({
     if (open) setTimeout(() => emailRef.current?.focus(), 80);
   }, [open, mode]);
 
-  // ⬇️ Khi đổi tab: xoá lỗi của tab kia
   useEffect(() => {
     if (mode === 'login') setErrorRegister(null);
     else setErrorLogin(null);
@@ -235,7 +238,7 @@ export default function LoginModal({
       {/* overlay */}
       <div className="fixed inset-0 bg-black/55 backdrop-blur-[1px]" onClick={onClose} />
 
-      {/* modal: hai cột bằng nhau */}
+      {/* modal */}
       <div
         className="relative z-[101] mx-auto my-6 w-[min(1000px,96vw)]
                    rounded-[24px] overflow-hidden bg-white/95 shadow-2xl ring-1 ring-black/5"
@@ -337,7 +340,15 @@ export default function LoginModal({
                     />
                     Ghi nhớ đăng nhập
                   </label>
-                  <a href="#" className="text-xs font-medium text-sky-600 hover:underline">
+
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowForgot(true);
+                    }}
+                    className="text-xs font-medium text-sky-600 hover:underline"
+                  >
                     Quên mật khẩu?
                   </a>
                 </div>
@@ -358,7 +369,6 @@ export default function LoginModal({
                 </div>
               </form>
             ) : (
-              // REGISTER
               <form onSubmit={handleRegister} className="mt-6 grid grid-cols-1 gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field
@@ -512,6 +522,8 @@ export default function LoginModal({
             </div>
           </div>
         </div>
+
+        <ForgotPasswordModal open={showForgot} onClose={() => setShowForgot(false)} apiBase={apiBase} />
       </div>
     </div>
   );
@@ -585,3 +597,4 @@ function FancyButton({
     </button>
   );
 }
+

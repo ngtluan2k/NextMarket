@@ -806,11 +806,6 @@ export default function Sale() {
         <OrderDetailModal
             sale={detailSale}
             onClose={() => setDetailSale(null)}
-            onEdit={(s) => {
-              // Mở form edit của bạn (nếu có)
-              setDetailSale(null);
-              // openEditModal(s);
-            }}
           />
       </Content>
     </Layout>

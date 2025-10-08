@@ -47,6 +47,7 @@ import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDash
 import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
 import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
 import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
+
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
