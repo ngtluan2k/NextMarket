@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "@ant-design/plots": "^2.6.5",
     "antd": "^5.27.3",
     "i": "^0.3.7",
     "lodash.debounce": "^4.0.8",

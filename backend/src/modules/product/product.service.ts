@@ -533,4 +533,35 @@ export class ProductService {
 
     return similarProducts;
   }
+  
+  async findById(id: number) {
+    const product = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('variant.inventories', 'inventory')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.categories', 'pc')
+      .leftJoinAndSelect('pc.category', 'category')
+      .leftJoinAndSelect('product.pricing_rules', 'pricing_rules')
+      .leftJoinAndSelect('product.store', 'store')
+      .where('product.id = :id', { id })
+      .getOne();
+  
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return product; // or map to your existing DTO
+  }
+
+  async getSlugById(id: number): Promise<string> {
+    const row = await this.productRepo.findOne({
+      where: { id },
+      select: { id: true, slug: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Product not found');
+    }
+    return row.slug;
+  }
 }

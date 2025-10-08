@@ -10,6 +10,9 @@ import AdminHeader from './AdminHeader';
 import AdminSidebar from './AdminSidebar';
 import VoucherManager from './VoucherManager';
 import StoreManager from './StoreManager';
+import AffiliateProgramDashboard from './AffiliateProgramDashboard';
+import AffiliateRegistration from './AffiliateRegistrationManager'
+import { Empty } from 'antd';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -72,35 +75,60 @@ export const AdminDashboard: React.FC = () => {
   
       case '6-1':
         return <BrandManager />;
-  
-      case '6-2':
-        return <Wip title="Đối soát công nợ" />;
-  
-      case '7-1':
-        return <Wip title="Doanh thu" />;
-  
-      case '7-2':
-        return <Wip title="Thanh toán" />;
-  
+      case '6-2': // Đối soát công nợ
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
+      case '7-1': // Doanh thu
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
+      case '7-2': // Thanh toán
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '8-1':
         return <VoucherManager />;
-  
-      case '8-2':
-        return <Wip title="Chiến dịch quảng cáo" />;
-  
+      case '8-2': 
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '9':
-        return <Wip title="Báo cáo & Thống kê" />;
-  
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
       case '10-1':
         return <StoreManager />;
   
       case '10-2':
-        return <Wip title="Tính năng cửa hàng khác" />;
-  
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
+      case '11-1':
+        return <AffiliateRegistration />;
+      case '11-2':
+        return <AffiliateProgramDashboard />;
       case 'permissions':
         return <PermissionManager />;
-  
-      case 'userRoles':
+      case 'userRoles': 
         return <UserRoleManager />;
   
       default:
@@ -110,21 +138,17 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header cố định trên cùng */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <AdminHeader />
       </div>
 
       <div className="flex">
-        {/* Sidebar cố định bên trái */}
         <div className="fixed left-0 top-0 h-screen pt-20 z-40">
           <AdminSidebar activeKey={activeKey} onMenuClick={handleMenuClick} />
         </div>
 
-        {/* Main content area */}
         <div className="flex-1 ml-72 pt-24 px-6 pb-6 overflow-x-hidden overflow-y-auto">
           <div className="bg-white rounded-lg shadow-sm min-h-[calc(100vh-120px)]">
-            {/* Content */}
             <div className="p-6">{renderContent()}</div>
           </div>
         </div>

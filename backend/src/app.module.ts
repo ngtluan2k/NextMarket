@@ -49,6 +49,9 @@ import { StoreFollowersModule } from './modules/store-follower/store-followers.m
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { SubscriptionUsagesModule } from './modules/subscription_usages/subscription_usages.module';
 import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.module';
+import { AffiliateRegistrationModule } from './modules/affiliate-registration/affiliate-registration.module';
+import { AffiliatePlatformModule } from './modules/affiliate-platform/affiliate-platform.module';
+import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registration-platform/affiliate-registration-platform.module';
 
 @Module({
   imports: [
@@ -133,6 +136,9 @@ import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.
     SubscriptionModule,
     SubscriptionUsagesModule,
     AffiliateLinksModule,
+    AffiliateRegistrationModule,
+    AffiliatePlatformModule,
+    AffiliateRegistrationPlatformModule
   ],
 })
 export class AppModule {}

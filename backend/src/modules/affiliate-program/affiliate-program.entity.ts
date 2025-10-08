@@ -1,38 +1,32 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 
 @Entity('affiliate_programs')
 export class AffiliateProgram {
   @PrimaryGeneratedColumn()
-  id?: number;
+  id!: number;
 
-  @Column()
-  uuid?: string;
+  @Column({ type: 'char', length: 36, unique: true })
+  uuid!: string;
 
-  @Column()
-  name?: string;
+  @Column({ length: 255 })
+  name!: string;
 
-  @Column({ name: 'cookie_days' })
-  cookieDays?: number;
+  @Column({ type: 'int' })
+  cookie_days!: number;
 
-  @Column({ name: 'commission_type' })
-  commissionType?: string; // percentage | fixed
+  @Column({ length: 255 })
+  commission_type!: string;
 
-  @Column({ name: 'commission_value', type: 'decimal' })
-  commissionValue?: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  commission_value!: number;
 
-  @Column()
+  @Column({ length: 255 })
   status!: string;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt?: Date;
+  @Column({ type: 'datetime' })
+  created_at!: Date;
 
   @OneToMany(() => AffiliateLink, (link) => link.program_id)
-  links?: AffiliateLink[];
+  links!: AffiliateLink[];
 }

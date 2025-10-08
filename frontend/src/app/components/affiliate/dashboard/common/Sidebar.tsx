@@ -56,17 +56,15 @@ const Sidebar = () => {
         transform transition-transform duration-300 ease-in-out translate-x-full lg:translate-x-0 `}
     >
       <div className="flex flex-col h-full">
-        {/* Logo */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <NavLink to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">S</span>
+              <span className="text-white font-bold text-lg">E</span>
             </div>
-            <span className="font-bold text-gray-900 text-lg">Skilarna</span>
+            <span className="font-bold text-gray-900 text-lg">Everymart</span>
           </NavLink>
         </div>
 
-        {/* Search */}
         <div className="px-4 py-4">
           <div className="relative">
             <input
@@ -80,7 +78,6 @@ const Sidebar = () => {
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           {navigation.map((item) => (
             <NavLink

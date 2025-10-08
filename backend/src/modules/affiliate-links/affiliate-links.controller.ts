@@ -8,21 +8,26 @@ import {
   Delete,
   UseGuards,
   Request,
+  ParseIntPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { AffiliateLinksService } from './affiliate-links.service';
 import { CreateAffiliateLinkDto } from './dto/create-affiliate-link.dto';
 import { UpdateAffiliateLinkDto } from './dto/update-affiliate-link.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { Request as ExpressRequest } from 'express';
+
 interface AuthRequest extends ExpressRequest {
   user: {
-    id: number;
+    userId: number;
     email: string;
     roles: string[];
     permissions: string[];
   };
 }
+
 @Controller('affiliate-links')
+@UseGuards(JwtAuthGuard)
 export class AffiliateLinksController {
   constructor(private readonly service: AffiliateLinksService) {}
 
@@ -36,55 +41,53 @@ export class AffiliateLinksController {
     return this.service.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDto: UpdateAffiliateLinkDto) {
-    return this.service.update(+id, updateDto);
-  }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(+id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('register')
   async register(@Request() req: AuthRequest) {
-    const userId = req.user.id;
-    console.log("+++++++++++++++ register to be an affiliate with user : " + JSON.stringify(req, null, 0 ))
+    const userId = req.user.userId;
     return this.service.register(userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('unregister')
   async unregister(@Request() req: AuthRequest) {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     return this.service.unregister(userId);
   }
 
-
-  @UseGuards(JwtAuthGuard)
   @Post('create-link')
   async createAffiliateLink(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; variantSlug?: string }
+    @Body() body: { productId: number; variantId: number },
   ) {
-    const userId = req.user.id;
-    return this.service.createAffiliateLink(
-      userId,
-      body.productId,
-      body.variantSlug
-    );
+    const userId = req.user.userId;
+    return this.service.createAffiliateLink(userId, body.productId, body.variantId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('my-links')
   async getMyLinks(@Request() req: AuthRequest) {
-    const userId = req.user.id;
+    const userId = req.user.userId; 
+    console.log("user id current : "+ req.user.userId)
     return this.service.getMyLinks(userId);
+  }
+
+  @Get('affiliated-products')
+  async getAffiliatedProducts(@Request() req: AuthRequest) {
+    const userId = req.user.userId;
+    return this.service.getAffiliatedProducts(userId);
+  }
+
+  @Delete(':id')
+  @HttpCode(200) 
+  async deleteMyLink(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: AuthRequest,
+  ) {
+    const userId = req.user.userId;
+    return this.service.deleteMyLink(id, userId);
   }
 }

@@ -8,5 +8,6 @@ import { AffiliateProgram } from './affiliate-program.entity';
   imports: [TypeOrmModule.forFeature([AffiliateProgram])],
   controllers: [AffiliateProgramsController],
   providers: [AffiliateProgramsService],
+  exports: [AffiliateProgramsService, TypeOrmModule],
 })
 export class AffiliateProgramsModule {}
