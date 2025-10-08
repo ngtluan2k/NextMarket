@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Search,
   Package,
@@ -10,6 +10,7 @@ import {
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
 import ReviewModal from '../../components/account/ReviewModal';
+
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -21,6 +22,7 @@ type OrderTab =
   | 'completed'
   | 'cancelled'
   | 'returned';
+ 
 
 function mapStatus(status: number): OrderTab {
   switch (status) {
@@ -39,7 +41,7 @@ function mapStatus(status: number): OrderTab {
     case 6:
       return 'cancelled'; // Cancelled
     case 7:
-      return 'returned'; // Returned
+      return 'returned';
     default:
       return 'all';
   }
@@ -74,6 +76,7 @@ export type OrderSummary = {
     };
   }>;
 };
+
 
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
@@ -161,7 +164,7 @@ export default function OrdersPage() {
               qty: it.quantity,
               price: Number(it.price ?? 0),
               isReviewed,
-              reviewId: existingReview?.id, 
+              reviewId: existingReview?.id,
             };
           }),
         }));
@@ -292,11 +295,10 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${
-                    active
-                      ? 'text-sky-700 border-b-2 border-sky-600'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${active
+                    ? 'text-sky-700 border-b-2 border-sky-600'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   aria-pressed={active}
                 >
                   {t.label}
@@ -419,24 +421,23 @@ export default function OrdersPage() {
 
                               {(o.status === 'delivered' ||
                                 o.status === 'completed') && (
-                                <button
-                                  className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${
-                                    it.isReviewed
+                                  <button
+                                    className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${it.isReviewed
                                       ? 'bg-sky-600 hover:bg-sky-700'
                                       : 'bg-emerald-600 hover:bg-emerald-700'
-                                  }`}
-                                  onClick={() => {
-                                    setOpenReview(true);
-                                    setSelectedProductId(
-                                      it.productId?.toString() ?? null
-                                    );
-                                    setSelectedOrderId(o.id);
-                                     setSelectedReviewId(it.reviewId ?? null); 
-                                  }}
-                                >
-                                  {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
-                                </button>
-                              )}
+                                      }`}
+                                    onClick={() => {
+                                      setOpenReview(true);
+                                      setSelectedProductId(
+                                        it.productId?.toString() ?? null
+                                      );
+                                      setSelectedOrderId(o.id);
+                                      setSelectedReviewId(it.reviewId ?? null);
+                                    }}
+                                  >
+                                    {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
+                                  </button>
+                                )}
                             </div>
                           </div>
                         ))}

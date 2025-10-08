@@ -19,6 +19,7 @@ import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
 export enum OrderStatuses {
   pending = 0,
   confirmed = 1,
@@ -124,4 +125,9 @@ export class Order {
 
   @OneToMany(() => ProductReview, (reviews) => reviews.order)
   reviews!: ProductReview;
+
+  @ManyToOne(() => GroupOrder, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'group_order_id' })
+  group_order!: GroupOrder | null;
+
 }

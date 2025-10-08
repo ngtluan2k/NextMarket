@@ -21,6 +21,7 @@ import { StoreAddress } from '../store-address/store-address.entity';
 import { StoreBankAccount } from '../store-bank-account/store-bank-account.entity';
 import { StoreFollower } from '../store-follower/store-follower.entity';
 import { Voucher } from '../vouchers/vouchers.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
 
 @Entity('stores')
 export class Store {
@@ -122,4 +123,7 @@ export class Store {
 
   @OneToMany(() => Voucher, (Voucher) => Voucher.store)
   vouchers?: Voucher[];
+  @OneToMany(() => GroupOrder, (groupOrder) => groupOrder.store)
+  group_orders!: GroupOrder[];
+
 }

@@ -46,9 +46,14 @@ import { FilesModule } from './common/files/files.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { WalletTransactionModule } from './modules/wallet_transaction/wallet_transaction.module';
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
+
 
 @Module({
   imports: [
+
+    ScheduleModule.forRoot(),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -127,6 +132,11 @@ import { StoreFollowersModule } from './modules/store-follower/store-followers.m
     WalletModule,
     WalletTransactionModule,
     StoreFollowersModule,
+    GroupOrdersModule,
+   
+    
+
   ],
+  providers: [],
 })
-export class AppModule {}
+export class AppModule { }

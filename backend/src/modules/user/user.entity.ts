@@ -14,6 +14,8 @@ import { Order } from '../orders/order.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { Store } from '../store/store.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
+import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -66,4 +68,12 @@ export class User {
 
   @OneToMany(() => ProductReview, (reviews) => reviews.user)
   reviews!: ProductReview[];
+
+  @OneToMany(() => GroupOrder, (groupOrder) => groupOrder.user)
+  group_orders!: GroupOrder[];
+
+  @OneToMany(() => GroupOrderMember, (member) => member.user)
+  group_order_members!: GroupOrderMember[];
+
+
 }

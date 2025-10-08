@@ -33,6 +33,10 @@ import SearchPage from "./page/SearchPage";
 import CartPage from "./page/CartPage";
 import OtpVerifyPage from "./page/OtpVerify";
 import ReviewForm from "./test";
+import GroupOrders from "./components/group_orders/GroupOrders";
+import GroupOrderDetail from "./components/group_orders/components/GroupOrderDetail";
+import GroupJoin from "./components/group_orders/components/GroupJoin";
+
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -63,6 +67,7 @@ const App: React.FC = () => {
             path="/products/slug/:slug"
             element={<ProductDetailPage showMessage={showMessage} />}
           />
+
           <Route
             path="/cart"
             element={<CartPage showMessage={showMessage} />}
@@ -120,10 +125,13 @@ const App: React.FC = () => {
 
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
-<Route path="/test" element={<ReviewForm />} />
+          <Route path="/test" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/verify-otp" element={<OtpVerifyPage />} />
+          <Route path="/group-orders/:id" element={<GroupOrders />} />
+          <Route path="/group-orders/:id/detail" element={<GroupOrderDetail />} />
+          <Route path="/group/:uuid" element={<GroupJoin />} />
         </Routes>
       </CartProvider>
     </AuthProvider>
