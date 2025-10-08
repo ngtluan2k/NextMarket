@@ -77,9 +77,9 @@ export class VouchersService {
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
   const roleList = Array.isArray(roles) ? roles : [roles];
 
-  if (roleList.includes('admin')) {
+  if (roleList.includes('Admin')) {
     return this.vouchersRepository.find();
-  } else if (roleList.includes('seller')) {
+  } else if (roleList.includes('Seller')) {
     const ownedStores = await this.storesRepository.find({
       where: { user: { id: userId } },
     });
@@ -95,6 +95,7 @@ export class VouchersService {
   async findOne(
     id: number,
     userId: number,
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     role: string = 'user'
   ): Promise<Voucher> {
     const voucher = await this.vouchersRepository.findOne({
@@ -578,9 +579,9 @@ export class VouchersService {
 
     const roleList = Array.isArray(roles) ? roles : [roles];
 
-    if (roleList.includes('admin')) {
+    if (roleList.includes('Admin')) {
       return adminPermissions.includes(permission);
-    } else if (roleList.includes('seller')) {
+    } else if (roleList.includes('Seller')) {
       return storeOwnerPermissions.includes(permission);
     }
     return false;
