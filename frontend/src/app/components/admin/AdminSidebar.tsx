@@ -11,6 +11,7 @@ import {
   DollarOutlined,
   GiftOutlined,
   BarChartOutlined,
+  DeploymentUnitOutlined,
   SignatureOutlined,
 } from '@ant-design/icons';
 
@@ -114,15 +115,18 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         {
       key: '10',
-      icon: <ShopOutlined />, // có thể chọn icon khác nếu muốn
+      icon: <ShopOutlined />,
       label: 'Quản lý cửa hàng',
       children: [{ key: '10-1', icon: dotIcon, label: 'Danh sách cửa hàng' }],
     },
-        {
+    {
       key: '11',
-      icon: <SignatureOutlined />, // có thể chọn icon khác nếu muốn
-      label: 'Quản lý Affiliate',
-      children: [{ key: '11-1', icon: dotIcon, label: 'Danh sách đơn đăng ký Affiliate' }],
+      icon: <SignatureOutlined />,
+      label: 'Tiếp thị liên kết',
+      children: [
+        { key: '11-1', icon: dotIcon, label: 'Danh sách đơn đăng ký Affiliate' },
+        { key: '11-2', icon: dotIcon, label: 'Chương trình tiếp thị liên kết' },
+      ],
     },
   ];
 

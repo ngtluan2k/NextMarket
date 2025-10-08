@@ -24,6 +24,7 @@ import {
 } from '../components/productDetail';
 import { VariantInfo } from '../types/product';
 import { fetchProductReviews, Review } from '../../service/product_review';
+import { useSearchParams } from 'react-router-dom';
 
 interface Props {
   showMessage?: (
@@ -59,6 +60,11 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const [reviewPage, setReviewPage] = useState(1);
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const variantFromQuery = searchParams.get('variant');
+  const affiliateFromQuery = searchParams.get('aff');
+
   console.log('product in product detail page: ' + JSON.stringify(product));
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
@@ -141,6 +147,32 @@ export default function ProductDetailPage({ showMessage }: Props) {
     );
     setQuantity(cartItem ? cartItem.quantity : 1);
   }, [product, cart]);
+
+  useEffect(() => {
+    if (affiliateFromQuery) {
+      try {
+        localStorage.setItem('affiliate_code', affiliateFromQuery);
+      } catch (error) {
+        throw new Error(`error ` + error);
+      }
+    }
+  }, [affiliateFromQuery]);
+
+  useEffect(() => {
+    if (variantFromQuery) {
+      const nextId = Number(variantFromQuery);
+      if (!Number.isNaN(nextId)) {
+        setSelectedVariantId(nextId);
+        try {
+          // Persist variant choice scoped by slug so it works on reload
+          localStorage.setItem(`lastVariant_${slug}`, String(nextId));
+        } catch (error) {
+          throw new Error(`error ` + error);
+        }
+      }
+    }
+    // run once when query changes or product slug changes
+  }, [variantFromQuery, slug]);
 
   const { calculatedPrice, totalPrice } = useMemo(() => {
     if (!product) return { calculatedPrice: 0, totalPrice: 0 };
@@ -280,9 +312,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
             <Suspense fallback={<div>Loading reviews...</div>}>
-              <LazyProductReviews
-                productId={product.id}
-              />
+              <LazyProductReviews productId={product.id} />
             </Suspense>
           </div>
 

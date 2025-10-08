@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { affiliateRegister } from '../../../service/affiliate.service';
+import { isAffiliateUser } from '../../../service/affiliate.service';
 import { decodeJwtToken } from '../../../service/auth.helper';
 
 interface JwtPayload {
@@ -22,7 +22,7 @@ export default function Affiliate() {
         const decoded: JwtPayload = decodeJwtToken(token);
         const userId = decoded.sub;
 
-        const response = await affiliateRegister(userId);
+        const response = await isAffiliateUser(userId);
         const isAffiliate = response.data.is_affiliate;
 
         if (isAffiliate) {

@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   Request,
+  ParseIntPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { AffiliateLinksService } from './affiliate-links.service';
 import { CreateAffiliateLinkDto } from './dto/create-affiliate-link.dto';
@@ -77,5 +79,15 @@ export class AffiliateLinksController {
   async getAffiliatedProducts(@Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.getAffiliatedProducts(userId);
+  }
+
+  @Delete(':id')
+  @HttpCode(200) 
+  async deleteMyLink(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: AuthRequest,
+  ) {
+    const userId = req.user.userId;
+    return this.service.deleteMyLink(id, userId);
   }
 }

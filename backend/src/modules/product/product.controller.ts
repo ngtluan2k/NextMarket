@@ -11,6 +11,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFiles,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -334,4 +335,14 @@ export class ProductController {
   //   const userId = req.user.sub;
   //   return this.productService.updateAndPublishProduct(id, dto, userId);
   // }
+  @Get(':id/slug')
+  async getSlug(@Param('id', ParseIntPipe) id: number) {
+    const slug = await this.productService.getSlugById(id);
+    return { data: { slug } };
+  }
+  @Get(':id')
+  async findById(@Param('id', ParseIntPipe) id: number) {
+    const data = await this.productService.findById(id);
+    return { data };
+  }
 }
