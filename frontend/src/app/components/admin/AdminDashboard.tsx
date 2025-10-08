@@ -11,6 +11,7 @@ import AdminHeader from './AdminHeader';
 import AdminSidebar from './AdminSidebar';
 import VoucherManager from './VoucherManager';
 import StoreManager from './StoreManager';
+import AffiliateRegistration from './AffiliateRegistrationManager'
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -125,6 +126,15 @@ export const AdminDashboard: React.FC = () => {
       case '10-1': // Xem danh sách cửa hàng
         return <StoreManager />;
       case '10-2':
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
+      case '11-1': // Xem danh sách cửa hàng
+        return <AffiliateRegistration />;
+      case '11-2':
         return (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}

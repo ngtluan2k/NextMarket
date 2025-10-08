@@ -47,6 +47,9 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { WalletTransactionModule } from './modules/wallet_transaction/wallet_transaction.module';
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
 import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.module';
+import { AffiliateRegistrationModule } from './modules/affiliate-registration/affiliate-registration.module';
+import { AffiliatePlatformModule } from './modules/affiliate-platform/affiliate-platform.module';
+import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registration-platform/affiliate-registration-platform.module';
 
 @Module({
   imports: [
@@ -129,6 +132,9 @@ import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.
     WalletTransactionModule,
     StoreFollowersModule,
     AffiliateLinksModule,
+    AffiliateRegistrationModule,
+    AffiliatePlatformModule,
+    AffiliateRegistrationPlatformModule
   ],
 })
 export class AppModule {}
