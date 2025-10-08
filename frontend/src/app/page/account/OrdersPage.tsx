@@ -107,6 +107,7 @@ type OrderTab =
   | 'completed'
   | 'cancelled'
   | 'returned';
+ 
 
 function mapStatus(status: number): OrderTab {
   switch (status) {
@@ -125,7 +126,7 @@ function mapStatus(status: number): OrderTab {
     case 6:
       return 'cancelled'; // Cancelled
     case 7:
-      return 'returned'; // Returned
+      return 'returned';
     default:
       return 'all';
   }
@@ -147,6 +148,7 @@ export type OrderSummary = {
     price?: number;
   }>;
 };
+
 
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
@@ -379,11 +381,10 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${
-                    active
-                      ? 'text-sky-700 border-b-2 border-sky-600'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${active
+                    ? 'text-sky-700 border-b-2 border-sky-600'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   aria-pressed={active}
                 >
                   {t.label}

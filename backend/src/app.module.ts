@@ -53,9 +53,14 @@ import { AffiliateRegistrationModule } from './modules/affiliate-registration/af
 import { AffiliatePlatformModule } from './modules/affiliate-platform/affiliate-platform.module';
 import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registration-platform/affiliate-registration-platform.module';
 import { InventoryTransactionModule } from './modules/inventory-transactions/inventory-transactions.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
+
 
 @Module({
   imports: [
+
+    ScheduleModule.forRoot(),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -141,6 +146,11 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
     AffiliatePlatformModule,
     AffiliateRegistrationPlatformModule,
     InventoryTransactionModule,
+    GroupOrdersModule,
+   
+    
+
   ],
+  providers: [],
 })
-export class AppModule {}
+export class AppModule { }

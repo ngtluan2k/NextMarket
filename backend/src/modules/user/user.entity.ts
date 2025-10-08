@@ -18,6 +18,8 @@ import { Subscription } from '../subscription/subscription.entity';
 import { AffiliateRegistration } from '../affiliate-registration/affiliate-registration.entity';
 
 import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
+import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -80,4 +82,11 @@ export class User {
   affiliateRegistrations!: AffiliateRegistration[];
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.createdBy)
   inventoryTransactions!: InventoryTransaction[];
+  @OneToMany(() => GroupOrder, (groupOrder) => groupOrder.user)
+  group_orders!: GroupOrder[];
+
+  @OneToMany(() => GroupOrderMember, (member) => member.user)
+  group_order_members!: GroupOrderMember[];
+
+
 }

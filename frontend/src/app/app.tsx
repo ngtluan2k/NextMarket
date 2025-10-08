@@ -17,6 +17,23 @@ import OrdersPage from './page/account/OrdersPage';
 import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
+
+import TestWallet from './test';
+import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
+
+import OrderDetailPage from './page/account/OrderDetailPage';
+
+import AffiliateGate from './page/affiliate';
+import AffiliateRegister from './page/affiliate/register';
+import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
+import { AffiliateDashboardLayout } from './page/affiliate/dashboard/MainLayout';
+import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDashboard';
+import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
+import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
+import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
+import AffiliateTransaction from './page/affiliate/dashboard/tab/affiliateTransaction';
+import Support from './page/affiliate/dashboard/tab/support';
+import AffiliateLinkResolver from './page/AffiliateLinkResolver';
 import { ProductForm } from './components/AddProduct';
 import StoreManagerDetail from './components/admin/StoreManagerDetail';
 import AddressBook from './components/account/AddressBook';
@@ -32,26 +49,11 @@ import BrandPage from './page/BrandPage';
 import SearchPage from './page/SearchPage';
 import CartPage from './page/CartPage';
 import OtpVerifyPage from './page/OtpVerify';
-import TestWallet from './test';
-import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
-
-
-
-
-import OrderDetailPage from "./page/account/OrderDetailPage";
-
 import ReviewForm from './test';
-import AffiliateGate from './page/affiliate';
-import AffiliateRegister from './page/affiliate/register';
-import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
-import { AffiliateDashboardLayout } from './page/affiliate/dashboard/MainLayout';
-import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDashboard';
-import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
-import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
-import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
-import AffiliateTransaction from './page/affiliate/dashboard/tab/affiliateTransaction';
-import Support from './page/affiliate/dashboard/tab/support';
-import AffiliateLinkResolver from './page/AffiliateLinkResolver';
+import GroupOrders from './components/group_orders/GroupOrders';
+import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
+import GroupJoin from './components/group_orders/components/GroupJoin';
+
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -82,6 +84,7 @@ const App: React.FC = () => {
             path="/products/slug/:slug"
             element={<ProductDetailPage showMessage={showMessage} />}
           />
+
           <Route
             path="/cart"
             element={<CartPage showMessage={showMessage} />}
@@ -133,7 +136,7 @@ const App: React.FC = () => {
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
           <Route path="/test" element={<TestWallet />} />
-          <Route path="/test" element={<ReviewForm />} />
+          <Route path="/test1" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/verify-otp" element={<OtpVerifyPage />} />
@@ -166,12 +169,15 @@ const App: React.FC = () => {
               element={<AffiliateNoti />}
             />
 
-            <Route
-              path="/affiliate/dashboard/support"
-              element={<Support />}
-            />
+            <Route path="/affiliate/dashboard/support" element={<Support />} />
           </Route>
           <Route path="/product/:id" element={<AffiliateLinkResolver />} />
+          <Route path="/group-orders/:id" element={<GroupOrders />} />
+          <Route
+            path="/group-orders/:id/detail"
+            element={<GroupOrderDetail />}
+          />
+          <Route path="/group/:uuid" element={<GroupJoin />} />
         </Routes>
       </CartProvider>
     </AuthProvider>

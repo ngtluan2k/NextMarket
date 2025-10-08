@@ -20,6 +20,8 @@ import {
 import { OrderItem } from '../order-items/order-item.entity';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
+import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
+
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
@@ -101,4 +103,7 @@ export class Product {
 
   @OneToMany(() => Subscription, (sub) => sub.product)
   subscriptions!: Subscription[];
+  @OneToMany(() => GroupOrderItem, (item) => item.product)
+  group_order_items!: GroupOrderItem[];
+
 }
