@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -20,6 +21,9 @@ class OrderItemDto {
 
   @IsNumber()
   price!: number;
+
+  @IsEnum(['bulk', 'subscription'])
+  type!: 'bulk' | 'subscription'; // ✅ thêm field này
 }
 
 export class CreateOrderDto {

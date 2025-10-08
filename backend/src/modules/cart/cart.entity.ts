@@ -77,4 +77,8 @@ export class CartItem {
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   added_at!: Date;
+
+  @Column({ type: 'varchar', length: 20 })
+  type!: 'bulk' | 'subscription';
+
 }

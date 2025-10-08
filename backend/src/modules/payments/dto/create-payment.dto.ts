@@ -12,7 +12,7 @@ export class CreatePaymentDto {
 
   @IsUUID()
   @IsOptional()
-  paymentMethodUuid?: string;
+  paymentMethodUuid!: string;
 
   @IsString()
   @IsOptional()

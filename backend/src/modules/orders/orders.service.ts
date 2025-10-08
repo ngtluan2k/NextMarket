@@ -16,11 +16,15 @@ import { Inventory } from '../inventory/inventory.entity';
 import { Product } from '../product/product.entity';
 import { Payment } from '../payments/payment.entity';
 import { VouchersService } from '../vouchers/vouchers.service';
+import { Subscription } from '../subscription/subscription.entity';
 import {
   OrderStatusHistory,
   historyStatus,
 } from '../order-status-history/order-status-history.entity';
 import { Variant } from '../variant/variant.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { Wallet } from '../wallet/wallet.entity';
+import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
 @Injectable()
 export class OrdersService {
   constructor(
@@ -172,6 +176,119 @@ export class OrdersService {
             );
           }
         }
+        // Kiểm tra pricing rules
+        const pricingRules = await manager
+          .createQueryBuilder(PricingRules, 'pricing_rule')
+          .where('pricing_rule.product_id = :productId', {
+            productId: itemDto.productId,
+          })
+          // chỉ lấy rule cùng variant hoặc rule không gắn variant (áp dụng toàn product)
+          .andWhere(
+            '(pricing_rule.variant_id IS NULL OR pricing_rule.variant_id = :variantId)',
+            { variantId: itemDto.variantId ?? null }
+          )
+          .andWhere('pricing_rule.min_quantity <= :quantity', {
+            quantity: itemDto.quantity,
+          })
+          .andWhere('pricing_rule.starts_at <= :now', { now: new Date() })
+          .andWhere('pricing_rule.ends_at >= :now', { now: new Date() })
+          .orderBy('pricing_rule.min_quantity', 'DESC')
+          .getMany();
+
+        let appliedRule: PricingRules | null = null;
+
+        for (const rule of pricingRules) {
+          if (rule.type !== itemDto.type) continue;
+
+          // áp dụng rule theo type
+          if (itemDto.type === 'subscription') {
+            const minQty = rule.min_quantity ?? 0; // nếu undefined thì lấy 0
+            if (minQty > 0 && itemDto.quantity === minQty) {
+              appliedRule = rule;
+              break;
+            }
+          } else if (itemDto.type === 'bulk') {
+            appliedRule = rule;
+            break;
+          }
+        }
+
+        if (appliedRule) {
+          itemPrice = Number(appliedRule.price);
+          console.log(
+            `Áp dụng pricing rule #${appliedRule.id} cho sản phẩm #${itemDto.productId}: price=${itemPrice}`
+          );
+
+          // Nếu là subscription thì tạo luôn record trong bảng Subscription
+          if (itemDto.type === 'subscription') {
+            const wallet = await manager.findOne(Wallet, {
+              where: { user_id: order.user.id },
+            });
+            if (!wallet) {
+              throw new Error('User chưa có ví');
+            }
+
+            // --- Kiểm tra số dư ---
+            if (wallet.balance < itemPrice) {
+              throw new Error(
+                `Số dư ví không đủ để mua gói (cần ${itemPrice} xu, hiện có ${wallet.balance} xu)`
+              );
+            }
+
+            // --- Trừ tiền và lưu lại ---
+            wallet.balance -= itemPrice;
+            wallet.updated_at = new Date();
+            await manager.save(wallet);
+
+            // --- Tạo WalletTransaction ---
+            const tx = manager.create(WalletTransaction, {
+              uuid: crypto.randomUUID(),
+              wallet,
+              wallet_id: wallet.id,
+              type: 'subscription_purchase',
+              amount: -itemPrice,
+              reference: `subscription:${itemDto.productId}:${
+                itemDto.variantId ?? '0'
+              }`,
+              created_at: new Date(),
+            });
+            await manager.save(tx);
+            const startDate = new Date();
+            const endDate = new Date();
+
+            // Parse chu kỳ (cycle), mặc định 30 ngày nếu không có
+            const cycle = appliedRule.cycle || '30 days';
+            const match = cycle.match(/(\d+)\s*(day|days|month|months)/i);
+
+            let durationDays = 30;
+            if (match) {
+              const num = parseInt(match[1]);
+              const unit = match[2].toLowerCase();
+              durationDays = unit.startsWith('month') ? num * 30 : num;
+            }
+
+            endDate.setDate(startDate.getDate() + durationDays);
+
+            const subscription = manager.create(Subscription, {
+              uuid: crypto.randomUUID(),
+              user: order.user, // hoặc order.userId nếu có
+              product: itemDto.productId ? { id: itemDto.productId } : null,
+              variant: itemDto.variantId ? { id: itemDto.variantId } : null,
+              pricingRule: { id: appliedRule.id },
+              name: appliedRule.name ?? 'Subscription',
+              price: itemPrice,
+              cycle,
+              totalQuantity: itemDto.quantity,
+              remainingQuantity: itemDto.quantity,
+              startDate,
+              endDate,
+              status: 'active',
+            });
+
+            await manager.save(subscription);
+            console.log(`Tạo subscription mới: #${subscription.id} (${cycle})`);
+          }
+        }
 
         // Kiểm tra tồn kho trong Inventory
         const inventory = await manager.findOne(Inventory, {
@@ -199,8 +316,10 @@ export class OrdersService {
           variant: variant ?? null,
           quantity: itemDto.quantity,
           price: itemPrice,
-          discount: discountTotal,
-          subtotal: itemDto.quantity * itemPrice - (discountTotal ?? 0),
+          discount: discountTotal / createOrderDto.items.length,
+          subtotal:
+            itemDto.quantity * itemPrice -
+            (discountTotal / createOrderDto.items.length || 0),
         });
 
         console.log('OrderItem created:', orderItem);
@@ -366,8 +485,8 @@ export class OrdersService {
         'orderItem.product',
         'orderItem.product.media',
         'orderItem.variant',
-        'orderItem.product.reviews',       // relation đúng từ entity Product
-        'orderItem.product.reviews.user',  // để biết reviewer là ai
+        'orderItem.product.reviews', // relation đúng từ entity Product
+        'orderItem.product.reviews.user', // để biết reviewer là ai
         'orderItem.product.reviews.order',
       ],
       order: { id: 'DESC' },

@@ -26,6 +26,7 @@ import {
 import { CodStrategy } from './strategies/cod.strategy';
 import { VnpayStrategy } from './strategies/vnpay.strategy';
 import { MomoStrategy } from './strategies/momo.strategy';
+import { EveryCoinStrategy } from './strategies/everycoin.strategy';
 
 @Injectable()
 export class PaymentsService {
@@ -47,7 +48,8 @@ export class PaymentsService {
     private historyRepo: Repository<OrderStatusHistory>,
     private codStrategy: CodStrategy,
     private vnpayStrategy: VnpayStrategy,
-    private momoStrategy: MomoStrategy
+    private momoStrategy: MomoStrategy,
+    private everycoinStrategy: EveryCoinStrategy
   ) {}
 
   async create(dto: CreatePaymentDto) {
@@ -64,10 +66,12 @@ export class PaymentsService {
     const method = await this.methodsRepo.findOne({
       where: { uuid: dto.paymentMethodUuid },
     });
+    this.logger.log(`Fetched method: ${JSON.stringify(method)}`);
+
     if (!method) throw new BadRequestException('Invalid payment method');
 
     const strategyType = method?.type || 'cod';
-
+this.logger.log(`🟢 strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`);
     let result;
     switch (strategyType) {
       case 'cod':
@@ -78,6 +82,9 @@ export class PaymentsService {
         break;
       case 'momo':
         result = await this.momoStrategy.createPayment(order, method);
+        break;
+        case 'everycoin': // <-- thêm case
+        result = await this.everycoinStrategy.createPayment(order, method);
         break;
       default:
         throw new BadRequestException('Unsupported payment method type');

@@ -39,6 +39,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
       .filter((i) => selectedIds.includes(i.id))
       .map((i) => ({
         id: i.id,
+        type: i.type,
         price: i.price,
         quantity: i.quantity,
         product: {

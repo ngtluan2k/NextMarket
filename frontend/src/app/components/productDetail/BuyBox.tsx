@@ -35,6 +35,7 @@ export default function BuyBox({
   stickyTop,
   onBuyNow,
   showMessage,
+  selectedType,
 }: {
   product?: Product;
   selectedVariantId: number | null;
@@ -51,6 +52,7 @@ export default function BuyBox({
     type: 'success' | 'error' | 'warning',
     content: string
   ) => void;
+  selectedType?: 'bulk' | 'subscription';
 }) {
   const navigate = useNavigate();
   const { addToCart } = useCart();
@@ -117,6 +119,7 @@ export default function BuyBox({
           product_id: product.id,
           price: calculatedPrice,
           quantity: quantity,
+          type: selectedType,
           product: {
             id: product.id,
             name: product.name,
@@ -158,15 +161,27 @@ export default function BuyBox({
   );
   if (!product) return null;
 
-  const handleAddToCart = async (product: Product, quantity: number) => {
+  const handleAddToCart = async (product: Product, quantity: number, type: 'bulk' | 'subscription',) => {
+      console.log('🛒 Add to Cart clicked:', {
+    productId: product.id,
+    productName: product.name,
+    quantity,
+    selectedVariantId,
+    type,
+    price: calculatedPrice,
+  });
     setLoading(true);
-
     try {
+      console.log('Before addToCart, quantity =', quantity);
+
       await addToCart(
         Number(product.id),
         quantity,
-        selectedVariantId ?? undefined
+        selectedVariantId ?? undefined,
+        type 
       );
+      console.log('After addToCart, quantity =', quantity);
+
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
@@ -292,7 +307,7 @@ export default function BuyBox({
           </button>
           <button
             className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-            onClick={() => handleAddToCart(product, quantity)}
+            onClick={() => handleAddToCart(product, quantity, selectedType ?? 'bulk')}
             disabled={loading}
           >
             Thêm vào giỏ

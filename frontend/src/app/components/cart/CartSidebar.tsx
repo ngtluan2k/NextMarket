@@ -10,6 +10,8 @@ import { UserAddress } from '../../types/user';
 import { CartItem } from '../../types/cart';
 import AddressModal from '../../page/AddressModal';
 import VoucherDiscountSection from '../checkout/VoucherDiscountSection'; // Import VoucherDiscountSection
+import { fetchMyWallet, Wallet } from '../../../service/wallet.service';
+
 const { Text } = Typography;
 
 type Props = {
@@ -53,6 +55,24 @@ export const CartSidebar: React.FC<Props> = ({
   );
   const [selectedVouchers, setSelectedVouchers] = useState<Voucher[]>([]); // State for selected vouchers
   const [discountTotal, setDiscountTotal] = useState(0); // State for total discount
+  const [wallet, setWallet] = useState<Wallet | null>(null); // 2. state
+  const [walletLoading, setWalletLoading] = useState(false);
+
+  useEffect(() => {
+    const getWallet = async () => {
+      setWalletLoading(true);
+      try {
+        const data = await fetchMyWallet();
+        setWallet(data);
+      } catch (err) {
+        message.error('Không thể tải số dư ví');
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+
+    getWallet();
+  }, []);
 
   // Sync selectedAddress with userAddress prop when it changes
   useEffect(() => {
@@ -108,6 +128,7 @@ export const CartSidebar: React.FC<Props> = ({
           variantId: item.variant?.id ? Number(item.variant.id) : undefined,
           quantity: Number(item.quantity),
           price: Number(item.price),
+          type: item.type || 'bulk',
         })),
       };
       console.log(
@@ -163,7 +184,7 @@ export const CartSidebar: React.FC<Props> = ({
         items,
         selectedVouchers,
         status:
-          selectedMethod.type === 'cod'
+          selectedMethod.type === 'cod' || selectedMethod.type === 'everycoin'
             ? 'success'
             : payment?.status ?? 'pending',
       };
@@ -181,12 +202,10 @@ export const CartSidebar: React.FC<Props> = ({
         });
       }
     } catch (err: any) {
-      console.error('Lỗi tạo đơn hàng/thanh toán:', {
-        status: err.status,
-        data: err.data,
-        message: err.message,
-        url: err.config?.url,
-      });
+      console.error(
+        '❌ EveryCoin Payment Error:',
+        err.response?.data || err.message
+      );
       message.error(err.message || 'Không thể tạo đơn hàng');
     } finally {
       setLoading(false);
@@ -264,6 +283,17 @@ export const CartSidebar: React.FC<Props> = ({
         currentAddressId={selectedAddress?.id}
         onSelect={handleAddressSelect}
       />
+
+      <Card style={{ marginBottom: 16 }}>
+        <Text strong>Số dư ví</Text>
+        <p>
+          {walletLoading
+            ? 'Đang tải...'
+            : wallet
+            ? `${wallet.balance.toLocaleString()} ${wallet.currency}`
+            : 'Chưa có thông tin ví'}
+        </p>
+      </Card>
 
       <Card style={{ marginBottom: 16 }}>
         <div className="flex justify-between items-center mb-2">

@@ -43,11 +43,18 @@ export type UserContextType = {
 
 // Dữ liệu của API /me
 export type Me = {
-  id: number;
+  id: number;               // profile ID
+  user_id?: number;         // ID thực sự của user (bảng users)
   username?: string;
   email: string;
   full_name?: string;
   roles?: string[];
   permissions?: string[];
   addresses?: UserAddress[];
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+    // ... các field khác nếu cần
+  };
 };

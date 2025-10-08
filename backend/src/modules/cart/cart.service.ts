@@ -35,6 +35,7 @@ export class CartService {
         'items.product.media',
         'items.product.pricing_rules',
         'items.product.store',
+        'items.product.pricing_rules.variant',
       ],
     });
     if (!cart) {
@@ -53,7 +54,8 @@ export class CartService {
     userId: number,
     productId: number,
     quantity = 1,
-    variantId?: number
+    variantId?: number,
+    type?: 'bulk' | 'subscription'
   ): Promise<CartItem> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -85,6 +87,7 @@ export class CartService {
         cart_id: cart.id,
         product_id: productId,
         variant_id: variantId ?? undefined,
+        type,
       },
     });
 
@@ -106,6 +109,7 @@ export class CartService {
         variant_id: variantId ?? undefined,
         quantity,
         price: variant ? variant.price : product.base_price,
+        type,
         added_at: new Date(),
       });
     }
@@ -113,7 +117,8 @@ export class CartService {
     cartItem.price = this.calculatePriceWithRulesForItem(
       product,
       variant,
-      cartItem.quantity
+      cartItem.quantity,
+      type
     );
 
     return this.cartItemRepository.save(cartItem);
@@ -123,7 +128,24 @@ export class CartService {
     const cart = await this.getOrCreateCart(userId);
 
     const optimizedItems = cart.items.map((item) => {
-      const calculatedPrice = this.calculatePriceWithRules(item);
+      const calculatedPrice = this.calculatePriceWithRulesForItem(
+        item.product,
+        item.variant,
+        item.quantity,
+        item.type // dùng type để tính giá đúng
+      );
+      console.log(
+        'Item type:',
+        item.type,
+        'Quantity:',
+        item.quantity,
+        'Variant:',
+        item.variant
+          ? `${item.variant.variant_name} (${item.variant.id})`
+          : 'none',
+        'Calculated price:',
+        calculatedPrice
+      );
 
       return {
         id: item.id,
@@ -132,6 +154,7 @@ export class CartService {
         variant_id: item.variant_id,
         quantity: item.quantity,
         price: calculatedPrice,
+        type: item.type ?? 'subscription',
         added_at: item.added_at,
         product: {
           id: item.product.id,
@@ -195,14 +218,22 @@ export class CartService {
     userId: number,
     productId: number,
     quantity: number,
-    variantId?: number
+    variantId?: number,
+    type?: 'bulk' | 'subscription'
   ): Promise<CartItem> {
+    console.log('updateQuantity body:', {
+      productId,
+      quantity,
+      variantId,
+      type,
+    });
     const cart = await this.getOrCreateCart(userId);
     const cartItem = await this.cartItemRepository.findOne({
       where: {
         cart_id: cart.id,
         product_id: productId,
         variant_id: variantId ?? undefined,
+        type,
       },
       relations: ['product', 'product.pricing_rules', 'variant'],
     });
@@ -225,11 +256,14 @@ export class CartService {
       }
     }
     cartItem.quantity = quantity;
+    cartItem.type = type ?? cartItem.type; // lưu type vào cartItem
     cartItem.price = this.calculatePriceWithRulesForItem(
       cartItem.product,
       cartItem.variant,
-      quantity
+      quantity,
+      type // truyền type xuống để tính đúng giá
     );
+
     return this.cartItemRepository.save(cartItem);
   }
 
@@ -268,34 +302,45 @@ export class CartService {
     }
     return currentPrice;
   }
+public calculatePriceWithRulesForItem(
+  product: Product,
+  variant: Variant | null,
+  quantity: number,
+  type: 'bulk' | 'subscription' = 'bulk'
+): number {
+  // Giá mặc định: variant.price nếu có, không thì base_price
+  let currentPrice = variant ? Number(variant.price) : Number(product.base_price);
+  const now = new Date();
 
-  private calculatePriceWithRulesForItem(
-    product: Product,
-    variant: Variant | null,
-    quantity: number
-  ): number {
-    let currentPrice = variant
-      ? Number(variant.price)
-      : Number(product.base_price);
+  const validRules = (product.pricing_rules ?? []).filter(rule => {
+    const startsAt = rule.starts_at ? new Date(rule.starts_at) : new Date(0);
+    const endsAt = rule.ends_at ? new Date(rule.ends_at) : new Date(8640000000000000);
+    const minQty = rule.min_quantity ?? 0;
 
-    const now = new Date();
-    const validRules = (product.pricing_rules ?? [])
-      .filter((rule) => {
-        const startsAt = rule.starts_at
-          ? new Date(rule.starts_at)
-          : new Date(0);
-        const endsAt = rule.ends_at
-          ? new Date(rule.ends_at)
-          : new Date(8640000000000000);
-        const minQuantity = rule.min_quantity ?? 0;
-        return quantity >= minQuantity && now >= startsAt && now <= endsAt;
-      })
-      .sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0));
+    // chỉ áp dụng rule trong khoảng thời gian
+    if (now < startsAt || now > endsAt) return false;
 
-    if (validRules.length > 0) {
-      const bestRule = validRules[0];
-      currentPrice = Number(bestRule.price);
+    // chỉ áp dụng nếu đúng type
+    if (rule.type !== type) return false;
+
+    // chỉ áp dụng nếu đúng variant (nếu rule gắn variant)
+    if (rule.variant) {
+      if (!variant || rule.variant.id !== variant.id) return false;
     }
-    return currentPrice;
-  }
+
+    // kiểm tra quantity
+    if (type === 'subscription') return quantity === minQty;
+    return quantity >= minQty;
+  });
+
+  // chọn rule có min_quantity lớn nhất
+  const bestRule = validRules.sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0))[0];
+
+  if (bestRule) currentPrice = Number(bestRule.price);
+
+  return currentPrice;
+}
+
+
+
 }

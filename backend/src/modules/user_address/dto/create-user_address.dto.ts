@@ -27,7 +27,6 @@ export class CreateUserAddressDto {
   ward!: string;
 
   @IsString()
-  @IsNotEmpty()
   district!: string;
 
   @IsString()

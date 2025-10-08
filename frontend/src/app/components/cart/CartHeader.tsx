@@ -164,6 +164,9 @@ export const CartHeader: React.FC<Props> = ({
                     Variant: {(item as any).variant.variant_name}
                   </Text>
                 )}
+                <Text type="secondary" className="block text-xs">
+                  Type: {item.type}
+                </Text>
                 {color && (
                   <Text type="secondary" className="block text-xs">
                     {color}
@@ -196,9 +199,10 @@ export const CartHeader: React.FC<Props> = ({
                   className="px-2"
                   onClick={() =>
                     updateQuantity(
-                      item.id,
+                      item.product.id,
                       Math.max(1, item.quantity - 1),
-                      item.variant?.id
+                      item.variant?.id,
+                      item.type
                     )
                   }
                 >
@@ -216,7 +220,8 @@ export const CartHeader: React.FC<Props> = ({
                     updateQuantity(
                       item.product.id,
                       item.quantity + 1,
-                      item.variant?.id
+                      item.variant?.id,
+                      item.type
                     )
                   }
                 >

@@ -226,7 +226,7 @@ export default function OrdersPage() {
         return (
           <span className={`${base} bg-amber-50 text-amber-700`}>
             <Clock className="h-3 w-3" />
-            Chờ thanh toán
+            Chờ xác nhận
           </span>
         );
       case 'confirmed':

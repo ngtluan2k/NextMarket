@@ -12,7 +12,7 @@ import { Payment } from '../payments/payment.entity';
 import { VouchersModule } from '../vouchers/vouchers.module';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
-
+import { CartModule } from '../cart/cart.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -25,6 +25,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
       Payment,
       OrderStatusHistory,
     ]),
+    CartModule,
     VouchersModule,
     forwardRef(() => ProductReviewsModule), // 👈 thêm cái này
   ],

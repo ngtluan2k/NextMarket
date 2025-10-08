@@ -7,7 +7,9 @@ import {
 } from 'typeorm';
 import { ManyToOne } from 'typeorm';
 import { Product } from '../product/product.entity';
-
+import { OneToMany } from 'typeorm';
+import { Subscription } from '../subscription/subscription.entity';
+import { Variant } from '../variant/variant.entity';
 @Entity('pricing_rules')
 export class PricingRules {
   @PrimaryGeneratedColumn()
@@ -20,6 +22,13 @@ export class PricingRules {
   @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })
   product!: Product;
+
+  @ManyToOne(() => Variant)
+  @JoinColumn({ name: 'variant_id' })
+  variant!: Variant;
+
+  @Column()
+  name!: string;
 
   @Column()
   type!: string;
@@ -38,4 +47,10 @@ export class PricingRules {
 
   @Column({ nullable: true })
   ends_at?: Date;
+
+  @Column()
+  status!: string;
+
+  @OneToMany(() => Subscription, (sub) => sub.pricingRule)
+  subscriptions!: Subscription[];
 }

@@ -15,7 +15,7 @@ import { OrderItem } from '../order-items/order-item.entity';
 import { Variant } from '../variant/variant.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
-
+import { EveryCoinStrategy } from './strategies/everycoin.strategy';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -30,7 +30,7 @@ import { OrderStatusHistory } from '../order-status-history/order-status-history
       OrderStatusHistory,
     ]),
   ],
-  providers: [PaymentsService, CodStrategy, VnpayStrategy, MomoStrategy],
+  providers: [PaymentsService, CodStrategy, VnpayStrategy, MomoStrategy, EveryCoinStrategy,],
   controllers: [PaymentsController, PaymentsWebhookController],
   exports: [PaymentsService],
 })

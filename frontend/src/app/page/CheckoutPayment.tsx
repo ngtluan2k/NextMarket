@@ -31,7 +31,11 @@ const CheckoutPayment: React.FC = () => {
     items: [],
     subtotal: 0,
   }) as CheckoutLocationState;
-
+  // Payment
+  const [method, setMethod] = useState<PaymentMethodType>('cod');
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>(
+    []
+  );
   const [showLoginModal, setShowLoginModal] = useState(false);
   const items = state.items ?? [];
   const subtotalNum =
@@ -59,11 +63,29 @@ const CheckoutPayment: React.FC = () => {
         image: primaryImage,
         quantity: i.quantity,
         price: i.price,
+        type: i.type,
         product: i.product,
         variant,
       };
     });
   }, [items]);
+
+  // Kiểm tra có subscription hay không
+const isSubscription = useMemo(
+  () => checkoutItems.some((i) => i.type === 'subscription'),
+  [checkoutItems]
+);
+
+// Lọc payment methods cho COD ↔ EveryCoin
+const filteredMethods = useMemo(
+  () =>
+    paymentMethods.filter((m) => {
+      if (m.type === 'cod') return !isSubscription;
+      if (m.type === 'everycoin') return isSubscription;
+      return true; // các method khác luôn hiển thị
+    }),
+  [paymentMethods, isSubscription]
+);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -85,11 +107,7 @@ const CheckoutPayment: React.FC = () => {
     month: 'numeric',
   })}`;
 
-  // Payment
-  const [method, setMethod] = useState<PaymentMethodType>('cod');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>(
-    []
-  );
+
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,6 +181,17 @@ const CheckoutPayment: React.FC = () => {
         setPaymentMethods([]);
       }
     };
+
+   // Kiểm tra có subscription hay không
+const isSubscription = checkoutItems.some((i) => i.type === 'subscription');
+
+// Lọc payment methods cho COD ↔ EveryCoin
+const filteredMethods = paymentMethods.filter((m) => {
+  if (m.type === 'cod') return !isSubscription;      // COD chỉ hiện khi không phải subscription
+  if (m.type === 'everycoin') return isSubscription; // EveryCoin chỉ hiện khi là subscription
+  return true; // các method khác luôn hiển thị
+});
+
 
     const fetchUserAddress = async () => {
       try {
@@ -269,7 +298,7 @@ const CheckoutPayment: React.FC = () => {
               <PaymentMethods
                 selected={method}
                 onChange={setMethod}
-                methods={paymentMethods}
+                methods={filteredMethods}
                 savedCards={savedCards}
               />
             </div>

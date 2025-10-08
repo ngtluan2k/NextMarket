@@ -43,6 +43,9 @@ export const ProductForm: React.FC = () => {
       cycle?: string;
       starts_at?: string | Date;
       ends_at?: string | Date;
+      variant_sku?: string; // mới: liên kết với variant SKU
+      name?: string; // mới: tên rule
+      status?: 'active' | 'inactive'; // mới: trạng thái
     }[];
   }
 
@@ -155,6 +158,9 @@ export const ProductForm: React.FC = () => {
           cycle: '',
           starts_at: '',
           ends_at: '',
+          variant_sku: '',
+          name: '',
+          status: 'active',
         },
       ],
     }));
@@ -546,7 +552,7 @@ export const ProductForm: React.FC = () => {
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Pricing Rules</h3>
           {form.pricing_rules.map((pr, i) => (
-            <div key={i} className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-2">
+            <div key={i} className="grid grid-cols-1 md:grid-cols-9 gap-4 mb-2">
               <input
                 placeholder="Type"
                 value={pr.type}
@@ -609,6 +615,41 @@ export const ProductForm: React.FC = () => {
                 }}
                 className="px-3 py-2 border rounded-md"
               />
+              {/* Mới: variant_sku */}
+              <input
+                placeholder="Variant SKU"
+                value={pr.variant_sku || ''}
+                onChange={(e) => {
+                  const newPR = [...form.pricing_rules];
+                  newPR[i].variant_sku = e.target.value;
+                  setForm({ ...form, pricing_rules: newPR });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+              {/* Mới: Name */}
+              <input
+                placeholder="Name"
+                value={pr.name || ''}
+                onChange={(e) => {
+                  const newPR = [...form.pricing_rules];
+                  newPR[i].name = e.target.value;
+                  setForm({ ...form, pricing_rules: newPR });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+              {/* Mới: Status */}
+              <select
+                value={pr.status || 'active'}
+                onChange={(e) => {
+                  const newPR = [...form.pricing_rules];
+                  newPR[i].status = e.target.value as 'active' | 'inactive';
+                  setForm({ ...form, pricing_rules: newPR });
+                }}
+                className="px-3 py-2 border rounded-md"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
           ))}
           <button

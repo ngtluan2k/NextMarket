@@ -46,6 +46,8 @@ import { FilesModule } from './common/files/files.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { WalletTransactionModule } from './modules/wallet_transaction/wallet_transaction.module';
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
+import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { SubscriptionUsagesModule } from './modules/subscription_usages/subscription_usages.module';
 
 @Module({
   imports: [
@@ -127,6 +129,8 @@ import { StoreFollowersModule } from './modules/store-follower/store-followers.m
     WalletModule,
     WalletTransactionModule,
     StoreFollowersModule,
+    SubscriptionModule,
+    SubscriptionUsagesModule,
   ],
 })
 export class AppModule {}
