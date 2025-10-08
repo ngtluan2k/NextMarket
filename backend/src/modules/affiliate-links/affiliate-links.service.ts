@@ -1,28 +1,37 @@
-import { UserService } from '../user/user.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { CreateAffiliateLinkDto } from '../affiliate-links/dto/create-affiliate-link.dto';
 import { UpdateAffiliateLinkDto } from '../affiliate-links/dto/update-affiliate-link.dto';
-import * as crypto from 'crypto';
 import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
-import { In } from 'typeorm';
+import { UserService } from '../user/user.service';
+import { Product } from '../product/product.entity';
+import { OrderItem } from '../order-items/order-item.entity';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AffiliateLinksService {
   constructor(
     @InjectRepository(AffiliateLink)
     private repository: Repository<AffiliateLink>,
-    private userService: UserService,
     @InjectRepository(AffiliateCommission)
     private commissionRepository: Repository<AffiliateCommission>,
     @InjectRepository(AffiliateProgram)
-    private programRepository: Repository<AffiliateProgram>
+    private programRepository: Repository<AffiliateProgram>,
+    @InjectRepository(Product)
+    private productRepository: Repository<Product>,
+    @InjectRepository(OrderItem)
+    private orderItemRepository: Repository<OrderItem>,
+    private userService: UserService
   ) {}
 
   async create(createDto: CreateAffiliateLinkDto): Promise<AffiliateLink> {
+    const user = await this.userService.findOne(createDto.userId);
+    if (!user || !user.is_affiliate) {
+      throw new NotFoundException('User is not an affiliate or does not exist');
+    }
     const entity = this.repository.create(createDto);
     entity.uuid = crypto.randomUUID();
     entity.created_at = new Date();
@@ -31,7 +40,6 @@ export class AffiliateLinksService {
     entity.code = createDto.code;
 
     const savedLink = await this.repository.save(entity);
-
     await this.userService.updateAffiliateStatus(createDto.userId, true);
     return savedLink;
   }
@@ -46,7 +54,7 @@ export class AffiliateLinksService {
       relations: ['program_id', 'user_id'],
     });
     if (!res) {
-      throw new NotFoundException(`cannot found affiliate links at id ${id}!`);
+      throw new NotFoundException(`Cannot find affiliate link with id ${id}`);
     }
     return res;
   }
@@ -77,26 +85,17 @@ export class AffiliateLinksService {
       user.code = `AFF${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
       await this.userService.update(userId, { code: user.code });
     }
-    
+
     const defaultProgram = await this.programRepository.findOne({
       where: { status: 'active' },
       order: { id: 'ASC' },
     });
     if (!defaultProgram) {
-      throw new NotFoundException('No active affiliate programs available for registration');
+      throw new NotFoundException('No active affiliate programs available');
     }
 
-    const affiliateLink = this.repository.create({
-      user_id: { id: userId } as any,
-      program_id: { id: defaultProgram.id } as any,
-      code: user.code,
-      created_at: new Date(),
-    });
-    await this.repository.save(affiliateLink);
-
-    await this.userService.updateAffiliateStatus(userId, true);
     return {
-      message: 'Successfully registered as affiliate',
+      message: 'Successfully registered as an affiliate',
       affiliate_code: user.code,
     };
   }
@@ -104,22 +103,21 @@ export class AffiliateLinksService {
   async unregister(userId: number) {
     const user = await this.userService.findOne(userId);
     if (!user || !user.is_affiliate) {
-      return { message: 'You are not registered as an affiliate' };
+      throw new NotFoundException('User is not an affiliate or does not exist');
     }
 
     const affiliateLinks = await this.repository.find({
       where: { user_id: { id: userId } },
     });
-    if (affiliateLinks.length > 0) {
-      await this.commissionRepository.update(
-        {
-          link_id: { id: In(affiliateLinks.map((link) => link.id)) },
-          status: 'pending',
-        },
-        { status: 'canceled' }
-      );
-      await this.repository.delete({ user_id: { id: userId } });
-    }
+
+    await this.commissionRepository.update(
+      {
+        link_id: { id: In(affiliateLinks.map((link) => link.id)) },
+        status: 'pending',
+      },
+      { status: 'canceled' }
+    );
+    await this.repository.delete({ user_id: { id: userId } });
     await this.userService.updateAffiliateStatus(userId, false);
 
     return { message: 'Successfully unregistered from affiliate program' };
@@ -128,7 +126,7 @@ export class AffiliateLinksService {
   async createAffiliateLink(
     userId: number,
     productId: number,
-    variantSlug?: string
+    variantId?: number
   ) {
     const user = await this.userService.findOne(userId);
     if (!user || !user.is_affiliate) {
@@ -144,28 +142,36 @@ export class AffiliateLinksService {
     }
 
     const baseLink = `https://everymart.com/product/${productId}?aff=${user.code}`;
+
     const affiliateLink = this.repository.create({
       user_id: { id: userId } as any,
       program_id: { id: defaultProgram.id } as any,
-      code: variantSlug
-        ? `${user.code}-${productId}-${variantSlug}`
-        : `${user.code}-${productId}`,
+      code: variantId
+        ? `${user.code}:${productId}:${variantId}`
+        : `${user.code}:${productId}`,
       created_at: new Date(),
+      uuid: crypto.randomUUID(),
     });
 
     const savedLink = await this.repository.save(affiliateLink);
     return {
       message: 'Affiliate link created',
-      affiliate_link: `${baseLink}${
-        variantSlug ? `&variant=${variantSlug}` : ''
-      }`,
+      affiliate_link: `${baseLink}${variantId ? `&variant=${variantId}` : ''}`,
       link_id: savedLink.id,
     };
   }
 
   async getMyLinks(userId: number) {
+    console.log('userId', userId);
+
     const user = await this.userService.findOne(userId);
-    if (!user || !user.is_affiliate) {
+    console.log(JSON.stringify(user), null, 2);
+    if (!user || user.is_affiliate != true) {
+      console.log(
+        'User is not an affiliate or does not exist',
+        user.id,
+        user.is_affiliate
+      );
       return {
         message: 'User is not an affiliate or does not exist',
         links: [],
@@ -185,7 +191,6 @@ export class AffiliateLinksService {
     }
 
     const affiliateLinks = links.map((link) => {
-     
       if (!link.code) {
         return {
           link_id: link.id,
@@ -195,15 +200,17 @@ export class AffiliateLinksService {
         };
       }
 
-      const codeParts = link.code.split('-');
-      const productId = codeParts[1] || 'unknown'; 
-      const variantSlug = codeParts[2];
-      const baseLink = `https://everymart.com/product/${productId}?aff=${user.code}`;
-      
+      const codeParts = link.code.split(':');
+      const linkProductId = codeParts[1] || 'unknown';
+      const linkVariantId = codeParts[2] ? parseInt(codeParts[2], 10) : undefined;
+      const baseLink = `https://everymart.com/product/${linkProductId}?aff=${user.code}`;
+
       return {
         link_id: link.id,
+        productId: parseInt(linkProductId, 10),
+        variantId: linkVariantId,
         affiliate_link: `${baseLink}${
-          variantSlug ? `&variant=${variantSlug}` : ''
+          linkVariantId ? `&variant=${linkVariantId}` : ''
         }`,
         program_name: link.program_id?.name,
         created_at: link.created_at,
@@ -211,5 +218,36 @@ export class AffiliateLinksService {
     });
 
     return { message: 'Affiliate links retrieved', links: affiliateLinks };
+  }
+
+  async getAffiliatedProducts(userId: number) {
+    const user = await this.userService.findOne(userId);
+    if (!user || !user.is_affiliate) {
+      throw new NotFoundException('User is not an affiliate or does not exist');
+    }
+
+    const commissions = await this.commissionRepository
+      .createQueryBuilder('commission')
+      .leftJoin('commission.link_id', 'link')
+      .leftJoin('link.user_id', 'user')
+      .leftJoinAndSelect('commission.order_item_id', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .where('user.id = :userId', { userId })
+      .getMany();
+
+    const products = commissions
+      .map((comm) => comm.order_item_id?.product)
+      .filter((p): p is Product => p !== null && p !== undefined);
+
+    const uniqueProducts = [
+      ...new Map(products.map((p) => [p.id, p])).values(),
+    ];
+
+    return {
+      message: uniqueProducts.length
+        ? 'Affiliated products retrieved'
+        : 'No affiliated products found',
+      products: uniqueProducts,
+    };
   }
 }

@@ -5,10 +5,12 @@ import {
   ManyToOne,
   JoinColumn,
   Generated,
+  OneToMany,
 } from 'typeorm';
 import { Order } from '../orders/order.entity';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
+import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
 
 @Entity('order_items')
 export class OrderItem {
@@ -44,4 +46,7 @@ export class OrderItem {
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   subtotal?: number;
+
+  @OneToMany(() => AffiliateCommission, (commission) => commission.order_item_id)
+  commissions!: AffiliateCommission[];
 }

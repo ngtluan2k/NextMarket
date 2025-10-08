@@ -1,15 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ReferralsService } from './referrals.service';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { UpdateReferralDto } from './dto/update-referral.dto';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthRequest extends ExpressRequest {
+  user: {
+    id: number;
+    email: string;
+    roles: string[];
+    permissions: string[];
+  };
+}
 
 @Controller('referrals')
+@UseGuards(JwtAuthGuard)
 export class ReferralsController {
   constructor(private readonly service: ReferralsService) {}
 
-  @Post()
-  create(@Body() createDto: CreateReferralDto) {
-    return this.service.create(createDto);
+  @Post('create')
+  async create(@Request() req: AuthRequest, @Body() createDto: CreateReferralDto) {
+    return this.service.createForUser(req.user.id, createDto);
+  }
+
+  @Get('my-referrals')
+  async findUserReferrals(@Request() req: AuthRequest) {
+    return this.service.findUserReferrals(req.user.id);
   }
 
   @Get()

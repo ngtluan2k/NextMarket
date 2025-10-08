@@ -1,31 +1,31 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
-import { Order } from '../orders/order.entity';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Entity('affiliate_commissions')
 export class AffiliateCommission {
   @PrimaryGeneratedColumn()
-  id?: number;
+  id!: number;
 
   @Column({ type: 'char', length: 36, unique: true })
-  uuid?: string;
+  uuid!: string;
 
-  @ManyToOne(() => AffiliateLink, (link) => link.id)
+  @ManyToOne(() => AffiliateLink, (link) => link.commissions)
   @JoinColumn({ name: 'link_id' })
-  link_id?: AffiliateLink;
+  link_id!: AffiliateLink;
 
-  @ManyToOne(() => Order, (order) => order.id)
-  @JoinColumn({ name: 'order_id' })
-  order_id?: Order;
+  @ManyToOne(() => OrderItem, (orderItem) => orderItem.commissions)
+  @JoinColumn({ name: 'order_item_id' })
+  order_item_id!: OrderItem;
 
-  @Column({ type: 'decimal' })
-  amount?: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  amount!: number;
 
   @Column({ length: 255 })
-  status?: string;
+  status!: string;
 
   @Column({ type: 'datetime' })
-  created_at?: Date;
+  created_at!: Date;
 
   @Column({ type: 'datetime', nullable: true })
   paid_at?: Date;
