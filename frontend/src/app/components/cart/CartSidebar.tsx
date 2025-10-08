@@ -8,8 +8,9 @@ import { useAuth } from '../../context/AuthContext';
 import { PaymentMethodResponse } from '../../types/payment';
 import { UserAddress } from '../../types/user';
 import { CartItem } from '../../types/cart';
+import { Voucher } from '../../types/voucher';
+import VoucherDiscountSection from '../checkout/VoucherDiscountSection';
 import AddressModal from '../../page/AddressModal';
-import VoucherDiscountSection from '../checkout/VoucherDiscountSection'; // Import VoucherDiscountSection
 import { fetchMyWallet, Wallet } from '../../../service/wallet.service';
 
 const { Text } = Typography;
@@ -49,7 +50,7 @@ export const CartSidebar: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
-  const [isVoucherModalVisible, setIsVoucherModalVisible] = useState(false); // State for voucher modal
+  const [isVoucherModalVisible, setIsVoucherModalVisible] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
     userAddress || null
   );
@@ -74,22 +75,17 @@ export const CartSidebar: React.FC<Props> = ({
     getWallet();
   }, []);
 
-  // Sync selectedAddress with userAddress prop when it changes
   useEffect(() => {
     if (userAddress) {
       setSelectedAddress(userAddress);
     }
   }, [userAddress]);
 
-  // Calculate final total after discount
   const finalTotal = selectedTotal - discountTotal;
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      console.log('Items received: ', JSON.stringify(items, null, 2));
-
-      // Input validation
       if (items.length === 0) {
         message.error('Không có sản phẩm trong đơn hàng');
         return;
@@ -115,7 +111,6 @@ export const CartSidebar: React.FC<Props> = ({
       const storeId = items[0]?.product?.store?.id;
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
-      // Create order payload with discount and voucher information
       const orderPayload = {
         userId,
         storeId,
@@ -135,16 +130,15 @@ export const CartSidebar: React.FC<Props> = ({
         '📦 Order payload (BE will calculate):',
         JSON.stringify(orderPayload, null, 2)
       );
-      console.log('Tạo đơn hàng:', JSON.stringify(orderPayload, null, 2));
-      const orderRes = await api.post('/orders', orderPayload);
+      const orderRes = await api.post(`/users/${userId}/orders`, orderPayload);
       const order = orderRes.data;
       console.log('Đơn hàng đã được tạo:', order);
       console.log('✅ Order created by BE:', {
         id: order.id,
         subtotal: order.subtotal,
         shippingFee: order.shippingFee,
-        discountTotal: order.discountTotal, // Lấy từ BE
-        totalAmount: order.totalAmount, // Lấy từ BE
+        discountTotal: order.discountTotal,
+        totalAmount: order.totalAmount,
       });
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
@@ -161,7 +155,7 @@ export const CartSidebar: React.FC<Props> = ({
       const paymentPayload = {
         orderUuid,
         paymentMethodUuid: selectedMethod.uuid,
-        amount: Number(order.totalAmount), // Use final total for payment
+        amount: Number(order.totalAmount),
       };
 
       console.log(
@@ -175,10 +169,10 @@ export const CartSidebar: React.FC<Props> = ({
 
       const successState = {
         orderCode: order.uuid || order.id,
-        total: order.totalAmount, // ✅ Sử dụng từ BE
-        discountTotal: order.discountTotal, // ✅ Sử dụng từ BE
-        subtotal: order.subtotal, // ✅ Sử dụng từ BE
-        shippingFee: order.shippingFee, // ✅ Sử dụng từ BE
+        total: order.totalAmount,
+        discountTotal: order.discountTotal,
+        subtotal: order.subtotal,
+        shippingFee: order.shippingFee,
         paymentMethodLabel: selectedMethod.name,
         etaLabel,
         items,
@@ -212,14 +206,50 @@ export const CartSidebar: React.FC<Props> = ({
     }
   };
 
-  const handleApplyVoucher = (voucher: Voucher, discount: number) => {
-    setSelectedVouchers([voucher]); // Update to handle multiple vouchers if needed
-    setDiscountTotal(discount);
+  const handleApplyVoucher = (vouchers: Voucher[], totalDiscount: number) => {
+    console.log('Applying vouchers:', vouchers, 'Total discount:', totalDiscount);
+    setSelectedVouchers(vouchers);
+    setDiscountTotal(Number.isFinite(totalDiscount) ? totalDiscount : 0);
   };
 
-  const handleRemoveVoucher = (voucherId: number) => {
-    setSelectedVouchers(selectedVouchers.filter((v) => v.id !== voucherId));
-    setDiscountTotal(0); // Recalculate discount if needed
+  const handleRemoveVoucher = async (voucherId: number) => {
+    const updatedVouchers = selectedVouchers.filter((v) => v.id !== voucherId);
+    console.log('Removing voucher:', voucherId, 'Updated vouchers:', updatedVouchers);
+    setSelectedVouchers(updatedVouchers);
+
+    if (updatedVouchers.length === 0) {
+      console.log('No vouchers left, resetting discountTotal to 0');
+      setDiscountTotal(0);
+      return;
+    }
+
+    try {
+      const res = await api.post('/vouchers/calculate-discount', {
+        voucherCodes: updatedVouchers.map((v) => v.code),
+        userId: me?.id,
+        orderItems: items.map((item) => ({
+          productId: Number(item.product?.id),
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        })),
+        storeId: items[0]?.product?.store?.id || 1,
+        orderAmount: selectedTotal,
+      });
+      const { discountTotal, appliedVouchers, invalidVouchers } = res.data;
+      console.log('Recalculated discount after removing voucher:', res.data);
+      if (invalidVouchers?.length > 0) {
+        invalidVouchers.forEach((v: { code: string; error: string }) => {
+          message.warning(`Voucher ${v.code}: ${v.error}`);
+        });
+      }
+      setDiscountTotal(Number.isFinite(discountTotal) ? discountTotal : 0);
+    } catch (error: any) {
+      console.error('Error calculating discount:', error);
+      message.error(
+        error.response?.data?.message || 'Không thể tính toán giảm giá'
+      );
+      setDiscountTotal(0);
+    }
   };
 
   const showConfirmModal = () => {
@@ -357,7 +387,7 @@ export const CartSidebar: React.FC<Props> = ({
         orderAmount={selectedTotal}
         onApply={handleApplyVoucher}
         selectedVouchers={selectedVouchers}
-        maxSelect={2}
+        
       />
 
       <Card>

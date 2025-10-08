@@ -52,6 +52,7 @@ import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.
 import { AffiliateRegistrationModule } from './modules/affiliate-registration/affiliate-registration.module';
 import { AffiliatePlatformModule } from './modules/affiliate-platform/affiliate-platform.module';
 import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registration-platform/affiliate-registration-platform.module';
+import { InventoryTransactionModule } from './modules/inventory-transactions/inventory-transactions.module';
 
 @Module({
   imports: [
@@ -138,7 +139,8 @@ import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registr
     AffiliateLinksModule,
     AffiliateRegistrationModule,
     AffiliatePlatformModule,
-    AffiliateRegistrationPlatformModule
+    AffiliateRegistrationPlatformModule,
+    InventoryTransactionModule,
   ],
 })
 export class AppModule {}

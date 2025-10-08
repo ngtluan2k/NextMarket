@@ -14,6 +14,9 @@ import { Inventory } from '../inventory/inventory.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { ProductReview } from '../product_reviews/product_review.entity';
+import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
+
 @Entity('variants')
 export class Variant {
   @PrimaryGeneratedColumn()
@@ -56,10 +59,14 @@ export class Variant {
   // === Relations ===
   @OneToMany(() => Inventory, (inventories) => inventories.variant)
   inventories!: Inventory[];
+
   @OneToMany(() => OrderItem, (item) => item.variant)
   orderItems!: OrderItem[];
   @OneToMany(() => Subscription, (sub) => sub.variant)
   subscriptions!: Subscription[];
   @OneToMany(() =>  PricingRules, (rule) => rule.variant)
   variant!: Variant;
+  
+  @OneToMany(() => InventoryTransaction, (transaction) => transaction.variant)
+  inventoryTransactions!: InventoryTransaction[];
 }

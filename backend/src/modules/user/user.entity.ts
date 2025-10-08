@@ -17,6 +17,7 @@ import { ProductReview } from '../product_reviews/product_review.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import { AffiliateRegistration } from '../affiliate-registration/affiliate-registration.entity';
 
+import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -77,4 +78,6 @@ export class User {
   subscriptions!: Subscription[];
   @OneToMany(() => AffiliateRegistration, (affiliate) => affiliate.user)
   affiliateRegistrations!: AffiliateRegistration[];
+  @OneToMany(() => InventoryTransaction, (transaction) => transaction.createdBy)
+  inventoryTransactions!: InventoryTransaction[];
 }

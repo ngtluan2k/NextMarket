@@ -31,7 +31,7 @@ export class CodStrategy {
         order,
         paymentMethod,
         amount: order.totalAmount,
-        status: PaymentStatus.Pending, // Đặt trạng thái thành công
+        status: PaymentStatus.Unpaid, // Đặt trạng thái thành công
         paidAt: new Date(),
       });
       await manager.save(payment);
@@ -52,7 +52,28 @@ export class CodStrategy {
       await manager.save(history);
 
       // Cập nhật kho hàng
-      
+      // const items: OrderItem[] = await manager.find(OrderItem, {
+      //   where: { order: { id: order.id } },
+      //   relations: ['variant', 'product'],
+      // });
+      // for (const item of items) {
+      //   if (item.variant) {
+      //     item.variant.stock = (item.variant.stock || 0) - item.quantity;
+      //     await manager.save(item.variant);
+      //   }
+      //   const inv = await manager.findOne(Inventory, {
+      //     where: {
+      //       product: { id: item.product.id },
+      //       variant: item.variant ? { id: item.variant.id } : IsNull(),
+      //     },
+      //   });
+      //   if (inv) {
+      //     inv.used_quantity = (inv.used_quantity || 0) - item.quantity;
+      //     inv.quantity = (inv.quantity || 0) - item.quantity;
+      //     await manager.save(inv);
+      //   }
+      // }
+
       return payment;
     });
   }

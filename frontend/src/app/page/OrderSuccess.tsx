@@ -21,7 +21,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
-
+import { orderService } from '../../service/order.service';
 const { Title, Text } = Typography;
 
 type OrderSuccessState = {
@@ -69,15 +69,23 @@ const OrderSuccess: React.FC = () => {
     const fetchOrderDetails = async () => {
       if (paymentUuid) {
         try {
-          const response = await axios.get<ApiResponse>(
-            `http://localhost:3000/orders/payment/${paymentUuid}`
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          const userId = user?.id || user?.sub;
+
+          if (!userId) {
+            setError('Không xác định được người dùng');
+            setLoading(false);
+            return;
+          }
+
+          const data = await orderService.findByPaymentUuid(
+            userId,
+            paymentUuid
           );
-          if (response.status === 200 && response.data) {
-            setOrderData(response.data);
+          if (data) {
+            setOrderData(data);
           } else {
-            setError(
-              response.data?.message || 'Không lấy được thông tin đơn hàng.'
-            );
+            setError('Không lấy được thông tin đơn hàng.');
           }
         } catch (err) {
           console.error(err);
