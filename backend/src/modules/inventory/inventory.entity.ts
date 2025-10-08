@@ -6,9 +6,11 @@ import {
   ManyToOne,
   UpdateDateColumn,
   Generated,
+  OneToMany,
 } from 'typeorm';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
+import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
 
 @Entity('inventory')
 export class Inventory {
@@ -40,4 +42,7 @@ export class Inventory {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt!: Date;
+
+  @OneToMany(() => InventoryTransaction, (transaction) => transaction.inventory)
+  transactions!: InventoryTransaction[];
 }

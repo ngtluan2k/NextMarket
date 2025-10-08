@@ -1,72 +1,97 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3000/orders'; // đổi thành baseURL của backend
+import { api, API_ENDPOINTS } from '../app/api/api'
 
 export const orderService = {
-  // Lấy tất cả đơn hàng của user
-  async getOrdersByUser(userId: number) {
-    try {
-      const res = await axios.get(`${API_URL}/user/${userId}`);
-      return res.data;
-    } catch (error: any) {
-      console.error(
-        'Lỗi khi lấy đơn hàng:',
-        error.response?.data || error.message
-      );
-      throw error;
-    }
+  // ========== USER ENDPOINTS ==========
+
+  getOrdersByUser: async (userId: number, params?: any) => {
+    const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders`, { params });
+    return res.data;
   },
 
-  // Lấy chi tiết 1 đơn hàng
-  async getOrderDetail(orderId: number) {
-    try {
-      const res = await axios.get(`${API_URL}/${orderId}`);
-      return res.data;
-    } catch (error: any) {
-      console.error(
-        'Lỗi khi lấy chi tiết đơn hàng:',
-        error.response?.data || error.message
-      );
-      throw error;
-    }
+  getOrderDetail: async (userId: number, orderId: number) => {
+    const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders/${orderId}`);
+    return res.data;
   },
-  //Đổi trạng thái của 1 đơn hàng, khách chỉ có thể hủy
-  async changeStatus(
-    orderId: number,
-    status: string,
-    token: string,
-    note?: string
-  ) {
-    try {
-      const res = await axios.patch(
-        `${API_URL}/${orderId}/status/${status}`,
-        { note }, // gửi note nếu có
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      return res.data;
-    } catch (error: any) {
-      console.error(
-        'Lỗi khi thay đổi trạng thái đơn hàng:',
-        error.response?.data || error.message
-      );
-      throw error;
-    }
+
+  createOrder: async (userId: number, payload: any) => {
+    const res = await api.post(`${API_ENDPOINTS.users}/${userId}/orders`, payload);
+    return res.data;
   },
-  // Lấy tất cả đơn hàng của store
-  async getOrdersByStore(storeId: number) {
-    try {
-      const res = await axios.get(`${API_URL}/store/${storeId}`);
-      return res.data;
-    } catch (error: any) {
-      console.error(
-        'Lỗi khi lấy đơn hàng của store:',
-        error.response?.data || error.message
-      );
-      throw error;
-    }
+
+  changeStatusByUser: async (userId: number, orderId: number, status: string, note?: string) => {
+    const res = await api.patch(
+      `${API_ENDPOINTS.users}/${userId}/orders/${orderId}/status/${status}`,
+      { note }
+    );
+    return res.data;
   },
+
+   findByPaymentUuid: async (userId: number, paymentUuid: string) => {
+  const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders/payment/${paymentUuid}`);
+  return res.data;
+},
+
+  // ========== STORE ENDPOINTS ==========
+
+  getOrdersByStore: async (storeId: number, params?: any) => {
+    const res = await api.get(`${API_ENDPOINTS.stores}/${storeId}/orders`, { params });
+    return res.data;
+  },
+
+  getStoreOrderDetail: async (storeId: number, orderId: number) => {
+    const res = await api.get(`${API_ENDPOINTS.stores}/${storeId}/orders/${orderId}`);
+    return res.data;
+  },
+
+  changeStatusByStore: async (storeId: number, orderId: number, status: string, note?: string) => {
+    const res = await api.patch(
+      `${API_ENDPOINTS.stores}/${storeId}/orders/${orderId}/status/${status}`,
+      { note }
+    );
+    return res.data;
+  },
+
+  getStoreRevenue: async (storeId: number) => {
+    const res = await api.get(`${API_ENDPOINTS.stores}/${storeId}/orders/reports/revenue`);
+    return res.data;
+  },
+
+  getStoreStats: async (storeId: number) => {
+    const res = await api.get(`${API_ENDPOINTS.stores}/${storeId}/orders/reports/stats`);
+    return res.data;
+  },
+
+  // ========== ADMIN ENDPOINTS ==========
+
+  getAllOrders: async () => {
+    const res = await api.get(`${API_ENDPOINTS.admin}/orders`);
+    return res.data;
+  },
+
+  getAdminOrderDetail: async (orderId: number) => {
+    const res = await api.get(`${API_ENDPOINTS.admin}/orders/${orderId}`);
+    return res.data;
+  },
+
+  createOrderAdmin: async (payload: any) => {
+    const res = await api.post(`${API_ENDPOINTS.admin}/orders`, payload);
+    return res.data;
+  },
+
+  updateOrderAdmin: async (orderId: number, payload: any) => {
+    const res = await api.patch(`${API_ENDPOINTS.admin}/orders/${orderId}`, payload);
+    return res.data;
+  },
+
+  deleteOrderAdmin: async (orderId: number) => {
+    const res = await api.delete(`${API_ENDPOINTS.admin}/orders/${orderId}`);
+    return res.data;
+  },
+
+  getAdminRevenue: async () => {
+    const res = await api.get(`${API_ENDPOINTS.admin}/orders/reports/revenue`);
+    return res.data;
+  },
+
+ 
 };

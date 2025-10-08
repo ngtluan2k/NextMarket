@@ -6,47 +6,62 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
+  UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { InventoryTransactionsService } from './inventory-transactions.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { InventoryTransactionService } from './inventory-transactions.service';
 import { CreateInventoryTransactionDto } from './dto/create-inventory-transaction.dto';
 import { UpdateInventoryTransactionDto } from './dto/update-inventory-transaction.dto';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { PermissionGuard } from '../../common/auth/permission.guard';
+import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 
+@ApiTags('inventory-transactions')
+@ApiBearerAuth()
 @Controller('inventory-transactions')
-export class InventoryTransactionsController {
-  constructor(
-    private readonly inventoryTransactionsService: InventoryTransactionsService
-  ) {}
+@UseGuards(JwtAuthGuard, PermissionGuard)
+export class InventoryTransactionController {
+  constructor(private readonly transactionService: InventoryTransactionService) {}
 
   @Post()
-  create(@Body() createInventoryTransactionDto: CreateInventoryTransactionDto) {
-    return this.inventoryTransactionsService.create(
-      createInventoryTransactionDto
-    );
+  @Permissions('add_inventory_transaction')
+  @ApiOperation({ summary: 'Tạo giao dịch tồn kho mới' })
+  @ApiResponse({ status: 201, description: 'Tạo thành công' })
+  async add(@Body() dto: CreateInventoryTransactionDto, @Req() req: any) {
+    const userId = req.user?.userId;
+    return this.transactionService.addInventoryTransaction(dto, userId);
   }
 
   @Get()
-  findAll() {
-    return this.inventoryTransactionsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.inventoryTransactionsService.findOne(+id);
+  @Permissions('view_inventory_transaction')
+  @ApiOperation({ summary: 'Lấy danh sách giao dịch tồn kho' })
+  async findAll() {
+    return this.transactionService.findAll();
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateInventoryTransactionDto: UpdateInventoryTransactionDto
+  @Permissions('update_inventory_transaction')
+  @ApiOperation({ summary: 'Cập nhật giao dịch tồn kho' })
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateInventoryTransactionDto,
+    @Req() req: any,
   ) {
-    return this.inventoryTransactionsService.update(
-      +id,
-      updateInventoryTransactionDto
-    );
+    const userId = req.user?.userId;
+    return this.transactionService.updateInventoryTransaction(id, dto, userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.inventoryTransactionsService.remove(+id);
+  @Permissions('delete_inventory_transaction')
+  @ApiOperation({ summary: 'Xóa giao dịch tồn kho' })
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.transactionService.deleteInventoryTransaction(id);
   }
 }

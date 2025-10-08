@@ -4,7 +4,10 @@ import { IsNull, Repository } from 'typeorm';
 import { Payment, PaymentStatus } from '../payment.entity';
 import { Order } from '../../orders/order.entity';
 import { PaymentMethod } from '../../payment-methods/payment-method.entity';
-import { historyStatus, OrderStatusHistory } from '../../order-status-history/order-status-history.entity';
+import {
+  historyStatus,
+  OrderStatusHistory,
+} from '../../order-status-history/order-status-history.entity';
 import { OrderItem } from '../../order-items/order-item.entity';
 import { Variant } from '../../variant/variant.entity';
 import { Inventory } from '../../inventory/inventory.entity';
@@ -14,10 +17,11 @@ export class CodStrategy {
   constructor(
     @InjectRepository(Payment) private paymentRepo: Repository<Payment>,
     @InjectRepository(Order) private ordersRepo: Repository<Order>,
-    @InjectRepository(OrderStatusHistory) private historyRepo: Repository<OrderStatusHistory>,
+    @InjectRepository(OrderStatusHistory)
+    private historyRepo: Repository<OrderStatusHistory>,
     @InjectRepository(OrderItem) private orderItemsRepo: Repository<OrderItem>,
     @InjectRepository(Variant) private variantsRepo: Repository<Variant>,
-    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
+    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>
   ) {}
 
   async createPayment(order: Order, paymentMethod: PaymentMethod) {
@@ -27,7 +31,7 @@ export class CodStrategy {
         order,
         paymentMethod,
         amount: order.totalAmount,
-        status: PaymentStatus.Completed, // Đặt trạng thái thành công
+        status: PaymentStatus.Unpaid, // Đặt trạng thái thành công
         paidAt: new Date(),
       });
       await manager.save(payment);
@@ -48,27 +52,27 @@ export class CodStrategy {
       await manager.save(history);
 
       // Cập nhật kho hàng
-      const items: OrderItem[] = await manager.find(OrderItem, {
-        where: { order: { id: order.id } },
-        relations: ['variant', 'product'],
-      });
-      for (const item of items) {
-        if (item.variant) {
-          item.variant.stock = (item.variant.stock || 0) - item.quantity;
-          await manager.save(item.variant);
-        }
-        const inv = await manager.findOne(Inventory, {
-          where: {
-            product: { id: item.product.id },
-            variant: item.variant ? { id: item.variant.id } : IsNull(),
-          },
-        });
-        if (inv) {
-          inv.quantity = (inv.quantity || 0) - item.quantity;
-          inv.used_quantity = (inv.used_quantity || 0) + item.quantity;
-          await manager.save(inv);
-        }
-      }
+      // const items: OrderItem[] = await manager.find(OrderItem, {
+      //   where: { order: { id: order.id } },
+      //   relations: ['variant', 'product'],
+      // });
+      // for (const item of items) {
+      //   if (item.variant) {
+      //     item.variant.stock = (item.variant.stock || 0) - item.quantity;
+      //     await manager.save(item.variant);
+      //   }
+      //   const inv = await manager.findOne(Inventory, {
+      //     where: {
+      //       product: { id: item.product.id },
+      //       variant: item.variant ? { id: item.variant.id } : IsNull(),
+      //     },
+      //   });
+      //   if (inv) {
+      //     inv.used_quantity = (inv.used_quantity || 0) - item.quantity;
+      //     inv.quantity = (inv.quantity || 0) - item.quantity;
+      //     await manager.save(inv);
+      //   }
+      // }
 
       return payment;
     });

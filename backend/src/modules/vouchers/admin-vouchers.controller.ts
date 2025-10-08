@@ -35,8 +35,8 @@ export class AdminVouchersController {
   @ApiOperation({ summary: 'Tạo voucher mới' })
   @ApiResponse({ status: 201, description: 'Voucher được tạo thành công' })
   async create(@Body() createVoucherDto: CreateVoucherDto, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -48,8 +48,8 @@ export class AdminVouchersController {
   @ApiOperation({ summary: 'Lấy danh sách tất cả voucher' })
   @ApiResponse({ status: 200, description: 'Danh sách các voucher' })
   async findAll(@Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -61,7 +61,7 @@ export class AdminVouchersController {
   @ApiOperation({ summary: 'Lấy thông tin chi tiết voucher' })
   @ApiResponse({ status: 200, description: 'Thông tin voucher' })
   async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -77,8 +77,8 @@ export class AdminVouchersController {
     @Body() updateVoucherDto: UpdateVoucherDto,
     @Req() req: any
   ) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -90,8 +90,8 @@ export class AdminVouchersController {
   @ApiOperation({ summary: 'Xóa voucher' })
   @ApiResponse({ status: 200, description: 'Voucher được xóa thành công' })
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }

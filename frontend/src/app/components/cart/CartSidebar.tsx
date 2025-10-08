@@ -88,7 +88,7 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      const storeId = items[0]?.product?.store?.id || 1;
+      const storeId = items[0]?.product?.store?.id;
       const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
 
       const orderPayload = {
@@ -109,7 +109,7 @@ export const CartSidebar: React.FC<Props> = ({
         '📦 Order payload (BE will calculate):',
         JSON.stringify(orderPayload, null, 2)
       );
-      const orderRes = await api.post('/orders', orderPayload);
+      const orderRes = await api.post(`/users/${userId}/orders`, orderPayload);
       const order = orderRes.data;
       console.log('Đơn hàng đã được tạo:', order);
       console.log('✅ Order created by BE:', {

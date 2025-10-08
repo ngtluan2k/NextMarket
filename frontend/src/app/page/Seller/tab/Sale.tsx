@@ -1,4 +1,3 @@
-'use client';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import {
@@ -40,101 +39,19 @@ import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
-import 'dayjs/locale/vi'; // import locale
-dayjs.locale('vi'); // set global locale
+import { storeService } from '../../../../service/store.service';
+import 'dayjs/locale/vi';
+import type { Sale, ProductItem, Payment} from '../../../types/order';
+
+dayjs.locale('vi');
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
-interface ProductItem {
-  id: number;
-  quantity: number;
-  subtotal: string;
-  product: {
-    id: number;
-    name: string;
-    base_price: string;
-    brand_id: number;
-    description: string;
-    short_description: string;
-    slug: string;
-    status: string;
-    store_id: number;
-    updated_at: string;
-    created_at: string;
-    uuid: string;
-  };
-  variant?: {
-    id: number;
-    sku: string;
-    price: string;
-    stock: number;
-    variant_name: string;
-    barcode: string;
-    created_at?: string;
-    updated_at?: string;
-    uuid: string;
-  };
-  discount: string;
-  price: string;
-  uuid: string;
-}
-interface Payment {
-  id: number;
-  amount: string;
-  createdAt: string;
-  paidAt?: string | null;
-  provider?: string | null;
-  rawPayload?: string | null;
-  status: string; // '0', '1', '2', '3'
-  transactionId?: string | null;
-  uuid: string;
-}
 
-export interface Sale {
-  id: number;
-  orderNumber: string; // nếu API không có, bạn có thể tự sinh dạng ORD-xxx
-  orderItem: ProductItem[];
-  totalAmount: string;
-  subtotal: string;
-  discountTotal: string;
-  shippingFee: string;
-  status: string; // '0', '1', ... hoặc map sang 'Hoàn Thành', 'Đang Chờ'...
-  createdAt: string;
-  updatedAt: string;
-  currency: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    password: string;
-    status: string;
-    code: string | null;
-    uuid: string;
-    created_at: string;
-    updated_at?: string | null;
-  };
-  userAddress?: {
-    id: number;
-    recipientName: string;
-    phone: string;
-    country: string;
-    province: string;
-    district: string | null;
-    ward: string;
-    street: string;
-    postalCode: string | null;
-    isDefault: boolean;
-    createdAt?: string | null;
-    uuid: string;
-    user_id: number;
-  };
-  payment?: Payment[];
-  paymentMethod?: string;
-  notes?: string;
-}
 
 const orderStatusMap: Record<number, string> = {
   0: 'Đang Chờ Xác Nhận',
@@ -146,28 +63,30 @@ const orderStatusMap: Record<number, string> = {
   6: 'Đã Hủy',
   7: 'Trả Hàng',
 };
+
 function getStatusColor(status: string | number): string {
   switch (Number(status)) {
     case 0:
-      return 'orange'; // Pending
+      return 'orange';
     case 1:
-      return 'blue'; // Confirmed
+      return 'blue';
     case 2:
-      return 'cyan'; // Processing
+      return 'cyan';
     case 3:
-      return 'purple'; // Shipped
+      return 'purple';
     case 4:
-      return 'green'; // Delivered
+      return 'green';
     case 5:
-      return 'green'; // Completed
+      return 'green';
     case 6:
-      return 'red'; // Cancelled
+      return 'red';
     case 7:
-      return 'magenta'; // Returned
+      return 'magenta';
     default:
       return 'default';
   }
 }
+
 export const getPaymentStatusText = (status: number | string) => {
   switch (status) {
     case 0:
@@ -186,19 +105,18 @@ export const getPaymentStatusText = (status: number | string) => {
 export const getPaymentStatusColor = (status: number | string) => {
   switch (status) {
     case 0:
-      return 'orange'; // Pending
+      return 'orange';
     case 1:
-      return 'green'; // Completed
+      return 'green';
     case 2:
-      return 'red'; // Failed
+      return 'red';
     case 3:
-      return 'purple'; // Refunded
+      return 'purple';
     default:
       return 'default';
   }
 };
 
-// Hoặc hàm
 function getStatusText(status: number | string): string {
   return orderStatusMap[Number(status)] || 'Không Xác Định';
 }
@@ -216,59 +134,49 @@ export default function Sale() {
   );
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [storeId, setStoreId] = useState<number | null>(null);
+  const [form] = Form.useForm();
+  
+  const {
+    sales,
+    loading,
+    error,
+    pagination,
+    fetchSales,
+    handleTableChange,
+    createOrder,
+    updateOrder,
+    deleteOrder,
+    changeOrderStatus,
+  } = useMyStoreOrders({
+    status: statusFilter,
+    startDate: dateRange ? dateRange[0].format('YYYY-MM-DD') : undefined,
+    endDate: dateRange ? dateRange[1].format('YYYY-MM-DD') : undefined,
+  });
+
+  // Lấy storeId khi component mount
+  useEffect(() => {
+    const fetchStore = async () => {
+      try {
+        const store = await storeService.getMyStore();
+        if (store && store.id) {
+          setStoreId(store.id);
+        } else {
+          throw new Error('Không tìm thấy cửa hàng');
+        }
+      } catch (err) {
+        console.error('❌ Lỗi khi lấy store:', err);
+        message.error('Không thể lấy thông tin cửa hàng.');
+      }
+    };
+
+    fetchStore();
+  }, []);
+
   const handleViewDetail = (sale: Sale) => {
     setSelectedSale(sale);
     setIsDetailModalVisible(true);
   };
-
-  const [form] = Form.useForm();
-  const generateOrderNumber = (id: number) =>
-    `ORD-${String(id).padStart(3, '0')}`;
-  const { sales: salesFromAPI, loading, error } = useMyStoreOrders();
-
-  // 1. Tạo state nội bộ
-  const [sales, setSales] = useState<Sale[]>([]);
-
-  // 2. Đồng bộ khi load xong từ hook
-  useEffect(() => {
-    if (salesFromAPI) setSales(salesFromAPI);
-  }, [salesFromAPI]);
-  console.log('Sales from API:', sales);
-
-  const safeLower = (val?: string) => (val || '').toLowerCase();
-
-  // Filter sales based on search and filters
-  const filteredSales = sales.filter((sale) => {
-    const customerName =
-      sale.userAddress?.recipientName || sale.user?.username || '';
-    const matchesSearch =
-      customerName.toLowerCase().includes(searchText.toLowerCase()) ||
-      sale.id.toString().includes(searchText.toLowerCase()) ||
-      sale.user?.email?.toLowerCase().includes(searchText.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === 'all' || sale.status === statusFilter;
-    const matchesPayment =
-      paymentFilter === 'all' ||
-      (sale.payment &&
-        sale.payment[0] &&
-        sale.payment[0].status === paymentFilter);
-
-    const matchesDate =
-      !dateRange ||
-      (dayjs(sale.createdAt).isSameOrAfter(dateRange[0], 'day') &&
-        dayjs(sale.createdAt).isSameOrBefore(dateRange[1], 'day'));
-    return matchesDate && matchesSearch && matchesStatus && matchesPayment;
-  });
-
-  // Calculate statistics
-  const totalSales = sales.reduce(
-    (sum, sale) => sum + Number(sale.totalAmount || 0),
-    0
-  );
-  const completedSales = sales.filter((sale) => sale.status === '5').length;
-  const pendingSales = sales.filter((sale) => sale.status === '0').length;
-  const totalOrders = sales.length;
 
   const handleAddSale = () => {
     setEditingSale(null);
@@ -279,63 +187,125 @@ export default function Sale() {
   const handleEditSale = (sale: Sale) => {
     setEditingSale(sale);
     form.setFieldsValue({
-      ...sale,
+      customer: sale.userAddress?.recipientName || sale.user.username,
+      customerEmail: sale.user.email,
+      products: sale.orderItem.map((item) => item.product.name),
+      quantity: sale.orderItem.reduce((sum, item) => sum + item.quantity, 0),
+      totalAmount: parseFloat(sale.totalAmount),
+      status: sale.status,
+      paymentMethod: sale.paymentMethod,
       saleDate: dayjs(sale.createdAt),
-      products: sale.orderItem,
+      notes: sale.notes,
     });
     setIsModalVisible(true);
   };
 
-  // const handleDeleteSale = (saleId: string) => {
-  //   Modal.confirm({
-  //     title: "Xóa Đơn Hàng",
-  //     content: "Bạn có chắc chắn muốn xóa đơn hàng này?",
-  //     okText: "Xóa",
-  //     okType: "danger",
-  //     onOk: () => {
-  //       setSales(sales.filter((sale) => sale.id !== saleId))
-  //       message.success("Xóa đơn hàng thành công")
-  //     },
-  //   })
-  // }
+  const handleDeleteSale = (saleId: number) => {
+    Modal.confirm({
+      title: 'Xóa Đơn Hàng',
+      content: 'Bạn có chắc chắn muốn xóa đơn hàng này?',
+      okText: 'Xóa',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await deleteOrder(saleId);
+          message.success('Xóa đơn hàng thành công');
+        } catch (err: any) {
+          message.error(err.message || 'Không thể xóa đơn hàng');
+        }
+      },
+    });
+  };
 
-  // const handleModalOk = async () => {
-  //   try {
-  //     const values = await form.validateFields()
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
+      const orderData: Partial<Sale> = {
+        user: {
+          id: 0, // Cần API để lấy user_id thực tế
+          username: values.customer,
+          email: values.customerEmail,
+          password: '',
+          status: 'active',
+          code: null,
+          uuid: '',
+          created_at: new Date().toISOString(),
+        },
+        orderItem: values.products.map((name: string, index: number) => ({
+          id: index + 1,
+          quantity: Math.floor(values.quantity / values.products.length),
+          subtotal: (values.totalAmount / values.products.length).toString(),
+          product: {
+            id: index + 1, // Cần API để lấy product_id thực tế
+            name,
+            base_price: '0',
+            brand_id: 0,
+            description: '',
+            short_description: '',
+            slug: '',
+            status: 'active',
+            store_id: storeId || 0,
+            updated_at: '',
+            created_at: '',
+            uuid: '',
+          },
+          discount: '0',
+          price: '0',
+          uuid: '',
+        })),
+        totalAmount: values.totalAmount.toString(),
+        subtotal: values.totalAmount.toString(),
+        discountTotal: '0',
+        shippingFee: '0',
+        status: values.status,
+        paymentMethod: values.paymentMethod,
+        createdAt: values.saleDate.format('YYYY-MM-DD'),
+        updatedAt: values.saleDate.format('YYYY-MM-DD'),
+        currency: 'VND',
+        notes: values.notes,
+      };
 
-  //     if (editingSale) {
-  //       // Update existing sale
-  //       setSales(
-  //         sales.map((sale) =>
-  //           sale.id === editingSale.id
-  //             ? {
-  //                 ...sale,
-  //                 ...values,
-  //                 saleDate: values.saleDate.format("YYYY-MM-DD"),
-  //               }
-  //             : sale,
-  //         ),
-  //       )
-  //       message.success("Cập nhật đơn hàng thành công")
-  //     } else {
-  //       // Add new sale
-  //       const newSale: Sale = {
-  //         ...values,
-  //         key: `${sales.length + 1}`,
-  //         id: `SAL${String(sales.length + 1).padStart(3, "0")}`,
-  //         orderNumber: `ORD-2025-${String(sales.length + 1).padStart(3, "0")}`,
-  //         saleDate: values.saleDate.format("YYYY-MM-DD"),
-  //       }
-  //       setSales([...sales, newSale])
-  //       message.success("Tạo đơn hàng thành công")
-  //     }
+      if (editingSale) {
+        await updateOrder(editingSale.id, orderData);
+        message.success('Cập nhật đơn hàng thành công');
+      } else {
+        await createOrder(orderData);
+        message.success('Tạo đơn hàng thành công');
+      }
 
-  //     setIsModalVisible(false)
-  //     form.resetFields()
-  //   } catch (error) {
-  //     message.error("Không thể lưu đơn hàng")
-  //   }
-  // }
+      setIsModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      message.error('Không thể lưu đơn hàng');
+    }
+  };
+
+  // Filter sales locally for searchText and paymentFilter
+  const filteredSales = sales.filter((sale) => {
+    const customerName =
+      sale.userAddress?.recipientName || sale.user?.username || '';
+    const matchesSearch =
+      customerName.toLowerCase().includes(searchText.toLowerCase()) ||
+      sale.orderNumber.toLowerCase().includes(searchText.toLowerCase()) ||
+      sale.user?.email?.toLowerCase().includes(searchText.toLowerCase());
+
+    const matchesPayment =
+      paymentFilter === 'all' ||
+      (sale.payment &&
+        sale.payment[0] &&
+        sale.payment[0].status === paymentFilter);
+
+    return matchesSearch && matchesPayment;
+  });
+
+  // Calculate statistics
+  const totalSales = sales.reduce(
+    (sum, sale) => sum + Number(sale.totalAmount || 0),
+    0
+  );
+  const completedSales = sales.filter((sale) => sale.status === '5').length;
+  const pendingSales = sales.filter((sale) => sale.status === '0').length;
+  const totalOrders = sales.length;
 
   const columns: ColumnsType<Sale> = [
     {
@@ -348,11 +318,7 @@ export default function Sale() {
           <div className="text-sm text-gray-500">{record.id}</div>
         </div>
       ),
-      sorter: (a, b) => {
-        const numA = a.id;
-        const numB = b.id;
-        return numA - numB;
-      },
+      sorter: (a, b) => a.id - b.id,
     },
     {
       title: 'Khách Hàng',
@@ -418,7 +384,6 @@ export default function Sale() {
       ),
       sorter: (a, b) => parseFloat(a.totalAmount) - parseFloat(b.totalAmount),
     },
-
     {
       title: 'Trạng Thái',
       dataIndex: 'status',
@@ -447,7 +412,6 @@ export default function Sale() {
         );
       },
     },
-
     {
       title: 'Ngày Bán',
       dataIndex: 'createdAt',
@@ -482,7 +446,7 @@ export default function Sale() {
                 icon: <DeleteOutlined />,
                 label: 'Xóa',
                 danger: true,
-                // onClick: () => handleDeleteSale(record.id),
+                onClick: () => handleDeleteSale(record.id),
               },
             ],
           }}
@@ -504,7 +468,6 @@ export default function Sale() {
   return (
     <Layout>
       <Content className="p-6">
-        {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <Title level={2} className="!mb-1 !text-gray-900">
@@ -527,14 +490,13 @@ export default function Sale() {
           </Space>
         </div>
 
-        {/* Statistics Cards */}
         <Row gutter={[16, 16]} className="mb-6">
           <Col xs={24} sm={12} lg={6}>
             <Card className="border-l-4 border-l-cyan-500">
               <Statistic
                 title="Tổng Doanh Thu"
                 value={totalSales}
-                precision={0} // số nguyên
+                precision={0}
                 prefix={<DollarOutlined className="text-cyan-500" />}
                 suffix="₫"
                 valueStyle={{ color: '#1890ff' }}
@@ -570,7 +532,6 @@ export default function Sale() {
           </Col>
         </Row>
 
-        {/* Filters */}
         <Card className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <Space wrap>
@@ -578,17 +539,16 @@ export default function Sale() {
                 placeholder="Trạng Thái"
                 style={{ width: 120 }}
                 value={statusFilter}
-                onChange={setStatusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value);
+                }}
               >
                 <Select.Option value="all">Tất Cả Trạng Thái</Select.Option>
-                <Select.Option value="0">Đang Chờ Xác Nhận</Select.Option>
-                <Select.Option value="1">Đã Xác Nhận</Select.Option>
-                <Select.Option value="2">Đang Xử Lí</Select.Option>
-                <Select.Option value="3">Đã Giao Hàng</Select.Option>
-                <Select.Option value="4">Shipper Đã Giao</Select.Option>
-                <Select.Option value="5">Hoàn Thành</Select.Option>
-                <Select.Option value="6">Đã Hủy</Select.Option>
-                <Select.Option value="7">Trả Hàng</Select.Option>
+                {Object.entries(orderStatusMap).map(([key, value]) => (
+                  <Select.Option key={key} value={key}>
+                    {value}
+                  </Select.Option>
+                ))}
               </Select>
               <Select
                 placeholder="Phương Thức Thanh Toán"
@@ -604,9 +564,9 @@ export default function Sale() {
               </Select>
               <RangePicker
                 value={dateRange as any}
-                onChange={(dates) =>
-                  setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)
-                }
+                onChange={(dates) => {
+                  setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null);
+                }}
               />
             </Space>
             <Input
@@ -631,31 +591,33 @@ export default function Sale() {
           </div>
         </Card>
 
-        {/* Sales Table */}
         <Card>
           <Table
             columns={columns}
-            dataSource={filteredSales}
+            dataSource={sales}  
             rowSelection={rowSelection}
             loading={loading}
             pagination={{
-              total: filteredSales.length,
-              pageSize: 10,
+              ...pagination,  
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} trên tổng số ${total} đơn hàng`,
             }}
+            onChange={handleTableChange}  
             scroll={{ x: 1200 }}
             className="custom-table"
+            onRow={(record) => ({
+              onClick: () => handleViewDetail(record),
+              style: { cursor: 'pointer' },
+            })}
           />
         </Card>
 
-        {/* Add/Edit Sale Modal */}
         <Modal
           title={editingSale ? 'Chỉnh Sửa Đơn Hàng' : 'Thêm Đơn Hàng Mới'}
           open={isModalVisible}
-          // onOk={handleModalOk}
+          onOk={handleModalOk}
           onCancel={() => setIsModalVisible(false)}
           width={800}
           okText={editingSale ? 'Cập Nhật Đơn Hàng' : 'Thêm Đơn Hàng'}
@@ -746,14 +708,11 @@ export default function Sale() {
                   ]}
                 >
                   <Select placeholder="Chọn trạng thái">
-                    <Select.Option value="0">Đang Chờ Xác Nhận</Select.Option>
-                    <Select.Option value="1">Đã Xác Nhận</Select.Option>
-                    <Select.Option value="2">Đang Xử Lí</Select.Option>
-                    <Select.Option value="3">Đã Giao Hàng</Select.Option>
-                    <Select.Option value="4">Shipper Đã Giao</Select.Option>
-                    <Select.Option value="5">Hoàn Thành</Select.Option>
-                    <Select.Option value="6">Đã Hủy</Select.Option>
-                    <Select.Option value="7">Trả Hàng</Select.Option>
+                    {Object.entries(orderStatusMap).map(([key, value]) => (
+                      <Select.Option key={key} value={key}>
+                        {value}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </Col>
@@ -806,14 +765,16 @@ export default function Sale() {
           isDetailModalVisible={isDetailModalVisible}
           setIsDetailModalVisible={setIsDetailModalVisible}
           token={token}
-          onStatusChange={(newStatus) => {
-            // cập nhật đúng đơn hàng
-            const updatedSales = sales.map((sale) =>
-              sale.id === selectedSale?.id
-                ? { ...sale, status: String(newStatus) } // convert về string nếu API dùng string
-                : sale
-            );
-            setSales(updatedSales);
+          onStatusChange={(newStatus, note) => {
+            if (storeId && selectedSale) {
+              changeOrderStatus(
+                storeId,
+                selectedSale.id,
+                String(newStatus),
+                note
+              );
+               fetchSales();
+            }
           }}
         />
       </Content>

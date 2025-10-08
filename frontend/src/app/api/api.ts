@@ -7,8 +7,13 @@
     orders: `${API_BASE_URL}/orders`,
     cart: `${API_BASE_URL}/cart`,
     users: `${API_BASE_URL}/users`,
+    stores: `${API_BASE_URL}/stores`,
+    admin: `${API_BASE_URL}/admin`,
     auth: `${API_BASE_URL}/auth`,
     provinces: `${API_BASE_URL}/provinces`,
+    adminVouchers: `${API_BASE_URL}/admin/vouchers`,
+    storeOwnerVouchers: `${API_BASE_URL}/store-owner/vouchers`,
+    userVouchers: `${API_BASE_URL}/user/vouchers`,
   };
 
   export const api = axios.create({

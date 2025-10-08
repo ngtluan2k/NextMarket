@@ -19,16 +19,7 @@ import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
-export enum OrderStatuses {
-  pending = 0,
-  confirmed = 1,
-  processing = 2,
-  shipped = 3,
-  delivered = 4,  
-  completed = 5,
-  cancelled = 6,
-  returned = 7,
-}
+import { OrderStatuses } from './types/orders';
 
 @Entity('orders')
 export class Order {

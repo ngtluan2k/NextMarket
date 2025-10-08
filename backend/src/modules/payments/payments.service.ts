@@ -151,7 +151,7 @@ export class PaymentsService {
       }
 
       // 5. Nếu thành công
-      payment.status = PaymentStatus.Completed;
+      payment.status = PaymentStatus.Paid;
       payment.transactionId = providerTransactionId;
       payment.paidAt = new Date();
       payment.rawPayload =
@@ -214,21 +214,22 @@ export class PaymentsService {
           });
         }
 
-        if (inv) {
-          inv.used_quantity = (inv.used_quantity || 0) + item.quantity;
-          await manager.save(inv);
-          this.logger.log(
-            `Updated inventory: product ${item.product.id}, variant ${
-              item.variant?.id || 'none'
-            } → used_quantity = ${inv.used_quantity}`
-          );
-        } else {
-          this.logger.warn(
-            `No inventory found for product ${item.product.id}, variant ${
-              item.variant?.id || 'none'
-            }`
-          );
-        }
+        // if (inv) {
+        //   inv.used_quantity = (inv.used_quantity || 0) - item.quantity;
+        //   inv.quantity = (inv.quantity || 0) - item.quantity;
+        //   await manager.save(inv);
+        //   this.logger.log(
+        //     `Updated inventory: product ${item.product.id}, variant ${
+        //       item.variant?.id || 'none'
+        //     } → used_quantity = ${inv.used_quantity}`
+        //   );
+        // } else {
+        //   this.logger.warn(
+        //     `No inventory found for product ${item.product.id}, variant ${
+        //       item.variant?.id || 'none'
+        //     }`
+        //   );
+        // }
       }
 
       return payment;

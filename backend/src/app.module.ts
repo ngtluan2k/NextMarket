@@ -43,7 +43,7 @@ import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.
 import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
 import { ProductReviewsModule } from './modules/product_reviews/product_reviews.module';
 import { FilesModule } from './common/files/files.module';
-import { InventoryTransactionsModule } from './modules/inventory-transactions/inventory-transactions.module';
+import { InventoryTransactionModule } from './modules/inventory-transactions/inventory-transactions.module';
 
 @Module({
   imports: [
@@ -122,7 +122,7 @@ import { InventoryTransactionsModule } from './modules/inventory-transactions/in
     PaymentTransactionsModule,
     ProductReviewsModule,
     FilesModule,
-    InventoryTransactionsModule,
+    InventoryTransactionModule,
   ],
 })
 export class AppModule {}

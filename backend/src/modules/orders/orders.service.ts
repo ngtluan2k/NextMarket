@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
-import { Order, OrderStatuses } from './order.entity';
+import { Order } from './order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { User } from '../user/user.entity';
@@ -22,6 +22,8 @@ import {
 } from '../order-status-history/order-status-history.entity';
 import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { OrderStatuses } from './types/orders';
+import {OrderFilters}  from './types/orders'
 @Injectable()
 export class OrdersService {
   constructor(
@@ -174,19 +176,25 @@ export class OrdersService {
           }
         }
         // Kiểm tra pricing rules
-      const pricingRule = await manager
-        .createQueryBuilder(PricingRules, 'pricing_rule')
-        .where('pricing_rule.product_id = :productId', { productId: itemDto.productId })
-        .andWhere('pricing_rule.min_quantity <= :quantity', { quantity: itemDto.quantity })
-        .andWhere('pricing_rule.starts_at <= :now', { now: new Date() })
-        .andWhere('pricing_rule.ends_at >= :now', { now: new Date() })
-        .orderBy('pricing_rule.min_quantity', 'DESC') // Ưu tiên quy tắc với số lượng tối thiểu cao hơn
-        .getOne();
+        const pricingRule = await manager
+          .createQueryBuilder(PricingRules, 'pricing_rule')
+          .where('pricing_rule.product_id = :productId', {
+            productId: itemDto.productId,
+          })
+          .andWhere('pricing_rule.min_quantity <= :quantity', {
+            quantity: itemDto.quantity,
+          })
+          .andWhere('pricing_rule.starts_at <= :now', { now: new Date() })
+          .andWhere('pricing_rule.ends_at >= :now', { now: new Date() })
+          .orderBy('pricing_rule.min_quantity', 'DESC') // Ưu tiên quy tắc với số lượng tối thiểu cao hơn
+          .getOne();
 
-      if (pricingRule) {
-        itemPrice = Number(pricingRule.price); // Ghi đè giá bằng pricing rule
-        console.log(`Áp dụng pricing rule cho sản phẩm #${itemDto.productId}: price=${itemPrice}`);
-      }
+        if (pricingRule) {
+          itemPrice = Number(pricingRule.price); // Ghi đè giá bằng pricing rule
+          console.log(
+            `Áp dụng pricing rule cho sản phẩm #${itemDto.productId}: price=${itemPrice}`
+          );
+        }
 
         // Kiểm tra tồn kho trong Inventory
         const inventory = await manager.findOne(Inventory, {
@@ -195,15 +203,27 @@ export class OrdersService {
             variant: itemDto.variantId ? { id: itemDto.variantId } : IsNull(),
           },
         });
-        if (
-          !inventory ||
-          inventory.quantity - inventory.used_quantity < itemDto.quantity
-        ) {
-          console.error(
-            `❌ Not enough inventory for product #${itemDto.productId}`
-          );
+
+        if (!inventory) {
           throw new BadRequestException(
-            `Không đủ hàng trong kho cho sản phẩm #${itemDto.productId}`
+            `Không tìm thấy kho cho sản phẩm #${itemDto.productId}`
+          );
+        }
+
+        const { available } = await manager
+          .createQueryBuilder(Inventory, 'inv')
+          .select(
+            'COALESCE(SUM(inv.quantity - COALESCE(inv.used_quantity, 0)), 0)',
+            'available'
+          )
+          .where('inv.variant_id = :variantId', {
+            variantId: itemDto.variantId,
+          })
+          .getRawOne();
+
+        if (Number(available) < itemDto.quantity) {
+          throw new BadRequestException(
+            `Không đủ hàng trong kho cho biến thể #${itemDto.variantId}`
           );
         }
 
@@ -215,7 +235,9 @@ export class OrdersService {
           quantity: itemDto.quantity,
           price: itemPrice,
           discount: discountTotal / createOrderDto.items.length,
-          subtotal: itemDto.quantity * itemPrice - (discountTotal / createOrderDto.items.length || 0),
+          subtotal:
+            itemDto.quantity * itemPrice -
+            (discountTotal / createOrderDto.items.length || 0),
         });
 
         console.log('OrderItem created:', orderItem);
@@ -226,7 +248,6 @@ export class OrdersService {
         inventory.used_quantity =
           (inventory.used_quantity || 0) + itemDto.quantity;
         await manager.save(inventory);
-
       }
 
       // Áp dụng voucher sau khi tạo order thành công
@@ -291,7 +312,7 @@ export class OrdersService {
 
   async changeStatus(
     id: number,
-    status: string, // 👈 nhận string
+    status: string,
     user: User,
     note?: string
   ): Promise<Order> {
@@ -318,7 +339,6 @@ export class OrdersService {
       throw new BadRequestException('Trạng thái không hợp lệ');
     }
 
-    // check quyền y chang bạn đang làm
     const isCustomer = Number(user.id) === order.user.id;
     const isStore = Number(user.id) === order.store.user_id;
 
@@ -366,21 +386,41 @@ export class OrdersService {
     history.note = note ?? '';
     await this.orderStatusHistoryRepository.save(history);
 
+    if (newStatus === OrderStatuses.confirmed) {
+      const orderItems = await this.orderItemsRepository.find({
+        where: { order: { id: order.id } },
+        relations: ['product', 'variant'],
+      });
+
+      for (const item of orderItems) {
+        const inventory = await this.inventoryRepository.findOne({
+          where: {
+            product: { id: item.product.id },
+            variant: item.variant ? { id: item.variant.id } : IsNull(),
+          },
+        });
+
+        if (!inventory) continue;
+
+        // Nếu kho không đủ (tránh lỗi do update chậm)
+        if ((inventory.quantity || 0) < item.quantity) {
+          throw new BadRequestException(
+            `Kho không đủ hàng cho ${item.product.name}`
+          );
+        }
+
+        inventory.quantity -= item.quantity;
+        inventory.used_quantity -= item.quantity;
+        await this.inventoryRepository.save(inventory);
+      }
+
+      console.log(`Đã trừ hàng khi cửa hàng xác nhận đơn #${order.id}`);
+    }
+
     return updatedOrder;
   }
 
-  async findByUser(userId: number): Promise<Order[]> {
-    return this.ordersRepository.find({
-      where: { user: { id: userId } },
-      relations: [
-        'store',
-        'userAddress',
-        'voucherUsages',
-        'voucherUsages.voucher',
-      ],
-      order: { id: 'DESC' },
-    });
-  }
+  
 
   async getRevenue(): Promise<number> {
     const { sum } = await this.ordersRepository
@@ -436,26 +476,178 @@ export class OrdersService {
       })),
     };
   }
-  async findByStore(storeId: number): Promise<Order[]> {
-  return this.ordersRepository
+  
+
+  async getStoreRevenue(storeId: number): Promise<number> {
+  const { sum } = await this.ordersRepository
     .createQueryBuilder('order')
-    .leftJoinAndSelect('order.user', 'user')
+    .select('SUM(order.totalAmount)', 'sum')
+    .where('order.store_id = :storeId', { storeId })
+    .andWhere('order.status = :status', { status: OrderStatuses.completed })
+    .getRawOne();
+
+  return Number(sum ?? 0);
+}
+
+  // Mở rộng findByStore để hỗ trợ filters và pagination
+  async findByStore(storeId: number, filters: OrderFilters = {}): Promise<Order[]> {
+    let query = this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.userAddress', 'userAddress')
+      .leftJoinAndSelect('order.orderItem', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('orderItem.variant', 'variant')
+      .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+      .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+      .leftJoinAndSelect('order.payment', 'payment')
+      .leftJoinAndSelect('product.reviews', 'reviews', 'reviews.order_id = order.id')
+      .where('order.store_id = :storeId', { storeId });
+
+    // Filter by status
+    if (filters.status) {
+      query = query.andWhere('order.status = :status', { status: Number(filters.status) });
+    }
+
+    // Filter by payment status
+    if (filters.paymentStatus) {
+      query = query.andWhere('payment.status = :paymentStatus', { paymentStatus: Number(filters.paymentStatus) });
+    }
+
+    // Filter by date range
+    if (filters.fromDate) {
+      query = query.andWhere('order.createdAt >= :fromDate', { fromDate: filters.fromDate });
+    }
+    if (filters.toDate) {
+      query = query.andWhere('order.createdAt <= :toDate', { toDate: filters.toDate });
+    }
+
+    // Search by customer name, email, or order ID
+    if (filters.search) {
+      query = query.andWhere(
+        `(
+          userAddress.recipientName ILIKE :search OR
+          user.username ILIKE :search OR
+          user.email ILIKE :search OR
+          order.id::text ILIKE :search
+        )`,
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Pagination
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    query = query.skip((page - 1) * limit).take(limit);
+
+    return query.orderBy('order.id', 'DESC').getMany();
+  }
+
+  // Đếm số lượng orders của store (cho pagination)
+  async countOrdersByStore(storeId: number, filters: OrderFilters = {}): Promise<number> {
+  let query = this.ordersRepository
+    .createQueryBuilder('order')
+    .leftJoin('order.user', 'user')
+    .leftJoin('order.userAddress', 'userAddress')
+    .leftJoin('order.payment', 'payment')
+    .where('order.store_id = :storeId', { storeId });
+
+  if (filters.status) {
+    query = query.andWhere('order.status = :status', { status: filters.status });
+  }
+  if (filters.paymentStatus) {
+    query = query.andWhere('payment.status = :paymentStatus', { paymentStatus: filters.paymentStatus });
+  }
+  if (filters.fromDate) {
+    query = query.andWhere('order.createdAt >= :fromDate', { fromDate: filters.fromDate });
+  }
+  if (filters.toDate) {
+    query = query.andWhere('order.createdAt <= :toDate', { toDate: filters.toDate });
+  }
+  if (filters.search) {
+    const searchOperator = process.env.DB_TYPE === 'postgres' ? 'ILIKE' : 'LIKE';
+    query = query.andWhere(
+      `(
+        userAddress.recipientName ${searchOperator} :search OR
+        user.username ${searchOperator} :search OR
+        user.email ${searchOperator} :search OR
+        CAST(order.id AS CHAR) ${searchOperator} :search
+      )`,
+      { search: `%${filters.search}%` }
+    );
+  }
+
+  return query.getCount();
+}
+
+
+  // Thống kê cho store (cho cards trong Sale.tsx)
+  async getStoreStats(storeId: number): Promise<{
+  totalOrders: number;
+  completed: number;
+  pending: number;
+  totalRevenue: number;
+}> {
+  const totalOrders = await this.ordersRepository
+    .createQueryBuilder('order')
+    .where('order.store_id = :storeId', { storeId })
+    .getCount();
+
+  const completed = await this.ordersRepository
+    .createQueryBuilder('order')
+    .where('order.store_id = :storeId', { storeId })
+    .andWhere('order.status = :status', { status: OrderStatuses.completed })
+    .getCount();
+
+  const pending = await this.ordersRepository
+    .createQueryBuilder('order')
+    .where('order.store_id = :storeId', { storeId })
+    .andWhere('order.status = :status', { status: OrderStatuses.pending })
+    .getCount();
+
+  const totalRevenue = await this.getStoreRevenue(storeId);
+
+  return {
+    totalOrders,
+    completed,
+    pending,
+    totalRevenue,
+  };
+}
+
+
+  // Đếm orders của user (cho UserOrdersController)
+  async countOrdersByUser(userId: number, filters: OrderFilters = {}): Promise<number> {
+  let query = this.ordersRepository
+    .createQueryBuilder('order')
+    .where('order.user_id = :userId', { userId });
+
+  if (filters.status) {
+    query = query.andWhere('order.status = :status', { status: filters.status });
+  }
+
+  return query.getCount();
+}
+
+  // Mở rộng findByUser để hỗ trợ filter và pagination
+  async findByUser(userId: number, filters: OrderFilters = {}): Promise<Order[]> {
+  let query = this.ordersRepository
+    .createQueryBuilder('order')
+    .leftJoinAndSelect('order.store', 'store')
     .leftJoinAndSelect('order.userAddress', 'userAddress')
-    .leftJoinAndSelect('order.orderItem', 'orderItem')
-    .leftJoinAndSelect('orderItem.product', 'product')
-    .leftJoinAndSelect('orderItem.variant', 'variant')
     .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
     .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-    .leftJoinAndSelect('order.payment', 'payment')
-    // join reviews nhưng có điều kiện order_id = order.id
-    .leftJoinAndSelect(
-      'product.reviews',
-      'reviews',
-      'reviews.order_id = order.id'
-    )
-    .where('order.store_id = :storeId', { storeId })
-    .orderBy('order.id', 'DESC')
-    .getMany();
+    .where('order.user_id = :userId', { userId });
+
+  if (filters.status) {
+    query = query.andWhere('order.status = :status', { status: filters.status });
+  }
+
+  const page = filters.page ?? 1;
+  const limit = filters.limit ?? 10;
+  query = query.skip((page - 1) * limit).take(limit);
+
+  return query.orderBy('order.id', 'DESC').getMany();
 }
 
 }

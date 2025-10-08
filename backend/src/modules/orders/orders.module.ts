@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { OrdersController } from './orders.controller';
+// import { OrdersController } from './orders.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/user.entity';
 import { Store } from '../store/store.entity';
@@ -12,7 +12,9 @@ import { Payment } from '../payments/payment.entity';
 import { VouchersModule } from '../vouchers/vouchers.module';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
-
+import { UserOrdersController } from './UserOrdersController';
+import { StoreOrdersController } from './StoreOrdersController';
+import { AdminOrdersController } from './AdminOrdersController';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -26,9 +28,14 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
       OrderStatusHistory,
     ]),
     VouchersModule,
-    forwardRef(() => ProductReviewsModule), // 👈 thêm cái này
+    forwardRef(() => ProductReviewsModule),
   ],
-  controllers: [OrdersController],
+  controllers: [
+    // OrdersController,         
+    UserOrdersController,     
+    StoreOrdersController,  
+    AdminOrdersController,   
+  ],
   providers: [OrdersService],
   exports: [OrdersService],
 })
