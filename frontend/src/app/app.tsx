@@ -36,12 +36,14 @@ import ReviewForm from './test';
 import AffiliateGate from './page/affiliate';
 import AffiliateRegister from './page/affiliate/register';
 import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
-import AffiliatePayment from './page/affiliate/dashboard/tab/affiliatePayment';
 import { AffiliateDashboardLayout } from './page/affiliate/dashboard/MainLayout';
 import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDashboard';
 import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
 import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
 import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
+import AffiliateTransaction from './page/affiliate/dashboard/tab/affiliateTransaction';
+import Support from './page/affiliate/dashboard/tab/support';
+import AffiliateLinkResolver from './page/AffiliateLinkResolver';
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -138,7 +140,7 @@ const App: React.FC = () => {
             />
             <Route
               path="/affiliate/dashboard/payments"
-              element={<AffiliatePayment />}
+              element={<AffiliateTransaction />}
             />
             <Route
               path="/affiliate/dashboard/resource"
@@ -155,9 +157,10 @@ const App: React.FC = () => {
 
             <Route
               path="/affiliate/dashboard/support"
-              element={<AffiliatePayment />}
+              element={<Support />}
             />
           </Route>
+          <Route path="/product/:id" element={<AffiliateLinkResolver />} />
         </Routes>
       </CartProvider>
     </AuthProvider>

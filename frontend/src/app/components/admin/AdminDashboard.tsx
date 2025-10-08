@@ -11,6 +11,7 @@ import AdminHeader from './AdminHeader';
 import AdminSidebar from './AdminSidebar';
 import VoucherManager from './VoucherManager';
 import StoreManager from './StoreManager';
+import AffiliateProgramDashboard from './AffiliateProgramDashboard';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -131,9 +132,19 @@ export const AdminDashboard: React.FC = () => {
             description={<span>Chức năng đang phát triển...</span>}
           />
         );
-      case 'permissions': // Quản lý quyền (thêm cho phần permissions riêng)
+      case '11-1':
+        return (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span>Chức năng đang phát triển...</span>}
+          />
+        );
+
+      case '11-2':
+        return <AffiliateProgramDashboard />;
+      case 'permissions':
         return <PermissionManager />;
-      case 'userRoles': // Phân quyền người dùng (thêm cho phần user roles riêng)
+      case 'userRoles': 
         return <UserRoleManager />;
       default:
         return <RoleManager />;

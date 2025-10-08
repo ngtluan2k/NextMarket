@@ -7,7 +7,7 @@ import {
   LogOut,
   ChevronDown,
 } from 'lucide-react';
-import { ShopOutlined } from '@ant-design/icons';
+import { ShopOutlined, SignatureOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 
 export default function AccountMenu({ className = '' }) {
@@ -71,6 +71,13 @@ export default function AccountMenu({ className = '' }) {
           >
             <ShopOutlined className="h-4 w-4 text-slate-500" />
             Cửa hàng của tôi
+          </a>
+          <a
+            href="/affiliate "
+            className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
+          >
+            <SignatureOutlined className="h-4 w-4 text-slate-500" />
+            Đăng ký làm Affiliate
           </a>
           <button
             onClick={logout}

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
@@ -141,7 +141,7 @@ export class AffiliateLinksService {
       throw new NotFoundException('No active affiliate programs available');
     }
 
-    const baseLink = `https://everymart.com/product/${productId}?aff=${user.code}`;
+    const baseLink = `http://localhost:4200/product/${productId}?aff=${user.code}`;
 
     const affiliateLink = this.repository.create({
       user_id: { id: userId } as any,
@@ -194,7 +194,7 @@ export class AffiliateLinksService {
       if (!link.code) {
         return {
           link_id: link.id,
-          affiliate_link: `https://everymart.com/product/unknown?aff=${user.code}`,
+          affiliate_link: `http://localhost:4200/product/unknown?aff=${user.code}`,
           program_name: link.program_id?.name,
           created_at: link.created_at,
         };
@@ -203,7 +203,7 @@ export class AffiliateLinksService {
       const codeParts = link.code.split(':');
       const linkProductId = codeParts[1] || 'unknown';
       const linkVariantId = codeParts[2] ? parseInt(codeParts[2], 10) : undefined;
-      const baseLink = `https://everymart.com/product/${linkProductId}?aff=${user.code}`;
+      const baseLink = `http://localhost:4200/product/${linkProductId}?aff=${user.code}`;
 
       return {
         link_id: link.id,
@@ -249,5 +249,24 @@ export class AffiliateLinksService {
         : 'No affiliated products found',
       products: uniqueProducts,
     };
+  }
+
+  async deleteMyLink(linkId: number, userId: number) {
+    const link = await this.repository.findOne({
+      where: { id: linkId },
+      relations: ['user_id'],
+    });
+    if (!link) {
+      throw new NotFoundException('Affiliate link not found');
+    }
+    if (!link.user_id || link.user_id.id !== userId) {
+      throw new ForbiddenException('You are not allowed to delete this link');
+    }
+
+    await this.commissionRepository.delete({ link_id: { id: linkId } });
+
+    await this.repository.remove(link);
+
+    return { message: 'Affiliate link deleted', link_id: linkId };
   }
 }
