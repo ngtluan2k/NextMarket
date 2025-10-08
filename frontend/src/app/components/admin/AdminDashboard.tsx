@@ -108,23 +108,23 @@ export const AdminDashboard: React.FC = () => {
             description={<span>Chức năng đang phát triển...</span>}
           />
         );
-      case '8-1': // Mã giảm giá
+      case '8-1':
         return <VoucherManager />;
-      case '8-2': // Chiến dịch quảng cáo
+      case '8-2': 
         return (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={<span>Chức năng đang phát triển...</span>}
           />
         );
-      case '9': // Báo cáo & thống kê
+      case '9':
         return (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={<span>Chức năng đang phát triển...</span>}
           />
         );
-      case '10-1': // Xem danh sách cửa hàng
+      case '10-1':
         return <StoreManager />;
       case '10-2':
         return (
@@ -133,7 +133,7 @@ export const AdminDashboard: React.FC = () => {
             description={<span>Chức năng đang phát triển...</span>}
           />
         );
-      case '11-1': // Xem danh sách cửa hàng
+      case '11-1':
         return <AffiliateRegistration />;
       case '11-2':
         return <AffiliateProgramDashboard />;
@@ -148,21 +148,17 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header cố định trên cùng */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <AdminHeader />
       </div>
 
       <div className="flex">
-        {/* Sidebar cố định bên trái */}
         <div className="fixed left-0 top-0 h-screen pt-20 z-40">
           <AdminSidebar activeKey={activeKey} onMenuClick={handleMenuClick} />
         </div>
 
-        {/* Main content area */}
         <div className="flex-1 ml-72 pt-24 px-6 pb-6 overflow-x-hidden overflow-y-auto">
           <div className="bg-white rounded-lg shadow-sm min-h-[calc(100vh-120px)]">
-            {/* Content */}
             <div className="p-6">{renderContent()}</div>
           </div>
         </div>
