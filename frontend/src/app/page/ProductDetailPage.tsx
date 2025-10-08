@@ -237,18 +237,15 @@ const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, q
             </div>
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-            <Suspense fallback={<div>Loading reviews...</div>}>
-              <LazyProductReviews
-                productId={product.id}
-              />
-            </Suspense>
-          </div>
-
-          <div className="lg:col-span-3 mt-2">
-            <Suspense fallback={<div>Loading more products...</div>}>
-              <LazyExploreMore />
-            </Suspense>
-          </div>
+              <Suspense fallback={<div>Loading reviews...</div>}>
+                <LazyProductReviews productId={0} />
+              </Suspense>
+            </div>
+            <div className="lg:col-span-3 mt-2">
+              <Suspense fallback={<div>Loading more products...</div>}>
+                <LazyExploreMore />
+              </Suspense>
+            </div>
         </div>
       </main>
       <Footer />

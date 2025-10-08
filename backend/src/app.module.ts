@@ -48,6 +48,7 @@ import { WalletTransactionModule } from './modules/wallet_transaction/wallet_tra
 import { StoreFollowersModule } from './modules/store-follower/store-followers.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { SubscriptionUsagesModule } from './modules/subscription_usages/subscription_usages.module';
+import { AffiliateLinksModule } from './modules/affiliate-links/affiliate-links.module';
 
 @Module({
   imports: [
@@ -131,6 +132,7 @@ import { SubscriptionUsagesModule } from './modules/subscription_usages/subscrip
     StoreFollowersModule,
     SubscriptionModule,
     SubscriptionUsagesModule,
+    AffiliateLinksModule,
   ],
 })
 export class AppModule {}

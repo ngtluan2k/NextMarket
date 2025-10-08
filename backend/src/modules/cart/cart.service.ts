@@ -201,13 +201,16 @@ export class CartService {
   async removeFromCart(
     userId: number,
     productId: number,
-    variantId?: number
+    variantId?: number,
+    type?: 'bulk' | 'subscription'
   ): Promise<void> {
     const cart = await this.getOrCreateCart(userId);
     const result = await this.cartItemRepository.delete({
       cart_id: cart.id,
       product_id: productId,
       variant_id: variantId ?? undefined,
+      type,
+
     });
     if (result.affected === 0) {
       throw new NotFoundException('Mục giỏ hàng không tìm thấy');

@@ -63,12 +63,13 @@ export class CartController {
   async removeFromCart(
     @Request() req: AuthRequest,
     @Param('productId') productId: number,
-    @Body() body?: { variantId?: number }
+    @Body() body?: { variantId?: number, type?: 'bulk' | 'subscription' }
   ) {
     await this.cartService.removeFromCart(
       req.user.userId,
       +productId,
-      body?.variantId
+      body?.variantId,
+      body?.type
     );
     return { message: 'Đã xóa khỏi giỏ hàng' };
   }

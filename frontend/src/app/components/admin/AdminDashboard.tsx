@@ -1,6 +1,5 @@
 // src/components/admin/AdminDashboard.tsx
 import React, { useState } from 'react';
-import { Empty } from 'antd';
 import { RoleManager } from './RoleManager';
 import { PermissionManager } from './PermissionManager';
 import { UserRoleManager } from './UserRoleManager';
@@ -14,6 +13,23 @@ import StoreManager from './StoreManager';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
+  
+  const Wip: React.FC<{ title?: string; desc?: string; img?: string }> = ({
+    title = 'Chức năng đang phát triển...',
+    desc = 'Tính năng sẽ sớm ra mắt.',
+    img = 'img/img/Gemini_Generated_Image_wcu7v2wcu7v2wcu7.png',
+  }) => (
+    <div className="flex flex-col items-center justify-center py-16">
+      <img
+        src={img}
+        alt="Work in progress"
+        className="w-[380px] max-w-full"
+        style={{ filter: 'brightness(1.15) contrast(1.05)' }} // tạm thời
+      />
+      <h3 className="mt-4 text-lg font-semibold text-gray-900 text-center">{title}</h3>
+      <p className="mt-1 text-sm text-gray-500 text-center">{desc}</p>
+    </div>
+  );
 
   const handleMenuClick = (key: string) => {
     setActiveKey(key);
@@ -21,120 +37,72 @@ export const AdminDashboard: React.FC = () => {
 
   const renderContent = () => {
     switch (activeKey) {
-      case '1-1': // Quản lý người dùng
-        return (
-          <div>
-            <h3>Quản lý người dùng</h3>
-            <p>Chức năng đang phát triển...</p>
-          </div>
-        );
-      case '1-2': // Quản lý vai trò
+      case '1-1':
+        return <Wip title="Quản lý người dùng" />;
+  
+      case '1-2':
         return <RoleManager />;
-      case '2-1': // Danh sách sản phẩm
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '2-2': // Danh mục sản phẩm
+  
+      case '2-1':
+        return <Wip title="Danh sách sản phẩm" />;
+  
+      case '2-2':
         return <CategoryManager />;
-      case '2-3': // Khuyến mãi sản phẩm
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '3-1': // Tồn kho
+  
+      case '2-3':
+        return <Wip title="Khuyến mãi sản phẩm" />;
+  
+      case '3-1':
         return <InventoryManager />;
-      case '3-2': // Nhập/Xuất kho
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '4-1': // Danh sách đơn hàng
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '4-2': // Trả hàng/Hoàn tiền
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '5-1': // Danh sách khách hàng
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '5-2': // Nhóm khách hàng
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '6-1': // Danh sách nhà bán
+  
+      case '3-2':
+        return <Wip title="Nhập/Xuất kho" />;
+  
+      case '4-1':
+        return <Wip title="Danh sách đơn hàng" />;
+  
+      case '4-2':
+        return <Wip title="Trả hàng / Hoàn tiền" />;
+  
+      case '5-1':
+        return <Wip title="Danh sách khách hàng" />;
+  
+      case '5-2':
+        return <Wip title="Nhóm khách hàng" />;
+  
+      case '6-1':
         return <BrandManager />;
-      case '6-2': // Đối soát công nợ
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '7-1': // Doanh thu
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '7-2': // Thanh toán
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '8-1': // Mã giảm giá
+  
+      case '6-2':
+        return <Wip title="Đối soát công nợ" />;
+  
+      case '7-1':
+        return <Wip title="Doanh thu" />;
+  
+      case '7-2':
+        return <Wip title="Thanh toán" />;
+  
+      case '8-1':
         return <VoucherManager />;
-      case '8-2': // Chiến dịch quảng cáo
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '9': // Báo cáo & thống kê
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case '10-1': // Xem danh sách cửa hàng
+  
+      case '8-2':
+        return <Wip title="Chiến dịch quảng cáo" />;
+  
+      case '9':
+        return <Wip title="Báo cáo & Thống kê" />;
+  
+      case '10-1':
         return <StoreManager />;
+  
       case '10-2':
-        return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
-          />
-        );
-      case 'permissions': // Quản lý quyền (thêm cho phần permissions riêng)
+        return <Wip title="Tính năng cửa hàng khác" />;
+  
+      case 'permissions':
         return <PermissionManager />;
-      case 'userRoles': // Phân quyền người dùng (thêm cho phần user roles riêng)
+  
+      case 'userRoles':
         return <UserRoleManager />;
+  
       default:
         return <RoleManager />;
     }

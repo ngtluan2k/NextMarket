@@ -8,7 +8,7 @@ interface CartContextType {
     variantId?: number,
     type?: 'bulk' | 'subscription'
   ) => Promise<void>;
-  removeFromCart: (productId: number, variantId?: number) => Promise<void>;
+  removeFromCart: (productId: number, variantId?: number, type?: 'bulk' | 'subscription') => Promise<void>;
   updateQuantity: (
     productId: number,
     quantity: number,
@@ -115,7 +115,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const removeFromCart = async (productId: number, variantId?: number) => {
+  const removeFromCart = async (productId: number, variantId?: number, type?: 'bulk' | 'subscription') => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       alert('Vui lòng đăng nhập để xóa khỏi giỏ hàng');
@@ -130,7 +130,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
             'Content-Type': 'application/json',
             Authorization: `Bearer ${currentToken}`,
           },
-          body: JSON.stringify({ variantId }),
+          body: JSON.stringify({ variantId, type }),
         }
       );
       if (response.ok) {

@@ -155,4 +155,17 @@ export class UserController {
     const data = await this.userService.uploadAvatar(id, currentUserId, file);
     return { status: 200, message: 'Avatar uploaded', data };
   }
+
+  @Get(':id/is-affiliate')
+  @ApiOperation({ summary: 'Check if user is an affiliate by ID' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  async checkIsAffiliate(@Param('id', ParseIntPipe) id: number) {
+    const isAffiliate = await this.userService.isUserAffiliate(id);
+    return {
+      status: 200,
+      message: 'Affiliate status checked',
+      data: { is_affiliate: isAffiliate },
+    };
+  }
 }

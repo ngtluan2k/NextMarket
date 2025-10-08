@@ -18,6 +18,7 @@ import { ProductCategoryModule } from '../product_category/product_category.modu
 import { StoreModule } from '../store/store.module';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
+import { Brand } from '../brands/brand.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
 import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
 
@@ -26,6 +27,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
     TypeOrmModule.forFeature([
       Product,
       Store,
+      Brand,
       ProductMedia,
       Variant,
       Inventory,
@@ -41,7 +43,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
     forwardRef(() => PricingRuleModule),
     forwardRef(() => ProductCategoryModule),
     forwardRef(() => StoreModule),
-    forwardRef(() => ProductReviewsModule), // Để products có thể liên kết reviews
+    forwardRef(() => ProductReviewsModule), 
   ],
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],

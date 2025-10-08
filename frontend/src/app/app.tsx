@@ -34,6 +34,22 @@ import CartPage from './page/CartPage';
 import OtpVerifyPage from './page/OtpVerify';
 import TestWallet from './test';
 import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
+
+
+
+
+import OrderDetailPage from "./page/account/OrderDetailPage";
+
+import ReviewForm from './test';
+import AffiliateGate from './page/affiliate';
+import AffiliateRegister from './page/affiliate/register';
+import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
+import AffiliatePayment from './page/affiliate/dashboard/tab/affiliatePayment';
+import { AffiliateDashboardLayout } from './page/affiliate/dashboard/MainLayout';
+import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDashboard';
+import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
+import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
+import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -86,6 +102,7 @@ const App: React.FC = () => {
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="orders" element={<OrdersPage />} />
+            <Route path="/account/orders/:id" element={<OrderDetailPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />
@@ -106,15 +123,6 @@ const App: React.FC = () => {
             />
           </Route>
 
-          {/* Catch-all Route */}
-          {/* <Route path="/" element={<Home />} /> */}
-          {/* <Route path="/home" element={<Home />} /> */}
-          {/* <Route path="/seller-registration" element={<SellerRegistration />} /> */}
-          {/* <Route path="/category/:slug" element={<CategoryPage />} /> */}
-          {/* <Route path="/admin" element={<AdminDashboard />} /> */}
-          {/* <Route path="/products/slug/:slug" element={<ProductDetailPage />} /> */}
-          {/* <Route path="/cart" element={<Cart showMessage={showMessage} />} /> */}
-          {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
           <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
           {/* Brands */}
           <Route path="/brands" element={<FeaturedBrandsPage />} />
@@ -123,9 +131,44 @@ const App: React.FC = () => {
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
           <Route path="/test" element={<TestWallet />} />
+          <Route path="/test" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/verify-otp" element={<OtpVerifyPage />} />
+
+          <Route path="/affiliate" element={<AffiliateGate />} />
+          <Route path="/affiliate/register" element={<AffiliateRegister />} />
+          <Route element={<AffiliateDashboardLayout />}>
+            <Route
+              path="/affiliate/dashboard"
+              element={<AffiliateDashboard />}
+            />
+            <Route
+              path="/affiliate/dashboard/links"
+              element={<AffiliateLinks />}
+            />
+            <Route
+              path="/affiliate/dashboard/payments"
+              element={<AffiliatePayment />}
+            />
+            <Route
+              path="/affiliate/dashboard/resource"
+              element={<AffiliateResource />}
+            />
+            <Route
+              path="/affiliate/dashboard/setting"
+              element={<AffiliateSettings />}
+            />
+            <Route
+              path="/affiliate/dashboard/notifications"
+              element={<AffiliateNoti />}
+            />
+
+            <Route
+              path="/affiliate/dashboard/support"
+              element={<AffiliatePayment />}
+            />
+          </Route>
         </Routes>
       </CartProvider>
     </AuthProvider>

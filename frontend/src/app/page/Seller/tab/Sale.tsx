@@ -34,13 +34,13 @@ import {
   CalendarOutlined,
   ExportOutlined,
 } from '@ant-design/icons';
-import OrderDetailModal from './OrderDetailModal';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
 import 'dayjs/locale/vi'; // import locale
+import OrderDetailModal, { Sale as SaleType } from '../../../components/seller/OrderDetailModal';
 dayjs.locale('vi'); // set global locale
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -220,6 +220,8 @@ export default function Sale() {
     setSelectedSale(sale);
     setIsDetailModalVisible(true);
   };
+
+  const [detailSale, setDetailSale] = useState<SaleType | null>(null);
 
   const [form] = Form.useForm();
   const generateOrderNumber = (id: number) =>
@@ -466,7 +468,7 @@ export default function Sale() {
                 key: 'view',
                 icon: <EyeOutlined />,
                 label: 'Xem Chi Tiết',
-                onClick: () => handleViewDetail(record),
+                onClick: () => setDetailSale(record),
               },
               {
                 key: 'edit',
@@ -802,20 +804,14 @@ export default function Sale() {
           </Form>
         </Modal>
         <OrderDetailModal
-          selectedSale={selectedSale}
-          isDetailModalVisible={isDetailModalVisible}
-          setIsDetailModalVisible={setIsDetailModalVisible}
-          token={token}
-          onStatusChange={(newStatus) => {
-            // cập nhật đúng đơn hàng
-            const updatedSales = sales.map((sale) =>
-              sale.id === selectedSale?.id
-                ? { ...sale, status: String(newStatus) } // convert về string nếu API dùng string
-                : sale
-            );
-            setSales(updatedSales);
-          }}
-        />
+            sale={detailSale}
+            onClose={() => setDetailSale(null)}
+            onEdit={(s) => {
+              // Mở form edit của bạn (nếu có)
+              setDetailSale(null);
+              // openEditModal(s);
+            }}
+          />
       </Content>
     </Layout>
   );
