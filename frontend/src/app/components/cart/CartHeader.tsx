@@ -3,6 +3,7 @@ import { Checkbox, Image, Button, Typography } from 'antd';
 import { DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 const { Text, Title } = Typography;
 
@@ -28,28 +29,42 @@ export const CartHeader: React.FC<Props> = ({
   onContinue,
   showMessage,
 }) => {
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
   const { cart, updateQuantity, removeFromCart } = useCart();
+
   // console.log("selected id : " + selectedIds)
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
   const storeName = cart[0]?.product?.store?.name ?? 'Shop';
+
   const selectedCartItems = cart.filter((item) =>
     selectedIds.includes(item.id)
   );
-
+  const cartByStore = cart.reduce((acc: Record<string, typeof cart>, item) => {
+    const storeId = item.product?.store?.id ?? 'unknown';
+    if (!acc[storeId]) acc[storeId] = [];
+    acc[storeId].push(item);
+    return acc;
+  }, {});
   const handleRemoveFromCart = async (
     productId: number,
     productName: string,
-    variantId?: number
+    variantId?: number,
+    type?: 'bulk' | 'subscription'
   ) => {
     try {
       console.log(productId);
-      await removeFromCart(productId, variantId);
+      await removeFromCart(productId, variantId, type);
       showMessage?.('success', `Removed ${productName} from cart successfully`);
     } catch (error) {
       showMessage?.('error', `Failed to remove ${productName} from cart`);
     }
   };
+  useEffect(() => {
+    const firstSelected = cart.find((i) => selectedIds.includes(i.id));
+    setSelectedType(firstSelected?.type ?? null);
+  }, [selectedIds, cart]);
 
   const toImageUrl = (url?: string) => {
     if (!url) return '/default-product.png'; // fallback ảnh mặc định
@@ -80,10 +95,10 @@ export const CartHeader: React.FC<Props> = ({
     );
   }
 
-  // 2) CÓ SẢN PHẨM -> render như bình thường
+  // 2) CÓ SẢN PHẨM -> render nhóm theo từng store
   return (
     <div className="bg-white rounded-md p-4 w-full">
-      {/* Header */}
+      {/* Header tổng */}
       <div
         className="items-center text-gray-600 text-sm font-medium border-b pb-3 w-full"
         style={{ display: 'grid', gridTemplateColumns: GRID }}
@@ -91,7 +106,20 @@ export const CartHeader: React.FC<Props> = ({
         <Checkbox
           checked={allChecked}
           indeterminate={indeterminate}
-          onChange={onToggleAll}
+          onChange={() => {
+            // Nếu đã có selectedType, chỉ chọn các item cùng type
+            if (selectedType) {
+              cart.forEach((item) => {
+                if (item.type === selectedType) onToggleOne(item.id);
+              });
+            } else {
+              // Nếu chưa chọn gì, chọn theo type đầu tiên gặp trong cart
+              const firstType = cart[0]?.type;
+              cart.forEach((item) => {
+                if (item.type === firstType) onToggleOne(item.id);
+              });
+            }
+          }}
         />
         <Text>Tất cả ({cart.length} sản phẩm)</Text>
         <Text className="text-right">Đơn giá</Text>
@@ -102,149 +130,202 @@ export const CartHeader: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Shop */}
-      <div className="flex items-center gap-2 py-3 border-b">
-        <Checkbox
-          checked={allChecked}
-          indeterminate={indeterminate}
-          onChange={onToggleAll}
-        />
-        <Text strong>{storeName}</Text>
-      </div>
-
-      {/* Products */}
-      {cart.map((item) => {
-        const mediaArray = Array.isArray(item.product?.media)
-          ? item.product.media
-          : item.product?.media
-          ? [item.product.media]
-          : [];
-
-        const imageUrl = toImageUrl(
-          mediaArray.find((m: any) => m?.is_primary)?.url ||
-            mediaArray[0]?.url ||
-            item.product?.url
+      {/* Nhóm các sản phẩm theo store */}
+      {Object.entries(
+        cart.reduce((acc: Record<string, typeof cart>, item) => {
+          const storeId = item.product?.store?.id ?? 'unknown';
+          if (!acc[storeId]) acc[storeId] = [];
+          acc[storeId].push(item);
+          return acc;
+        }, {})
+      ).map(([storeId, items]) => {
+        const storeName = items[0].product?.store?.name ?? 'Shop';
+        const allStoreChecked = items.every((item) =>
+          selectedIds.includes(item.id)
         );
-
-        const oldPrice: number | undefined = (item as any)?.old_price;
-        const deliveryDate: string | undefined = (item as any)?.delivery_date;
-        const color: string | undefined = (item as any)?.product?.color;
-
-        const checked = selectedIds.includes(item.id); // Check by cart item id
+        const storeIndeterminate =
+          !allStoreChecked &&
+          items.some((item) => selectedIds.includes(item.id));
 
         return (
-          <div
-            key={item.id}
-            className="items-center border-b py-4 w-full"
-            style={{ display: 'grid', gridTemplateColumns: GRID }}
-          >
-            {/* Checkbox từng sản phẩm */}
-            <Checkbox
-              checked={checked}
-              onChange={() => onToggleOne(item.id)} // Toggle by cart item id
-            />
+          <div key={storeId} className="mt-3">
+            {/* Header từng shop */}
+            <div className="flex items-center gap-2 py-3 border-b bg-gray-50 px-2 rounded-md">
+              <Checkbox
+                checked={allStoreChecked}
+                indeterminate={storeIndeterminate}
+onChange={() => {
+  // Nếu chưa có selectedType thì lấy type của item đầu tiên trong shop
+  const currentType =
+    selectedType || (items.length > 0 ? items[0].type : null);
 
-            {/* Thông tin sản phẩm */}
-            <div className="flex gap-3 items-start">
-              <Image
-                src={imageUrl}
-                alt={item.product?.name}
-                width={80}
-                height={80}
-                className="rounded-md object-cover"
-                preview={false}
+  // Lọc theo type đang được chọn
+  const filtered = items.filter((item) => item.type === currentType);
+
+  // Kiểm tra xem tất cả filtered item đã được chọn chưa
+  const allFilteredChecked = filtered.every((item) =>
+    selectedIds.includes(item.id)
+  );
+
+  // Toggle theo trạng thái
+  filtered.forEach((item) => {
+    const isChecked = selectedIds.includes(item.id);
+
+    if (allFilteredChecked && isChecked) {
+      // Nếu tất cả đã chọn → bỏ chọn hết
+      onToggleOne(item.id);
+    } else if (!allFilteredChecked && !isChecked) {
+      // Nếu chưa chọn hết → chọn tất cả
+      onToggleOne(item.id);
+    }
+  });
+}}
+
               />
 
-              <div>
-                <Text className="block font-medium">
-                  {(item as any).product?.name}
-                </Text>
-                {(item as any).variant && (
-                  <Text type="secondary" className="block text-xs">
-                    Variant: {(item as any).variant.variant_name}
-                  </Text>
-                )}
-                {color && (
-                  <Text type="secondary" className="block text-xs">
-                    {color}
-                  </Text>
-                )}
-                {deliveryDate && (
-                  <Text type="secondary" className="block text-xs">
-                    🚚 {deliveryDate}
-                  </Text>
-                )}
-              </div>
+              <Text strong>{storeName}</Text>
             </div>
 
-            {/* Đơn giá */}
-            <div className="text-right">
-              {typeof oldPrice === 'number' && (
-                <Text delete className="text-gray-400 block">
-                  {oldPrice.toLocaleString()}đ
-                </Text>
-              )}
-              <Text className="text-red-500 font-semibold">
-                {item.price.toLocaleString()}đ
-              </Text>
-            </div>
+            {/* Danh sách sản phẩm trong shop */}
+            {items.map((item) => {
+              const mediaArray = Array.isArray(item.product?.media)
+                ? item.product.media
+                : item.product?.media
+                ? [item.product.media]
+                : [];
+              const imageUrl = toImageUrl(
+                mediaArray.find((m: any) => m?.is_primary)?.url ||
+                  mediaArray[0]?.url ||
+                  item.product?.url
+              );
 
-            {/* Số lượng */}
-            <div className="flex justify-center">
-              <div className="flex border rounded">
-                <button
-                  className="px-2"
-                  onClick={() =>
-                    updateQuantity(
-                      item.id,
-                      Math.max(1, item.quantity - 1),
-                      item.variant?.id
-                    )
-                  }
+              const checked = selectedIds.includes(item.id);
+              const oldPrice: number | undefined = (item as any)?.old_price;
+              const deliveryDate: string | undefined = (item as any)
+                ?.delivery_date;
+              const color: string | undefined = (item as any)?.product?.color;
+
+              return (
+                <div
+                  key={item.id}
+                  className="items-center border-b py-4 w-full"
+                  style={{ display: 'grid', gridTemplateColumns: GRID }}
                 >
-                  -
-                </button>
-                <input
-                  type="text"
-                  value={item.quantity}
-                  readOnly
-                  className="w-10 text-center border-x"
-                />
-                <button
-                  className="px-2"
-                  onClick={() =>
-                    updateQuantity(
-                      item.product.id,
-                      item.quantity + 1,
-                      item.variant?.id
-                    )
-                  }
-                >
-                  +
-                </button>
-              </div>
-            </div>
+                  {/* Checkbox từng sản phẩm */}
+                  <Checkbox
+                    checked={checked}
+                    disabled={!!(selectedType && selectedType !== item.type)}
+                    onChange={() => onToggleOne(item.id)}
+                  />
 
-            {/* Thành tiền */}
-            <Text className="text-right text-red-500 font-semibold">
-              {(item.price * item.quantity).toLocaleString()}đ
-            </Text>
+                  {/* Thông tin sản phẩm */}
+                  <div className="flex gap-3 items-start">
+                    <Image
+                      src={imageUrl}
+                      alt={item.product?.name}
+                      width={80}
+                      height={80}
+                      className="rounded-md object-cover"
+                      preview={false}
+                    />
+                    <div>
+                      <Text className="block font-medium">
+                        {item.product?.name}
+                      </Text>
+                      {item.variant && (
+                        <Text type="secondary" className="block text-xs">
+                          Variant: {item.variant.variant_name}
+                        </Text>
+                      )}
+                      <Text type="secondary" className="block text-xs">
+                        Type: {item.type}
+                      </Text>
+                      {color && (
+                        <Text type="secondary" className="block text-xs">
+                          {color}
+                        </Text>
+                      )}
+                      {deliveryDate && (
+                        <Text type="secondary" className="block text-xs">
+                          🚚 {deliveryDate}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
 
-            {/* Xoá */}
-            <div className="text-center">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() =>
-                  handleRemoveFromCart(
-                    item.product.id,
-                    item.product.name,
-                    item.variant?.id
-                  )
-                }
-              />
-            </div>
+                  {/* Đơn giá */}
+                  <div className="text-right">
+                    {typeof oldPrice === 'number' && (
+                      <Text delete className="text-gray-400 block">
+                        {oldPrice.toLocaleString()}đ
+                      </Text>
+                    )}
+                    <Text className="text-red-500 font-semibold">
+                      {item.price.toLocaleString()}đ
+                    </Text>
+                  </div>
+
+                  {/* Số lượng */}
+                  <div className="flex justify-center">
+                    <div className="flex border rounded">
+                      <button
+                        className="px-2"
+                        onClick={() =>
+                          updateQuantity(
+                            item.product.id,
+                            Math.max(1, item.quantity - 1),
+                            item.variant?.id,
+                            item.type
+                          )
+                        }
+                      >
+                        -
+                      </button>
+                      <input
+                        type="text"
+                        value={item.quantity}
+                        readOnly
+                        className="w-10 text-center border-x"
+                      />
+                      <button
+                        className="px-2"
+                        onClick={() =>
+                          updateQuantity(
+                            item.product.id,
+                            item.quantity + 1,
+                            item.variant?.id,
+                            item.type
+                          )
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Thành tiền */}
+                  <Text className="text-right text-red-500 font-semibold">
+                    {(item.price * item.quantity).toLocaleString()}đ
+                  </Text>
+
+                  {/* Xóa */}
+                  <div className="text-center">
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() =>
+                        handleRemoveFromCart(
+                          item.product.id,
+                          item.product.name,
+                          item.variant?.id
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}

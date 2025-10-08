@@ -15,10 +15,11 @@ import { PaymentTransaction } from '../payment-transactions/payment-transaction.
 import { Refund } from '../refunds/refund.entity';
 
 export enum PaymentStatus {
-  Pending = 0,
-  Completed = 1,
-  Failed = 2,
-  Refunded = 3,
+  Unpaid = 0,       
+  Paid = 1,         
+  Failed = 2,       
+  Refunded = 3,     
+  Pending = 4,      
 }
 
 @Entity('payments')

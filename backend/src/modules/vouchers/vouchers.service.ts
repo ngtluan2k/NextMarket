@@ -22,6 +22,7 @@ import { Store } from '../store/store.entity';
 import { VoucherUsageService } from '../voucher-usage/voucher-usage.service';
 import { CreateVoucherUsageDto } from '../voucher-usage/dto/create-voucher-usage.dto';
 import { EntityManager } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class VouchersService {
   constructor(
@@ -47,8 +48,7 @@ export class VouchersService {
       throw new ForbiddenException('Không có quyền tạo voucher');
     }
 
-    // Nếu là store owner, bắt buộc phải chỉ định store_id và kiểm tra ownership
-    if (role === 'store_owner') {
+    if (role === 'seller') {
       if (
         !createVoucherDto.applicable_store_ids ||
         createVoucherDto.applicable_store_ids.length !== 1
@@ -63,34 +63,39 @@ export class VouchersService {
 
     const voucher = this.vouchersRepository.create({
       ...createVoucherDto,
+      uuid: uuidv4(),
       start_date: new Date(createVoucherDto.start_date),
       end_date: new Date(createVoucherDto.end_date),
       store:
-        role === 'Seller'
+        role === 'seller'
           ? { id: createVoucherDto.applicable_store_ids![0] }
           : undefined,
     });
     return await this.vouchersRepository.save(voucher);
   }
 
-  async findAll(userId: number, role: string): Promise<Voucher[]> {
-    if (role === 'admin') {
-      return this.vouchersRepository.find();
-    } else if (role === 'store_owner') {
-      const ownedStores = await this.storesRepository.find({
-        where: { user: { id: userId } },
-      });
-      const storeIds = ownedStores.map((store) => store.id);
-      return this.vouchersRepository.find({
-        where: { store: { id: In(storeIds) } },
-      });
-    }
-    throw new ForbiddenException('Không có quyền xem danh sách voucher');
+  async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
+  const roleList = Array.isArray(roles) ? roles : [roles];
+
+  if (roleList.includes('Admin')) {
+    return this.vouchersRepository.find();
+  } else if (roleList.includes('Seller')) {
+    const ownedStores = await this.storesRepository.find({
+      where: { user: { id: userId } },
+    });
+    const storeIds = ownedStores.map((store) => store.id);
+    return this.vouchersRepository.find({
+      where: { store: { id: In(storeIds) } },
+    });
   }
+  throw new ForbiddenException('Không có quyền xem danh sách voucher');
+}
+
 
   async findOne(
     id: number,
     userId: number,
+    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     role: string = 'user'
   ): Promise<Voucher> {
     const voucher = await this.vouchersRepository.findOne({
@@ -118,7 +123,7 @@ export class VouchersService {
       throw new ForbiddenException('Không có quyền cập nhật voucher');
     }
 
-    if (role === 'store_owner' && updateVoucherDto.applicable_store_ids) {
+    if (role === 'seller' && updateVoucherDto.applicable_store_ids) {
       await this.checkStoreOwnership(
         userId,
         updateVoucherDto.applicable_store_ids[0]
@@ -156,7 +161,6 @@ export class VouchersService {
 
     const now = new Date();
 
-    // Trạng thái & thời gian hiệu lực
     if (voucher.status !== VoucherStatus.ACTIVE) {
       throw new BadRequestException(
         `Voucher đang ở trạng thái ${voucher.status}`
@@ -166,7 +170,6 @@ export class VouchersService {
       throw new BadRequestException('Voucher không hợp lệ vào thời điểm này');
     }
 
-    // Giới hạn toàn hệ thống
     if (
       voucher.total_usage_limit &&
       voucher.total_used_count >= voucher.total_usage_limit
@@ -174,7 +177,6 @@ export class VouchersService {
       throw new BadRequestException('Voucher đã đạt giới hạn sử dụng');
     }
 
-    // Giới hạn theo user
     const userUsageCount = await this.voucherUsageRepository.count({
       where: { voucher: { id: voucher.id }, user: { id: userId } },
     });
@@ -184,7 +186,6 @@ export class VouchersService {
       );
     }
 
-    // Voucher cho user mới
     if (voucher.new_user_only) {
       const userOrders = await this.ordersRepository.count({
         where: { user: { id: userId } },
@@ -194,7 +195,6 @@ export class VouchersService {
       }
     }
 
-    // Kiểm tra cửa hàng
     const applicableStores = voucher.applicable_store_ids || [];
     if (voucher.store?.id) {
       if (voucher.store.id !== storeId) {
@@ -205,9 +205,7 @@ export class VouchersService {
         throw new BadRequestException('Voucher không áp dụng cho cửa hàng này');
       }
     }
-    // ✅ Nếu cả voucher.store = null và applicable_store_ids rỗng => voucher toàn sàn
 
-    // Tính subtotal
     const subtotal = orderItems.reduce(
       (sum, item) => sum + item.quantity * item.price,
       0
@@ -219,7 +217,6 @@ export class VouchersService {
       );
     }
 
-    // Kiểm tra sản phẩm áp dụng
     if (
       voucher.applicable_product_ids?.length &&
       !orderItems.some((item) =>
@@ -231,7 +228,6 @@ export class VouchersService {
       );
     }
 
-    // Kiểm tra sản phẩm bị loại trừ
     if (
       voucher.excluded_product_ids?.length &&
       orderItems.some((item) =>
@@ -243,7 +239,6 @@ export class VouchersService {
       );
     }
 
-    // Tính discount
     let discount = 0;
     if (voucher.discount_type === VoucherDiscountType.PERCENTAGE) {
       discount = (subtotal * voucher.discount_value) / 100;
@@ -255,12 +250,13 @@ export class VouchersService {
       }
     } else if (voucher.discount_type === VoucherDiscountType.FIXED) {
       discount = voucher.discount_value;
+    } else if (voucher.discount_type === VoucherDiscountType.CASH_BACK) {
+      discount = voucher.discount_value;
     }
 
     return { voucher, discount };
   }
 
-  //  Ghi nhận voucher usage
   async applyVoucher(
     voucherId: number,
     userId: number,
@@ -282,7 +278,6 @@ export class VouchersService {
       );
     }
 
-    // Check cửa hàng
     const applicableStores = voucher.applicable_store_ids || [];
     if (voucher.store?.id) {
       if (order.store && voucher.store.id !== order.store.id) {
@@ -295,9 +290,7 @@ export class VouchersService {
         throw new BadRequestException('Voucher không áp dụng cho cửa hàng này');
       }
     }
-    //Nếu toàn sàn thì bỏ qua
 
-    // Cập nhật usage count
     voucher.total_used_count += 1;
     if (
       voucher.total_usage_limit &&
@@ -312,6 +305,7 @@ export class VouchersService {
         voucher: { id: voucherId },
         user: { id: userId },
         order: { id: order.id },
+        usedAt: new Date(),
       });
       return manager.save(usage);
     }
@@ -337,7 +331,6 @@ export class VouchersService {
 
     const availableVouchers = [];
     for (const voucher of vouchers) {
-      // Kiểm tra giới hạn sử dụng
       if (
         voucher.total_usage_limit &&
         voucher.total_used_count >= voucher.total_usage_limit
@@ -345,7 +338,6 @@ export class VouchersService {
         continue;
       }
 
-      // Kiểm tra giới hạn mỗi người dùng
       const userUsageCount = await this.voucherUsageRepository.count({
         where: { voucher: { id: voucher.id }, user: { id: userId } },
       });
@@ -353,7 +345,6 @@ export class VouchersService {
         continue;
       }
 
-      // Kiểm tra điều kiện người dùng mới
       if (voucher.new_user_only) {
         const userOrders = await this.ordersRepository.count({
           where: { user: { id: userId } },
@@ -388,7 +379,167 @@ export class VouchersService {
 
     voucher.collected_count += 1;
     await this.vouchersRepository.save(voucher);
-    // Lưu thông tin thu thập nếu cần (ví dụ: bảng voucher_collections)
+  }
+
+  async calculateDiscount(
+    voucherCodes: string[],
+    userId: number,
+    orderItems: { productId: number; quantity: number; price: number }[],
+    storeId: number,
+    orderAmount: number
+  ): Promise<{
+    discountTotal: number;
+    appliedVouchers: { code: string; discount: number; type: VoucherType }[];
+    invalidVouchers: { code: string; error: string }[];
+  }> {
+    if (!voucherCodes || voucherCodes.length === 0) {
+      return { discountTotal: 0, appliedVouchers: [], invalidVouchers: [] };
+    }
+
+    const appliedVouchers: {
+      code: string;
+      discount: number;
+      type: VoucherType;
+    }[] = [];
+    const invalidVouchers: { code: string; error: string }[] = [];
+    let discountTotal = 0;
+
+    // Load all vouchers at once to optimize database queries
+    const vouchers = await this.vouchersRepository.find({
+      where: {
+        code: In(voucherCodes.map((code) => code.trim().toUpperCase())),
+      },
+      relations: ['store'],
+    });
+
+    // Validate all vouchers and group by type
+    const vouchersByType: {
+      [key in VoucherType]?: { voucher: Voucher; discount: number }[];
+    } = {};
+
+    for (const code of voucherCodes) {
+      try {
+        const { voucher, discount } = await this.validateVoucher(
+          code,
+          userId,
+          orderItems,
+          storeId
+        );
+
+        // Convert discount to number to prevent string concatenation
+        const numericDiscount = Number(discount);
+
+        if (!Number.isFinite(numericDiscount)) {
+          throw new BadRequestException(
+            `Giá trị discount không hợp lệ cho voucher ${code}`
+          );
+        }
+
+        if (!vouchersByType[voucher.type]) {
+          vouchersByType[voucher.type] = [];
+        }
+        vouchersByType[voucher.type]!.push({
+          voucher,
+          discount: numericDiscount,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+            ? err
+            : 'Voucher không hợp lệ';
+
+        invalidVouchers.push({
+          code,
+          error: message,
+        });
+      }
+    }
+
+    // Process each voucher type
+    for (const type of Object.keys(
+      vouchersByType
+    ) as unknown as VoucherType[]) {
+      const vouchersOfType = vouchersByType[type]!;
+
+      // Check for non-stackable vouchers within the same type
+      const nonStackableVouchers = vouchersOfType.filter(
+        ({ voucher }) => !voucher.stackable
+      );
+      const stackableVouchers = vouchersOfType.filter(
+        ({ voucher }) => voucher.stackable
+      );
+
+      if (nonStackableVouchers.length > 0) {
+        // If there are non-stackable vouchers, pick the one with the highest discount
+        const bestNonStackable = nonStackableVouchers.sort(
+          (a, b) => Number(b.discount) - Number(a.discount)
+        )[0];
+
+        appliedVouchers.push({
+          code: bestNonStackable.voucher.code,
+          discount: Number(bestNonStackable.discount),
+          type: bestNonStackable.voucher.type,
+        });
+
+        // Use Number() to ensure numeric addition
+        discountTotal += Number(bestNonStackable.discount);
+
+        // Mark other non-stackable vouchers as invalid
+        nonStackableVouchers
+          .filter((v) => v.voucher.code !== bestNonStackable.voucher.code)
+          .forEach((v) =>
+            invalidVouchers.push({
+              code: v.voucher.code,
+              error: `Không thể áp dụng vì đã chọn voucher ${bestNonStackable.voucher.code} cùng loại`,
+            })
+          );
+
+        // Mark stackable vouchers of the same type as invalid
+        stackableVouchers.forEach((v) =>
+          invalidVouchers.push({
+            code: v.voucher.code,
+            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng loại`,
+          })
+        );
+      } else {
+        // Apply all stackable vouchers of this type
+        stackableVouchers.forEach(({ voucher, discount }) => {
+          const numericDiscount = Number(discount);
+
+          appliedVouchers.push({
+            code: voucher.code,
+            discount: numericDiscount,
+            type: voucher.type,
+          });
+
+          // Use Number() to ensure numeric addition
+          discountTotal += numericDiscount;
+        });
+      }
+    }
+
+    // Verify order amount against total discount
+    if (discountTotal > orderAmount) {
+      return {
+        discountTotal: 0,
+        appliedVouchers: [],
+        invalidVouchers: [
+          {
+            code: '',
+            error: 'Tổng chiết khấu không thể vượt quá giá trị đơn hàng',
+          },
+        ],
+      };
+    }
+
+    // Ensure discountTotal is returned as a number
+    return {
+      discountTotal: Number(discountTotal),
+      appliedVouchers,
+      invalidVouchers,
+    };
   }
 
   private async checkStoreOwnership(
@@ -412,7 +563,7 @@ export class VouchersService {
     }
   }
 
-  private hasPermission(role: string, permission: string): boolean {
+  private hasPermission(roles: string[] | string, permission: string): boolean {
     const adminPermissions = [
       'add_voucher',
       'view_voucher',
@@ -426,9 +577,11 @@ export class VouchersService {
       'delete_voucher',
     ];
 
-    if (role === 'admin') {
+    const roleList = Array.isArray(roles) ? roles : [roles];
+
+    if (roleList.includes('Admin')) {
       return adminPermissions.includes(permission);
-    } else if (role === 'store_owner') {
+    } else if (roleList.includes('Seller')) {
       return storeOwnerPermissions.includes(permission);
     }
     return false;

@@ -1,5 +1,5 @@
 import { StoreInfo } from './product';
-
+import { PricingRule } from '../components/productDetail/Info';
 export interface CartItem {
   id: number;
   quantity: number;
@@ -19,4 +19,6 @@ export interface CartItem {
     price: number;
     stock: number;
   };
+  type: 'bulk' | 'subscription';
+  pricingRule?: PricingRule;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from '../payment.entity';
@@ -20,10 +20,15 @@ export class MomoStrategy {
       status: 0,
     });
     const saved = await this.paymentRepo.save(payment);
-
     const redirectUrl = `https://test-payment.momo.vn/pay?orderId=${saved.uuid}`;
     return { payment: saved, redirectUrl };
   }
 
-  async handleCallback(payload: any) {}
+  async handleCallback(payload: any) {
+    // TODO: implement Momo payment callback handling (verify signature, update payment status, etc.)
+    // Throwing a NotImplementedException ensures the method is non-empty and signals work remaining.
+    throw new NotImplementedException(
+      'MomoStrategy.handleCallback is not implemented yet'
+    );
+  }
 }

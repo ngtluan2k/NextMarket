@@ -5,6 +5,7 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { Store } from '../store/store.entity';
 import { Brand } from '../brands/brand.entity';
 import { Inventory } from '../inventory/inventory.entity';
+import { Subscription } from '../subscription/subscription.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -97,4 +98,7 @@ export class Product {
 
   @OneToMany(() => ProductReview, (reviews) => reviews.product)
   reviews!: ProductReview[];
+
+  @OneToMany(() => Subscription, (sub) => sub.product)
+  subscriptions!: Subscription[];
 }

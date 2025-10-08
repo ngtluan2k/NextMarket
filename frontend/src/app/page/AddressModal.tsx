@@ -192,7 +192,8 @@ const AddressModal: React.FC<Props> = ({
   const handleFinish = async (values: any) => {
     setLoading(true);
     try {
-      const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+      const userId = me?.user_id || me?.id || Number(localStorage.getItem('user_id') || 0);
+
       if (!userId) {
         message.error('Vui lòng đăng nhập để thêm địa chỉ');
         setLoading(false);

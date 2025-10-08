@@ -5,10 +5,11 @@ import { PricingRuleController } from './pricing-rule.controller';
 import { PricingRules } from './pricing-rule.entity';
 import { ProductModule } from '../product/product.module';
 import { Product } from '../product/product.entity';
+import { Subscription } from '../subscription/subscription.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PricingRules, Product]), // cần Product để inject ProductRepository
+    TypeOrmModule.forFeature([PricingRules, Product, Subscription]), // cần Product để inject ProductRepository
     forwardRef(() => ProductModule), // nếu PricingRulesService dùng ProductService
   ],
   providers: [PricingRulesService],

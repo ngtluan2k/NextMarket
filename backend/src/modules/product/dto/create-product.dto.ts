@@ -64,5 +64,10 @@ export class CreateProductDto {
     cycle?: string;
     starts_at?: string | Date;
     ends_at?: string | Date;
+
+    // các trường mới
+    variant_sku?: string; // dùng sku để liên kết với variant
+    name?: string; // tên rule
+    status?: 'active' | 'inactive'; // trạng thái
   }[];
 }

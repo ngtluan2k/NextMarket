@@ -17,21 +17,24 @@ import OrdersPage from './page/account/OrdersPage';
 import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
-import { ProductForm } from "./components/AddProduct";
-import StoreManagerDetail from "./components/admin/StoreManagerDetail";
-import AddressBook from "./components/account/AddressBook";
-import AddressCreatePage from "./page/account/AddressCreatePage";
-import StoreLayout from "./page/StoreLayout";
-import StoreAllProductsTab from "./components/store/storetab/StoreAllProductsTab";
-import StoreHomeTab from "./components/store/storetab/StoreHomeTab";
-import StoreProfileTab from "./components/store/storetab/StoreProfileTab";
-import CheckoutPayment from "./page/CheckoutPayment";
-import OrderSuccess from "./page/OrderSuccess";
-import FeaturedBrandsPage from "./components/FeaturedBrands";
-import BrandPage from "./page/BrandPage";
-import SearchPage from "./page/SearchPage";
-import CartPage from "./page/CartPage";
-import OtpVerifyPage from "./page/OtpVerify";
+import { ProductForm } from './components/AddProduct';
+import StoreManagerDetail from './components/admin/StoreManagerDetail';
+import AddressBook from './components/account/AddressBook';
+import AddressCreatePage from './page/account/AddressCreatePage';
+import StoreLayout from './page/StoreLayout';
+import StoreAllProductsTab from './components/store/storetab/StoreAllProductsTab';
+import StoreHomeTab from './components/store/storetab/StoreHomeTab';
+import StoreProfileTab from './components/store/storetab/StoreProfileTab';
+import CheckoutPayment from './page/CheckoutPayment';
+import OrderSuccess from './page/OrderSuccess';
+import FeaturedBrandsPage from './components/FeaturedBrands';
+import BrandPage from './page/BrandPage';
+import SearchPage from './page/SearchPage';
+import CartPage from './page/CartPage';
+import OtpVerifyPage from './page/OtpVerify';
+import TestWallet from './test';
+import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
+
 
 
 
@@ -41,13 +44,14 @@ import ReviewForm from './test';
 import AffiliateGate from './page/affiliate';
 import AffiliateRegister from './page/affiliate/register';
 import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
-import AffiliatePayment from './page/affiliate/dashboard/tab/affiliatePayment';
 import { AffiliateDashboardLayout } from './page/affiliate/dashboard/MainLayout';
 import { AffiliateDashboard } from './page/affiliate/dashboard/tab/affiliateDashboard';
 import AffiliateResource from './page/affiliate/dashboard/tab/affiliateResource';
 import AffiliateSettings from './page/affiliate/dashboard/tab/affiliateSettings';
 import AffiliateNoti from './page/affiliate/dashboard/tab/affiliateNoti';
-
+import AffiliateTransaction from './page/affiliate/dashboard/tab/affiliateTransaction';
+import Support from './page/affiliate/dashboard/tab/support';
+import AffiliateLinkResolver from './page/AffiliateLinkResolver';
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
 }
@@ -105,6 +109,7 @@ const App: React.FC = () => {
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />
             <Route path="addresses/create" element={<AddressCreatePage />} />
+            <Route path="subscription" element={<MySubscriptionsPage />} />
           </Route>
 
           {/* Store Routes */}
@@ -127,6 +132,7 @@ const App: React.FC = () => {
 
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/test" element={<TestWallet />} />
           <Route path="/test" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -145,7 +151,7 @@ const App: React.FC = () => {
             />
             <Route
               path="/affiliate/dashboard/payments"
-              element={<AffiliatePayment />}
+              element={<AffiliateTransaction />}
             />
             <Route
               path="/affiliate/dashboard/resource"
@@ -162,9 +168,10 @@ const App: React.FC = () => {
 
             <Route
               path="/affiliate/dashboard/support"
-              element={<AffiliatePayment />}
+              element={<Support />}
             />
           </Route>
+          <Route path="/product/:id" element={<AffiliateLinkResolver />} />
         </Routes>
       </CartProvider>
     </AuthProvider>

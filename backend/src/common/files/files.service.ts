@@ -3,7 +3,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
-import trash from 'trash';
 import { Cron } from '@nestjs/schedule';
 
 @Injectable()
@@ -13,27 +12,20 @@ export class FilesService {
 
   constructor(private readonly dataSource: DataSource) {}
 
-  // Hàm quét và di chuyển file không dùng vào thùng rác
   async cleanUnusedFiles() {
     try {
-      // 1. Lấy danh sách file trong thư mục uploads
       const filesInUploads = fs.readdirSync(this.uploadPath);
-
-      // 2. Lấy danh sách ảnh từ database (giả sử table 'products', cột 'image_url')
-      // Lấy danh sách file từ bảng product_media
       const result = await this.dataSource.query(
         `SELECT url FROM product_media`
       );
-
-      // Lấy tên file từ URL
       const dbFiles = result.map((row: any) => path.basename(row.url));
-
-      // 3. Lọc những file không có trong DB
       const unusedFiles = filesInUploads.filter(
         (file) => !dbFiles.includes(file)
       );
 
-      // 4. Di chuyển vào thùng rác
+      // 👉 Import động để tránh lỗi require() ESM
+      const { default: trash } = await import('trash');
+
       for (const file of unusedFiles) {
         const filePath = path.join(this.uploadPath, file);
         await trash(filePath);
@@ -48,7 +40,7 @@ export class FilesService {
     }
   }
 
-  @Cron('0 * * * *') // chạy đúng phút 0 mỗi giờ
+  @Cron('0 * * * *')
   async handleHourlyCleanup() {
     this.logger.log('Running hourly cleanup of unused uploads...');
     await this.cleanUnusedFiles();

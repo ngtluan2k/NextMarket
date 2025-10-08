@@ -1,6 +1,6 @@
 import { IsString, IsNumber, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-class OrderItemDto {
+export class OrderItemDto {
   @IsNumber()
   productId!: number;
 

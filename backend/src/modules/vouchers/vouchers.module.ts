@@ -10,17 +10,14 @@ import { User } from '../user/user.entity';
 import { Order } from '../orders/order.entity';
 import { Store } from '../store/store.entity';
 import { VoucherUsageModule } from '../voucher-usage/voucher-usage.module';
+import { VouchersController } from './vouchers.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Voucher, VoucherUsage, User, Order, Store]),
     VoucherUsageModule,
   ],
-  controllers: [
-    AdminVouchersController,
-    UserVouchersController,
-    StoreOwnerVouchersController,
-  ],
+  controllers: [AdminVouchersController, UserVouchersController, StoreOwnerVouchersController, VouchersController],
   providers: [VouchersService],
   exports: [VouchersService],
 })

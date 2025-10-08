@@ -1,9 +1,10 @@
 import React from 'react';
 import { ReactNode } from 'react';
-import { Modal, Tag, Table, Button, message } from 'antd';
+import { Modal, Tag, Table, Button, message, Spin } from 'antd';
 import dayjs from 'dayjs';
-import { Sale } from './Sale';
 import { orderService } from '../../../../service/order.service';
+import { storeService } from '../../../../service/store.service';
+import { Sale, ProductItem, Payment} from '../../../types/order';
 
 // Map trạng thái số → label hiển thị
 const orderStatusMap: Record<number, string> = {
@@ -17,7 +18,7 @@ const orderStatusMap: Record<number, string> = {
   7: 'Trả Hàng',
 };
 
-// Map trạng thái số → string gửi lên API
+// Map trạng thái số → string gửi lên API (theo BE)
 const orderStatusStringMap: Record<number, string> = {
   0: 'pending',
   1: 'confirmed',
@@ -32,27 +33,28 @@ const orderStatusStringMap: Record<number, string> = {
 function getStatusColor(status: string | number): string {
   switch (Number(status)) {
     case 0:
-      return 'orange'; 
+      return 'orange';
     case 1:
       return 'blue';
     case 2:
-      return 'cyan'; 
+      return 'cyan';
     case 3:
-      return 'purple'; 
+      return 'purple';
     case 4:
-      return 'green'; 
+      return 'green';
     case 5:
-      return 'green'; 
+      return 'green';
     case 6:
-      return 'red'; 
+      return 'red';
     case 7:
-      return 'magenta'; 
+      return 'magenta';
     default:
       return 'default';
   }
 }
+
 export const getPaymentStatusText = (status: number | string) => {
-  switch (status) {
+  switch (Number(status)) {
     case 0:
       return 'Chưa thanh toán';
     case 1:
@@ -67,15 +69,15 @@ export const getPaymentStatusText = (status: number | string) => {
 };
 
 export const getPaymentStatusColor = (status: number | string) => {
-  switch (status) {
+  switch (Number(status)) {
     case 0:
-      return 'orange'; // Pending
+      return 'orange';
     case 1:
-      return 'green'; // Completed
+      return 'green';
     case 2:
-      return 'red'; // Failed
+      return 'red';
     case 3:
-      return 'purple'; // Refunded
+      return 'purple';
     default:
       return 'default';
   }
@@ -86,7 +88,7 @@ interface OrderDetailModalProps {
   isDetailModalVisible: boolean;
   setIsDetailModalVisible: (visible: boolean) => void;
   token: string;
-  onStatusChange?: (newStatus: number) => void;
+  onStatusChange?: (newStatus: number, note?: string) => void;
 }
 
 export default function OrderDetailModal({
@@ -96,7 +98,54 @@ export default function OrderDetailModal({
   token,
   onStatusChange,
 }: OrderDetailModalProps) {
-  if (!selectedSale) return null;
+  const [storeId, setStoreId] = React.useState<number | null>(null);
+  const [orderDetail, setOrderDetail] = React.useState<Sale | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  // Lấy storeId khi component mount
+  React.useEffect(() => {
+    const fetchStore = async () => {
+      try {
+        const store = await storeService.getMyStore();
+        if (store && store.id) {
+          setStoreId(store.id);
+        } else {
+          throw new Error('Không tìm thấy cửa hàng');
+        }
+      } catch (err) {
+        console.error('❌ Lỗi khi lấy store:', err);
+        message.error('Không thể lấy thông tin cửa hàng.');
+      }
+    };
+    fetchStore();
+  }, []);
+
+  // Fetch chi tiết đơn hàng khi modal mở
+  React.useEffect(() => {
+    if (isDetailModalVisible && selectedSale && storeId) {
+      fetchOrderDetail();
+    }
+  }, [isDetailModalVisible, selectedSale, storeId]);
+
+  const fetchOrderDetail = async () => {
+    if (!storeId || !selectedSale) return;
+
+    setLoading(true);
+    try {
+      const detail = await orderService.getStoreOrderDetail(
+        storeId,
+        selectedSale.id
+      );
+      setOrderDetail(detail);
+    } catch (err: any) {
+      console.error('❌ Lỗi khi lấy chi tiết đơn hàng:', err);
+      message.error('Không thể tải chi tiết đơn hàng');
+      // Fallback to selectedSale if API fails
+      setOrderDetail(selectedSale);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const productColumns = [
     {
@@ -123,6 +172,15 @@ export default function OrderDetailModal({
         `₫${parseFloat(price).toLocaleString('vi-VN')}`,
     },
     {
+      title: 'Giảm giá',
+      dataIndex: 'discount',
+      key: 'discount',
+      render: (discount: string) =>
+        discount && parseFloat(discount) > 0
+          ? `-₫${parseFloat(discount).toLocaleString('vi-VN')}`
+          : '-',
+    },
+    {
       title: 'Tạm tính',
       dataIndex: 'subtotal',
       key: 'subtotal',
@@ -131,37 +189,68 @@ export default function OrderDetailModal({
     },
   ];
 
-  // Hàm đổi trạng thái
+  // Hàm đổi trạng thái (PATCH theo BE)
   const handleChangeStatus = async (newStatus: number, note: string) => {
+    if (!storeId || !orderDetail) {
+      message.error('Không tìm thấy cửa hàng hoặc đơn hàng.');
+      return;
+    }
+
     try {
-      const statusStr = orderStatusStringMap[newStatus]; // convert số → string
-      console.log('--- DEBUG Sending changeStatus ---');
-      console.log('Order ID:', selectedSale.id);
+      const statusStr = orderStatusStringMap[newStatus];
+      
+      console.log('🔄 Đang cập nhật trạng thái...');
+      console.log('Store ID:', storeId);
+      console.log('Order ID:', orderDetail.id);
       console.log('Status string:', statusStr);
       console.log('Note:', note);
-      console.log('Token:', token);
-      await orderService.changeStatus(selectedSale.id, statusStr, token, note);
-      message.success('Cập nhật trạng thái thành công');
-      if (onStatusChange) onStatusChange(newStatus);
 
+      // Call API PATCH theo route BE: /stores/:storeId/orders/:id/status/:status
+      await orderService.changeStatusByStore(
+        storeId,
+        orderDetail.id,
+        statusStr,
+        note
+      );
+
+      message.success('Cập nhật trạng thái thành công');
+      
+      // Callback để refresh data ở parent
+      if (onStatusChange) {
+        onStatusChange(newStatus, note);
+      }
+
+      // Refresh chi tiết đơn hàng
+      await fetchOrderDetail();
+      
       setIsDetailModalVisible(false);
-    } catch (err) {
-      console.error('Lỗi cập nhật:', err);
-      message.error('Cập nhật thất bại');
+    } catch (err: any) {
+      console.error('❌ Lỗi cập nhật trạng thái:', err);
+      message.error(err.message || 'Cập nhật trạng thái thất bại');
     }
   };
 
   // Footer theo trạng thái
   const renderFooter = () => {
-    const status = Number(selectedSale.status);
+    if (!orderDetail) return null;
+
+    const status = Number(orderDetail.status);
     const buttons: ReactNode[] = [];
 
+    // Thêm nút đóng
+    buttons.push(
+      <Button key="close" onClick={() => setIsDetailModalVisible(false)}>
+        Đóng
+      </Button>
+    );
+
+    // Trạng thái 0: Đang chờ xác nhận
     if (status === 0) {
       buttons.push(
         <Button
           key="confirm"
           type="primary"
-          onClick={() => handleChangeStatus(1, 'Người bán xác nhận')}
+          onClick={() => handleChangeStatus(1, 'Người bán xác nhận đơn hàng')}
         >
           Xác Nhận Đơn
         </Button>
@@ -175,22 +264,58 @@ export default function OrderDetailModal({
           Hủy Đơn
         </Button>
       );
-    } else if (status === 1 || status === 2) {
+    }
+    // Trạng thái 1 hoặc 2: Đã xác nhận / Đang xử lý
+    else if (status === 1 || status === 2) {
       buttons.push(
         <Button
-          key="cancel"
-          danger
-          onClick={() => handleChangeStatus(6, 'Người bán hủy đơn')}
+          key="processing"
+          type="primary"
+          onClick={() => handleChangeStatus(2, 'Đơn hàng đang được xử lý')}
         >
-          Hủy Đơn
+          Đang Xử Lý
         </Button>
       );
-    } else if (status === 3) {
+      buttons.push(
+        <Button
+          key="shipped"
+          type="primary"
+          onClick={() => handleChangeStatus(3, 'Đơn hàng đã giao cho shipper')}
+        >
+          Đã Giao Hàng
+        </Button>
+      );
+      // buttons.push(
+      //   <Button
+      //     key="cancel"
+      //     danger
+      //     onClick={() => handleChangeStatus(6, 'Người bán hủy đơn')}
+      //   >
+      //     Hủy Đơn
+      //   </Button>
+      // );
+    }
+    // Trạng thái 3: Đã giao hàng
+    else if (status === 3) {
+      buttons.push(
+        <Button
+          key="delivered"
+          type="primary"
+          onClick={() =>
+            handleChangeStatus(4, 'Shipper đã giao hàng cho khách')
+          }
+        >
+          Shipper Đã Giao
+        </Button>
+      );
+    }
+    // Trạng thái 4: Shipper đã giao
+    else if (status === 4) {
       buttons.push(
         <Button
           key="complete"
           type="primary"
-          onClick={() => handleChangeStatus(5, 'Đơn đã hoàn thành')}
+          onClick={() => handleChangeStatus(5, 'Đơn hàng hoàn thành')}
         >
           Hoàn Thành
         </Button>
@@ -200,69 +325,147 @@ export default function OrderDetailModal({
     return buttons;
   };
 
+  if (!selectedSale && !orderDetail) return null;
+
+  const displayOrder = orderDetail || selectedSale;
+
   return (
     <Modal
-      title={`Chi tiết đơn hàng #${selectedSale.id}`}
+      title={`Chi tiết đơn hàng #${displayOrder?.orderNumber || displayOrder?.id}`}
       open={isDetailModalVisible}
       onCancel={() => setIsDetailModalVisible(false)}
       footer={renderFooter()}
-      width={800}
+      width={900}
     >
-      {/* Thông tin khách hàng */}
-      <div className="mb-4">
-        <h3 className="font-semibold">Khách hàng</h3>
-        <p>
-          {selectedSale.user?.username} ({selectedSale.user?.email})
-        </p>
-        {selectedSale.userAddress && (
-          <p>
-            {selectedSale.userAddress.recipientName} -{' '}
-            {selectedSale.userAddress.phone}
-            <br />
-            {selectedSale.userAddress.street}, {selectedSale.userAddress.ward},{' '}
-            {selectedSale.userAddress.district},{' '}
-            {selectedSale.userAddress.province}
-          </p>
-        )}
-      </div>
+      <Spin spinning={loading}>
+        {displayOrder && (
+          <>
+            {/* Thông tin khách hàng */}
+            <div className="mb-4 p-4 bg-gray-50 rounded">
+              <h3 className="font-semibold text-lg mb-3">
+                📋 Thông tin khách hàng
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-600">Tên khách hàng:</p>
+                  <p className="font-medium">{displayOrder.user?.username}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Email:</p>
+                  <p className="font-medium">{displayOrder.user?.email}</p>
+                </div>
+              </div>
 
-      {/* Bảng sản phẩm */}
-      <Table
-        dataSource={selectedSale.orderItem}
-        columns={productColumns}
-        rowKey="id"
-        pagination={false}
-      />
-
-      {/* Tổng quan đơn hàng */}
-      <div className="mt-4 space-y-2">
-        <p>
-          <strong>Tổng tiền:</strong> ₫
-          {parseFloat(selectedSale.totalAmount).toLocaleString('vi-VN')}
-        </p>
-        <p>
-          <strong>Trạng thái đơn hàng:</strong>{' '}
-          <Tag color={getStatusColor(selectedSale.status)}>
-            {orderStatusMap[Number(selectedSale.status)] || 'Không xác định'}
-          </Tag>
-        </p>
-        <p>
-          <strong>Ngày tạo:</strong>{' '}
-          {dayjs(selectedSale.createdAt).format('DD/MM/YYYY HH:mm')}
-        </p>
-        {selectedSale.payment && selectedSale.payment.length > 0 && (
-          <p>
-            <strong>Thanh toán:</strong> {selectedSale.payment[0].amount}₫{' '}
-            <Tag
-              color={getPaymentStatusColor(
-                Number(selectedSale.payment[0].status)
+              {displayOrder.userAddress && (
+                <div className="mt-3">
+                  <p className="text-gray-600">Địa chỉ giao hàng:</p>
+                  <p className="font-medium">
+                    {displayOrder.userAddress.recipientName} -{' '}
+                    {displayOrder.userAddress.phone}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    {displayOrder.userAddress.street},{' '}
+                    {displayOrder.userAddress.ward},{' '}
+                    {displayOrder.userAddress.district},{' '}
+                    {displayOrder.userAddress.province}
+                  </p>
+                </div>
               )}
-            >
-              {getPaymentStatusText(Number(selectedSale.payment[0].status))}
-            </Tag>
-          </p>
+            </div>
+
+            {/* Bảng sản phẩm */}
+            <div className="mb-4">
+              <h3 className="font-semibold text-lg mb-3">🛒 Sản phẩm</h3>
+              <Table
+                dataSource={displayOrder.orderItem}
+                columns={productColumns}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            </div>
+
+            {/* Tổng quan đơn hàng */}
+            <div className="p-4 bg-gray-50 rounded space-y-3">
+              <h3 className="font-semibold text-lg mb-3">💰 Tổng quan</h3>
+
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tạm tính:</span>
+                <span className="font-medium">
+                  ₫{parseFloat(displayOrder.subtotal).toLocaleString('vi-VN')}
+                </span>
+              </div>
+
+              {displayOrder.discountTotal &&
+                parseFloat(displayOrder.discountTotal) > 0 && (
+                  <div className="flex justify-between text-red-600">
+                    <span>Giảm giá:</span>
+                    <span>
+                      -₫
+                      {parseFloat(displayOrder.discountTotal).toLocaleString(
+                        'vi-VN'
+                      )}
+                    </span>
+                  </div>
+                )}
+
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí vận chuyển:</span>
+                <span className="font-medium">
+                  ₫
+                  {parseFloat(displayOrder.shippingFee).toLocaleString('vi-VN')}
+                </span>
+              </div>
+
+              <div className="flex justify-between border-t pt-2">
+                <span className="font-bold text-lg">Tổng tiền:</span>
+                <span className="font-bold text-lg text-blue-600">
+                  ₫
+                  {parseFloat(displayOrder.totalAmount).toLocaleString('vi-VN')}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center border-t pt-2">
+                <span className="text-gray-600">Trạng thái đơn hàng:</span>
+                <Tag color={getStatusColor(displayOrder.status)} className="text-sm">
+                  {orderStatusMap[Number(displayOrder.status)] ||
+                    'Không xác định'}
+                </Tag>
+              </div>
+
+              {displayOrder.payment && displayOrder.payment.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Trạng thái thanh toán:</span>
+                  <Tag
+                    color={getPaymentStatusColor(
+                      Number(displayOrder.payment[0].status)
+                    )}
+                    className="text-sm"
+                  >
+                    {getPaymentStatusText(
+                      Number(displayOrder.payment[0].status)
+                    )}
+                  </Tag>
+                </div>
+              )}
+
+              <div className="flex justify-between text-sm text-gray-500 border-t pt-2">
+                <span>Ngày tạo:</span>
+                <span>
+                  {dayjs(displayOrder.createdAt).format('DD/MM/YYYY HH:mm')}
+                </span>
+              </div>
+
+              {displayOrder.notes && (
+                <div className="border-t pt-2">
+                  <p className="text-gray-600 text-sm">Ghi chú:</p>
+                  <p className="text-sm italic">{displayOrder.notes}</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
-      </div>
+      </Spin>
     </Modal>
   );
 }

@@ -121,8 +121,12 @@ export class ProductService {
 
       if (dto.pricing_rules?.length) {
         for (const pr of dto.pricing_rules) {
+          // tìm variant nếu có variant_sku
+          const variant = pr.variant_sku ? variantMap[pr.variant_sku] : null;
+
           await manager.save(PricingRules, {
             product,
+            variant, // liên kết variant nếu có
             type: pr.type,
             min_quantity: pr.min_quantity,
             price: pr.price,
@@ -130,6 +134,8 @@ export class ProductService {
             starts_at: pr.starts_at ? new Date(pr.starts_at) : undefined,
             ends_at: pr.ends_at ? new Date(pr.ends_at) : undefined,
             uuid: require('uuid').v4(),
+            name: pr.name ?? `${product.name} - ${pr.type}`, // fallback tên
+            status: pr.status ?? 'active', // default active
           });
         }
       }
@@ -373,6 +379,7 @@ export class ProductService {
       .leftJoinAndSelect('product.categories', 'pc')
       .leftJoinAndSelect('pc.category', 'category')
       .leftJoinAndSelect('product.pricing_rules', 'pricing_rules')
+      .leftJoinAndSelect('pricing_rules.variant', 'pricing_rule_variant')
       .leftJoinAndSelect('product.store', 'store')
       .where('product.slug = :slug', { slug })
       .getOne();
@@ -430,6 +437,9 @@ export class ProductService {
         cycle: pr.cycle,
         starts_at: pr.starts_at,
         ends_at: pr.ends_at,
+        name: pr.name,
+        status: pr.status,
+        variant_sku: pr.variant ? pr.variant.sku : null,
       })),
       store: product.store
         ? {
@@ -522,5 +532,36 @@ export class ProductService {
       .getMany();
 
     return similarProducts;
+  }
+  
+  async findById(id: number) {
+    const product = await this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('variant.inventories', 'inventory')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.categories', 'pc')
+      .leftJoinAndSelect('pc.category', 'category')
+      .leftJoinAndSelect('product.pricing_rules', 'pricing_rules')
+      .leftJoinAndSelect('product.store', 'store')
+      .where('product.id = :id', { id })
+      .getOne();
+  
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return product; // or map to your existing DTO
+  }
+
+  async getSlugById(id: number): Promise<string> {
+    const row = await this.productRepo.findOne({
+      where: { id },
+      select: { id: true, slug: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Product not found');
+    }
+    return row.slug;
   }
 }

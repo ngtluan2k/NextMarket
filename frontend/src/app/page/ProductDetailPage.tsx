@@ -55,6 +55,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
+const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_price ?? 0);
+  const [selectedType, setSelectedType] = useState<'bulk' | 'subscription' | undefined>(undefined);
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewPage, setReviewPage] = useState(1);
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
@@ -115,63 +118,14 @@ export default function ProductDetailPage({ showMessage }: Props) {
     }
   }, [selectedVariantId, slug]);
 
-  useEffect(() => {
-    if (!product) return;
-    if (
-      selectedVariantId === null ||
-      !product.variants?.some((v: any) => v.id === selectedVariantId)
-    ) {
-      const storedVariant = localStorage.getItem(`lastVariant_${slug}`);
-      const validVariantIds = product.variants?.map((v: any) => v.id) || [];
-      if (storedVariant && validVariantIds.includes(Number(storedVariant))) {
-        setSelectedVariantId(Number(storedVariant));
-      } else {
-        const defaultVariant = product.variants?.[0]?.id ?? null;
-        setSelectedVariantId(defaultVariant);
-      }
-    }
+useEffect(() => {
+  if (!product) return;
+  setQuantity(1); // mỗi lần product load lại
+}, [product]);
 
-    const currentVariantId = selectedVariantId ?? undefined;
-    const cartItem = cart.find(
-      (item) =>
-        item.product.id === product.id &&
-        (item.variant
-          ? item.variant.id === currentVariantId
-          : currentVariantId === undefined)
-    );
-    setQuantity(cartItem ? cartItem.quantity : 1);
-  }, [product, cart]);
 
-  const { calculatedPrice, totalPrice } = useMemo(() => {
-    if (!product) return { calculatedPrice: 0, totalPrice: 0 };
+const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
 
-    let currentPrice = Number(product.base_price ?? 0);
-    if (selectedVariantId) {
-      const variant = product.variants?.find(
-        (v: any) => v.id === selectedVariantId
-      );
-      if (variant) currentPrice = Number(variant.price);
-    }
-
-    const now = new Date();
-    const validRules = (product.pricing_rules ?? [])
-      .filter((r: any) => {
-        const start = r.starts_at ? new Date(r.starts_at) : new Date(0);
-        const end = r.ends_at ? new Date(r.ends_at) : null;
-
-        return (
-          quantity >= r.min_quantity && now >= start && (!end || now <= end) // nếu có end thì check, nếu null thì coi như vô hạn
-        );
-      })
-      .sort((a: any, b: any) => b.min_quantity - a.min_quantity);
-
-    if (validRules.length) currentPrice = Number(validRules[0].price);
-
-    return {
-      calculatedPrice: currentPrice,
-      totalPrice: currentPrice * quantity,
-    };
-  }, [product, selectedVariantId, quantity]);
 
   const galleryData = useMemo(() => {
     if (!product || !product.variants) {
@@ -245,7 +199,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
               quantity={quantity}
               setQuantity={setQuantity}
               calculatedPrice={calculatedPrice}
+              setCalculatedPrice={setCalculatedPrice}
               maxQuantity={stock}
+              selectedType={selectedType}
+              setSelectedType={setSelectedType}
             />
             <MemoizedShipping />
             <MemoizedComboStrip items={combos} />
@@ -275,19 +232,23 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 width={L.rightWidth}
                 minHeight={L.buyBoxMinHeight}
                 showMessage={showMessage}
+                selectedType={selectedType}
               />
             </div>
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
-              <Suspense fallback={<div>Loading reviews...</div>}>
-                <LazyProductReviews productId={0} />
-              </Suspense>
-            </div>
-            <div className="lg:col-span-3 mt-2">
-              <Suspense fallback={<div>Loading more products...</div>}>
-                <LazyExploreMore />
-              </Suspense>
-            </div>
+            <Suspense fallback={<div>Loading reviews...</div>}>
+              <LazyProductReviews
+                productId={product.id}
+              />
+            </Suspense>
+          </div>
+
+          <div className="lg:col-span-3 mt-2">
+            <Suspense fallback={<div>Loading more products...</div>}>
+              <LazyExploreMore />
+            </Suspense>
+          </div>
         </div>
       </main>
       <Footer />

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Search,
   Package,
@@ -179,10 +179,10 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [total, setTotal] = useState(0); // Tổng số record từ server
   const userId = getUserIdFromStorage();
-  const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(
-    null
-  );
+  const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(null);
+  const pageSize = 10; // Số record mỗi trang
 
   
 
@@ -195,11 +195,26 @@ export default function OrdersPage() {
     (async () => {
       setLoading(true);
       try {
+        // Build query params
+        const params: any = {
+          page,
+          limit: pageSize,
+        };
+        if (tab !== 'all') {
+          params.status = TABS.find((t) => t.key === tab)?.key === tab ? mapStatusToNumber(tab) : undefined;
+        }
+        if (submittedQ) {
+          params.search = submittedQ.trim();
+        }
+
         // Lấy dữ liệu từ backend
-        const res = await orderService.getOrdersByUser(userId);
+        const res = await orderService.getOrdersByUser(userId, params);
+
+        // Backend trả về { data, total, page, limit }
+        const { data, total: serverTotal } = res;
 
         // Map dữ liệu backend về OrderSummary
-        const items: OrderSummary[] = (res as any[]).map((o) => ({
+        const items: OrderSummary[] = (data as any[]).map((o) => ({
           id: String(o.id),
           code: o.uuid,
           storeName: o.store?.name ?? '',
@@ -229,33 +244,17 @@ export default function OrdersPage() {
             };
           }),
         }));
-        // Filter theo tab
-        let filteredItems = items;
-        if (tab !== 'all') {
-          filteredItems = items.filter((o) => o.status === tab);
-        }
-
-        // Filter theo search
-        if (submittedQ) {
-          const qLower = submittedQ.toLowerCase();
-          filteredItems = filteredItems.filter(
-            (o) =>
-              o.code.toLowerCase().includes(qLower) ||
-              (o.storeName ?? '').toLowerCase().includes(qLower) || // fix ở đây
-              o.items.some((it) => it.name.toLowerCase().includes(qLower))
-          );
-        }
 
         if (!cancelled) {
-          setOrders(
-            page === 1 ? filteredItems : (prev) => [...prev, ...filteredItems]
-          );
-          setHasMore(filteredItems.length >= 10);
+          setOrders(page === 1 ? items : (prev) => [...prev, ...items]);
+          setTotal(serverTotal || 0);
+          setHasMore(items.length >= pageSize && page * pageSize < serverTotal);
         }
       } catch (err) {
         if (!cancelled) {
           console.error('Lỗi khi lấy đơn hàng:', err);
           setOrders([]);
+          setTotal(0);
           setHasMore(false);
         }
       } finally {
@@ -268,28 +267,53 @@ export default function OrdersPage() {
     };
   }, [tab, submittedQ, page, userId]);
 
-  // đổi tab => reset trang & dữ liệu
+  // Hàm ánh xạ OrderTab về status number để gửi API
+  const mapStatusToNumber = (tab: OrderTab): number | undefined => {
+    switch (tab) {
+      case 'pending':
+        return 0;
+      case 'confirmed':
+        return 1;
+      case 'processing':
+        return 2;
+      case 'shipping':
+        return 3;
+      case 'delivered':
+        return 4;
+      case 'completed':
+        return 5;
+      case 'cancelled':
+        return 6;
+      case 'returned':
+        return 7;
+      default:
+        return undefined;
+    }
+  };
+
+  // Đổi tab => reset trang & dữ liệu
   const changeTab = (t: OrderTab) => {
     setTab(t);
     setPage(1);
-    setSubmittedQ((s) => s); // giữ nguyên search hiện tại
+    setOrders([]); // Reset orders để tránh giữ dữ liệu cũ
   };
 
+  // Submit tìm kiếm => reset trang & dữ liệu
   const onSubmitSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setPage(1);
     setSubmittedQ(q.trim());
+    setOrders([]); // Reset orders để tránh giữ dữ liệu cũ
   };
 
   const statusPill = (s: OrderTab) => {
-    const base =
-      'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
+    const base = 'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
     switch (s) {
       case 'pending':
         return (
           <span className={`${base} bg-amber-50 text-amber-700`}>
             <Clock className="h-3 w-3" />
-            Chờ thanh toán
+            Chờ xác nhận
           </span>
         );
       case 'confirmed':
@@ -504,9 +528,7 @@ export default function OrdersPage() {
                             Đánh giá
                           </a>
                         )}
-
-                        {/* Nút Hủy đơn */}
-                        {['pending', 'confirmed'].includes(o.status) && (
+                        {['pending'].includes(o.status) && (
                           <button
                             onClick={() => setCancelModalOrderId(Number(o.id))}
                             className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
@@ -539,9 +561,14 @@ export default function OrdersPage() {
               token={localStorage.getItem('token') || ''}
               onClose={() => setCancelModalOrderId(null)}
               onCancelled={() => {
+                setOrders((prev) =>
+                  prev.map((o) =>
+                    o.id === String(cancelModalOrderId)
+                      ? { ...o, status: 'cancelled' }
+                      : o
+                  )
+                );
                 setCancelModalOrderId(null);
-                setPage(1); // reset page
-                setSubmittedQ((s) => s); // trigger useEffect load lại dữ liệu
               }}
             />
           )}

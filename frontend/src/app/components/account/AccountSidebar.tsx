@@ -18,6 +18,7 @@ import {
   Coins,
   BookOpen,
   HelpCircle,
+  Flag,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -57,6 +58,12 @@ const DEFAULT_ITEMS: AccountMenuItem[] = [
     label: 'Quản lý đơn hàng',
     icon: <ClipboardList className="h-4 w-4" />,
     to: '/account/orders',
+  },
+  {
+    key: 'subscriptions',
+    label: 'Quản lý gói đăng ký',
+    icon: <Flag className="h-4 w-4" />,
+    to: '/account/subscription',
   },
   {
     key: 'returns',
