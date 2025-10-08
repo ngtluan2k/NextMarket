@@ -14,6 +14,8 @@ import { Order } from '../orders/order.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { Store } from '../store/store.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
+import { AffiliateRegistration } from '../affiliate-registration/affiliate-registration.entity';
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -69,4 +71,7 @@ export class User {
 
   @OneToMany(() => ProductReview, (reviews) => reviews.user)
   reviews!: ProductReview[];
+
+  @OneToMany(() => AffiliateRegistration, (affiliate) => affiliate.user)
+  affiliateRegistrations!: AffiliateRegistration[];
 }

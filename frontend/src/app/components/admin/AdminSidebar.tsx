@@ -11,6 +11,7 @@ import {
   DollarOutlined,
   GiftOutlined,
   BarChartOutlined,
+  SignatureOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -110,11 +111,18 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       icon: <BarChartOutlined />,
       label: 'Báo cáo & thống kê',
     },
-    {
+
+        {
       key: '10',
       icon: <ShopOutlined />, // có thể chọn icon khác nếu muốn
       label: 'Quản lý cửa hàng',
       children: [{ key: '10-1', icon: dotIcon, label: 'Danh sách cửa hàng' }],
+    },
+        {
+      key: '11',
+      icon: <SignatureOutlined />, // có thể chọn icon khác nếu muốn
+      label: 'Quản lý Affiliate',
+      children: [{ key: '11-1', icon: dotIcon, label: 'Danh sách đơn đăng ký Affiliate' }],
     },
   ];
 
