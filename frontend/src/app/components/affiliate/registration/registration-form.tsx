@@ -70,50 +70,49 @@ export function RegistrationForm() {
     }
   };
 
-const handleSubmit = async (values: any) => {
-  if (selectedPlatforms.length === 0) {
-    message.error('Vui lòng chọn ít nhất một nền tảng');
-    return;
-  }
+  const handleSubmit = async (values: any) => {
+    if (selectedPlatforms.length === 0) {
+      message.error('Vui lòng chọn ít nhất một nền tảng');
+      return;
+    }
 
-  const token = localStorage.getItem('token');
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userId = userData?.id || userData?.user_id;
+    const token = localStorage.getItem('token');
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = userData?.id || userData?.user_id;
 
-  if (!token || !userId) {
-    message.error('Bạn cần đăng nhập trước khi đăng ký');
-    return;
-  }
+    if (!token || !userId) {
+      message.error('Bạn cần đăng nhập trước khi đăng ký');
+      return;
+    }
 
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
-  try {
-    const payload = {
-      userId,
-      uuid: uuidv4(),
-      description: values.intro,
-      status: 'PENDING',
-      platformIds: selectedPlatforms,
-      phone: values.phone,
-      email: values.email
-    };
+    try {
+      const payload = {
+        userId,
+        uuid: uuidv4(),
+        description: values.intro,
+        status: 'PENDING',
+        platformIds: selectedPlatforms,
+        phone: values.phone,
+        email: values.email,
+      };
 
-    await axios.post(
-      'http://localhost:3000/affiliate-registrations',
-      payload,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+      await axios.post(
+        'http://localhost:3000/affiliate-registrations',
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-    message.success('Đăng ký thành công');
-    setVerificationSent(true);
-  } catch (error) {
-    console.error(error);
-    message.error('Có lỗi khi gửi đăng ký');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
+      message.success('Đăng ký thành công');
+      setVerificationSent(true);
+    } catch (error) {
+      console.error(error);
+      message.error('Có lỗi khi gửi đăng ký');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (verificationSent) {
     return (

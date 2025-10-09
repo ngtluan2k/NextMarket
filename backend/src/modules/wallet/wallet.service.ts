@@ -9,11 +9,13 @@ import { WalletDto } from './dto/wallet.dto';
 export class WalletService {
   constructor(
     @InjectRepository(Wallet)
-    private walletRepo: Repository<Wallet>,
+    private walletRepo: Repository<Wallet>
   ) {}
 
   async getMyWallet(userId: number): Promise<WalletDto> {
-    const wallet = await this.walletRepo.findOne({ where: { user_id: userId } });
+    const wallet = await this.walletRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!wallet) throw new NotFoundException('Wallet not found');
     return {
       id: wallet.id,

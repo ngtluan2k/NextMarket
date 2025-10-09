@@ -17,7 +17,7 @@ export class OrderItem {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -47,6 +47,9 @@ export class OrderItem {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   subtotal?: number;
 
-  @OneToMany(() => AffiliateCommission, (commission) => commission.order_item_id)
+  @OneToMany(
+    () => AffiliateCommission,
+    (commission) => commission.order_item_id
+  )
   commissions!: AffiliateCommission[];
 }

@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { AffiliateCommissionsService } from './affiliate-commissions.service';
 import { CreateAffiliateCommissionDto } from './dto/create-affiliate-commission.dto';
 import { UpdateAffiliateCommissionDto } from './dto/update-affiliate-commission.dto';
@@ -23,7 +31,10 @@ export class AffiliateCommissionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDto: UpdateAffiliateCommissionDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateAffiliateCommissionDto
+  ) {
     return this.service.update(+id, updateDto);
   }
 

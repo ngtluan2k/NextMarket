@@ -38,9 +38,16 @@ export default function TestWallet() {
       <h2 className="text-lg font-semibold mb-2">Ví của tôi</h2>
       {wallet ? (
         <div className="space-y-1">
-          <p><strong>ID:</strong> {wallet.id}</p>
-          <p><strong>Số dư:</strong> {wallet.balance} {wallet.currency}</p>
-          <p><strong>Cập nhật:</strong> {new Date(wallet.updated_at).toLocaleString('vi-VN')}</p>
+          <p>
+            <strong>ID:</strong> {wallet.id}
+          </p>
+          <p>
+            <strong>Số dư:</strong> {wallet.balance} {wallet.currency}
+          </p>
+          <p>
+            <strong>Cập nhật:</strong>{' '}
+            {new Date(wallet.updated_at).toLocaleString('vi-VN')}
+          </p>
         </div>
       ) : (
         <p>Không tìm thấy ví</p>

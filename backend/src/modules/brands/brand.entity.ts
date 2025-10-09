@@ -6,7 +6,7 @@ export class Brand {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -19,7 +19,7 @@ export class Brand {
   @Column({ length: 255, nullable: true })
   logo_url!: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   created_at!: Date;
 
   @OneToMany(() => Product, (product) => product.brand)

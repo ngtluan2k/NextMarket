@@ -41,7 +41,6 @@ export class AffiliateLinksController {
     return this.service.findAll();
   }
 
-
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(+id);
@@ -62,16 +61,20 @@ export class AffiliateLinksController {
   @Post('create-link')
   async createAffiliateLink(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; variantId: number },
+    @Body() body: { productId: number; variantId: number }
   ) {
     const userId = req.user.userId;
-    return this.service.createAffiliateLink(userId, body.productId, body.variantId);
+    return this.service.createAffiliateLink(
+      userId,
+      body.productId,
+      body.variantId
+    );
   }
 
   @Get('my-links')
   async getMyLinks(@Request() req: AuthRequest) {
-    const userId = req.user.userId; 
-    console.log("user id current : "+ req.user.userId)
+    const userId = req.user.userId;
+    console.log('user id current : ' + req.user.userId);
     return this.service.getMyLinks(userId);
   }
 
@@ -82,10 +85,10 @@ export class AffiliateLinksController {
   }
 
   @Delete(':id')
-  @HttpCode(200) 
+  @HttpCode(200)
   async deleteMyLink(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req: AuthRequest,
+    @Request() req: AuthRequest
   ) {
     const userId = req.user.userId;
     return this.service.deleteMyLink(id, userId);

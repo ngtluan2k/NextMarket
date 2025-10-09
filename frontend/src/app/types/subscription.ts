@@ -31,7 +31,6 @@ export interface Subscription {
   };
 }
 
-
 export interface UseSubscriptionBody {
   subscriptionId: number;
   usedQuantity?: number;

@@ -8,7 +8,9 @@ import { InventoryTransactionService } from './inventory-transactions.service';
 import { InventoryTransactionController } from './inventory-transactions.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([InventoryTransaction, Variant, Inventory, User])],
+  imports: [
+    TypeOrmModule.forFeature([InventoryTransaction, Variant, Inventory, User]),
+  ],
   controllers: [InventoryTransactionController],
   providers: [InventoryTransactionService],
   exports: [InventoryTransactionService],

@@ -32,7 +32,8 @@ const AffiliateHeader = () => {
           Chào mừng trở lại, Olajide
         </h1>
         <p className="text-gray-600">
-          Đây là tổng quan về {getPageTitle().toLowerCase()} và doanh thu của bạn.
+          Đây là tổng quan về {getPageTitle().toLowerCase()} và doanh thu của
+          bạn.
         </p>
       </div>
 

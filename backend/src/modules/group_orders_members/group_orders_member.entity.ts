@@ -22,10 +22,10 @@ export class GroupOrderMember {
   @JoinColumn({ name: 'group_order_id' })
   group_order!: GroupOrder;
 
-  @Column({ type: 'tinyint', width: 1, default: () => '0' })
+  @Column({ type: 'integer', width: 1, default: () => '0' })
   is_host!: boolean;
 
-  @CreateDateColumn({ type: 'datetime' })
+  @CreateDateColumn({ type: 'timestamp' })
   joined_at!: Date;
 
   @Column({
@@ -38,8 +38,9 @@ export class GroupOrderMember {
   @OneToMany(() => GroupOrderItem, (i) => i.member)
   items!: GroupOrderItem[];
 
-  @ManyToOne(() => User, (user) => user.group_order_members, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.group_order_members, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user!: User;
-
 }

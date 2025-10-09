@@ -1,12 +1,12 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    ManyToOne,
-    OneToMany,
-    JoinColumn,
-    CreateDateColumn,
-    Generated,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+  Generated,
 } from 'typeorm';
 import { Store } from '../store/store.entity';
 import { User } from '../user/user.entity';
@@ -14,55 +14,55 @@ import { GroupOrderMember } from '../group_orders_members/group_orders_member.en
 import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { Order } from '../orders/order.entity';
 
-
 export type GroupOrderStatus = 'open' | 'locked' | 'completed' | 'cancelled';
 
 @Entity('group_orders')
 export class GroupOrder {
-    @PrimaryGeneratedColumn()
-    id!: number;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-    @Column({ type: 'char', length: 36, unique: true })
-    @Generated('uuid')
-    uuid!: string;
-    
-    @Column({ type: 'varchar', length: 100, nullable: false })
-    name!: string;
+  @Column({ type: 'char', unique: true })
+  @Generated('uuid')
+  uuid!: string;
 
-    @Column({ type: 'varchar', length: 12, nullable: true, unique: true })
-    join_code!: string | null;
+  @Column({ type: 'varchar', length: 100, nullable: false })
+  name!: string;
 
-    @Column({ type: 'varchar', length: 255, nullable: true })
-    invite_link!: string | null;
+  @Column({ type: 'varchar', length: 12, nullable: true, unique: true })
+  join_code!: string | null;
 
-    @Column({
-        type: 'enum',
-        enum: ['open', 'locked', 'completed', 'cancelled'],
-        default: 'open',
-    })
-    status!: GroupOrderStatus;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  invite_link!: string | null;
 
-    @Column({ type: 'datetime', nullable: true })
-    expires_at!: Date | null;
+  @Column({
+    type: 'enum',
+    enum: ['open', 'locked', 'completed', 'cancelled'],
+    default: 'open',
+  })
+  status!: GroupOrderStatus;
 
-    @CreateDateColumn({ type: 'datetime' })
-    created_at!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  expires_at!: Date | null;
 
-    @OneToMany(() => GroupOrderMember, (m) => m.group_order)
-    members!: GroupOrderMember[];
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at!: Date;
 
-    @OneToMany(() => GroupOrderItem, (item) => item.group_order)
-    items!: GroupOrderItem[];
+  @OneToMany(() => GroupOrderMember, (m) => m.group_order)
+  members!: GroupOrderMember[];
 
-    @ManyToOne(() => Store, (store) => store.group_orders, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'store_id' })
-    store!: Store;
+  @OneToMany(() => GroupOrderItem, (item) => item.group_order)
+  items!: GroupOrderItem[];
 
-    @ManyToOne(() => User, (user) => user.group_orders, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'host_user_id' })
-    user!: User;
+  @ManyToOne(() => Store, (store) => store.group_orders, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'store_id' })
+  store!: Store;
 
-    @OneToMany(() => Order, (o) => o.group_order)
-    orders!: Order[];
+  @ManyToOne(() => User, (user) => user.group_orders, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'host_user_id' })
+  user!: User;
 
+  @OneToMany(() => Order, (o) => o.group_order)
+  orders!: Order[];
 }

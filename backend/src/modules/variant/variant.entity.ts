@@ -22,7 +22,7 @@ export class Variant {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -64,9 +64,9 @@ export class Variant {
   orderItems!: OrderItem[];
   @OneToMany(() => Subscription, (sub) => sub.variant)
   subscriptions!: Subscription[];
-  @OneToMany(() =>  PricingRules, (rule) => rule.variant)
+  @OneToMany(() => PricingRules, (rule) => rule.variant)
   variant!: Variant;
-  
+
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.variant)
   inventoryTransactions!: InventoryTransaction[];
 }

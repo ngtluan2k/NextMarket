@@ -1,38 +1,38 @@
-import { ShoppingBag, User } from "lucide-react"
-import { Button, Dropdown, MenuProps, message } from "antd"
-import { useEffect, useState } from "react"
+import { ShoppingBag, User } from 'lucide-react';
+import { Button, Dropdown, MenuProps, message } from 'antd';
+import { useEffect, useState } from 'react';
 
 export function RegistrationHeader() {
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem("user")
+    const userData = localStorage.getItem('user');
     if (userData) {
       try {
-        setCurrentUser(JSON.parse(userData))
+        setCurrentUser(JSON.parse(userData));
       } catch {
-        console.error("Không thể parse user từ localStorage")
+        console.error('Không thể parse user từ localStorage');
       }
     }
-  }, [])
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("user")
-    localStorage.removeItem("token")
-    message.success("Đã đăng xuất")
-    window.location.href = "/login" // hoặc redirect về trang chủ
-  }
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    message.success('Đã đăng xuất');
+    window.location.href = '/login'; // hoặc redirect về trang chủ
+  };
 
-  const menuItems: MenuProps["items"] = [
+  const menuItems: MenuProps['items'] = [
     {
-      key: "dashboard",
+      key: 'dashboard',
       label: <a href="/dashboard">Trang cá nhân</a>,
     },
     {
-      key: "logout",
+      key: 'logout',
       label: <span onClick={handleLogout}>Đăng xuất</span>,
     },
-  ]
+  ];
 
   return (
     <header className="border-b bg-white shadow-sm">
@@ -47,7 +47,9 @@ export function RegistrationHeader() {
               <h1 className="text-xl font-bold text-orange-500">
                 CHƯƠNG TRÌNH AFFILIATES
               </h1>
-              <p className="text-xs text-gray-600 font-medium">Tiếp thị liên kết</p>
+              <p className="text-xs text-gray-600 font-medium">
+                Tiếp thị liên kết
+              </p>
             </div>
           </a>
 
@@ -77,5 +79,5 @@ export function RegistrationHeader() {
         </div>
       </div>
     </header>
-  )
+  );
 }

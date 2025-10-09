@@ -26,7 +26,7 @@ export class Order {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -45,7 +45,7 @@ export class Order {
   userAddress!: UserAddress;
 
   @Column({
-    type: 'tinyint',
+    type: 'integer',
     default: OrderStatuses.pending,
   })
   status!: OrderStatuses;
@@ -119,5 +119,4 @@ export class Order {
   @ManyToOne(() => GroupOrder, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'group_order_id' })
   group_order!: GroupOrder | null;
-
 }

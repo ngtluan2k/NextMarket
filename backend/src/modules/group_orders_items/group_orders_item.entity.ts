@@ -10,7 +10,6 @@ import { GroupOrder } from '../group_orders/group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { Product } from '../product/product.entity';
 
-
 @Entity('group_order_items')
 export class GroupOrderItem {
   @PrimaryGeneratedColumn()
@@ -33,12 +32,10 @@ export class GroupOrderItem {
   @Column({ type: 'varchar', length: 255, nullable: true })
   note!: string | null;
 
-  @CreateDateColumn({ type: 'datetime' })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 
   @ManyToOne(() => Product, (p) => p.group_order_items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
-
-
 }

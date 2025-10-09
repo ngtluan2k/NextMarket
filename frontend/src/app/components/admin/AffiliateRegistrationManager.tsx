@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Table,
   Button,
@@ -10,14 +10,14 @@ import {
   Col,
   Statistic,
   message,
-} from "antd";
+} from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   EyeOutlined,
   ExclamationCircleOutlined,
-} from "@ant-design/icons";
-import axios from "axios";
+} from '@ant-design/icons';
+import axios from 'axios';
 
 interface AffiliateRegistration {
   createdAt: string | number | Date;
@@ -27,21 +27,23 @@ interface AffiliateRegistration {
   user_email: string;
   phone: string;
   registered_at: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 const AffiliateRegistrationManager: React.FC = () => {
-  const [registrations, setRegistrations] = useState<AffiliateRegistration[]>([]);
+  const [registrations, setRegistrations] = useState<AffiliateRegistration[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
   const [viewingRegistration, setViewingRegistration] =
     useState<AffiliateRegistration | null>(null);
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem('token');
 
   const apiClient = axios.create({
-    baseURL: "http://localhost:3000", // chỉnh lại theo BE thật
+    baseURL: 'http://localhost:3000', // chỉnh lại theo BE thật
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
   });
 
@@ -52,11 +54,11 @@ const AffiliateRegistrationManager: React.FC = () => {
   const fetchRegistrations = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get("/affiliate-registrations");
+      const res = await apiClient.get('/affiliate-registrations');
       const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setRegistrations(data);
     } catch (err: any) {
-      message.error("Không thể tải danh sách đăng ký Affiliate");
+      message.error('Không thể tải danh sách đăng ký Affiliate');
       setRegistrations([]);
     } finally {
       setLoading(false);
@@ -65,18 +67,18 @@ const AffiliateRegistrationManager: React.FC = () => {
 
   const handleApprove = async (id: number) => {
     Modal.confirm({
-      title: "Phê duyệt đăng ký",
-      icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
-      content: "Bạn có chắc chắn muốn phê duyệt đăng ký này?",
-      okText: "Phê duyệt",
-      cancelText: "Hủy",
+      title: 'Phê duyệt đăng ký',
+      icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+      content: 'Bạn có chắc chắn muốn phê duyệt đăng ký này?',
+      okText: 'Phê duyệt',
+      cancelText: 'Hủy',
       onOk: async () => {
         try {
           await apiClient.patch(`/affiliate-registrations/${id}/approve`);
-          message.success("Đã phê duyệt thành công");
+          message.success('Đã phê duyệt thành công');
           await fetchRegistrations();
         } catch {
-          message.error("Phê duyệt thất bại");
+          message.error('Phê duyệt thất bại');
         }
       },
     });
@@ -84,19 +86,19 @@ const AffiliateRegistrationManager: React.FC = () => {
 
   const handleReject = async (id: number) => {
     Modal.confirm({
-      title: "Từ chối đăng ký",
-      icon: <CloseCircleOutlined style={{ color: "#f5222d" }} />,
-      content: "Bạn có chắc chắn muốn từ chối đăng ký này?",
-      okText: "Từ chối",
-      okType: "danger",
-      cancelText: "Hủy",
+      title: 'Từ chối đăng ký',
+      icon: <CloseCircleOutlined style={{ color: '#f5222d' }} />,
+      content: 'Bạn có chắc chắn muốn từ chối đăng ký này?',
+      okText: 'Từ chối',
+      okType: 'danger',
+      cancelText: 'Hủy',
       onOk: async () => {
         try {
           await apiClient.patch(`/affiliate-registrations/${id}/reject`);
-          message.success("Đã từ chối thành công");
+          message.success('Đã từ chối thành công');
           await fetchRegistrations();
         } catch {
-          message.error("Từ chối thất bại");
+          message.error('Từ chối thất bại');
         }
       },
     });
@@ -104,9 +106,9 @@ const AffiliateRegistrationManager: React.FC = () => {
 
   const getStatusTag = (status: string) => {
     switch (status) {
-      case "APPROVED":
+      case 'APPROVED':
         return <Tag color="green">Đã duyệt</Tag>;
-      case "REJECTED":
+      case 'REJECTED':
         return <Tag color="red">Từ chối</Tag>;
       default:
         return <Tag color="orange">Chờ duyệt</Tag>;
@@ -115,50 +117,50 @@ const AffiliateRegistrationManager: React.FC = () => {
 
   const columns = [
     {
-      title: "Tên người đăng ký",
-      dataIndex: "user_full_name",
-      key: "user_full_name",
+      title: 'Tên người đăng ký',
+      dataIndex: 'user_full_name',
+      key: 'user_full_name',
       width: 180,
     },
     {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
       width: 200,
     },
     {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      key: "phone",
+      title: 'Số điện thoại',
+      dataIndex: 'phone',
+      key: 'phone',
       width: 140,
     },
     {
-      title: "Ngày đăng ký",
-      dataIndex: "createdAt",
-      key: "createdAt",
+      title: 'Ngày đăng ký',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       width: 150,
       render: (date: string) =>
-        date ? new Date(date).toLocaleDateString("vi-VN") : "N/A",
+        date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A',
     },
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
       width: 120,
       render: (status: string) => getStatusTag(status),
     },
     {
-      title: "Thao tác",
-      key: "actions",
+      title: 'Thao tác',
+      key: 'actions',
       width: 160,
-      fixed: "right" as const,
+      fixed: 'right' as const,
       render: (record: AffiliateRegistration) => (
         <Space size="small">
           <Button
             icon={<EyeOutlined />}
             onClick={() => setViewingRegistration(record)}
           />
-          {record.status === "PENDING" && (
+          {record.status === 'PENDING' && (
             <>
               <Button
                 icon={<CheckCircleOutlined />}
@@ -185,9 +187,9 @@ const AffiliateRegistrationManager: React.FC = () => {
 
   // ==== Thống kê ====
   const total = registrations.length;
-  const approved = registrations.filter((r) => r.status === "APPROVED").length;
-  const rejected = registrations.filter((r) => r.status === "REJECTED").length;
-  const pending = registrations.filter((r) => r.status === "PENDING").length;
+  const approved = registrations.filter((r) => r.status === 'APPROVED').length;
+  const rejected = registrations.filter((r) => r.status === 'REJECTED').length;
+  const pending = registrations.filter((r) => r.status === 'PENDING').length;
 
   return (
     <div className="h-full overflow-hidden">
@@ -205,7 +207,7 @@ const AffiliateRegistrationManager: React.FC = () => {
             <Statistic
               title="Tổng số đăng ký"
               value={total}
-              valueStyle={{ color: "#1677ff" }}
+              valueStyle={{ color: '#1677ff' }}
             />
           </Card>
         </Col>
@@ -214,8 +216,8 @@ const AffiliateRegistrationManager: React.FC = () => {
             <Statistic
               title="Đã phê duyệt"
               value={approved}
-              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-              valueStyle={{ color: "#52c41a" }}
+              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
@@ -224,8 +226,8 @@ const AffiliateRegistrationManager: React.FC = () => {
             <Statistic
               title="Đã từ chối"
               value={rejected}
-              prefix={<CloseCircleOutlined style={{ color: "#f5222d" }} />}
-              valueStyle={{ color: "#f5222d" }}
+              prefix={<CloseCircleOutlined style={{ color: '#f5222d' }} />}
+              valueStyle={{ color: '#f5222d' }}
             />
           </Card>
         </Col>
@@ -234,15 +236,17 @@ const AffiliateRegistrationManager: React.FC = () => {
             <Statistic
               title="Chờ duyệt"
               value={pending}
-              prefix={<ExclamationCircleOutlined style={{ color: "#faad14" }} />}
-              valueStyle={{ color: "#faad14" }}
+              prefix={
+                <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+              }
+              valueStyle={{ color: '#faad14' }}
             />
           </Card>
         </Col>
       </Row>
 
       {/* Table */}
-      <Card size="small" bodyStyle={{ padding: "12px" }}>
+      <Card size="small" bodyStyle={{ padding: '12px' }}>
         <Table
           dataSource={registrations}
           columns={columns}
@@ -252,7 +256,7 @@ const AffiliateRegistrationManager: React.FC = () => {
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
-            pageSizeOptions: ["10", "20", "50"],
+            pageSizeOptions: ['10', '20', '50'],
           }}
         />
       </Card>
@@ -277,13 +281,13 @@ const AffiliateRegistrationManager: React.FC = () => {
               <strong>Điện thoại:</strong> {viewingRegistration.phone}
             </p>
             <p>
-              <strong>Ngày đăng ký:</strong>{" "}
-              {new Date(
-                viewingRegistration.createdAt
-              ).toLocaleDateString("vi-VN")}
+              <strong>Ngày đăng ký:</strong>{' '}
+              {new Date(viewingRegistration.createdAt).toLocaleDateString(
+                'vi-VN'
+              )}
             </p>
             <p>
-              <strong>Trạng thái:</strong>{" "}
+              <strong>Trạng thái:</strong>{' '}
               {getStatusTag(viewingRegistration.status)}
             </p>
           </div>

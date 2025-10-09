@@ -8,7 +8,10 @@ import { Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 import { API_BASE_URL } from '../../api/api';
 import { Users } from 'lucide-react';
+<<<<<<< HEAD
 import { Rate } from "antd";
+=======
+>>>>>>> b3c4735f2eaac85034d25157281a0649534ab224
 import { log } from 'console';
 import { StarFilled } from '@ant-design/icons';
 

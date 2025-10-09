@@ -17,7 +17,7 @@ export class Inventory {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -44,7 +44,7 @@ export class Inventory {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt!: Date;
-  
+
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.inventory)
   transactions!: InventoryTransaction[];
 }

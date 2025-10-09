@@ -55,8 +55,12 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
-const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_price ?? 0);
-  const [selectedType, setSelectedType] = useState<'bulk' | 'subscription' | undefined>(undefined);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(
+    product?.base_price ?? 0
+  );
+  const [selectedType, setSelectedType] = useState<
+    'bulk' | 'subscription' | undefined
+  >(undefined);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewPage, setReviewPage] = useState(1);
@@ -134,14 +138,15 @@ useEffect(() => {
     }
   }, [selectedVariantId, slug]);
 
-useEffect(() => {
-  if (!product) return;
-  setQuantity(1); // mỗi lần product load lại
-}, [product]);
+  useEffect(() => {
+    if (!product) return;
+    setQuantity(1); // mỗi lần product load lại
+  }, [product]);
 
-
-const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
-
+  const totalPrice = useMemo(
+    () => calculatedPrice * quantity,
+    [calculatedPrice, quantity]
+  );
 
   const galleryData = useMemo(() => {
     if (!product || !product.variants) {
@@ -254,9 +259,7 @@ const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, q
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
             <Suspense fallback={<div>Loading reviews...</div>}>
-              <LazyProductReviews
-                productId={product.id}
-              />
+              <LazyProductReviews productId={product.id} />
             </Suspense>
           </div>
 

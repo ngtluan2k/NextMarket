@@ -4,7 +4,10 @@ import { Repository } from 'typeorm';
 import { Payment, PaymentStatus } from '../payment.entity';
 import { Order } from '../../orders/order.entity';
 import { PaymentMethod } from '../../payment-methods/payment-method.entity';
-import { OrderStatusHistory, historyStatus } from '../../order-status-history/order-status-history.entity';
+import {
+  OrderStatusHistory,
+  historyStatus,
+} from '../../order-status-history/order-status-history.entity';
 
 @Injectable()
 export class EveryCoinStrategy {

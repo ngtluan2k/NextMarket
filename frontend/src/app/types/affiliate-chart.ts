@@ -1,4 +1,3 @@
-
 export const chartData = [
   { month: 'Tháng 1', conversions: 45 },
   { month: 'Tháng 2', conversions: 52 },
@@ -24,7 +23,6 @@ export const chartConfig = {
     },
   },
 };
-
 
 export interface AffiliateStat {
   date: string;

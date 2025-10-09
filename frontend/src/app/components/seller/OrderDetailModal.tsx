@@ -57,7 +57,7 @@ export interface Payment {
   paidAt?: string | null;
   provider?: string | null;
   rawPayload?: string | null;
-  status: string; 
+  status: string;
   transactionId?: string | null;
   uuid: string;
 }
@@ -104,7 +104,6 @@ export interface Sale {
   notes?: string;
 }
 
-
 const orderStatusMap: Record<number, string> = {
   0: 'Đang Chờ Xác Nhận',
   1: 'Đã Xác Nhận',
@@ -115,42 +114,65 @@ const orderStatusMap: Record<number, string> = {
   6: 'Đã Hủy',
   7: 'Trả Hàng',
 };
-const getStatusText = (s: number | string) => orderStatusMap[Number(s)] || 'Không Xác Định';
+const getStatusText = (s: number | string) =>
+  orderStatusMap[Number(s)] || 'Không Xác Định';
 const getStatusColor = (s: number | string) => {
   switch (Number(s)) {
-    case 0: return 'orange';
-    case 1: return 'blue';
-    case 2: return 'cyan';
-    case 3: return 'purple';
+    case 0:
+      return 'orange';
+    case 1:
+      return 'blue';
+    case 2:
+      return 'cyan';
+    case 3:
+      return 'purple';
     case 4:
-    case 5: return 'green';
-    case 6: return 'red';
-    case 7: return 'magenta';
-    default: return 'default';
+    case 5:
+      return 'green';
+    case 6:
+      return 'red';
+    case 7:
+      return 'magenta';
+    default:
+      return 'default';
   }
 };
 const getPaymentStatusText = (s: number | string) => {
   switch (Number(s)) {
-    case 0: return 'Chưa thanh toán';
-    case 1: return 'Đã thanh toán';
-    case 2: return 'Thất bại';
-    case 3: return 'Hoàn tiền';
-    default: return 'Không rõ';
+    case 0:
+      return 'Chưa thanh toán';
+    case 1:
+      return 'Đã thanh toán';
+    case 2:
+      return 'Thất bại';
+    case 3:
+      return 'Hoàn tiền';
+    default:
+      return 'Không rõ';
   }
 };
 const getPaymentStatusColor = (s: number | string) => {
   switch (Number(s)) {
-    case 0: return 'orange';
-    case 1: return 'green';
-    case 2: return 'red';
-    case 3: return 'purple';
-    default: return 'default';
+    case 0:
+      return 'orange';
+    case 1:
+      return 'green';
+    case 2:
+      return 'red';
+    case 3:
+      return 'purple';
+    default:
+      return 'default';
   }
 };
 function formatVND(n: string | number) {
   const v = typeof n === 'string' ? parseFloat(n) : n;
   if (Number.isNaN(v)) return '₫0';
-  return v.toLocaleString('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
+  return v.toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  });
 }
 // tránh hiển thị -0 ₫
 function fmtDiscount(n: number) {
@@ -182,11 +204,7 @@ const itemColumns: ColumnsType<ProductItem> = [
   {
     title: 'SKU / Biến thể',
     key: 'variant',
-    render: (_, item) => (
-      <span>
-        {item.variant?.sku || '—'}
-      </span>
-    ),
+    render: (_, item) => <span>{item.variant?.sku || '—'}</span>,
   },
   {
     title: 'Đơn giá',
@@ -233,13 +251,18 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
       width={840}
       title={
         sale ? (
-          <div className="flex items-center justify-between gap-2" style={{ paddingRight: 24 }}>
+          <div
+            className="flex items-center justify-between gap-2"
+            style={{ paddingRight: 24 }}
+          >
             <span>
               Chi tiết đơn hàng:&nbsp;<b>{sale.orderNumber}</b>&nbsp;
               <Text type="secondary">#{sale.id}</Text>
             </span>
             <Space size={6}>
-              <Tag color={getStatusColor(sale.status)}>{getStatusText(sale.status)}</Tag>
+              <Tag color={getStatusColor(sale.status)}>
+                {getStatusText(sale.status)}
+              </Tag>
               <Tag color={getPaymentStatusColor(payment?.status ?? '0')}>
                 {getPaymentStatusText(payment?.status ?? '0')}
               </Tag>
@@ -272,8 +295,12 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
                 Khách hàng
               </Title>
               <Descriptions size="small" column={1} bordered>
-                <Descriptions.Item label="Tên">{sale.user?.username || '—'}</Descriptions.Item>
-                <Descriptions.Item label="Email">{sale.user?.email || '—'}</Descriptions.Item>
+                <Descriptions.Item label="Tên">
+                  {sale.user?.username || '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {sale.user?.email || '—'}
+                </Descriptions.Item>
                 <Descriptions.Item label="Ngày tạo">
                   {new Date(sale.createdAt).toLocaleString('vi-VN')}
                 </Descriptions.Item>
@@ -292,7 +319,9 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
                   <Descriptions.Item label="Người nhận">
                     {sale.userAddress.recipientName}
                   </Descriptions.Item>
-                  <Descriptions.Item label="SĐT">{sale.userAddress.phone}</Descriptions.Item>
+                  <Descriptions.Item label="SĐT">
+                    {sale.userAddress.phone}
+                  </Descriptions.Item>
                   <Descriptions.Item label="Địa chỉ">
                     {`${sale.userAddress.street}, ${sale.userAddress.ward}, ${
                       sale.userAddress.district || ''
@@ -302,7 +331,9 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
                   </Descriptions.Item>
                   <Descriptions.Item label="Tỉnh/TP - Quốc gia">
                     {sale.userAddress.province}, {sale.userAddress.country}{' '}
-                    {sale.userAddress.postalCode ? `(${sale.userAddress.postalCode})` : ''}
+                    {sale.userAddress.postalCode
+                      ? `(${sale.userAddress.postalCode})`
+                      : ''}
                   </Descriptions.Item>
                 </Descriptions>
               ) : (
@@ -332,7 +363,12 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
               {/* Căn tiêu đề sát mép phải */}
               <Title
                 level={5}
-                style={{ margin: 0, marginBottom: 6, display: 'flex', justifyContent: 'flex-end' }}
+                style={{
+                  margin: 0,
+                  marginBottom: 6,
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                }}
               >
                 Tổng kết
               </Title>
@@ -384,7 +420,9 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
                   {payment?.provider || '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày tạo TT">
-                  {payment ? new Date(payment.createdAt).toLocaleString('vi-VN') : '—'}
+                  {payment
+                    ? new Date(payment.createdAt).toLocaleString('vi-VN')
+                    : '—'}
                 </Descriptions.Item>
               </Descriptions>
             </Col>
@@ -397,7 +435,10 @@ const OrderDetailModal: React.FC<Props> = ({ sale, open, onClose, onEdit }) => {
                 className="prose max-w-none"
                 dangerouslySetInnerHTML={{
                   __html: sale.notes?.trim()
-                    ? sale.notes.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')
+                    ? sale.notes
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/\n/g, '<br/>')
                     : '<span style="color:#999">Không có ghi chú</span>',
                 }}
               />

@@ -3,16 +3,14 @@ export interface CreateAffiliateLinkPayload {
   variantId?: number;
 }
 
-
 export interface AffiliateLink {
   link_id: number;
   productId: number;
   variantId: number;
   affiliate_links: string;
   program_name: string;
-  created_at: string; 
+  created_at: string;
 }
-
 
 export interface AffiliateProduct {
   id: number;
@@ -21,15 +19,12 @@ export interface AffiliateProduct {
   thumbnail: string;
 }
 
-
 export interface AffiliateCommission {
   id: number;
   amount: number;
   status: 'pending' | 'approved' | 'paid' | 'canceled';
   created_at: string;
-  
 }
-
 
 export type MyLink = {
   link_id: number;
@@ -76,6 +71,4 @@ export type Program = {
   status?: string;
 };
 
-export type ProgramsResponse =
-  | { data?: Program[] }
-  | Program[];
+export type ProgramsResponse = { data?: Program[] } | Program[];

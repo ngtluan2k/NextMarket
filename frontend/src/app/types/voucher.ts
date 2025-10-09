@@ -242,12 +242,13 @@ export const isVoucherActive = (voucher: Voucher): boolean => {
   const now = new Date();
   const startDate = new Date(voucher.start_date);
   const endDate = new Date(voucher.end_date);
-  
+
   return (
     voucher.status === VoucherStatus.ACTIVE &&
     now >= startDate &&
     now <= endDate &&
-    (!voucher.total_usage_limit || voucher.total_used_count < voucher.total_usage_limit)
+    (!voucher.total_usage_limit ||
+      voucher.total_used_count < voucher.total_usage_limit)
   );
 };
 
@@ -262,6 +263,7 @@ export const isVoucherExpired = (voucher: Voucher): boolean => {
 export const isVoucherDepleted = (voucher: Voucher): boolean => {
   return (
     voucher.status === VoucherStatus.DEPLETED ||
-    (!!voucher.total_usage_limit && voucher.total_used_count >= voucher.total_usage_limit)
+    (!!voucher.total_usage_limit &&
+      voucher.total_used_count >= voucher.total_usage_limit)
   );
 };

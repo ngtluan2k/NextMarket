@@ -28,7 +28,7 @@ export class Store {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -70,13 +70,13 @@ export class Store {
   @Column({ type: 'boolean', default: false })
   is_deleted!: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   deleted_at!: Date | null;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @UpdateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
@@ -125,5 +125,4 @@ export class Store {
   vouchers?: Voucher[];
   @OneToMany(() => GroupOrder, (groupOrder) => groupOrder.store)
   group_orders!: GroupOrder[];
-
 }

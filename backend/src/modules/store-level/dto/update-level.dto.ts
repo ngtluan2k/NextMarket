@@ -3,10 +3,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { StoreLevelEnum } from '../../store-level/store-level.enum';
 
 export class UpdateLevelDto {
-  @ApiPropertyOptional({ 
-    description: 'Cấp độ store', 
+  @ApiPropertyOptional({
+    description: 'Cấp độ store',
     enum: StoreLevelEnum,
-    example: StoreLevelEnum.BASIC  
+    example: StoreLevelEnum.BASIC,
   })
   @IsOptional()
   @IsEnum(StoreLevelEnum)

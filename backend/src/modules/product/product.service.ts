@@ -581,7 +581,7 @@ if (Array.isArray(dto.pricing_rules)) {
 
     return similarProducts;
   }
-  
+
   async findById(id: number) {
     const product = await this.productRepo
       .createQueryBuilder('product')
@@ -595,7 +595,7 @@ if (Array.isArray(dto.pricing_rules)) {
       .leftJoinAndSelect('product.store', 'store')
       .where('product.id = :id', { id })
       .getOne();
-  
+
     if (!product) {
       throw new NotFoundException('Product not found');
     }

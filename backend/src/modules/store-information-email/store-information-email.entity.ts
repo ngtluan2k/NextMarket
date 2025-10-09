@@ -21,14 +21,14 @@ export class StoreInformationEmail {
   @Column({ length: 100, unique: true })
   email!: string;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
   // @Column({ type: 'boolean', default: false })
   // is_draft!: boolean;
 
   @Column({
-    type: 'datetime',
+    type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
     onUpdate: 'CURRENT_TIMESTAMP',
   })

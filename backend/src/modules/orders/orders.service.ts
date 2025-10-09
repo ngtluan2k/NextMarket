@@ -26,7 +26,7 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { Wallet } from '../wallet/wallet.entity';
 import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
 import { OrderStatuses } from './types/orders';
-import {OrderFilters}  from './types/orders'
+import { OrderFilters } from './types/orders';
 @Injectable()
 export class OrdersService {
   constructor(
@@ -516,8 +516,6 @@ export class OrdersService {
     return updatedOrder;
   }
 
-  
-
   async getRevenue(): Promise<number> {
     const { sum } = await this.ordersRepository
       .createQueryBuilder('order')
@@ -572,21 +570,23 @@ export class OrdersService {
       })),
     };
   }
-  
 
   async getStoreRevenue(storeId: number): Promise<number> {
-  const { sum } = await this.ordersRepository
-    .createQueryBuilder('order')
-    .select('SUM(order.totalAmount)', 'sum')
-    .where('order.store_id = :storeId', { storeId })
-    .andWhere('order.status = :status', { status: OrderStatuses.completed })
-    .getRawOne();
+    const { sum } = await this.ordersRepository
+      .createQueryBuilder('order')
+      .select('SUM(order.totalAmount)', 'sum')
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status = :status', { status: OrderStatuses.completed })
+      .getRawOne();
 
-  return Number(sum ?? 0);
-}
+    return Number(sum ?? 0);
+  }
 
   // Mở rộng findByStore để hỗ trợ filters và pagination
-  async findByStore(storeId: number, filters: OrderFilters = {}): Promise<Order[]> {
+  async findByStore(
+    storeId: number,
+    filters: OrderFilters = {}
+  ): Promise<Order[]> {
     let query = this.ordersRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.user', 'user')
@@ -597,25 +597,37 @@ export class OrdersService {
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
       .leftJoinAndSelect('order.payment', 'payment')
-      .leftJoinAndSelect('product.reviews', 'reviews', 'reviews.order_id = order.id')
+      .leftJoinAndSelect(
+        'product.reviews',
+        'reviews',
+        'reviews.order_id = order.id'
+      )
       .where('order.store_id = :storeId', { storeId });
 
     // Filter by status
     if (filters.status) {
-      query = query.andWhere('order.status = :status', { status: Number(filters.status) });
+      query = query.andWhere('order.status = :status', {
+        status: Number(filters.status),
+      });
     }
 
     // Filter by payment status
     if (filters.paymentStatus) {
-      query = query.andWhere('payment.status = :paymentStatus', { paymentStatus: Number(filters.paymentStatus) });
+      query = query.andWhere('payment.status = :paymentStatus', {
+        paymentStatus: Number(filters.paymentStatus),
+      });
     }
 
     // Filter by date range
     if (filters.fromDate) {
-      query = query.andWhere('order.createdAt >= :fromDate', { fromDate: filters.fromDate });
+      query = query.andWhere('order.createdAt >= :fromDate', {
+        fromDate: filters.fromDate,
+      });
     }
     if (filters.toDate) {
-      query = query.andWhere('order.createdAt <= :toDate', { toDate: filters.toDate });
+      query = query.andWhere('order.createdAt <= :toDate', {
+        toDate: filters.toDate,
+      });
     }
 
     // Search by customer name, email, or order ID
@@ -640,90 +652,106 @@ export class OrdersService {
   }
 
   // Đếm số lượng orders của store (cho pagination)
-  async countOrdersByStore(storeId: number, filters: OrderFilters = {}): Promise<number> {
-  let query = this.ordersRepository
-    .createQueryBuilder('order')
-    .leftJoin('order.user', 'user')
-    .leftJoin('order.userAddress', 'userAddress')
-    .leftJoin('order.payment', 'payment')
-    .where('order.store_id = :storeId', { storeId });
+  async countOrdersByStore(
+    storeId: number,
+    filters: OrderFilters = {}
+  ): Promise<number> {
+    let query = this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoin('order.user', 'user')
+      .leftJoin('order.userAddress', 'userAddress')
+      .leftJoin('order.payment', 'payment')
+      .where('order.store_id = :storeId', { storeId });
 
-  if (filters.status) {
-    query = query.andWhere('order.status = :status', { status: filters.status });
-  }
-  if (filters.paymentStatus) {
-    query = query.andWhere('payment.status = :paymentStatus', { paymentStatus: filters.paymentStatus });
-  }
-  if (filters.fromDate) {
-    query = query.andWhere('order.createdAt >= :fromDate', { fromDate: filters.fromDate });
-  }
-  if (filters.toDate) {
-    query = query.andWhere('order.createdAt <= :toDate', { toDate: filters.toDate });
-  }
-  if (filters.search) {
-    const searchOperator = process.env.DB_TYPE === 'postgres' ? 'ILIKE' : 'LIKE';
-    query = query.andWhere(
-      `(
+    if (filters.status) {
+      query = query.andWhere('order.status = :status', {
+        status: filters.status,
+      });
+    }
+    if (filters.paymentStatus) {
+      query = query.andWhere('payment.status = :paymentStatus', {
+        paymentStatus: filters.paymentStatus,
+      });
+    }
+    if (filters.fromDate) {
+      query = query.andWhere('order.createdAt >= :fromDate', {
+        fromDate: filters.fromDate,
+      });
+    }
+    if (filters.toDate) {
+      query = query.andWhere('order.createdAt <= :toDate', {
+        toDate: filters.toDate,
+      });
+    }
+    if (filters.search) {
+      const searchOperator =
+        process.env.DB_TYPE === 'postgres' ? 'ILIKE' : 'LIKE';
+      query = query.andWhere(
+        `(
         userAddress.recipientName ${searchOperator} :search OR
         user.username ${searchOperator} :search OR
         user.email ${searchOperator} :search OR
         CAST(order.id AS CHAR) ${searchOperator} :search
       )`,
-      { search: `%${filters.search}%` }
-    );
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    return query.getCount();
   }
-
-  return query.getCount();
-}
-
 
   // Thống kê cho store (cho cards trong Sale.tsx)
   async getStoreStats(storeId: number): Promise<{
-  totalOrders: number;
-  completed: number;
-  pending: number;
-  totalRevenue: number;
-}> {
-  const totalOrders = await this.ordersRepository
-    .createQueryBuilder('order')
-    .where('order.store_id = :storeId', { storeId })
-    .getCount();
+    totalOrders: number;
+    completed: number;
+    pending: number;
+    totalRevenue: number;
+  }> {
+    const totalOrders = await this.ordersRepository
+      .createQueryBuilder('order')
+      .where('order.store_id = :storeId', { storeId })
+      .getCount();
 
-  const completed = await this.ordersRepository
-    .createQueryBuilder('order')
-    .where('order.store_id = :storeId', { storeId })
-    .andWhere('order.status = :status', { status: OrderStatuses.completed })
-    .getCount();
+    const completed = await this.ordersRepository
+      .createQueryBuilder('order')
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status = :status', { status: OrderStatuses.completed })
+      .getCount();
 
-  const pending = await this.ordersRepository
-    .createQueryBuilder('order')
-    .where('order.store_id = :storeId', { storeId })
-    .andWhere('order.status = :status', { status: OrderStatuses.pending })
-    .getCount();
+    const pending = await this.ordersRepository
+      .createQueryBuilder('order')
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status = :status', { status: OrderStatuses.pending })
+      .getCount();
 
-  const totalRevenue = await this.getStoreRevenue(storeId);
+    const totalRevenue = await this.getStoreRevenue(storeId);
 
-  return {
-    totalOrders,
-    completed,
-    pending,
-    totalRevenue,
-  };
-}
-
-
-  // Đếm orders của user (cho UserOrdersController)
-  async countOrdersByUser(userId: number, filters: OrderFilters = {}): Promise<number> {
-  let query = this.ordersRepository
-    .createQueryBuilder('order')
-    .where('order.user_id = :userId', { userId });
-
-  if (filters.status) {
-    query = query.andWhere('order.status = :status', { status: filters.status });
+    return {
+      totalOrders,
+      completed,
+      pending,
+      totalRevenue,
+    };
   }
 
-  return query.getCount();
-}
+  // Đếm orders của user (cho UserOrdersController)
+  async countOrdersByUser(
+    userId: number,
+    filters: OrderFilters = {}
+  ): Promise<number> {
+    let query = this.ordersRepository
+      .createQueryBuilder('order')
+      .where('order.user_id = :userId', { userId });
+
+    if (filters.status) {
+      query = query.andWhere('order.status = :status', {
+        status: filters.status,
+      });
+    }
+
+    return query.getCount();
+  }
+
   async findByUser2(userId: number): Promise<Order[]> {
     return this.ordersRepository.find({
       where: { user: { id: userId } },
@@ -745,24 +773,28 @@ export class OrdersService {
     });
   }
   // Mở rộng findByUser để hỗ trợ filter và pagination
-  async findByUser(userId: number, filters: OrderFilters = {}): Promise<Order[]> {
-  let query = this.ordersRepository
-    .createQueryBuilder('order')
-    .leftJoinAndSelect('order.store', 'store')
-    .leftJoinAndSelect('order.userAddress', 'userAddress')
-    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
-    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-    .where('order.user_id = :userId', { userId });
+  async findByUser(
+    userId: number,
+    filters: OrderFilters = {}
+  ): Promise<Order[]> {
+    let query = this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.store', 'store')
+      .leftJoinAndSelect('order.userAddress', 'userAddress')
+      .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+      .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+      .where('order.user_id = :userId', { userId });
 
-  if (filters.status) {
-    query = query.andWhere('order.status = :status', { status: filters.status });
+    if (filters.status) {
+      query = query.andWhere('order.status = :status', {
+        status: filters.status,
+      });
+    }
+
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    query = query.skip((page - 1) * limit).take(limit);
+
+    return query.orderBy('order.id', 'DESC').getMany();
   }
-
-  const page = filters.page ?? 1;
-  const limit = filters.limit ?? 10;
-  query = query.skip((page - 1) * limit).take(limit);
-
-  return query.orderBy('order.id', 'DESC').getMany();
-}
-
 }

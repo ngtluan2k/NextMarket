@@ -8,7 +8,11 @@ interface CartContextType {
     variantId?: number,
     type?: 'bulk' | 'subscription'
   ) => Promise<void>;
-  removeFromCart: (productId: number, variantId?: number, type?: 'bulk' | 'subscription') => Promise<void>;
+  removeFromCart: (
+    productId: number,
+    variantId?: number,
+    type?: 'bulk' | 'subscription'
+  ) => Promise<void>;
   updateQuantity: (
     productId: number,
     quantity: number,
@@ -51,7 +55,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         const data = await response.json();
-        console.log("value inside cart: "+JSON.stringify(data.items))
+        console.log('value inside cart: ' + JSON.stringify(data.items));
         setCart(data.items);
       } else {
         setCart([]);
@@ -102,7 +106,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type  }),
+        body: JSON.stringify({ productId, quantity, variantId, type }),
       });
       if (response.ok) {
         await loadCart();
@@ -115,7 +119,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const removeFromCart = async (productId: number, variantId?: number, type?: 'bulk' | 'subscription') => {
+  const removeFromCart = async (
+    productId: number,
+    variantId?: number,
+    type?: 'bulk' | 'subscription'
+  ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       alert('Vui lòng đăng nhập để xóa khỏi giỏ hàng');
@@ -160,7 +168,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type  }),
+        body: JSON.stringify({ productId, quantity, variantId, type }),
       });
       if (response.ok) {
         await loadCart();

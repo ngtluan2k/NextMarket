@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InventoryTransaction, TransactionType } from './inventory-transaction.entity';
+import {
+  InventoryTransaction,
+  TransactionType,
+} from './inventory-transaction.entity';
 import { CreateInventoryTransactionDto } from './dto/create-inventory-transaction.dto';
 import { UpdateInventoryTransactionDto } from './dto/update-inventory-transaction.dto';
 import { Variant } from '../variant/variant.entity';
@@ -23,7 +26,7 @@ export class InventoryTransactionService {
     @InjectRepository(Inventory)
     private readonly inventoryRepo: Repository<Inventory>,
     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    private readonly userRepo: Repository<User>
   ) {}
 
   /** 🧾 Lấy tất cả giao dịch tồn kho */
@@ -34,18 +37,24 @@ export class InventoryTransactionService {
         order: { createdAt: 'DESC' },
       });
     } catch (error) {
-      throw new InternalServerErrorException('Không thể tải danh sách giao dịch tồn kho');
+      throw new InternalServerErrorException(
+        'Không thể tải danh sách giao dịch tồn kho'
+      );
     }
   }
 
   /** ➕ Thêm giao dịch tồn kho mới */
-  async addInventoryTransaction(dto: CreateInventoryTransactionDto, userId: number) {
+  async addInventoryTransaction(
+    dto: CreateInventoryTransactionDto,
+    userId: number
+  ) {
     try {
       const variant = await this.variantRepo.findOne({
         where: { id: dto.variantId },
         relations: ['product'],
       });
-      if (!variant) throw new NotFoundException('Không tìm thấy biến thể sản phẩm');
+      if (!variant)
+        throw new NotFoundException('Không tìm thấy biến thể sản phẩm');
 
       const inventory =
         (await this.inventoryRepo.findOne({
@@ -105,7 +114,10 @@ export class InventoryTransactionService {
 
       return savedTransaction;
     } catch (error) {
-      if (error instanceof BadRequestException || error instanceof NotFoundException)
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      )
         throw error;
       console.error('Error addInventoryTransaction:', error);
       throw new InternalServerErrorException('Thêm giao dịch tồn kho thất bại');
@@ -116,13 +128,14 @@ export class InventoryTransactionService {
   async updateInventoryTransaction(
     id: number,
     dto: UpdateInventoryTransactionDto,
-    userId: number,
+    userId: number
   ) {
     const transaction = await this.transactionRepo.findOne({
       where: { id },
       relations: ['variant', 'inventory'],
     });
-    if (!transaction) throw new NotFoundException('Không tìm thấy giao dịch tồn kho');
+    if (!transaction)
+      throw new NotFoundException('Không tìm thấy giao dịch tồn kho');
 
     const inventory = transaction.inventory;
     if (!inventory) throw new NotFoundException('Không tìm thấy kho liên quan');
@@ -157,7 +170,8 @@ export class InventoryTransactionService {
     }
 
     transaction.quantity = dto.quantity ?? transaction.quantity;
-    transaction.transactionType = dto.transactionType ?? transaction.transactionType;
+    transaction.transactionType =
+      dto.transactionType ?? transaction.transactionType;
     transaction.note = dto.note ?? transaction.note;
 
     const user = await this.userRepo.findOne({ where: { id: userId } });
@@ -170,10 +184,14 @@ export class InventoryTransactionService {
     const total = await this.inventoryRepo
       .createQueryBuilder('inv')
       .select('SUM(inv.quantity)', 'sum')
-      .where('inv.variant_id = :variantId', { variantId: transaction.variant.id })
+      .where('inv.variant_id = :variantId', {
+        variantId: transaction.variant.id,
+      })
       .getRawOne();
 
-    await this.variantRepo.update(transaction.variant.id, { stock: total.sum || 0 });
+    await this.variantRepo.update(transaction.variant.id, {
+      stock: total.sum || 0,
+    });
 
     return transaction;
   }
@@ -184,7 +202,8 @@ export class InventoryTransactionService {
       where: { id },
       relations: ['variant', 'inventory'],
     });
-    if (!transaction) throw new NotFoundException('Không tìm thấy giao dịch tồn kho');
+    if (!transaction)
+      throw new NotFoundException('Không tìm thấy giao dịch tồn kho');
 
     const inventory = transaction.inventory;
     // Hoàn tác trước khi xóa
@@ -207,10 +226,14 @@ export class InventoryTransactionService {
     const total = await this.inventoryRepo
       .createQueryBuilder('inv')
       .select('SUM(inv.quantity)', 'sum')
-      .where('inv.variant_id = :variantId', { variantId: transaction.variant.id })
+      .where('inv.variant_id = :variantId', {
+        variantId: transaction.variant.id,
+      })
       .getRawOne();
 
-    await this.variantRepo.update(transaction.variant.id, { stock: total.sum || 0 });
+    await this.variantRepo.update(transaction.variant.id, {
+      stock: total.sum || 0,
+    });
 
     return { message: 'Xóa giao dịch tồn kho thành công' };
   }

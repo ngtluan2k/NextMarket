@@ -10,7 +10,14 @@ import { Order } from '../orders/order.entity';
 import { GroupOrdersController } from './group_orders.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order])],
+  imports: [
+    TypeOrmModule.forFeature([
+      GroupOrder,
+      GroupOrderMember,
+      GroupOrderItem,
+      Order,
+    ]),
+  ],
   controllers: [GroupOrdersController],
   providers: [GroupOrdersService],
   exports: [GroupOrdersService],

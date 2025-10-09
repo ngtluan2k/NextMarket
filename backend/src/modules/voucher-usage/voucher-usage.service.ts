@@ -79,7 +79,6 @@ export class VoucherUsageService {
       voucher: { id: dto.voucher_id },
       user: { id: dto.user_id },
       order: { id: dto.order_id },
-      
     });
     return this.usageRepo.save(usage);
   }
