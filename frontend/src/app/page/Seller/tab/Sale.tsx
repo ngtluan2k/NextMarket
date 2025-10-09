@@ -593,6 +593,7 @@ export default function Sale() {
 
         <Card>
           <Table
+            rowKey="id"
             columns={columns}
             dataSource={sales}  
             rowSelection={rowSelection}

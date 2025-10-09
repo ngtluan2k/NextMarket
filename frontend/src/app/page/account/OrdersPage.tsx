@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Package,
@@ -9,93 +9,8 @@ import {
 } from 'lucide-react';
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
-import { Link } from 'react-router-dom';
-
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-/** Chuẩn hoá path thô (Windows path, public/uploads, v.v.) về 'uploads/...' */
-function normalizeRawPath(s: string) {
-  let t = s.trim().replace(/\\/g, '/');
-
-  // nếu là Windows/absolute path → cắt từ '/uploads/...'
-  const m = /\/uploads\/[^?#]*/i.exec(t);
-  if (m) t = t.slice(m.index + 1); // còn 'uploads/...'
-
-  // bỏ prefix 'public/' hoặc 'static/' nếu có
-  t = t.replace(/^\/?(public|static)\//i, '');
-
-  // đảm bảo bắt đầu bằng 'uploads/'
-  if (!/^uploads\//i.test(t)) t = `uploads/${t.replace(/^\/+/, '')}`;
-  return t;
-}
-
-/** Ghép thành absolute URL dùng BE; giữ nguyên http(s) hoặc data: */
-function toAbs(p?: string) {
-  if (!p) return '';
-  // 👇 CHỐT: chuẩn hoá slash TRƯỚC khi kiểm tra http(s)
-  let s = String(p).trim().replace(/\\/g, '/');
-
-  // nếu đã là absolute URL (sau khi đổi slash) hoặc data URL thì trả luôn
-  if (/^https?:\/\//i.test(s) || /^data:image\//i.test(s)) return s;
-
-  // absolute disk path (C:/..., file:/...) → cắt về 'uploads/...'
-  if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
-    const idx = s.toLowerCase().lastIndexOf('/uploads/');
-    if (idx >= 0) s = s.slice(idx + 1); // còn 'uploads/...'
-  }
-
-  // đảm bảo prefix uploads/
-  if (!/^\/?uploads\//i.test(s)) s = `uploads/${s.replace(/^\/+/, '')}`;
-
-  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
-}
-
-/** Lấy URL ảnh đầu tiên từ mọi kiểu media: string / JSON string / array / object */
-function firstMediaUrl(media: any): string {
-  if (!media) return '';
-
-  if (typeof media === 'string') {
-    try {
-      const parsed = JSON.parse(media);
-      if (Array.isArray(parsed) && parsed.length) {
-        const m0 = parsed.find((x: any) => x?.is_primary) ?? parsed[0];
-        const url = typeof m0 === 'string' ? m0 : (m0?.url ?? m0?.path ?? '');
-        return url;
-      }
-      // string thường → trả nguyên
-      return media;
-    } catch {
-      return media; // không phải JSON → coi như path/url
-    }
-  }
-
-  if (Array.isArray(media) && media.length) {
-    const m0 = media.find((x: any) => x?.is_primary) ?? media[0];
-    return typeof m0 === 'string' ? m0 : (m0?.url ?? m0?.path ?? '');
-  }
-
-  if (typeof media === 'object') {
-    return media?.url ?? media?.path ?? '';
-  }
-
-  return '';
-}
-
-/** Gom mọi khả năng có thể chứa ảnh của product/variant */
-function getProductImage(prod: any, variant?: any): string {
-  return (
-    firstMediaUrl(prod?.media) ||
-    prod?.thumbnail ||
-    prod?.image ||
-    prod?.image_url ||
-    prod?.productMedia?.[0]?.url ||
-    variant?.image ||
-    ''
-  );
-}
-
+import ReviewModal from '../../components/account/ReviewModal';
+import {Link} from 'react-router-dom';
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -107,7 +22,6 @@ type OrderTab =
   | 'completed'
   | 'cancelled'
   | 'returned';
- 
 
 function mapStatus(status: number): OrderTab {
   switch (status) {
@@ -126,7 +40,7 @@ function mapStatus(status: number): OrderTab {
     case 6:
       return 'cancelled'; // Cancelled
     case 7:
-      return 'returned';
+      return 'returned'; // Returned
     default:
       return 'all';
   }
@@ -141,14 +55,26 @@ export type OrderSummary = {
   createdAt?: string | number | Date;
   totalPrice?: number;
   items: Array<{
+    productId?: number;
     id: string;
     name: string;
     image?: string;
     qty: number;
     price?: number;
+    isReviewed?: boolean;
+    reviewId?: number | null;
+  }>;
+  orderItem?: Array<{
+    id: string;
+    quantity: number;
+    product?: {
+      id: number;
+      name: string;
+      media?: Array<{ url: string; is_primary: boolean }>;
+      reviews?: Array<{ id: number; user: { id: number }; order: { id: string | number } }>;
+    };
   }>;
 };
-
 
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
@@ -175,18 +101,23 @@ const getUserIdFromStorage = (): number | null => {
 
 export default function OrdersPage() {
   const [tab, setTab] = useState<OrderTab>('all');
+  const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null
+  );
+
+  const [openReview, setOpenReview] = useState(false);
   const [q, setQ] = useState('');
   const [submittedQ, setSubmittedQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [total, setTotal] = useState(0); // Tổng số record từ server
   const userId = getUserIdFromStorage();
-  const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(null);
-  const pageSize = 10; // Số record mỗi trang
-
-  
+  const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(
+    null
+  );
 
   // gọi API theo tab + q + page
   useEffect(() => {
@@ -197,26 +128,11 @@ export default function OrdersPage() {
     (async () => {
       setLoading(true);
       try {
-        // Build query params
-        const params: any = {
-          page,
-          limit: pageSize,
-        };
-        if (tab !== 'all') {
-          params.status = TABS.find((t) => t.key === tab)?.key === tab ? mapStatusToNumber(tab) : undefined;
-        }
-        if (submittedQ) {
-          params.search = submittedQ.trim();
-        }
-
         // Lấy dữ liệu từ backend
-        const res = await orderService.getOrdersByUser(userId, params);
-
-        // Backend trả về { data, total, page, limit }
-        const { data, total: serverTotal } = res;
-
+        const res = await orderService.getOrderByUser(userId);
+        console.log('Orders fetched:', res);
         // Map dữ liệu backend về OrderSummary
-        const items: OrderSummary[] = (data as any[]).map((o) => ({
+        const items: OrderSummary[] = (res as any[]).map((o) => ({
           id: String(o.id),
           code: o.uuid,
           storeName: o.store?.name ?? '',
@@ -224,39 +140,60 @@ export default function OrdersPage() {
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
           items: (o.orderItem ?? []).map((it: any) => {
-            const rawImg = getProductImage(it.product, it.variant);
-            const finalUrl = rawImg ? toAbs(rawImg) : '';
-          
-            // 👇 log 1 dòng cho mỗi item
-            console.log('[ORDER IMG]', {
-              orderId: o.id,
-              itemId: it.id,
-              rawImg,
-              finalUrl,
-              productMedia: it.product?.media,
-              productMediaList: it.product?.productMedia,
-            });
-          
+            const product = it.product;
+            const image =
+              product?.media?.find((m: any) => m.is_primary)?.url ||
+              product?.media?.[0]?.url ||
+              undefined;
+
+            // check review **cùng order + cùng product**
+            const isReviewed = (product?.reviews ?? []).some(
+              (r: any) => r.user.id === userId && r.order.id === o.id
+            );
+            const existingReview = (product?.reviews ?? []).find(
+              (r: any) => r.user.id === userId && r.order.id === o.id
+            );
+
             return {
-              id: String(it.id),
-              name: it.product?.name ?? '',
-              image: finalUrl,
+              orderItemId: String(it.id),
+              productId: product?.id,
+              name: product?.name ?? it.name,
+              image: image ? `http://localhost:3000${image}` : undefined,
               qty: it.quantity,
               price: Number(it.price ?? 0),
+              isReviewed,
+              reviewId: existingReview?.id, 
             };
           }),
         }));
 
+        // Filter theo tab
+        let filteredItems = items;
+        if (tab !== 'all') {
+          filteredItems = items.filter((o) => o.status === tab);
+        }
+
+        // Filter theo search
+        if (submittedQ) {
+          const qLower = submittedQ.toLowerCase();
+          filteredItems = filteredItems.filter(
+            (o) =>
+              o.code.toLowerCase().includes(qLower) ||
+              (o.storeName ?? '').toLowerCase().includes(qLower) || // fix ở đây
+              o.items.some((it) => it.name.toLowerCase().includes(qLower))
+          );
+        }
+
         if (!cancelled) {
-          setOrders(page === 1 ? items : (prev) => [...prev, ...items]);
-          setTotal(serverTotal || 0);
-          setHasMore(items.length >= pageSize && page * pageSize < serverTotal);
+          setOrders(
+            page === 1 ? filteredItems : (prev) => [...prev, ...filteredItems]
+          );
+          setHasMore(filteredItems.length >= 10);
         }
       } catch (err) {
         if (!cancelled) {
           console.error('Lỗi khi lấy đơn hàng:', err);
           setOrders([]);
-          setTotal(0);
           setHasMore(false);
         }
       } finally {
@@ -269,47 +206,22 @@ export default function OrdersPage() {
     };
   }, [tab, submittedQ, page, userId]);
 
-  // Hàm ánh xạ OrderTab về status number để gửi API
-  const mapStatusToNumber = (tab: OrderTab): number | undefined => {
-    switch (tab) {
-      case 'pending':
-        return 0;
-      case 'confirmed':
-        return 1;
-      case 'processing':
-        return 2;
-      case 'shipping':
-        return 3;
-      case 'delivered':
-        return 4;
-      case 'completed':
-        return 5;
-      case 'cancelled':
-        return 6;
-      case 'returned':
-        return 7;
-      default:
-        return undefined;
-    }
-  };
-
-  // Đổi tab => reset trang & dữ liệu
+  // đổi tab => reset trang & dữ liệu
   const changeTab = (t: OrderTab) => {
     setTab(t);
     setPage(1);
-    setOrders([]); // Reset orders để tránh giữ dữ liệu cũ
+    setSubmittedQ((s) => s); // giữ nguyên search hiện tại
   };
 
-  // Submit tìm kiếm => reset trang & dữ liệu
   const onSubmitSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setPage(1);
     setSubmittedQ(q.trim());
-    setOrders([]); // Reset orders để tránh giữ dữ liệu cũ
   };
 
   const statusPill = (s: OrderTab) => {
-    const base = 'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
+    const base =
+      'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
     switch (s) {
       case 'pending':
         return (
@@ -357,7 +269,7 @@ export default function OrdersPage() {
         return (
           <span className={`${base} bg-rose-50 text-rose-700`}>
             <XCircle className="h-3 w-3" />
-            Đã huỷ
+            Đã hủy
           </span>
         );
       default:
@@ -381,10 +293,11 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${active
-                    ? 'text-sky-700 border-b-2 border-sky-600'
-                    : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${
+                    active
+                      ? 'text-sky-700 border-b-2 border-sky-600'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                   aria-pressed={active}
                 >
                   {t.label}
@@ -441,106 +354,143 @@ export default function OrdersPage() {
           {!loading && orders.length > 0 && (
             <>
               <ul className="space-y-3">
-                {orders.map((o) => (
-                  <li
-                    key={o.id}
-                    className="rounded-xl border border-slate-200 p-4"
-                  >
-                    {/* Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm text-slate-700">
-                        <span className="font-medium">Mã đơn:</span> {o.code}
-                        {o.storeName ? (
-                          <span className="ml-3 text-slate-500">
-                            | {o.storeName}
-                          </span>
-                        ) : null}
-                        {o.createdAt ? (
-                          <span className="ml-3 text-slate-500">
-                            {new Date(o.createdAt).toLocaleString('vi-VN')}
-                          </span>
-                        ) : null}
-                      </div>
-                      {statusPill(o.status)}
-                    </div>
+                {orders.map((o) => {
+                  const mergedProducts = Array.from(
+                    o.items.reduce((map, item) => {
+                      if (!item.productId) return map;
+                      const existing = map.get(item.productId);
+                      if (existing) {
+                        existing.qty += item.qty;
+                      } else {
+                        map.set(item.productId, {
+                          productId: item.productId, // chính xác
+                          name: item.name,
+                          image: item.image,
+                          qty: item.qty,
+                          price: item.price,
+                          isReviewed: item.isReviewed,
+                          reviewId: item.reviewId ?? null,
+                        });
+                      }
+                      return map;
+                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean; reviewId?: number | null }>())
+                  ).map(([_, v]) => v);
 
-                    {/* Items (hiển thị tối đa 3 ảnh) */}
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {o.items?.slice(0, 3).map((it) => (
-                        <div key={it.id} className="flex gap-3">
-                          <div className="h-16 w-16 overflow-hidden rounded bg-slate-100 ring-1 ring-slate-200">
-                          {it.image ? (
-                            <img
-                              src={it.image}
-                              alt={it.name}
-                              className="h-full w-full object-cover"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : null}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm text-slate-900 line-clamp-2">
-                              {it.name}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              SL: {it.qty}
-                            </div>
-                          </div>
+                  return (
+                    <li
+                      key={o.id}
+                      className="rounded-xl border border-slate-200 p-4"
+                    >
+                      {/* Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm text-slate-700">
+                          <span className="font-medium">Mã đơn:</span> {o.code}
+                          {o.storeName && (
+                            <span className="ml-3 text-slate-500">
+                              | {o.storeName}
+                            </span>
+                          )}
+                          {o.createdAt && (
+                            <span className="ml-3 text-slate-500">
+                              {new Date(o.createdAt).toLocaleString('vi-VN')}
+                            </span>
+                          )}
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Footer: tổng tiền + hành động */}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                      <div className="text-sm text-slate-600">
-                        Tổng tiền:{' '}
-                        <span className="font-semibold text-slate-900">
-                          {formatVND(o.totalPrice ?? 0)}
-                        </span>
+                        {statusPill(o.status)}
                       </div>
-                      <div className="flex items-center gap-2">
-                      <Link
+
+                      {/* Products */}
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {mergedProducts.slice(0, 3).map((it) => (
+                          <div key={it.name} className="flex gap-3">
+                            <div className="h-16 w-16 overflow-hidden rounded bg-slate-100 ring-1 ring-slate-200">
+                              <img
+                                src={it.image || '/placeholder.png'}
+                                alt={it.name}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0 flex flex-col">
+                              <div className="text-sm text-slate-900 line-clamp-2">
+                                {it.name}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                SL: {it.qty}
+                              </div>
+
+                              {(o.status === 'delivered' ||
+                                o.status === 'completed') && (
+                                <button
+                                  className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${
+                                    it.isReviewed
+                                      ? 'bg-sky-600 hover:bg-sky-700'
+                                      : 'bg-emerald-600 hover:bg-emerald-700'
+                                  }`}
+                                  onClick={() => {
+                                    setOpenReview(true);
+                                    setSelectedProductId(
+                                      it.productId?.toString() ?? null
+                                    );
+                                    setSelectedOrderId(o.id);
+                                     setSelectedReviewId(it.reviewId ?? null); 
+                                  }}
+                                >
+                                  {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Footer: tổng tiền + hành động */}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                        <div className="text-sm text-slate-600">
+                          Tổng tiền:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {formatVND(o.totalPrice ?? 0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Link
                         to={`/account/orders/${o.id}`}
                         className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
                       >
                         Chi tiết
                       </Link>
-                        {o.status === 'pending' && (
-                          <a
-                            href={`/checkout?orderId=${o.id}`}
-                            className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
-                          >
-                            Thanh toán
-                          </a>
-                        )}
-                        {o.status === 'shipping' && (
-                          <a
-                            href={`/account/orders/${o.id}#tracking`}
-                            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
-                          >
-                            Theo dõi
-                          </a>
-                        )}
-                        {o.status === 'delivered' && (
-                          <a
-                            href={`/account/orders/${o.id}#review`}
-                            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                          >
-                            Đánh giá
-                          </a>
-                        )}
-                        {['pending'].includes(o.status) && (
-                          <button
-                            onClick={() => setCancelModalOrderId(Number(o.id))}
-                            className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
-                          >
-                            Hủy đơn
-                          </button>
-                        )}
+                          {o.status === 'pending' && (
+                            <a
+                              href={`/checkout?orderId=${o.id}`}
+                              className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600"
+                            >
+                              Thanh toán
+                            </a>
+                          )}
+                          {o.status === 'shipping' && (
+                            <a
+                              href={`/account/orders/${o.id}#tracking`}
+                              className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
+                            >
+                              Theo dõi
+                            </a>
+                          )}
+
+                          {/* Nút Hủy đơn */}
+                          {['pending'].includes(o.status) && (
+                            <button
+                              onClick={() =>
+                                setCancelModalOrderId(Number(o.id))
+                              }
+                              className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600"
+                            >
+                              Hủy đơn
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
 
               {hasMore && (
@@ -555,6 +505,22 @@ export default function OrdersPage() {
               )}
             </>
           )}
+
+          {/* Review Modal */}
+          {openReview && selectedOrderId && selectedProductId && (
+            <ReviewModal
+              open={openReview}
+              onClose={() => setOpenReview(false)}
+              orderId={Number(selectedOrderId)} // <--- convert sang number
+              productId={Number(selectedProductId)} // <--- convert sang number
+              reviewId={selectedReviewId ?? undefined}
+              onSubmitted={() => {
+                // Sau khi đánh giá xong có thể refresh danh sách hoặc update item
+                setOpenReview(false);
+              }}
+            />
+          )}
+
           {/* Modal hủy đơn */}
           {cancelModalOrderId && (
             <CancelReasonModal
@@ -565,11 +531,11 @@ export default function OrdersPage() {
                 setOrders((prev) =>
                   prev.map((o) =>
                     o.id === String(cancelModalOrderId)
-                      ? { ...o, status: 'cancelled' }
+                      ? { ...o, status: 'cancelled' } // cập nhật trạng thái hủy
                       : o
                   )
                 );
-                setCancelModalOrderId(null);
+                setCancelModalOrderId(null); // đóng modal
               }}
             />
           )}

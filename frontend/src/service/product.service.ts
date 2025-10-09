@@ -90,6 +90,9 @@ export interface Product {
     cycle: string;
     starts_at: string;
     ends_at: string;
+    variant_sku?: string;
+    name?: string;
+    status?: 'active' | 'inactive';
   }>;
 }
 
@@ -126,6 +129,9 @@ export interface CreateProductDto {
     cycle?: string;
     starts_at?: string;
     ends_at?: string;
+    variant_sku?: string; // <-- thêm
+    name?: string; // <-- thêm
+    status?: 'active' | 'inactive'; // <-- thêm
   }>;
 }
 

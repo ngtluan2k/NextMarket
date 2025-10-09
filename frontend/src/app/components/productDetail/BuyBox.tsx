@@ -7,8 +7,10 @@ import LoginModal from '../LoginModal';
 import { Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 import { API_BASE_URL } from '../../api/api';
-import { Users } from "lucide-react";
+import { Users } from 'lucide-react';
+import { Rate } from "antd";
 import { log } from 'console';
+import { StarFilled } from '@ant-design/icons';
 
 function toAbs(p?: string) {
   if (!p) return '';
@@ -69,6 +71,7 @@ export default function BuyBox({
 
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+
 
   useEffect(() => {
     console.log('BuyBox mounted/updated', {
@@ -162,15 +165,19 @@ export default function BuyBox({
   );
   if (!product) return null;
 
-  const handleAddToCart = async (product: Product, quantity: number, type: 'bulk' | 'subscription',) => {
-      console.log('🛒 Add to Cart clicked:', {
-    productId: product.id,
-    productName: product.name,
-    quantity,
-    selectedVariantId,
-    type,
-    price: calculatedPrice,
-  });
+  const handleAddToCart = async (
+    product: Product,
+    quantity: number,
+    type: 'bulk' | 'subscription'
+  ) => {
+    console.log('🛒 Add to Cart clicked:', {
+      productId: product.id,
+      productName: product.name,
+      quantity,
+      selectedVariantId,
+      type,
+      price: calculatedPrice,
+    });
     setLoading(true);
     try {
       console.log('Before addToCart, quantity =', quantity);
@@ -179,7 +186,7 @@ export default function BuyBox({
         Number(product.id),
         quantity,
         selectedVariantId ?? undefined,
-        type 
+        type
       );
       console.log('After addToCart, quantity =', quantity);
 
@@ -210,51 +217,50 @@ export default function BuyBox({
       >
         {/* Nút mua chung */}
         <button
-          onClick={() => navigate(`/group-orders/${product?.uuid ?? product?.id}`)}
-
+          onClick={() =>
+            navigate(`/group-orders/${product?.uuid ?? product?.id}`)
+          }
           className="absolute right-4 top-4 flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm hover:shadow-md hover:bg-slate-50 transition-all"
         >
           <Users size={16} />
           Mua chung
         </button>
 
-
         {/* Seller info */}
         <div
           className="flex items-center gap-2 cursor-pointer"
           onClick={handleClickStore}
         >
-<div className="h-13 w-13 rounded-full ring-1 ring-slate-200 overflow-hidden">
-  {product.store?.logo_url ? (
-    <img
-      src={toAbs(product.store.logo_url)}
-      alt={product.store?.name ?? 'Store'}
-      className="h-full w-full object-cover"
-      onError={(e) => {
-        const target = e.target as HTMLImageElement;
-        target.style.display = 'none'; // hoặc target.src = '' để fallback
-      }}
-    />
-  ) : (
-    <svg
-      className="h-10 w-full text-slate-400 bg-white"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <path
-        d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M3 21a9 9 0 1 1 18 0"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-    </svg>
-  )}
-</div>
-
+          <div className="h-13 w-13 rounded-full ring-1 ring-slate-200 overflow-hidden">
+            {product.store?.logo_url ? (
+              <img
+                src={toAbs(product.store.logo_url)}
+                alt={product.store?.name ?? 'Store'}
+                className="h-10 w-10 object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none'; // hoặc target.src = '' để fallback
+                }}
+              />
+            ) : (
+              <svg
+                className="h-10 w-10 text-slate-400 bg-white"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M3 21a9 9 0 1 1 18 0"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            )}
+          </div>
 
           <div>
             <div className="text-sm font-semibold">
@@ -262,7 +268,9 @@ export default function BuyBox({
             </div>
             <div className="flex items-center gap-1 text-xs text-slate-500">
               <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
-              {(product.rating ?? 0).toFixed(1)}
+              {Number(product.store?.avg_rating ?? 0).toFixed(1) || '0'}{' '} 
+              <StarFilled style={{ color: '#faad14' }} /> •{' '}
+              {product.store?.review_count ?? 0} đánh giá
             </div>
           </div>
         </div>
@@ -306,10 +314,11 @@ export default function BuyBox({
         {/* Actions */}
         <div className="mt-4 space-y-2">
           <button
-            className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${!availability || loading
-              ? 'opacity-50 cursor-not-allowed'
-              : 'hover:opacity-90'
-              }`}
+            className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
+              !availability || loading
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:opacity-90'
+            }`}
             style={{ background: TIKI_RED }}
             onClick={handleBuyNow}
             disabled={!availability || loading}
@@ -318,7 +327,9 @@ export default function BuyBox({
           </button>
           <button
             className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-            onClick={() => handleAddToCart(product, quantity, selectedType ?? 'bulk')}
+            onClick={() =>
+              handleAddToCart(product, quantity, selectedType ?? 'bulk')
+            }
             disabled={loading}
           >
             Thêm vào giỏ

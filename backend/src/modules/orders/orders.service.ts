@@ -724,7 +724,26 @@ export class OrdersService {
 
   return query.getCount();
 }
-
+  async findByUser2(userId: number): Promise<Order[]> {
+    return this.ordersRepository.find({
+      where: { user: { id: userId } },
+      relations: [
+        'store',
+        'user',
+        'userAddress',
+        'voucherUsages',
+        'voucherUsages.voucher',
+        'orderItem',
+        'orderItem.product',
+        'orderItem.product.media',
+        'orderItem.variant',
+        'orderItem.product.reviews', // relation đúng từ entity Product
+        'orderItem.product.reviews.user', // để biết reviewer là ai
+        'orderItem.product.reviews.order',
+      ],
+      order: { id: 'DESC' },
+    });
+  }
   // Mở rộng findByUser để hỗ trợ filter và pagination
   async findByUser(userId: number, filters: OrderFilters = {}): Promise<Order[]> {
   let query = this.ordersRepository

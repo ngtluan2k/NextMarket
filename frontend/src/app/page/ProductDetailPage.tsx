@@ -70,6 +70,22 @@ const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_pri
       return stored ? Number(stored) : null;
     }
   );
+useEffect(() => {
+  if (!product?.variants?.length) return;
+
+  const exists = product.variants?.some((v: VariantInfo) => v.id === selectedVariantId);
+
+
+  if (!exists) {
+    if (product.variants.length === 1) {
+      setSelectedVariantId(product.variants[0].id);
+    } else {
+      setSelectedVariantId(null);
+    }
+  }
+}, [product, selectedVariantId]);
+
+
 
   const stock = useMemo(() => {
     const v = product?.variants?.find(

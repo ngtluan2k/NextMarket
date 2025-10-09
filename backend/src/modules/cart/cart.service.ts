@@ -171,11 +171,8 @@ export class CartService {
                 email: item.product.store.email,
               }
             : null,
-          media: item.product.media.filter(
-            (media) =>
-              media.is_primary &&
-              (!item.variant_id || media.id === item.variant_id)
-          ),
+         media: item.product.media.filter((media) => media.is_primary),
+
         },
         variant: item.variant
           ? {

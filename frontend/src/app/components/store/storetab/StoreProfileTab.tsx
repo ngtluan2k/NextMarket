@@ -16,7 +16,7 @@ export type StoreProfileData = {
   storeIdentification?: any[];
   bankAccount?: any[];
   address?: any[];
-  rating?: number;
+  avg_rating?: number;
   ratingCountText?: string;
   cancelRatePct?: number;
   returnRatePct?: number;
@@ -218,8 +218,8 @@ export default function StoreProfileTab({
                 {info?.description || '—'}
               </Row>
               <Row icon={Icon.starStroke} label="Đánh giá">
-                {typeof info?.rating === 'number'
-                  ? `${info.rating.toFixed(1)} / 5`
+                {typeof info?.avg_rating === 'number'
+                  ? `${info.avg_rating.toFixed(1)} / 5`
                   : '—'}
               </Row>
               <Row icon={Icon.users} label="Người theo dõi">

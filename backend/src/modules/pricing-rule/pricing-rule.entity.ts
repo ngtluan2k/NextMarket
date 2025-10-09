@@ -23,9 +23,9 @@ export class PricingRules {
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
-  @ManyToOne(() => Variant)
+  @ManyToOne(() => Variant, { nullable: true })
   @JoinColumn({ name: 'variant_id' })
-  variant!: Variant;
+  variant?: Variant;
 
   @Column()
   name!: string;

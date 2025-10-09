@@ -12,7 +12,7 @@ type ReviewModalProps = {
   onSubmitted?: () => void;
 };
 
-const ReviewModal: React.FC<ReviewModalProps> = ({
+export const ReviewModal: React.FC<ReviewModalProps> = ({
   open,
   onClose,
   orderId,
