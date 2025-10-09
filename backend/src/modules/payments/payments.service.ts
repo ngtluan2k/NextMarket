@@ -71,7 +71,9 @@ export class PaymentsService {
     if (!method) throw new BadRequestException('Invalid payment method');
 
     const strategyType = method?.type || 'cod';
-this.logger.log(`🟢 strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`);
+    this.logger.log(
+      `🟢 strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`
+    );
     let result;
     switch (strategyType) {
       case 'cod':
@@ -83,7 +85,7 @@ this.logger.log(`🟢 strategyType: ${strategyType}, paymentMethodUuid: ${dto.pa
       case 'momo':
         result = await this.momoStrategy.createPayment(order, method);
         break;
-        case 'everycoin': // <-- thêm case
+      case 'everycoin': // <-- thêm case
         result = await this.everycoinStrategy.createPayment(order, method);
         break;
       default:

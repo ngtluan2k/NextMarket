@@ -1,16 +1,26 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { OrdersService } from '../orders/orders.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { UpdateOrderDto } from '../orders/dto/update-order.dto';
 import { Order } from '../orders/order.entity';
 
-@Controller('admin/orders') 
+@Controller('admin/orders')
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   async findAll(): Promise<Order[]> {
     return this.ordersService.findAll();
   }
@@ -28,7 +38,10 @@ export class AdminOrdersController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  async update(@Param('id', ParseIntPipe) id: number, @Body() updateOrderDto: UpdateOrderDto): Promise<Order> {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateOrderDto: UpdateOrderDto
+  ): Promise<Order> {
     return this.ordersService.update(id, updateOrderDto);
   }
 
@@ -45,7 +58,9 @@ export class AdminOrdersController {
   }
 
   @Get('payment/:paymentUuid')
-  async findByPaymentUuid(@Param('paymentUuid') paymentUuid: string): Promise<any> {
+  async findByPaymentUuid(
+    @Param('paymentUuid') paymentUuid: string
+  ): Promise<any> {
     return this.ordersService.findByPaymentUuid(paymentUuid);
   }
 }

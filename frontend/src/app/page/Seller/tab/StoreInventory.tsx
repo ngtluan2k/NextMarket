@@ -48,7 +48,9 @@ import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
 import { ProductForm } from '../../../components/seller/ProductFormWizard';
 import { EditProductForm } from '../../../components/seller/EditProductForm';
-import ProductDetailModal, { ProductDetail as ProductForDetail } from '../../../components/seller/ProductDetailModal';
+import ProductDetailModal, {
+  ProductDetail as ProductForDetail,
+} from '../../../components/seller/ProductDetailModal';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
@@ -59,7 +61,7 @@ export interface Product {
   category: string;
   base_price: number;
   brandId: number;
-  brandName?: string;  
+  brandName?: string;
   stock: number;
   sold: number;
   revenue: number;
@@ -228,7 +230,7 @@ export default function StoreInventory() {
               new Date().toISOString().split('T')[0],
             apiId: apiProduct.id,
             brandId: apiProduct.brand?.id || apiProduct.brand_id || 0,
-            brandName: apiProduct.brand?.name || '', 
+            brandName: apiProduct.brand?.name || '',
 
             categories:
               apiProduct.categories?.map((c) => ({
@@ -245,7 +247,7 @@ export default function StoreInventory() {
                 is_primary: m.is_primary || false,
                 sort_order: m.sort_order,
               })) || [],
-            
+
             variants:
               apiProduct.variants?.map((v) => ({
                 id: v.id,
@@ -576,7 +578,7 @@ export default function StoreInventory() {
                 key: 'edit',
                 icon: <EditOutlined />,
                 label: 'Chỉnh Sửa Sản Phẩm',
-                onClick: () => setEditingProduct(record), 
+                onClick: () => setEditingProduct(record),
               },
               {
                 key: 'duplicate',
@@ -766,15 +768,15 @@ export default function StoreInventory() {
           </Modal>
         )}
 
-          <ProductDetailModal
-              product={detailProduct as unknown as ProductForDetail | null}
-              onClose={() => setDetailProduct(null)}
-              onEdit={(p) => {
-                // bấm "Chỉnh sửa" trong modal chi tiết → mở modal Edit có sẵn
-                setDetailProduct(null);
-                setEditingProduct(p as unknown as Product);
-              }}
-            />
+        <ProductDetailModal
+          product={detailProduct as unknown as ProductForDetail | null}
+          onClose={() => setDetailProduct(null)}
+          onEdit={(p) => {
+            // bấm "Chỉnh sửa" trong modal chi tiết → mở modal Edit có sẵn
+            setDetailProduct(null);
+            setEditingProduct(p as unknown as Product);
+          }}
+        />
       </Content>
     </Layout>
   );

@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Req,
-  Get,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard'; // hoặc đường dẫn guard JWT của bạn
 
@@ -25,7 +18,7 @@ export class SubscriptionController {
       subscriptionId,
       usedQuantity ?? 1,
       addressId,
-      note,
+      note
     );
   }
 

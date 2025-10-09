@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { orderService } from '../../service/order.service';
 import { storeService } from '../../service/store.service';
 import { message } from 'antd';
-import { Sale, ProductItem, Payment} from '../types/order'
+import { Sale, ProductItem, Payment } from '../types/order';
 
 interface UseStoreOrdersParams {
   status?: string;

@@ -16,7 +16,11 @@ const Sidebar = () => {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Tổng quan bảng điều khiển', href: '/affiliate/dashboard', icon: Home },
+    {
+      name: 'Tổng quan bảng điều khiển',
+      href: '/affiliate/dashboard',
+      icon: Home,
+    },
     {
       name: 'Liên kết tiếp thị',
       href: '/affiliate/dashboard/links',

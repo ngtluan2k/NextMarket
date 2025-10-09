@@ -9,7 +9,7 @@ import { UpdateAffiliatePlatformDto } from './dto/update-affiliate-platform.dto'
 export class AffiliatePlatformService {
   constructor(
     @InjectRepository(AffiliatePlatform)
-    private readonly platformRepo: Repository<AffiliatePlatform>,
+    private readonly platformRepo: Repository<AffiliatePlatform>
   ) {}
 
   findAll(): Promise<AffiliatePlatform[]> {
@@ -25,7 +25,10 @@ export class AffiliatePlatformService {
     return this.platformRepo.save(newPlatform);
   }
 
-  async update(id: number, dto: UpdateAffiliatePlatformDto): Promise<AffiliatePlatform> {
+  async update(
+    id: number,
+    dto: UpdateAffiliatePlatformDto
+  ): Promise<AffiliatePlatform> {
     await this.platformRepo.update(id, dto);
     const updated = await this.platformRepo.findOneBy({ id });
     if (!updated) {

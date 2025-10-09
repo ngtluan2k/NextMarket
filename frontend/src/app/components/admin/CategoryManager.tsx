@@ -1,6 +1,6 @@
 // src/components/admin/CategoryManager.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import {
   Plus,
   Pencil,
@@ -10,7 +10,7 @@ import {
   Search,
   UploadCloud,
   CheckCircle2,
-} from "lucide-react";
+} from 'lucide-react';
 
 /**
  * Category Manager – Tailwind UI
@@ -42,37 +42,37 @@ export type Category = {
   parentId?: number | null;
 };
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = 'http://localhost:3000';
 
 /* ================= Helpers ================= */
 
 const toAbsolute = (url?: string) => {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
   return `${API_BASE}${url}`;
 };
 
 const stripAccents = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 /** CHUẨN HOÁ TIẾNG VIỆT (không dấu + lower + trim, gộp khoảng trắng) */
 const normalizeVN = (s: string) =>
-  stripAccents(s || "")
+  stripAccents(s || '')
     .toLowerCase()
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
 const toSlug = (s: string) =>
   normalizeVN(s)
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 
 /** join class tiện dụng */
 function clsx(...a: (string | false | null | undefined)[]) {
-  return a.filter(Boolean).join(" ");
+  return a.filter(Boolean).join(' ');
 }
 
 /* ================= API layer (axios) ================= */
@@ -92,40 +92,50 @@ async function apiList(token?: string): Promise<Category[]> {
 }
 
 async function apiCreate(
-  payload: { name: string; slug: string; imageFile?: File | null; parentId?: number | null },
+  payload: {
+    name: string;
+    slug: string;
+    imageFile?: File | null;
+    parentId?: number | null;
+  },
   token?: string
 ): Promise<void> {
   const fd = new FormData();
-  fd.append("name", payload.name);
+  fd.append('name', payload.name);
   // Nếu backend nhận slug tuỳ chọn thì mở dòng dưới:
   // fd.append("slug", payload.slug);
-  if (payload.parentId) fd.append("parent_id", String(payload.parentId));
-  if (payload.imageFile) fd.append("image", payload.imageFile);
+  if (payload.parentId) fd.append('parent_id', String(payload.parentId));
+  if (payload.imageFile) fd.append('image', payload.imageFile);
 
   await axios.post(`${API_BASE}/categories`, fd, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "Content-Type": "multipart/form-data",
+      'Content-Type': 'multipart/form-data',
     },
   });
 }
 
 async function apiUpdate(
   id: number,
-  payload: { name?: string; slug?: string; imageFile?: File | null; parentId?: number | null },
+  payload: {
+    name?: string;
+    slug?: string;
+    imageFile?: File | null;
+    parentId?: number | null;
+  },
   token?: string
 ): Promise<void> {
   const fd = new FormData();
-  if (payload.name) fd.append("name", payload.name);
+  if (payload.name) fd.append('name', payload.name);
   if (payload.parentId !== undefined && payload.parentId !== null)
-    fd.append("parent_id", String(payload.parentId));
-  if (payload.parentId === null) fd.append("parent_id", ""); // clear parent
-  if (payload.imageFile) fd.append("image", payload.imageFile);
+    fd.append('parent_id', String(payload.parentId));
+  if (payload.parentId === null) fd.append('parent_id', ''); // clear parent
+  if (payload.imageFile) fd.append('image', payload.imageFile);
 
   await axios.put(`${API_BASE}/categories/${id}`, fd, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "Content-Type": "multipart/form-data",
+      'Content-Type': 'multipart/form-data',
     },
   });
 }
@@ -185,14 +195,16 @@ function CategoryModal({
   categories: Category[];
 }) {
   const isEdit = !!initial;
-  const [name, setName] = useState(initial?.name || "");
-  const [slug, setSlug] = useState(initial?.slug || "");
+  const [name, setName] = useState(initial?.name || '');
+  const [slug, setSlug] = useState(initial?.slug || '');
   const [parentId, setParentId] = useState<number | null>(
     initial?.parentId ?? null
   );
-  const [parentQuery, setParentQuery] = useState("");
+  const [parentQuery, setParentQuery] = useState('');
   const [showParentList, setShowParentList] = useState(false); // NEW
-  const [imagePreview, setImagePreview] = useState<string>(initial?.image || "");
+  const [imagePreview, setImagePreview] = useState<string>(
+    initial?.image || ''
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -204,12 +216,12 @@ function CategoryModal({
   useEffect(() => {
     if (!open) {
       setTimeout(() => {
-        setName(initial?.name || "");
-        setSlug(initial?.slug || "");
+        setName(initial?.name || '');
+        setSlug(initial?.slug || '');
         setParentId(initial?.parentId ?? null);
-        setParentQuery("");
+        setParentQuery('');
         setShowParentList(false);
-        setImagePreview(initial?.image || "");
+        setImagePreview(initial?.image || '');
         setImageFile(null);
         setSaving(false);
       }, 200);
@@ -221,20 +233,20 @@ function CategoryModal({
   // - Khi gõ, lọc theo không dấu.
   // - Loại chính danh mục đang sửa.
   const candidates = useMemo(() => {
-    const pool = initial ? categories.filter((c) => c.id !== initial.id) : categories;
+    const pool = initial
+      ? categories.filter((c) => c.id !== initial.id)
+      : categories;
     const nq = normalizeVN(parentQuery);
     const uniq = new Map<number, Category>();
 
     pool.forEach((c) => {
-      const hit = nq
-        ? normalizeVN(c.name).includes(nq)
-        : true; // chưa gõ => show tất cả
+      const hit = nq ? normalizeVN(c.name).includes(nq) : true; // chưa gõ => show tất cả
       if (hit) uniq.set(c.id, c);
     });
 
     // Sắp xếp tên tăng dần cho dễ nhìn
     const arr = Array.from(uniq.values()).sort((a, b) =>
-      a.name.localeCompare(b.name, "vi")
+      a.name.localeCompare(b.name, 'vi')
     );
 
     return arr.slice(0, 8);
@@ -266,7 +278,7 @@ function CategoryModal({
       <div className="w-[min(680px,100%)] rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
         <div className="flex items-center justify-between border-b p-4">
           <h3 className="text-lg font-semibold text-slate-900">
-            {isEdit ? "Sửa danh mục" : "Thêm danh mục"}
+            {isEdit ? 'Sửa danh mục' : 'Thêm danh mục'}
           </h3>
           <button
             onClick={onClose}
@@ -311,8 +323,10 @@ function CategoryModal({
                   <input
                     value={parentQuery}
                     onChange={(e) => setParentQuery(e.target.value)}
-                    onFocus={() => setShowParentList(true)}          // NEW
-                    onBlur={() => setTimeout(() => setShowParentList(false), 120)} // NEW
+                    onFocus={() => setShowParentList(true)} // NEW
+                    onBlur={() =>
+                      setTimeout(() => setShowParentList(false), 120)
+                    } // NEW
                     placeholder="Tìm theo tên… (focus để hiện danh sách)"
                     className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-24 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                   />
@@ -322,7 +336,7 @@ function CategoryModal({
                       className="absolute right-2 top-1.5 rounded-md border px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
                       onClick={() => {
                         setParentId(null);
-                        setParentQuery("");
+                        setParentQuery('');
                         setShowParentList(true); // mở lại danh sách top khi bỏ chọn
                       }}
                     >
@@ -409,11 +423,11 @@ function CategoryModal({
             onClick={submit}
             disabled={!name.trim() || saving}
             className={clsx(
-              "inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700",
-              saving && "opacity-60"
+              'inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700',
+              saving && 'opacity-60'
             )}
           >
-            {saving ? "Đang lưu…" : isEdit ? "Lưu thay đổi" : "Tạo danh mục"}
+            {saving ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Tạo danh mục'}
           </button>
         </div>
       </div>
@@ -426,14 +440,14 @@ function CategoryModal({
 const CategoryManager: React.FC = () => {
   const [items, setItems] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
-  const [toast, setToast] = useState<string>("");
+  const [toast, setToast] = useState<string>('');
 
   const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("token") || undefined
+    typeof window !== 'undefined'
+      ? localStorage.getItem('token') || undefined
       : undefined;
 
   const load = async () => {
@@ -442,7 +456,7 @@ const CategoryManager: React.FC = () => {
       const data = await apiList(token);
       setItems(data);
     } catch (e) {
-      console.error("Fetch categories failed:", e);
+      console.error('Fetch categories failed:', e);
       setItems([]);
     } finally {
       setLoading(false);
@@ -453,9 +467,9 @@ const CategoryManager: React.FC = () => {
     load();
     // tests nhỏ đảm bảo helper chạy đúng
     const slugCases = [
-      { input: "Điện thoại mới 2025!!!", expect: "dien-thoai-moi-2025" },
-      { input: "Ốp   lưng", expect: "op-lung" },
-      { input: "   Hello   World  ", expect: "hello-world" },
+      { input: 'Điện thoại mới 2025!!!', expect: 'dien-thoai-moi-2025' },
+      { input: 'Ốp   lưng', expect: 'op-lung' },
+      { input: '   Hello   World  ', expect: 'hello-world' },
     ];
     slugCases.forEach((c) =>
       console.assert(toSlug(c.input) === c.expect, `toSlug failed: ${c.input}`)
@@ -463,8 +477,8 @@ const CategoryManager: React.FC = () => {
 
     // test tìm kiếm không dấu
     console.assert(
-      normalizeVN("Điện tử").includes(normalizeVN("dien")),
-      "normalizeVN search failed"
+      normalizeVN('Điện tử').includes(normalizeVN('dien')),
+      'normalizeVN search failed'
     );
   }, []); // eslint-disable-line
 
@@ -473,13 +487,12 @@ const CategoryManager: React.FC = () => {
     if (!nq) return items;
     return items.filter(
       (x) =>
-        normalizeVN(x.name).includes(nq) ||
-        normalizeVN(x.slug).includes(nq)
+        normalizeVN(x.name).includes(nq) || normalizeVN(x.slug).includes(nq)
     );
   }, [items, query]);
 
   const parentName = (cat: Category) =>
-    items.find((x) => x.id === cat.parentId)?.name || "-";
+    items.find((x) => x.id === cat.parentId)?.name || '-';
 
   const openCreate = () => {
     setEditing(null);
@@ -511,7 +524,7 @@ const CategoryManager: React.FC = () => {
           token
         );
         await load();
-        setToast("Đã cập nhật danh mục");
+        setToast('Đã cập nhật danh mục');
       } else {
         await apiCreate(
           {
@@ -523,27 +536,27 @@ const CategoryManager: React.FC = () => {
           token
         );
         await load();
-        setToast("Đã tạo danh mục mới");
+        setToast('Đã tạo danh mục mới');
       }
     } catch (e) {
-      console.error("Save failed:", e);
-      setToast("Lỗi khi lưu danh mục");
+      console.error('Save failed:', e);
+      setToast('Lỗi khi lưu danh mục');
     } finally {
-      setTimeout(() => setToast(""), 1500);
+      setTimeout(() => setToast(''), 1500);
     }
   };
 
   const onDelete = async (id: number) => {
-    if (!confirm("Xóa danh mục này?")) return;
+    if (!confirm('Xóa danh mục này?')) return;
     try {
       await apiDelete(id, token);
       await load();
-      setToast("Đã xóa danh mục");
+      setToast('Đã xóa danh mục');
     } catch (e) {
-      console.error("Delete failed:", e);
-      setToast("Lỗi khi xóa danh mục");
+      console.error('Delete failed:', e);
+      setToast('Lỗi khi xóa danh mục');
     } finally {
-      setTimeout(() => setToast(""), 1200);
+      setTimeout(() => setToast(''), 1200);
     }
   };
 
@@ -551,7 +564,9 @@ const CategoryManager: React.FC = () => {
     <div className="mx-auto max-w-6xl p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Category Manager</h2>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Category Manager
+          </h2>
           <p className="text-sm text-slate-600">
             Quản lý danh mục và mối quan hệ cha/con.
           </p>
@@ -592,7 +607,10 @@ const CategoryManager: React.FC = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                <td
+                  colSpan={6}
+                  className="px-4 py-8 text-center text-slate-500"
+                >
                   Đang tải…
                 </td>
               </tr>
@@ -608,7 +626,9 @@ const CategoryManager: React.FC = () => {
                   <td className="px-4 py-2">{c.id}</td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">{c.name}</span>
+                      <span className="font-medium text-slate-900">
+                        {c.name}
+                      </span>
                       {c.parentId ? <Chip>Child</Chip> : <Chip>Root</Chip>}
                     </div>
                   </td>

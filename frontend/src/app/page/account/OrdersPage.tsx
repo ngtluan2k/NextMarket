@@ -11,9 +11,7 @@ import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
 import { Link } from 'react-router-dom';
 
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 /** Chuẩn hoá path thô (Windows path, public/uploads, v.v.) về 'uploads/...' */
 function normalizeRawPath(s: string) {
@@ -61,7 +59,7 @@ function firstMediaUrl(media: any): string {
       const parsed = JSON.parse(media);
       if (Array.isArray(parsed) && parsed.length) {
         const m0 = parsed.find((x: any) => x?.is_primary) ?? parsed[0];
-        const url = typeof m0 === 'string' ? m0 : (m0?.url ?? m0?.path ?? '');
+        const url = typeof m0 === 'string' ? m0 : m0?.url ?? m0?.path ?? '';
         return url;
       }
       // string thường → trả nguyên
@@ -73,7 +71,7 @@ function firstMediaUrl(media: any): string {
 
   if (Array.isArray(media) && media.length) {
     const m0 = media.find((x: any) => x?.is_primary) ?? media[0];
-    return typeof m0 === 'string' ? m0 : (m0?.url ?? m0?.path ?? '');
+    return typeof m0 === 'string' ? m0 : m0?.url ?? m0?.path ?? '';
   }
 
   if (typeof media === 'object') {
@@ -107,7 +105,6 @@ type OrderTab =
   | 'completed'
   | 'cancelled'
   | 'returned';
- 
 
 function mapStatus(status: number): OrderTab {
   switch (status) {
@@ -149,7 +146,6 @@ export type OrderSummary = {
   }>;
 };
 
-
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
   { key: 'pending', label: 'Chờ thanh toán' },
@@ -183,10 +179,10 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [total, setTotal] = useState(0); // Tổng số record từ server
   const userId = getUserIdFromStorage();
-  const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(null);
+  const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(
+    null
+  );
   const pageSize = 10; // Số record mỗi trang
-
-  
 
   // gọi API theo tab + q + page
   useEffect(() => {
@@ -203,7 +199,10 @@ export default function OrdersPage() {
           limit: pageSize,
         };
         if (tab !== 'all') {
-          params.status = TABS.find((t) => t.key === tab)?.key === tab ? mapStatusToNumber(tab) : undefined;
+          params.status =
+            TABS.find((t) => t.key === tab)?.key === tab
+              ? mapStatusToNumber(tab)
+              : undefined;
         }
         if (submittedQ) {
           params.search = submittedQ.trim();
@@ -226,7 +225,7 @@ export default function OrdersPage() {
           items: (o.orderItem ?? []).map((it: any) => {
             const rawImg = getProductImage(it.product, it.variant);
             const finalUrl = rawImg ? toAbs(rawImg) : '';
-          
+
             // 👇 log 1 dòng cho mỗi item
             console.log('[ORDER IMG]', {
               orderId: o.id,
@@ -236,7 +235,7 @@ export default function OrdersPage() {
               productMedia: it.product?.media,
               productMediaList: it.product?.productMedia,
             });
-          
+
             return {
               id: String(it.id),
               name: it.product?.name ?? '',
@@ -309,7 +308,8 @@ export default function OrdersPage() {
   };
 
   const statusPill = (s: OrderTab) => {
-    const base = 'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
+    const base =
+      'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
     switch (s) {
       case 'pending':
         return (
@@ -381,10 +381,11 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${active
-                    ? 'text-sky-700 border-b-2 border-sky-600'
-                    : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${
+                    active
+                      ? 'text-sky-700 border-b-2 border-sky-600'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                   aria-pressed={active}
                 >
                   {t.label}
@@ -469,14 +470,16 @@ export default function OrdersPage() {
                       {o.items?.slice(0, 3).map((it) => (
                         <div key={it.id} className="flex gap-3">
                           <div className="h-16 w-16 overflow-hidden rounded bg-slate-100 ring-1 ring-slate-200">
-                          {it.image ? (
-                            <img
-                              src={it.image}
-                              alt={it.name}
-                              className="h-full w-full object-cover"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : null}
+                            {it.image ? (
+                              <img
+                                src={it.image}
+                                alt={it.name}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : null}
                           </div>
                           <div className="min-w-0">
                             <div className="text-sm text-slate-900 line-clamp-2">
@@ -499,12 +502,12 @@ export default function OrdersPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                      <Link
-                        to={`/account/orders/${o.id}`}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
-                      >
-                        Chi tiết
-                      </Link>
+                        <Link
+                          to={`/account/orders/${o.id}`}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                        >
+                          Chi tiết
+                        </Link>
                         {o.status === 'pending' && (
                           <a
                             href={`/checkout?orderId=${o.id}`}

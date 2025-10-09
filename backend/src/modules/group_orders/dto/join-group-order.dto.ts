@@ -8,7 +8,9 @@ export class JoinGroupOrderDto {
   @IsInt()
   userId!: number;
 
-  @ApiPropertyOptional({ description: 'Mã tham gia (nếu yêu cầu xác thực bằng join_code)' })
+  @ApiPropertyOptional({
+    description: 'Mã tham gia (nếu yêu cầu xác thực bằng join_code)',
+  })
   @IsOptional()
   @IsString()
   joinCode?: string;

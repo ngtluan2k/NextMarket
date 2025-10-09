@@ -25,7 +25,7 @@ export class OrderStatusHistory {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -37,14 +37,14 @@ export class OrderStatusHistory {
 
   @Column({
     name: 'old_status',
-    type: 'tinyint',
+    type: 'integer',
     default: historyStatus.pending,
   })
   oldStatus!: historyStatus;
 
   @Column({
     name: 'new_status',
-    type: 'tinyint',
+    type: 'integer',
     default: historyStatus.pending,
   })
   newStatus!: historyStatus;

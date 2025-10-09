@@ -77,7 +77,7 @@ export class AffiliateProgramsController {
   @ApiOperation({ summary: '(Admin) Update an affiliate program' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateDto: UpdateAffiliateProgramDto,
+    @Body() updateDto: UpdateAffiliateProgramDto
   ) {
     return this.service.update(id, updateDto);
   }

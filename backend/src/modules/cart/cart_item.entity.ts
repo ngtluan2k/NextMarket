@@ -13,7 +13,7 @@ export class CartItem {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @ManyToOne(() => ShoppingCart, (cart) => cart.items, { onDelete: 'CASCADE' })
@@ -39,6 +39,6 @@ export class CartItem {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price!: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   added_at!: Date;
 }

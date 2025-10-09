@@ -44,6 +44,8 @@ export class ProductReview {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
-  @OneToMany(() => ProductReviewMedia, (media) => media.review, { cascade: true })
+  @OneToMany(() => ProductReviewMedia, (media) => media.review, {
+    cascade: true,
+  })
   media!: ProductReviewMedia[];
 }

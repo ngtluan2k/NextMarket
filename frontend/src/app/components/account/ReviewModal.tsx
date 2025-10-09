@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { createProductReview, updateProductReview } from "../../../service/product_review";
+import React, { useState, useEffect } from 'react';
+import {
+  createProductReview,
+  updateProductReview,
+} from '../../../service/product_review';
 
 type ReviewModalProps = {
   open: boolean;
@@ -19,7 +22,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   productId,
   reviewId,
   existingRating = 5,
-  existingComment = "",
+  existingComment = '',
   onSubmitted,
 }) => {
   const [rating, setRating] = useState<number>(existingRating);
@@ -64,7 +67,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
         <h2 className="text-lg font-semibold mb-4">
-          {reviewId ? "Cập nhật đánh giá" : "Đánh giá sản phẩm"}
+          {reviewId ? 'Cập nhật đánh giá' : 'Đánh giá sản phẩm'}
         </h2>
         <form onSubmit={handleSubmit}>
           <label className="block mb-2 text-sm font-medium">Rating</label>
@@ -73,8 +76,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
             onChange={(e) => setRating(Number(e.target.value))}
             className="w-full border rounded-md p-2 mb-4"
           >
-            {[1,2,3,4,5].map(n => (
-              <option key={n} value={n}>{'⭐'.repeat(n)}</option>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {'⭐'.repeat(n)}
+              </option>
             ))}
           </select>
 
@@ -107,7 +112,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               disabled={loading}
               className="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
             >
-              {loading ? "Đang gửi..." : reviewId ? "Cập nhật" : "Gửi đánh giá"}
+              {loading ? 'Đang gửi...' : reviewId ? 'Cập nhật' : 'Gửi đánh giá'}
             </button>
           </div>
         </form>

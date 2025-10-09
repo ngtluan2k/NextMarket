@@ -22,11 +22,14 @@ export const createAffiliateLink = async (
     return res.data;
   } catch (error) {
     handleApiError(error);
-    throw error; 
+    throw error;
   }
 };
 
-export const getMyAffiliateLinks = async (): Promise<{ message: string; links: AffiliateLink[] }> => {
+export const getMyAffiliateLinks = async (): Promise<{
+  message: string;
+  links: AffiliateLink[];
+}> => {
   try {
     const res = await api.get(`${API_BASE_URL}/my-links`, {
       headers: getAuthHeaders(),
@@ -35,11 +38,13 @@ export const getMyAffiliateLinks = async (): Promise<{ message: string; links: A
     return res.data;
   } catch (error) {
     handleApiError(error);
-    throw error; 
+    throw error;
   }
 };
 
-export const getMyAffiliatedProducts = async (): Promise<AffiliateProduct[]> => {
+export const getMyAffiliatedProducts = async (): Promise<
+  AffiliateProduct[]
+> => {
   try {
     const res = await api.get(`${API_BASE_URL}/affiliated-products`, {
       headers: getAuthHeaders(),
@@ -47,6 +52,6 @@ export const getMyAffiliatedProducts = async (): Promise<AffiliateProduct[]> => 
     return res.data;
   } catch (error) {
     handleApiError(error);
-    throw error; 
+    throw error;
   }
 };

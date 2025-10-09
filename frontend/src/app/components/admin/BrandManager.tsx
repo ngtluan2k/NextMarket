@@ -1,6 +1,6 @@
 // src/components/admin/brandManager.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import {
   Plus,
   Pencil,
@@ -10,7 +10,7 @@ import {
   Image as ImageIcon,
   X,
   CheckCircle2,
-} from "lucide-react";
+} from 'lucide-react';
 
 /**
  * Brand Manager – Tailwind UI
@@ -19,7 +19,7 @@ import {
  * - Tìm kiếm, modal thêm/sửa, upload + preview logo, toast thông báo
  */
 
-const API_BASE = "http://localhost:3000";
+const API_BASE = 'http://localhost:3000';
 
 export type Brand = {
   id: number;
@@ -29,30 +29,30 @@ export type Brand = {
 };
 
 const toAbsolute = (url?: string) => {
-  if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("data:")) return url;
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
   return `${API_BASE}${url}`;
 };
 
 const normalizeVN = (s: string) =>
-  (s || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
+  (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
 function clsx(...a: (string | false | null | undefined)[]) {
-  return a.filter(Boolean).join(" ");
+  return a.filter(Boolean).join(' ');
 }
 
 /* ================= MOCK FALLBACK ================= */
 let useMock = false;
 
 function svgLogo(letter: string, color: string) {
-  const safeLetter = (letter || "?").slice(0, 1).toUpperCase();
+  const safeLetter = (letter || '?').slice(0, 1).toUpperCase();
   const svg = `<?xml version='1.0' encoding='UTF-8'?>
   <svg xmlns='http://www.w3.org/2000/svg' width='240' height='140'>
     <defs>
@@ -71,9 +71,24 @@ function svgLogo(letter: string, color: string) {
 
 let mockId = 1000;
 const mockDB: Brand[] = [
-  { id: ++mockId, name: "Apple",   description: "Thiết bị cao cấp",   logo_url: svgLogo("A", "#16a34a") },
-  { id: ++mockId, name: "Samsung", description: "Điện tử Hàn Quốc",   logo_url: svgLogo("S", "#0284c7") },
-  { id: ++mockId, name: "Xiaomi",  description: "Giá tốt, nhiều mẫu", logo_url: svgLogo("X", "#f97316") },
+  {
+    id: ++mockId,
+    name: 'Apple',
+    description: 'Thiết bị cao cấp',
+    logo_url: svgLogo('A', '#16a34a'),
+  },
+  {
+    id: ++mockId,
+    name: 'Samsung',
+    description: 'Điện tử Hàn Quốc',
+    logo_url: svgLogo('S', '#0284c7'),
+  },
+  {
+    id: ++mockId,
+    name: 'Xiaomi',
+    description: 'Giá tốt, nhiều mẫu',
+    logo_url: svgLogo('X', '#f97316'),
+  },
 ];
 
 async function fileToDataURL(f: File): Promise<string> {
@@ -95,7 +110,7 @@ async function apiList(token?: string): Promise<Brand[]> {
     const data = res.data?.data ?? res.data ?? [];
     return data;
   } catch {
-    console.warn("/brands unreachable, using MOCK DATA.");
+    console.warn('/brands unreachable, using MOCK DATA.');
     useMock = true;
     return mockDB;
   }
@@ -107,45 +122,49 @@ async function apiCreate(fd: FormData, token?: string): Promise<void> {
       await axios.post(`${API_BASE}/brands`, fd, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
       return;
     } catch {
-      console.warn("POST /brands failed, switching to MOCK.");
+      console.warn('POST /brands failed, switching to MOCK.');
       useMock = true;
     }
   }
-  const name = String(fd.get("name") || "");
-  const description = String(fd.get("description") || "");
-  let logo_url = "";
-  const logo = fd.get("logo");
+  const name = String(fd.get('name') || '');
+  const description = String(fd.get('description') || '');
+  let logo_url = '';
+  const logo = fd.get('logo');
   if (logo instanceof File) logo_url = await fileToDataURL(logo);
   mockDB.unshift({ id: ++mockId, name, description, logo_url });
 }
 
-async function apiUpdate(id: number, fd: FormData, token?: string): Promise<void> {
+async function apiUpdate(
+  id: number,
+  fd: FormData,
+  token?: string
+): Promise<void> {
   if (!useMock) {
     try {
       await axios.put(`${API_BASE}/brands/${id}`, fd, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
       return;
     } catch {
-      console.warn("PUT /brands failed, switching to MOCK.");
+      console.warn('PUT /brands failed, switching to MOCK.');
       useMock = true;
     }
   }
   const target = mockDB.find((b) => b.id === id);
   if (!target) return;
-  const name = fd.get("name");
-  const description = fd.get("description");
-  const logo = fd.get("logo");
-  if (typeof name === "string" && name) target.name = name;
-  if (typeof description === "string") target.description = description;
+  const name = fd.get('name');
+  const description = fd.get('description');
+  const logo = fd.get('logo');
+  if (typeof name === 'string' && name) target.name = name;
+  if (typeof description === 'string') target.description = description;
   if (logo instanceof File) target.logo_url = await fileToDataURL(logo);
 }
 
@@ -157,7 +176,7 @@ async function apiDelete(id: number, token?: string): Promise<void> {
       });
       return;
     } catch {
-      console.warn("DELETE /brands failed, switching to MOCK.");
+      console.warn('DELETE /brands failed, switching to MOCK.');
       useMock = true;
     }
   }
@@ -174,21 +193,26 @@ function BrandModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSubmit: (payload: { name: string; description: string; logoFile: File | null }, id?: number) => Promise<void>;
+  onSubmit: (
+    payload: { name: string; description: string; logoFile: File | null },
+    id?: number
+  ) => Promise<void>;
   initial?: Brand | null;
 }) {
   const isEdit = !!initial;
-  const [name, setName] = useState(initial?.name || "");
-  const [description, setDescription] = useState(initial?.description || "");
-  const [logoPreview, setLogoPreview] = useState<string>(toAbsolute(initial?.logo_url));
+  const [name, setName] = useState(initial?.name || '');
+  const [description, setDescription] = useState(initial?.description || '');
+  const [logoPreview, setLogoPreview] = useState<string>(
+    toAbsolute(initial?.logo_url)
+  );
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setTimeout(() => {
-        setName(initial?.name || "");
-        setDescription(initial?.description || "");
+        setName(initial?.name || '');
+        setDescription(initial?.description || '');
         setLogoPreview(toAbsolute(initial?.logo_url));
         setLogoFile(null);
         setSaving(false);
@@ -207,7 +231,10 @@ function BrandModal({
   const submit = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    await onSubmit({ name: name.trim(), description: description.trim(), logoFile }, initial?.id);
+    await onSubmit(
+      { name: name.trim(), description: description.trim(), logoFile },
+      initial?.id
+    );
     setSaving(false);
     onClose();
   };
@@ -218,15 +245,24 @@ function BrandModal({
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center">
       <div className="w-[min(640px,100%)] rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
         <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-lg font-semibold text-slate-900">{isEdit ? "Sửa thương hiệu" : "Thêm thương hiệu"}</h3>
-          <button onClick={onClose} className="rounded-full p-1 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+          <h3 className="text-lg font-semibold text-slate-900">
+            {isEdit ? 'Sửa thương hiệu' : 'Thêm thương hiệu'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1 hover:bg-slate-100"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <div className="grid gap-4 p-5 sm:grid-cols-5">
           {/* Left fields */}
           <div className="sm:col-span-3 space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-700">Tên thương hiệu</label>
+              <label className="text-sm font-medium text-slate-700">
+                Tên thương hiệu
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -235,7 +271,9 @@ function BrandModal({
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700">Mô tả</label>
+              <label className="text-sm font-medium text-slate-700">
+                Mô tả
+              </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -251,7 +289,11 @@ function BrandModal({
             <label className="text-sm font-medium text-slate-700">Logo</label>
             <div className="mt-1 flex flex-col items-center justify-center rounded-2xl border border-slate-300 bg-slate-50 p-3">
               {logoPreview ? (
-                <img src={logoPreview} alt="preview" className="h-36 w-full rounded-xl object-contain bg-white" />
+                <img
+                  src={logoPreview}
+                  alt="preview"
+                  className="h-36 w-full rounded-xl object-contain bg-white"
+                />
               ) : (
                 <div className="flex h-36 w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 text-slate-400">
                   <ImageIcon className="h-8 w-8" />
@@ -280,16 +322,21 @@ function BrandModal({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t p-4">
-          <button onClick={onClose} className="rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">Hủy</button>
+          <button
+            onClick={onClose}
+            className="rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+          >
+            Hủy
+          </button>
           <button
             onClick={submit}
             disabled={!name.trim() || saving}
             className={clsx(
-              "inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700",
-              saving && "opacity-60"
+              'inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700',
+              saving && 'opacity-60'
             )}
           >
-            {saving ? "Đang lưu…" : isEdit ? "Lưu thay đổi" : "Tạo thương hiệu"}
+            {saving ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Tạo thương hiệu'}
           </button>
         </div>
       </div>
@@ -301,12 +348,15 @@ function BrandModal({
 export default function BrandManager() {
   const [items, setItems] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Brand | null>(null);
-  const [toast, setToast] = useState<string>("");
+  const [toast, setToast] = useState<string>('');
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") || undefined : undefined;
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('token') || undefined
+      : undefined;
 
   const load = async () => {
     setLoading(true);
@@ -314,7 +364,7 @@ export default function BrandManager() {
       const data = await apiList(token);
       setItems(data);
     } catch (e) {
-      console.error("Fetch brands failed:", e);
+      console.error('Fetch brands failed:', e);
       setItems([]);
     } finally {
       setLoading(false);
@@ -324,14 +374,19 @@ export default function BrandManager() {
   useEffect(() => {
     load();
     // test nhỏ: normalizeVN phải khớp tìm kiếm không dấu
-    console.assert(normalizeVN("ĐiỆn Thoại!").includes("dien"), "normalizeVN failed");
+    console.assert(
+      normalizeVN('ĐiỆn Thoại!').includes('dien'),
+      'normalizeVN failed'
+    );
   }, []); // eslint-disable-line
 
   const filtered = useMemo(() => {
     const nq = normalizeVN(query);
     if (!nq) return items;
-    return items.filter((b) =>
-      normalizeVN(b.name).includes(nq) || normalizeVN(b.description || "").includes(nq)
+    return items.filter(
+      (b) =>
+        normalizeVN(b.name).includes(nq) ||
+        normalizeVN(b.description || '').includes(nq)
     );
   }, [items, query]);
 
@@ -350,37 +405,38 @@ export default function BrandManager() {
   ) => {
     try {
       const fd = new FormData();
-      if (data.name) fd.append("name", data.name);
-      if (data.description !== undefined) fd.append("description", data.description);
-      if (data.logoFile) fd.append("logo", data.logoFile);
+      if (data.name) fd.append('name', data.name);
+      if (data.description !== undefined)
+        fd.append('description', data.description);
+      if (data.logoFile) fd.append('logo', data.logoFile);
 
       if (id) {
         await apiUpdate(id, fd, token);
-        setToast("Đã cập nhật thương hiệu");
+        setToast('Đã cập nhật thương hiệu');
       } else {
         await apiCreate(fd, token);
-        setToast("Đã tạo thương hiệu mới");
+        setToast('Đã tạo thương hiệu mới');
       }
       await load();
     } catch (e) {
-      console.error("Save brand failed:", e);
-      setToast("Lỗi khi lưu thương hiệu");
+      console.error('Save brand failed:', e);
+      setToast('Lỗi khi lưu thương hiệu');
     } finally {
-      setTimeout(() => setToast(""), 1500);
+      setTimeout(() => setToast(''), 1500);
     }
   };
 
   const onDelete = async (id: number) => {
-    if (!confirm("Xóa thương hiệu này?")) return;
+    if (!confirm('Xóa thương hiệu này?')) return;
     try {
       await apiDelete(id, token);
       await load();
-      setToast("Đã xóa thương hiệu");
+      setToast('Đã xóa thương hiệu');
     } catch (e) {
-      console.error("Delete brand failed:", e);
-      setToast("Lỗi khi xóa thương hiệu");
+      console.error('Delete brand failed:', e);
+      setToast('Lỗi khi xóa thương hiệu');
     } finally {
-      setTimeout(() => setToast(""), 1200);
+      setTimeout(() => setToast(''), 1200);
     }
   };
 
@@ -388,7 +444,8 @@ export default function BrandManager() {
     <div className="mx-auto max-w-6xl p-6">
       {useMock && (
         <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Đang hiển thị <b>dữ liệu mô phỏng</b> vì không kết nối được API. Bạn vẫn có thể thêm/sửa/xóa tạm thời để xem giao diện.
+          Đang hiển thị <b>dữ liệu mô phỏng</b> vì không kết nối được API. Bạn
+          vẫn có thể thêm/sửa/xóa tạm thời để xem giao diện.
         </div>
       )}
 
@@ -421,33 +478,52 @@ export default function BrandManager() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full table-fixed text-sm">
           <colgroup>
-            <col style={{ width: "80px" }} />
-            <col style={{ width: "24%" }} />
+            <col style={{ width: '80px' }} />
+            <col style={{ width: '24%' }} />
             <col />
-            <col style={{ width: "140px" }} />
-            <col style={{ width: "160px" }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '160px' }} />
           </colgroup>
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">ID</th>
-              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">Tên</th>
-              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">Mô tả</th>
-              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">Logo</th>
-              <th className="px-4 py-2 text-right font-medium whitespace-nowrap">Thao tác</th>
+              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
+                ID
+              </th>
+              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
+                Tên
+              </th>
+              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
+                Mô tả
+              </th>
+              <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
+                Logo
+              </th>
+              <th className="px-4 py-2 text-right font-medium whitespace-nowrap">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">Đang tải…</td>
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center text-slate-500"
+                >
+                  Đang tải…
+                </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6">
                   <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 p-10 text-center">
                     <ImageIcon className="h-10 w-10 text-slate-300" />
-                    <h4 className="mt-3 text-base font-semibold text-slate-900">Chưa có thương hiệu</h4>
-                    <p className="mt-1 text-sm text-slate-600">Hãy thêm thương hiệu mới để bắt đầu quản lý.</p>
+                    <h4 className="mt-3 text-base font-semibold text-slate-900">
+                      Chưa có thương hiệu
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Hãy thêm thương hiệu mới để bắt đầu quản lý.
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -455,13 +531,19 @@ export default function BrandManager() {
               filtered.map((b) => (
                 <tr key={b.id} className="border-t">
                   <td className="px-4 py-2 align-middle">{b.id}</td>
-                  <td className="px-4 py-2 align-middle font-medium text-slate-900">{b.name}</td>
+                  <td className="px-4 py-2 align-middle font-medium text-slate-900">
+                    {b.name}
+                  </td>
                   <td className="px-4 py-2 align-middle text-slate-600">
                     {b.description || <span className="text-slate-400">-</span>}
                   </td>
                   <td className="px-4 py-2 align-middle">
                     {b.logo_url ? (
-                      <img src={toAbsolute(b.logo_url)} alt={b.name} className="h-10 w-16 rounded object-contain bg-white" />
+                      <img
+                        src={toAbsolute(b.logo_url)}
+                        alt={b.name}
+                        className="h-10 w-16 rounded object-contain bg-white"
+                      />
                     ) : (
                       <span className="text-slate-400">No logo</span>
                     )}
@@ -500,9 +582,9 @@ export default function BrandManager() {
         onClose={() => setModalOpen(false)}
         onSubmit={async ({ name, description, logoFile }, id) => {
           const fd = new FormData();
-          if (name) fd.append("name", name);
-          fd.append("description", description || "");
-          if (logoFile) fd.append("logo", logoFile);
+          if (name) fd.append('name', name);
+          fd.append('description', description || '');
+          if (logoFile) fd.append('logo', logoFile);
           await onSubmit({ name, description, logoFile }, id);
         }}
         initial={editing}

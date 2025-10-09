@@ -1,5 +1,13 @@
 import { Store } from './../store/store.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Generated,Unique } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Generated,
+  Unique,
+} from 'typeorm';
 import { User } from './../user/user.entity';
 
 @Entity('store_followers')
@@ -8,7 +16,7 @@ export class StoreFollower {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -26,6 +34,6 @@ export class StoreFollower {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   followed_at!: Date;
 }

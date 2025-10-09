@@ -43,7 +43,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
     forwardRef(() => PricingRuleModule),
     forwardRef(() => ProductCategoryModule),
     forwardRef(() => StoreModule),
-    forwardRef(() => ProductReviewsModule), 
+    forwardRef(() => ProductReviewsModule),
   ],
   controllers: [ProductController],
   providers: [ProductService, ProductPublishService],

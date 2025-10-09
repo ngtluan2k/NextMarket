@@ -11,12 +11,12 @@ import AdminSidebar from './AdminSidebar';
 import VoucherManager from './VoucherManager';
 import StoreManager from './StoreManager';
 import AffiliateProgramDashboard from './AffiliateProgramDashboard';
-import AffiliateRegistration from './AffiliateRegistrationManager'
+import AffiliateRegistration from './AffiliateRegistrationManager';
 import { Empty } from 'antd';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
-  
+
   const Wip: React.FC<{ title?: string; desc?: string; img?: string }> = ({
     title = 'Chức năng đang phát triển...',
     desc = 'Tính năng sẽ sớm ra mắt.',
@@ -29,7 +29,9 @@ export const AdminDashboard: React.FC = () => {
         className="w-[380px] max-w-full"
         style={{ filter: 'brightness(1.15) contrast(1.05)' }} // tạm thời
       />
-      <h3 className="mt-4 text-lg font-semibold text-gray-900 text-center">{title}</h3>
+      <h3 className="mt-4 text-lg font-semibold text-gray-900 text-center">
+        {title}
+      </h3>
       <p className="mt-1 text-sm text-gray-500 text-center">{desc}</p>
     </div>
   );
@@ -42,37 +44,37 @@ export const AdminDashboard: React.FC = () => {
     switch (activeKey) {
       case '1-1':
         return <Wip title="Quản lý người dùng" />;
-  
+
       case '1-2':
         return <RoleManager />;
-  
+
       case '2-1':
         return <Wip title="Danh sách sản phẩm" />;
-  
+
       case '2-2':
         return <CategoryManager />;
-  
+
       case '2-3':
         return <Wip title="Khuyến mãi sản phẩm" />;
-  
+
       case '3-1':
         return <InventoryManager />;
-  
+
       case '3-2':
         return <Wip title="Nhập/Xuất kho" />;
-  
+
       case '4-1':
         return <Wip title="Danh sách đơn hàng" />;
-  
+
       case '4-2':
         return <Wip title="Trả hàng / Hoàn tiền" />;
-  
+
       case '5-1':
         return <Wip title="Danh sách khách hàng" />;
-  
+
       case '5-2':
         return <Wip title="Nhóm khách hàng" />;
-  
+
       case '6-1':
         return <BrandManager />;
       case '6-2': // Đối soát công nợ
@@ -98,7 +100,7 @@ export const AdminDashboard: React.FC = () => {
         );
       case '8-1':
         return <VoucherManager />;
-      case '8-2': 
+      case '8-2':
         return (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -114,7 +116,7 @@ export const AdminDashboard: React.FC = () => {
         );
       case '10-1':
         return <StoreManager />;
-  
+
       case '10-2':
         return (
           <Empty
@@ -128,9 +130,9 @@ export const AdminDashboard: React.FC = () => {
         return <AffiliateProgramDashboard />;
       case 'permissions':
         return <PermissionManager />;
-      case 'userRoles': 
+      case 'userRoles':
         return <UserRoleManager />;
-  
+
       default:
         return <RoleManager />;
     }

@@ -1,6 +1,6 @@
-import { RegistrationHeader } from "../../../components/affiliate/registration/registration-header"
-import { RegistrationHero } from "../../../components/affiliate/registration/registration-hero"
-import { RegistrationForm } from "../../../components/affiliate/registration/registration-form"
+import { RegistrationHeader } from '../../../components/affiliate/registration/registration-header';
+import { RegistrationHero } from '../../../components/affiliate/registration/registration-hero';
+import { RegistrationForm } from '../../../components/affiliate/registration/registration-form';
 export default function AffiliateRegister() {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -12,5 +12,5 @@ export default function AffiliateRegister() {
         </div>
       </main>
     </div>
-  )
+  );
 }

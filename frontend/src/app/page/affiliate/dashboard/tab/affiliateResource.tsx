@@ -1,9 +1,7 @@
-import React from 'react'
+import React from 'react';
 
 const AffiliateResource = () => {
-  return (
-    <div>affiliateResource</div>
-  )
-}
+  return <div>affiliateResource</div>;
+};
 
-export default AffiliateResource
+export default AffiliateResource;

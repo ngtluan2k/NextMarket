@@ -45,7 +45,7 @@ export class Voucher {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @Column({ unique: true, length: 50 })
@@ -80,10 +80,10 @@ export class Voucher {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   min_order_amount!: number;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   start_date!: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   end_date!: Date;
 
   @Column({ type: 'int', nullable: true })
@@ -151,10 +151,10 @@ export class Voucher {
   @Column({ type: 'varchar', length: 50, nullable: true, default: '#FF6B6B' })
   theme_color?: string;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt!: Date;
 
   @OneToMany(() => VoucherUsage, (usage) => usage.voucher)

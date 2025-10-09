@@ -11,7 +11,7 @@ export class Referral {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid?: string;
 
   @ManyToOne(() => User, (user) => user.id)
@@ -28,6 +28,6 @@ export class Referral {
   @Column({ length: 255 })
   status?: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   created_at?: Date;
 }

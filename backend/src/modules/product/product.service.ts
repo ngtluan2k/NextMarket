@@ -533,7 +533,7 @@ export class ProductService {
 
     return similarProducts;
   }
-  
+
   async findById(id: number) {
     const product = await this.productRepo
       .createQueryBuilder('product')
@@ -547,7 +547,7 @@ export class ProductService {
       .leftJoinAndSelect('product.store', 'store')
       .where('product.id = :id', { id })
       .getOne();
-  
+
     if (!product) {
       throw new NotFoundException('Product not found');
     }

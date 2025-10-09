@@ -31,9 +31,9 @@ export default function Affiliate() {
           navigate('/affiliate/register');
         }
       } catch (error) {
-        alert(error)
+        alert(error);
         console.error('Error checking affiliate status:', error);
-        navigate('/'); 
+        navigate('/');
       }
     };
 

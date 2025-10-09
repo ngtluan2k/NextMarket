@@ -26,8 +26,6 @@ interface Props {
   maxSelect?: number;
 }
 
-
-
 const VoucherDiscountSection: React.FC<Props> = ({
   visible,
   onClose,
@@ -151,7 +149,9 @@ const VoucherDiscountSection: React.FC<Props> = ({
       }
       if (selectedTypes.includes(voucher.type)) {
         message.warning(
-          `Bạn đã chọn một voucher thuộc loại này (${VoucherType[voucher.type]})`
+          `Bạn đã chọn một voucher thuộc loại này (${
+            VoucherType[voucher.type]
+          })`
         );
         return;
       }
@@ -183,7 +183,9 @@ const VoucherDiscountSection: React.FC<Props> = ({
         message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
       } else if (selectedTypes.includes(voucher.type)) {
         message.warning(
-          `Bạn đã chọn một voucher thuộc loại này (${VoucherType[voucher.type]})`
+          `Bạn đã chọn một voucher thuộc loại này (${
+            VoucherType[voucher.type]
+          })`
         );
       } else {
         setSelectedIds([...selectedIds, voucher.id]);
@@ -269,7 +271,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       width={650}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-         <div>
+          <div>
             <Tag color="blue">
               {selectedIds.length} đã chọn
               {maxSelect !== Infinity && ` / ${maxSelect}`}

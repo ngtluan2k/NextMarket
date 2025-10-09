@@ -149,7 +149,8 @@ export function AffiliateDashboard() {
             Danh mục đầu tư của bạn không có doanh thu
           </h3>
           <p className="text-gray-600 max-w-md">
-            Khi mọi người bắt đầu mua hàng qua liên kết của bạn, doanh thu và biểu đồ sẽ xuất hiện tại đây.
+            Khi mọi người bắt đầu mua hàng qua liên kết của bạn, doanh thu và
+            biểu đồ sẽ xuất hiện tại đây.
           </p>
         </div>
       </Card>

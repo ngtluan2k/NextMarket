@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 
@@ -7,7 +13,7 @@ export class AffiliateCommission {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @ManyToOne(() => AffiliateLink, (link) => link.commissions)
@@ -24,9 +30,9 @@ export class AffiliateCommission {
   @Column({ length: 255 })
   status!: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   created_at!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   paid_at?: Date;
 }

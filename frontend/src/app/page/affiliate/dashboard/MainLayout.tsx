@@ -18,8 +18,7 @@ export function AffiliateDashboardLayout() {
             minHeight: 360,
             background: '#F7F7F7',
             margin: '64px',
-            marginTop:'32px'
-
+            marginTop: '32px',
           }}
         >
           <AffiliateHeader />

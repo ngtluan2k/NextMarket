@@ -1,4 +1,9 @@
-import { Outlet, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Outlet,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import StoreTopBar from '../components/store/StoreTopBar';
@@ -17,7 +22,6 @@ export default function StoreLayout() {
   const [searchParams] = useSearchParams();
   const groupIdParam = searchParams.get('groupId');
   const groupId = groupIdParam ? Number(groupIdParam) : 0;
-
 
   useEffect(() => {
     if (!slug) return;
