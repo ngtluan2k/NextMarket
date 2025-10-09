@@ -181,7 +181,7 @@ export class ProductController {
   })
   async findByStoreId(@Param('storeId') storeId: number, @Req() req: any) {
     console.log('req.user:', JSON.stringify(req.user)); // Debug log
-    const userId = req.user?.userId; // Use userId
+    const userId = req.user?.sub; // Use userId
     console.log('Extracted userId:', userId);
     console.log('Requested storeId:', storeId);
     if (!userId)

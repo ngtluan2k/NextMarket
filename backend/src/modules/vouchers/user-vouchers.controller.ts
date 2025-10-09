@@ -29,7 +29,7 @@ export class UserVouchersController {
   @ApiOperation({ summary: 'Lấy danh sách voucher khả dụng cho người dùng' })
   @ApiResponse({ status: 200, description: 'Danh sách voucher khả dụng' })
   async getAvailableVouchers(@Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -40,7 +40,7 @@ export class UserVouchersController {
   @ApiOperation({ summary: 'Thu thập voucher' })
   @ApiResponse({ status: 200, description: 'Voucher được thu thập thành công' })
   async collectVoucher(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -54,7 +54,7 @@ export class UserVouchersController {
     @Body() applyVoucherDto: ApplyVoucherDto,
     @Req() req: any
   ) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }

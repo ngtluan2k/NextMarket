@@ -77,9 +77,9 @@ export class VouchersService {
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
   const roleList = Array.isArray(roles) ? roles : [roles];
 
-  if (roleList.includes('Admin')) {
+  if (roleList.includes('admin')) {
     return this.vouchersRepository.find();
-  } else if (roleList.includes('Seller')) {
+  } else if (roleList.includes('seller')) {
     const ownedStores = await this.storesRepository.find({
       where: { user: { id: userId } },
     });
@@ -579,7 +579,7 @@ export class VouchersService {
 
     const roleList = Array.isArray(roles) ? roles : [roles];
 
-    if (roleList.includes('Admin')) {
+    if (roleList.includes('admin')) {
       return adminPermissions.includes(permission);
     } else if (roleList.includes('Seller')) {
       return storeOwnerPermissions.includes(permission);

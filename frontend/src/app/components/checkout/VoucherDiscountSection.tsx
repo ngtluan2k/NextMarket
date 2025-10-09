@@ -13,6 +13,7 @@ import {
   OrderItem,
   VoucherDiscountType,
   VoucherType,
+  VoucherStatus,
 } from '../../types/voucher';
 
 interface Props {
@@ -26,7 +27,10 @@ interface Props {
   maxSelect?: number;
 }
 
-
+interface Product {
+  id: number;
+  category_id?: number;
+}
 
 const VoucherDiscountSection: React.FC<Props> = ({
   visible,
@@ -51,13 +55,25 @@ const VoucherDiscountSection: React.FC<Props> = ({
   const [voucherDiscounts, setVoucherDiscounts] = useState<
     Record<number, number>
   >({});
+  const [productCategories, setProductCategories] = useState<
+    Record<number, number | undefined>
+  >({});
   const { me } = useAuth();
   const navigate = useNavigate();
 
-  // Load available vouchers
+  // Log input data for debugging
   useEffect(() => {
-    console.log('Current user:', me);
+    console.log('Order items:', orderItems);
+    console.log('Store ID:', storeId);
+    console.log('Order amount:', orderAmount);
+    console.log('Selected vouchers:', selectedVouchers);
+    console.log('Selected types:', selectedTypes);
+  }, [orderItems, storeId, orderAmount, selectedVouchers]);
+
+  // Load product categories and available vouchers
+  useEffect(() => {
     if (visible && me?.id) {
+      fetchProductCategories();
       fetchAvailableVouchers();
     } else if (visible && !me?.id) {
       message.error('Vui lòng đăng nhập để xem danh sách voucher');
@@ -69,21 +85,111 @@ const VoucherDiscountSection: React.FC<Props> = ({
   // Calculate discounts for all vouchers
   useEffect(() => {
     if (vouchers.length > 0) {
+      console.log('Calculating discounts for vouchers:', vouchers);
       calculateAllDiscounts();
     }
   }, [vouchers, orderAmount]);
+
+  const fetchProductCategories = async () => {
+    setLoading(true);
+    try {
+      const productIds = [...new Set(orderItems.map((item) => item.productId))];
+      const categories: Record<number, number | undefined> = {};
+      for (const productId of productIds) {
+        const res = await api.get(`/products/${productId}`);
+        categories[productId] = res.data.category_id;
+      }
+      setProductCategories(categories);
+    } catch (error: any) {
+      message.warning('Không thể tải danh mục sản phẩm, bỏ qua kiểm tra danh mục');
+      setProductCategories({});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isVoucherValid = (voucher: Voucher) => {
+
+    // Kiểm tra trạng thái
+    if (voucher.status !== VoucherStatus.ACTIVE) {
+      return false;
+    }
+
+    // Kiểm tra thời gian
+    const now = new Date();
+    if (voucher.start_date && new Date(voucher.start_date) > now) {
+      return false;
+    }
+    if (voucher.end_date && new Date(voucher.end_date) < now) {
+      return false;
+    }
+
+    // Kiểm tra store_id
+    if (voucher.applicable_store_ids && voucher.applicable_store_ids.length > 0) {
+      if (!voucher.applicable_store_ids.includes(storeId)) {
+        return false;
+      }
+    }
+
+    // Lấy danh sách product_id từ orderItems
+    const orderProductIds = orderItems.map((item) => item.productId);
+    // Kiểm tra applicable_product_ids
+    if (
+      voucher.applicable_product_ids &&
+      voucher.applicable_product_ids.length > 0
+    ) {
+      const hasApplicableProduct = orderProductIds.some((productId) =>
+        voucher.applicable_product_ids!.includes(productId)
+      );
+      if (!hasApplicableProduct) {
+        return false;
+      }
+    }
+
+    // Kiểm tra excluded_product_ids
+    if (
+      voucher.excluded_product_ids &&
+      voucher.excluded_product_ids.length > 0
+    ) {
+      const hasExcludedProduct = orderProductIds.some((productId) =>
+        voucher.excluded_product_ids!.includes(productId)
+      );
+      if (hasExcludedProduct) {
+        return false;
+      }
+    }
+
+    // Kiểm tra applicable_category_ids (bỏ qua nếu productCategories rỗng)
+    if (
+      voucher.applicable_category_ids &&
+      voucher.applicable_category_ids.length > 0 &&
+      Object.keys(productCategories).length > 0
+    ) {
+      const orderCategoryIds = orderProductIds
+        .map((productId) => productCategories[productId])
+        .filter((id): id is number => id !== undefined);
+      const hasApplicableCategory = orderCategoryIds.some((categoryId) =>
+        voucher.applicable_category_ids!.includes(categoryId)
+      );
+      if (!hasApplicableCategory) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   const fetchAvailableVouchers = async () => {
     setLoading(true);
     try {
       const res = await api.get('/user/vouchers/available');
-      const filtered = res.data.filter(
-        (v: Voucher) => !v.store || v.store.id === storeId
-      );
-      console.log('Fetched vouchers:', filtered);
+      const filtered = res.data.filter((v: Voucher) => {
+        if (v.store && v.store.id !== storeId) {
+          return false;
+        }
+        return isVoucherValid(v);
+      });
       setVouchers(filtered);
     } catch (error: any) {
-      console.error('Error fetching vouchers:', error);
       const errorMessage =
         error.response?.status === 401
           ? 'Vui lòng đăng nhập để xem danh sách voucher'
@@ -102,27 +208,31 @@ const VoucherDiscountSection: React.FC<Props> = ({
     const discounts: Record<number, number> = {};
 
     for (const voucher of vouchers) {
-      if (isVoucherValid(voucher)) {
-        try {
-          const res = await api.post('/vouchers/calculate-discount', {
-            voucherCodes: [voucher.code],
-            userId: me?.id,
-            orderItems,
-            storeId,
-            orderAmount,
-          });
-          console.log(`Discount for voucher ${voucher.code}:`, res.data);
-          discounts[voucher.id] = res.data.appliedVouchers[0]?.discount || 0;
-        } catch (error) {
-          console.error(
-            `Error calculating discount for voucher ${voucher.code}:`,
-            error
-          );
-          discounts[voucher.id] = 0;
+      try {
+        const payload = {
+          voucherCodes: [voucher.code],
+          userId: me?.id,
+          orderItems,
+          storeId,
+          orderAmount,
+        };
+        console.log(`Calculate discount payload for ${voucher.code}:`, payload);
+        const res = await api.post('/vouchers/calculate-discount', payload);
+        console.log(`Discount for voucher ${voucher.code}:`, res.data);
+        if (res.data.invalidVouchers?.length > 0) {
+          console.log(`Invalid reason for ${voucher.code}:`, res.data.invalidVouchers[0].error);
         }
+        discounts[voucher.id] = res.data.appliedVouchers[0]?.discount || 0;
+      } catch (error) {
+        console.error(
+          `Error calculating discount for voucher ${voucher.code}:`,
+          error
+        );
+        discounts[voucher.id] = 0;
       }
     }
 
+    console.log('Voucher discounts:', discounts);
     setVoucherDiscounts(discounts);
   };
 
@@ -144,7 +254,6 @@ const VoucherDiscountSection: React.FC<Props> = ({
       setSelectedIds(selectedIds.filter((id) => id !== voucher.id));
       setSelectedTypes(selectedTypes.filter((type) => type !== voucher.type));
     } else {
-      // Kiểm tra giới hạn nếu maxSelect không phải Infinity
       if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
         message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
         return;
@@ -176,6 +285,12 @@ const VoucherDiscountSection: React.FC<Props> = ({
       });
 
       const { voucher } = res.data;
+
+      if (!isVoucherValid(voucher)) {
+        message.error('Voucher không áp dụng được cho đơn hàng này');
+        setApplying(false);
+        return;
+      }
 
       if (selectedIds.includes(voucher.id)) {
         message.info('Voucher này đã được chọn');
@@ -223,8 +338,8 @@ const VoucherDiscountSection: React.FC<Props> = ({
       };
       console.log('Sending calculate-discount payload:', payload);
       const res = await api.post('/vouchers/calculate-discount', payload);
-      const { discountTotal, appliedVouchers, invalidVouchers } = res.data;
       console.log('Calculate discount response:', res.data);
+      const { discountTotal, appliedVouchers, invalidVouchers } = res.data;
 
       if (invalidVouchers?.length > 0) {
         invalidVouchers.forEach((v: { code: string; error: string }) => {
@@ -247,14 +362,12 @@ const VoucherDiscountSection: React.FC<Props> = ({
     }
   };
 
-  const isVoucherValid = (voucher: Voucher) => {
-    return orderAmount >= voucher.min_order_amount;
-  };
-
   const filteredVouchers = vouchers.filter(
     (voucher) =>
       !selectedTypes.includes(voucher.type) || selectedIds.includes(voucher.id)
   );
+
+  console.log('Filtered vouchers for rendering:', filteredVouchers);
 
   return (
     <Modal
@@ -269,7 +382,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       width={650}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-         <div>
+          <div>
             <Tag color="blue">
               {selectedIds.length} đã chọn
               {maxSelect !== Infinity && ` / ${maxSelect}`}
@@ -308,7 +421,6 @@ const VoucherDiscountSection: React.FC<Props> = ({
             dataSource={filteredVouchers}
             renderItem={(voucher) => {
               const isSelected = selectedIds.includes(voucher.id);
-              const isValid = isVoucherValid(voucher);
               const discount = voucherDiscounts[voucher.id] || 0;
 
               return (
@@ -320,11 +432,10 @@ const VoucherDiscountSection: React.FC<Props> = ({
                     borderRadius: 8,
                     marginBottom: 12,
                     padding: 16,
-                    cursor: isValid ? 'pointer' : 'not-allowed',
-                    opacity: isValid ? 1 : 0.6,
+                    cursor: 'pointer',
                     background: isSelected ? '#e6f7ff' : 'white',
                   }}
-                  onClick={() => isValid && handleSelectVoucher(voucher)}
+                  onClick={() => handleSelectVoucher(voucher)}
                 >
                   <div style={{ display: 'flex', width: '100%', gap: 12 }}>
                     <div
@@ -374,14 +485,13 @@ const VoucherDiscountSection: React.FC<Props> = ({
                               {voucher.min_order_amount.toLocaleString()}đ
                             </div>
                           )}
-                          {isValid && discount > 0 && (
+                          {discount > 0 ? (
                             <Tag color="green" style={{ marginTop: 4 }}>
                               Giảm {discount.toLocaleString()}đ
                             </Tag>
-                          )}
-                          {!isValid && (
-                            <Tag color="red" style={{ marginTop: 4 }}>
-                              Không đủ điều kiện
+                          ) : (
+                            <Tag color="orange" style={{ marginTop: 4 }}>
+                              Chưa áp dụng được
                             </Tag>
                           )}
                         </div>
