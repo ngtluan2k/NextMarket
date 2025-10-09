@@ -15,8 +15,16 @@ import {
   Alert,
   Select,
 } from 'antd';
-import { AffiliatedProduct, AffiliatedProductsResponse, CreateLinkRequest, CreateLinkResponse, MyLink, MyLinksResponse, Program, ProgramsResponse } from '../../../../types/affiliate-links';
-
+import {
+  AffiliatedProduct,
+  AffiliatedProductsResponse,
+  CreateLinkRequest,
+  CreateLinkResponse,
+  MyLink,
+  MyLinksResponse,
+  Program,
+  ProgramsResponse,
+} from '../../../../types/affiliate-links';
 
 const { Title, Text } = Typography;
 const API_BASE = 'http://localhost:3000';
@@ -27,7 +35,9 @@ export default function AffiliateLinks() {
 
   // lists
   const [myLinks, setMyLinks] = useState<MyLink[]>([]);
-  const [affiliatedProducts, setAffiliatedProducts] = useState<AffiliatedProduct[]>([]);
+  const [affiliatedProducts, setAffiliatedProducts] = useState<
+    AffiliatedProduct[]
+  >([]);
   const [programs, setPrograms] = useState<Program[]>([]);
 
   // create form
@@ -47,15 +57,19 @@ export default function AffiliateLinks() {
     [token]
   );
 
-
   const ensureUrl = useCallback(
     (link: MyLink): string => {
       const raw = (link.affiliate_link || '').trim();
       const baseIfMissing =
-        link.productId != null ? `${window.location.origin}/product/${link.productId}` : '';
+        link.productId != null
+          ? `${window.location.origin}/product/${link.productId}`
+          : '';
       const base = raw || baseIfMissing;
       if (!base) return '';
-      const enforcedOrigin = base.replace(/^https?:\/\/[^/]+/i, window.location.origin);
+      const enforcedOrigin = base.replace(
+        /^https?:\/\/[^/]+/i,
+        window.location.origin
+      );
       let url: URL;
       try {
         url = new URL(enforcedOrigin, window.location.origin);
@@ -65,7 +79,10 @@ export default function AffiliateLinks() {
       if (!url.searchParams.get('aff') && affiliateCode) {
         url.searchParams.set('aff', affiliateCode);
       }
-      if (!url.searchParams.get('variant') && typeof link.variantId === 'number') {
+      if (
+        !url.searchParams.get('variant') &&
+        typeof link.variantId === 'number'
+      ) {
         url.searchParams.set('variant', String(link.variantId));
       }
       return url.toString();
@@ -120,7 +137,8 @@ export default function AffiliateLinks() {
     const res = await fetch(`${API_BASE}/affiliate-links/affiliated-products`, {
       headers: authHeaders,
     });
-    if (!res.ok) throw new Error(`Failed to load affiliated products (${res.status})`);
+    if (!res.ok)
+      throw new Error(`Failed to load affiliated products (${res.status})`);
     const json: AffiliatedProductsResponse = await res.json();
     return (json?.data || json?.products || []) as AffiliatedProduct[];
   }, [authHeaders]);
@@ -137,10 +155,13 @@ export default function AffiliateLinks() {
         const res = await fetch(url, { headers: authHeaders });
         if (!res.ok) continue;
         const data: ProgramsResponse = await res.json();
-        const arr = Array.isArray(data) ? data : (data?.data || []);
+        const arr = Array.isArray(data) ? data : data?.data || [];
         if (Array.isArray(arr) && arr.length) {
           return arr
-            .filter((p: any) => p && typeof p.id === 'number' && typeof p.name === 'string')
+            .filter(
+              (p: any) =>
+                p && typeof p.id === 'number' && typeof p.name === 'string'
+            )
             .map((p: any) => ({ id: p.id, name: p.name, status: p.status }));
         }
       } catch {
@@ -177,7 +198,6 @@ export default function AffiliateLinks() {
     [authHeaders]
   );
 
-
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -200,7 +220,6 @@ export default function AffiliateLinks() {
     refreshAll();
   }, [refreshAll]);
 
-
   const handleCreateLink = useCallback(
     async (values: CreateLinkRequest) => {
       setLoading(true);
@@ -208,7 +227,8 @@ export default function AffiliateLinks() {
         const payload: CreateLinkRequest = {
           productId: Number(values.productId),
           variantId:
-            typeof values.variantId === 'number' && !Number.isNaN(values.variantId)
+            typeof values.variantId === 'number' &&
+            !Number.isNaN(values.variantId)
               ? values.variantId
               : undefined,
           programId:
@@ -239,7 +259,8 @@ export default function AffiliateLinks() {
         title: 'Program',
         dataIndex: 'program_name',
         key: 'program_name',
-        render: (v: string) => (v ? <Tag color="blue">{v}</Tag> : <Tag>Unknown</Tag>),
+        render: (v: string) =>
+          v ? <Tag color="blue">{v}</Tag> : <Tag>Unknown</Tag>,
       },
       {
         title: 'Product ID',
@@ -273,7 +294,11 @@ export default function AffiliateLinks() {
               >
                 {disabled ? 'Link not ready' : url}
               </span>
-              <Button type="primary" disabled={disabled} onClick={() => copyToClipboard(url)}>
+              <Button
+                type="primary"
+                disabled={disabled}
+                onClick={() => copyToClipboard(url)}
+              >
                 Copy
               </Button>
               <Button disabled={disabled} onClick={() => openInNewTab(url)}>
@@ -287,7 +312,8 @@ export default function AffiliateLinks() {
         title: 'Created',
         dataIndex: 'created_at',
         key: 'created_at',
-        render: (v: string | undefined) => (v ? new Date(v).toLocaleString() : '—'),
+        render: (v: string | undefined) =>
+          v ? new Date(v).toLocaleString() : '—',
       },
       {
         title: 'Actions',
@@ -328,7 +354,8 @@ export default function AffiliateLinks() {
         title: 'Created',
         dataIndex: 'created_at',
         key: 'created_at',
-        render: (v: string | undefined) => (v ? new Date(v).toLocaleString() : '—'),
+        render: (v: string | undefined) =>
+          v ? new Date(v).toLocaleString() : '—',
       },
     ],
     []
@@ -347,12 +374,23 @@ export default function AffiliateLinks() {
         />
       )}
 
-      <Card title={<Title level={4} style={{ margin: 0 }}>Create Affiliate Link</Title>} style={{ marginBottom: 16 }}>
+      <Card
+        title={
+          <Title level={4} style={{ margin: 0 }}>
+            Create Affiliate Link
+          </Title>
+        }
+        style={{ marginBottom: 16 }}
+      >
         <Form
           form={form}
           layout="inline"
           onFinish={handleCreateLink}
-          initialValues={{ productId: undefined, variantId: undefined, programId: undefined }}
+          initialValues={{
+            productId: undefined,
+            variantId: undefined,
+            programId: undefined,
+          }}
         >
           <Form.Item
             label="Program"
@@ -383,14 +421,21 @@ export default function AffiliateLinks() {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} disabled={!token}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              disabled={!token}
+            >
               Create Link
             </Button>
           </Form.Item>
         </Form>
         <Divider style={{ margin: '12px 0' }} />
         <Text type="secondary">
-          Program selection applies to link creation. Links are normalized to your current origin and will backfill missing aff/variant when possible.
+          Program selection applies to link creation. Links are normalized to
+          your current origin and will backfill missing aff/variant when
+          possible.
         </Text>
       </Card>
 

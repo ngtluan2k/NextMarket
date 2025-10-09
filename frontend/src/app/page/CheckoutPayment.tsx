@@ -71,21 +71,21 @@ const CheckoutPayment: React.FC = () => {
   }, [items]);
 
   // Kiểm tra có subscription hay không
-const isSubscription = useMemo(
-  () => checkoutItems.some((i) => i.type === 'subscription'),
-  [checkoutItems]
-);
+  const isSubscription = useMemo(
+    () => checkoutItems.some((i) => i.type === 'subscription'),
+    [checkoutItems]
+  );
 
-// Lọc payment methods cho COD ↔ EveryCoin
-const filteredMethods = useMemo(
-  () =>
-    paymentMethods.filter((m) => {
-      if (m.type === 'cod') return !isSubscription;
-      if (m.type === 'everycoin') return isSubscription;
-      return true; // các method khác luôn hiển thị
-    }),
-  [paymentMethods, isSubscription]
-);
+  // Lọc payment methods cho COD ↔ EveryCoin
+  const filteredMethods = useMemo(
+    () =>
+      paymentMethods.filter((m) => {
+        if (m.type === 'cod') return !isSubscription;
+        if (m.type === 'everycoin') return isSubscription;
+        return true; // các method khác luôn hiển thị
+      }),
+    [paymentMethods, isSubscription]
+  );
 
   useEffect(() => {
     if (items.length === 0) {
@@ -106,7 +106,6 @@ const filteredMethods = useMemo(
     day: 'numeric',
     month: 'numeric',
   })}`;
-
 
   const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
   const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
@@ -182,16 +181,15 @@ const filteredMethods = useMemo(
       }
     };
 
-   // Kiểm tra có subscription hay không
-const isSubscription = checkoutItems.some((i) => i.type === 'subscription');
+    // Kiểm tra có subscription hay không
+    const isSubscription = checkoutItems.some((i) => i.type === 'subscription');
 
-// Lọc payment methods cho COD ↔ EveryCoin
-const filteredMethods = paymentMethods.filter((m) => {
-  if (m.type === 'cod') return !isSubscription;      // COD chỉ hiện khi không phải subscription
-  if (m.type === 'everycoin') return isSubscription; // EveryCoin chỉ hiện khi là subscription
-  return true; // các method khác luôn hiển thị
-});
-
+    // Lọc payment methods cho COD ↔ EveryCoin
+    const filteredMethods = paymentMethods.filter((m) => {
+      if (m.type === 'cod') return !isSubscription; // COD chỉ hiện khi không phải subscription
+      if (m.type === 'everycoin') return isSubscription; // EveryCoin chỉ hiện khi là subscription
+      return true; // các method khác luôn hiển thị
+    });
 
     const fetchUserAddress = async () => {
       try {

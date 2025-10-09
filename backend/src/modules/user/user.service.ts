@@ -103,7 +103,9 @@ export class UserService {
       throw err;
     }
 
-    const role = await this.roleRepository.findOne({ where: { name: 'Customer' } });
+    const role = await this.roleRepository.findOne({
+      where: { name: 'Customer' },
+    });
     if (!role) throw new BadRequestException('Default role not found');
 
     const userRole = this.userRoleRepository.create({

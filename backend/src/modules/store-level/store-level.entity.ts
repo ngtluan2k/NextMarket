@@ -27,6 +27,6 @@ export class StoreLevel {
   })
   level!: StoreLevelEnum;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   upgraded_at!: Date;
 }

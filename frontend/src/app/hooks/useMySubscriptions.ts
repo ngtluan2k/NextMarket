@@ -15,7 +15,11 @@ export function useMySubscriptions() {
       const data = await fetchMySubscriptions();
       setSubscriptions(data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Failed to load subscriptions');
+      setError(
+        err?.response?.data?.message ||
+          err.message ||
+          'Failed to load subscriptions'
+      );
     } finally {
       setLoading(false);
     }

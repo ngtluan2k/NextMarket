@@ -53,9 +53,12 @@ import { AffiliateRegistrationModule } from './modules/affiliate-registration/af
 import { AffiliatePlatformModule } from './modules/affiliate-platform/affiliate-platform.module';
 import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registration-platform/affiliate-registration-platform.module';
 import { InventoryTransactionModule } from './modules/inventory-transactions/inventory-transactions.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -70,27 +73,42 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
       serveRoot: '/uploads',
     }),
 
-    // Cấu hình DB dùng ConfigService
+    //     TypeOrmModule.forRootAsync({
+    //       imports: [ConfigModule],
+    //       inject: [ConfigService],
+    //       useFactory: (config: ConfigService) => {
+    //         console.log('DB_HOST:', config.get('DB_HOST'));
+    //         console.log('DB_NAME:', config.get('DB_USERNAME'));
+    //         console.log('DB_PASSWORD:', config.get('DB_PASSWORD'));
+    //
+    //         return {
+    //           type: config.get<string>('DB_TYPE'),
+    //           host: config.get<string>('DB_HOST'),
+    //           port: config.get<number>('DB_PORT'),
+    //           username: config.get<string>('DB_USERNAME'),
+    //           password: config.get<string>('DB_PASSWORD'),
+    //           database: config.get<string>('DB_NAME'),
+    //           autoLoadEntities: true,
+    //           synchronize: true,
+    //           logging: true,
+    //         };
+    //       },
+    //     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        console.log('DB_HOST:', configService.get('DB_HOST'));
-        console.log('DB_NAME:', configService.get('DB_USERNAME'));
-        console.log('DB_PASSWORD:', configService.get('DB_PASSWORD'));
-
-        return {
-          type: 'mysql',
-          host: configService.get<string>('DB_HOST'),
-          port: configService.get<number>('DB_PORT'),
-          username: configService.get<string>('DB_USERNAME'),
-          password: configService.get<string>('DB_PASSWORD'),
-          database: configService.get<string>('DB_NAME'),
-          autoLoadEntities: true,
-          synchronize: false,
-          logging: true,
-        };
-      },
+      useFactory: (config: ConfigService) => ({
+        type: config.get('DB_TYPE'),
+        host: config.get('DB_HOST'),
+        port: +config.get('DB_PORT'),
+        username: config.get('DB_USERNAME'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_NAME'),
+        ssl: { rejectUnauthorized: false },
+        autoLoadEntities: true,
+        synchronize: true,
+        logging: true,
+      }),
     }),
 
     ProductModule,
@@ -141,6 +159,8 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
     AffiliatePlatformModule,
     AffiliateRegistrationPlatformModule,
     InventoryTransactionModule,
+    GroupOrdersModule,
   ],
+  providers: [],
 })
 export class AppModule {}

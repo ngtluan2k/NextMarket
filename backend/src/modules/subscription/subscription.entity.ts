@@ -19,7 +19,7 @@ export class Subscription {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @ManyToOne(() => User, (user) => user.id)
@@ -53,10 +53,10 @@ export class Subscription {
   @Column({ name: 'remaining_quantity', type: 'int', default: 0 })
   remainingQuantity!: number;
 
-  @Column({ name: 'start_date', type: 'datetime', nullable: true })
+  @Column({ name: 'start_date', type: 'timestamp', nullable: true })
   startDate!: Date;
 
-  @Column({ name: 'end_date', type: 'datetime', nullable: true })
+  @Column({ name: 'end_date', type: 'timestamp', nullable: true })
   endDate!: Date;
 
   @Column({ type: 'varchar', length: 50, default: 'active' })

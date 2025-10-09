@@ -1,6 +1,16 @@
 // src/components/LoginModal.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { Mail, Lock, User, Calendar, Phone, BadgeCheck, Eye, EyeOff, Globe } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  User,
+  Calendar,
+  Phone,
+  BadgeCheck,
+  Eye,
+  EyeOff,
+  Globe,
+} from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -65,7 +75,11 @@ export default function LoginModal({
 }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const { me, login } = useAuth();
-  const greeting = me?.full_name ? `Xin chào, ${me.full_name}` : me?.email ? `Xin chào, ${me.email}` : title;
+  const greeting = me?.full_name
+    ? `Xin chào, ${me.full_name}`
+    : me?.email
+    ? `Xin chào, ${me.email}`
+    : title;
 
   // login
   const [email, setEmail] = useState('');
@@ -86,7 +100,9 @@ export default function LoginModal({
   });
   const [showRegPw, setShowRegPw] = useState(false);
 
-  const [countries, setCountries] = useState<{ name: string; code: string }[]>([]);
+  const [countries, setCountries] = useState<{ name: string; code: string }[]>(
+    []
+  );
   const [submitting, setSubmitting] = useState(false);
 
   // lỗi theo tab
@@ -111,7 +127,11 @@ export default function LoginModal({
     if (!open) return;
     fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
       .then((res) => res.json())
-      .then((data) => setCountries(data.map((c: any) => ({ name: c.name.common, code: c.cca2 }))));
+      .then((data) =>
+        setCountries(
+          data.map((c: any) => ({ name: c.name.common, code: c.cca2 }))
+        )
+      );
   }, [open]);
 
   useEffect(() => {
@@ -218,7 +238,9 @@ export default function LoginModal({
             headers: { Authorization: `Bearer ${data.access_token}` },
           })
             .then((res) => res.json())
-            .then((cartJson) => localStorage.setItem('cart', JSON.stringify(cartJson)));
+            .then((cartJson) =>
+              localStorage.setItem('cart', JSON.stringify(cartJson))
+            );
           onClose();
           popup.close();
           window.removeEventListener('message', listener);
@@ -234,9 +256,16 @@ export default function LoginModal({
   const RightArt = sideImageUrl || defaultSide;
 
   return (
-    <div aria-modal role="dialog" className="fixed inset-0 z-[100] overflow-y-auto">
+    <div
+      aria-modal
+      role="dialog"
+      className="fixed inset-0 z-[100] overflow-y-auto"
+    >
       {/* overlay */}
-      <div className="fixed inset-0 bg-black/55 backdrop-blur-[1px]" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/55 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
 
       {/* modal */}
       <div
@@ -250,7 +279,12 @@ export default function LoginModal({
           aria-label="Đóng"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M6 6l12 12M18 6L6 18"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
@@ -259,15 +293,21 @@ export default function LoginModal({
           {/* LEFT: form */}
           <div className="p-6 sm:p-8">
             <div className="mb-3">
-              <h3 className="text-2xl font-bold tracking-tight text-slate-900">{greeting}</h3>
-              <p className="mt-1 text-sm text-slate-600">Đăng nhập hoặc tạo tài khoản để mua sắm nhanh hơn</p>
+              <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+                {greeting}
+              </h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Đăng nhập hoặc tạo tài khoản để mua sắm nhanh hơn
+              </p>
             </div>
 
             {/* tabs */}
             <div className="mt-2 flex w-full rounded-full bg-slate-100 p-0.5">
               <button
                 className={`flex-1 rounded-full py-2 text-sm font-medium transition ${
-                  mode === 'login' ? 'bg-white shadow text-sky-700' : 'text-slate-600 hover:text-slate-800'
+                  mode === 'login'
+                    ? 'bg-white shadow text-sky-700'
+                    : 'text-slate-600 hover:text-slate-800'
                 }`}
                 onClick={() => setMode('login')}
               >
@@ -275,7 +315,9 @@ export default function LoginModal({
               </button>
               <button
                 className={`flex-1 rounded-full py-2 text-sm font-medium transition ${
-                  mode === 'register' ? 'bg-white shadow text-sky-700' : 'text-slate-600 hover:text-slate-800'
+                  mode === 'register'
+                    ? 'bg-white shadow text-sky-700'
+                    : 'text-slate-600 hover:text-slate-800'
                 }`}
                 onClick={() => setMode('register')}
               >
@@ -325,7 +367,11 @@ export default function LoginModal({
                       onClick={() => setShowPw((v) => !v)}
                       aria-label={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     >
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPw ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   }
                 />
@@ -353,7 +399,11 @@ export default function LoginModal({
                   </a>
                 </div>
 
-                <FancyButton loading={submitting} type="submit" className="mt-2 rounded-full">
+                <FancyButton
+                  loading={submitting}
+                  type="submit"
+                  className="mt-2 rounded-full"
+                >
                   Tiếp tục
                 </FancyButton>
 
@@ -410,7 +460,9 @@ export default function LoginModal({
 
                 {/* giới tính */}
                 <div>
-                  <div className="mb-1 text-sm font-medium text-slate-700">Giới tính</div>
+                  <div className="mb-1 text-sm font-medium text-slate-700">
+                    Giới tính
+                  </div>
                   <input type="hidden" name="gender" value={reg.gender} />
                   <div className="flex flex-wrap gap-2">
                     {[
@@ -465,7 +517,11 @@ export default function LoginModal({
                         onClick={() => setShowRegPw((v) => !v)}
                         aria-label={showRegPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                       >
-                        {showRegPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showRegPw ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     }
                   />
@@ -473,7 +529,9 @@ export default function LoginModal({
 
                 {/* country */}
                 <div className="group">
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Đất nước</label>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Đất nước
+                  </label>
                   <div className="relative flex items-center rounded-2xl border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100">
                     <span className="pointer-events-none absolute left-3 text-slate-400">
                       <Globe className="h-4 w-4" />
@@ -481,7 +539,9 @@ export default function LoginModal({
                     <select
                       name="country"
                       value={reg.country}
-                      onChange={(e) => setReg({ ...reg, country: e.target.value })}
+                      onChange={(e) =>
+                        setReg({ ...reg, country: e.target.value })
+                      }
                       className="w-full rounded-2xl bg-transparent h-10 pl-10 pr-3 text-sm text-slate-900 outline-none"
                     >
                       <option value="Vietnam">Vietnam</option>
@@ -494,7 +554,11 @@ export default function LoginModal({
                   </div>
                 </div>
 
-                <FancyButton loading={submitting} type="submit" className="mt-1 rounded-full">
+                <FancyButton
+                  loading={submitting}
+                  type="submit"
+                  className="mt-1 rounded-full"
+                >
                   Tạo tài khoản
                 </FancyButton>
               </form>
@@ -515,10 +579,18 @@ export default function LoginModal({
 
           {/* RIGHT */}
           <div className="hidden lg:flex min-h-full bg-gradient-to-br from-sky-50 to-indigo-50 p-6 flex-col items-center justify-center border-l border-slate-200/70">
-            <img src={RightArt} alt="Welcome" className="max-h-[160px] w-full object-contain" />
+            <img
+              src={RightArt}
+              alt="Welcome"
+              className="max-h-[160px] w-full object-contain"
+            />
             <div className="mt-5 text-center">
-              <div className="text-base font-semibold text-slate-900">Mua sắm tại EveryMart</div>
-              <div className="mt-1 text-sm text-slate-600">Nhiều ưu đãi mỗi ngày</div>
+              <div className="text-base font-semibold text-slate-900">
+                Mua sắm tại EveryMart
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                Nhiều ưu đãi mỗi ngày
+              </div>
             </div>
           </div>
         </div>
@@ -543,14 +615,30 @@ type FieldProps = {
 };
 
 const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
-  { label, value, onChange, placeholder, type = 'text', iconLeft, rightSlot, autoComplete, name },
+  {
+    label,
+    value,
+    onChange,
+    placeholder,
+    type = 'text',
+    iconLeft,
+    rightSlot,
+    autoComplete,
+    name,
+  },
   ref
 ) {
   return (
     <div className="group">
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
       <div className="relative flex items-center rounded-2xl border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100">
-        {iconLeft && <span className="pointer-events-none absolute left-3 text-slate-400">{iconLeft}</span>}
+        {iconLeft && (
+          <span className="pointer-events-none absolute left-3 text-slate-400">
+            {iconLeft}
+          </span>
+        )}
         <input
           ref={ref}
           name={name}
@@ -586,8 +674,18 @@ function FancyButton({
       {loading ? (
         <span className="inline-flex items-center gap-2">
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" className="fill-none stroke-white/30" strokeWidth="4" />
-            <path d="M22 12a10 10 0 0 1-10 10" className="fill-none stroke-white" strokeWidth="4" />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              className="fill-none stroke-white/30"
+              strokeWidth="4"
+            />
+            <path
+              d="M22 12a10 10 0 0 1-10 10"
+              className="fill-none stroke-white"
+              strokeWidth="4"
+            />
           </svg>
           Đang xử lý...
         </span>
@@ -597,4 +695,3 @@ function FancyButton({
     </button>
   );
 }
-

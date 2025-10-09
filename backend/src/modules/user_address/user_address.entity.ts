@@ -16,7 +16,7 @@ export class UserAddress {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -56,7 +56,7 @@ export class UserAddress {
 
   @Column({
     name: 'created_at',
-    type: 'datetime',
+    type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
   })
   createdAt!: Date;

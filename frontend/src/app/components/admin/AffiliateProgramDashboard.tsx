@@ -296,7 +296,10 @@ const AffiliateProgramDashboard = () => {
     programs.reduce((acc, p) => acc + (p.commission_value || 0), 0) /
       totalPrograms || 0;
   const vnd = (value: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+    new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(value);
 
   return (
     <div className="min-h-screen bg-background p-6">

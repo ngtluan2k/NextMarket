@@ -1,10 +1,17 @@
-import { Outlet, useNavigate, useParams } from 'react-router-dom';
+import {
+  Outlet,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import StoreTopBar from '../components/store/StoreTopBar';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import StoreBestSellers from '../components/store/StoreBestSellers';
+import GroupOrderInfoBar from '../components/group_orders/components/GroupOrderInfoBar';
+import { group } from 'console';
 
 export default function StoreLayout() {
   const { slug = '' } = useParams();
@@ -12,6 +19,9 @@ export default function StoreLayout() {
 
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const groupIdParam = searchParams.get('groupId');
+  const groupId = groupIdParam ? Number(groupIdParam) : 0;
 
   useEffect(() => {
     if (!slug) return;
@@ -39,6 +49,8 @@ export default function StoreLayout() {
     <>
       {/* App Header */}
       <EveryMartHeader />
+
+      {groupId ? <GroupOrderInfoBar groupId={groupId} /> : null}
 
       {/* TopBar (card trắng bo tròn) */}
       <StoreTopBar

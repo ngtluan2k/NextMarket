@@ -16,7 +16,7 @@ export class CreateAffiliateProgramDto {
   commission_type?: 'percentage' | 'fixed';
 
   @ApiProperty()
-  @IsInt() 
+  @IsInt()
   commission_value?: number;
 
   @ApiProperty({ enum: ['active', 'inactive'] })

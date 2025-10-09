@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  NotFoundException,
+} from '@nestjs/common';
 import { AffiliatePlatformService } from './affiliate-platform.service';
 import { CreateAffiliatePlatformDto } from './dto/create-affiliate-platform.dto';
 import { UpdateAffiliatePlatformDto } from './dto/update-affiliate-platform.dto';
@@ -30,7 +39,7 @@ export class AffiliatePlatformController {
   @Put(':id')
   update(
     @Param('id') id: number,
-    @Body() dto: UpdateAffiliatePlatformDto,
+    @Body() dto: UpdateAffiliatePlatformDto
   ): Promise<AffiliatePlatform> {
     return this.platformService.update(id, dto);
   }

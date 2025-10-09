@@ -4,7 +4,7 @@ import { Modal, Tag, Table, Button, message, Spin } from 'antd';
 import dayjs from 'dayjs';
 import { orderService } from '../../../../service/order.service';
 import { storeService } from '../../../../service/store.service';
-import { Sale, ProductItem, Payment} from '../../../types/order';
+import { Sale, ProductItem, Payment } from '../../../types/order';
 
 // Map trạng thái số → label hiển thị
 const orderStatusMap: Record<number, string> = {
@@ -198,7 +198,7 @@ export default function OrderDetailModal({
 
     try {
       const statusStr = orderStatusStringMap[newStatus];
-      
+
       console.log('🔄 Đang cập nhật trạng thái...');
       console.log('Store ID:', storeId);
       console.log('Order ID:', orderDetail.id);
@@ -214,7 +214,7 @@ export default function OrderDetailModal({
       );
 
       message.success('Cập nhật trạng thái thành công');
-      
+
       // Callback để refresh data ở parent
       if (onStatusChange) {
         onStatusChange(newStatus, note);
@@ -222,7 +222,7 @@ export default function OrderDetailModal({
 
       // Refresh chi tiết đơn hàng
       await fetchOrderDetail();
-      
+
       setIsDetailModalVisible(false);
     } catch (err: any) {
       console.error('❌ Lỗi cập nhật trạng thái:', err);
@@ -331,7 +331,9 @@ export default function OrderDetailModal({
 
   return (
     <Modal
-      title={`Chi tiết đơn hàng #${displayOrder?.orderNumber || displayOrder?.id}`}
+      title={`Chi tiết đơn hàng #${
+        displayOrder?.orderNumber || displayOrder?.id
+      }`}
       open={isDetailModalVisible}
       onCancel={() => setIsDetailModalVisible(false)}
       footer={renderFooter()}
@@ -427,7 +429,10 @@ export default function OrderDetailModal({
 
               <div className="flex justify-between items-center border-t pt-2">
                 <span className="text-gray-600">Trạng thái đơn hàng:</span>
-                <Tag color={getStatusColor(displayOrder.status)} className="text-sm">
+                <Tag
+                  color={getStatusColor(displayOrder.status)}
+                  className="text-sm"
+                >
                   {orderStatusMap[Number(displayOrder.status)] ||
                     'Không xác định'}
                 </Tag>

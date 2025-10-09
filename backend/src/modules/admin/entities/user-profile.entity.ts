@@ -14,7 +14,7 @@ export class UserProfile {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -39,7 +39,7 @@ export class UserProfile {
   @Column({ type: 'text', nullable: true, default: 'Việt Nam' })
   country!: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   created_at!: Date;
 
   @OneToOne(() => User, (user) => user.profile)

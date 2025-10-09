@@ -15,11 +15,11 @@ import { PaymentTransaction } from '../payment-transactions/payment-transaction.
 import { Refund } from '../refunds/refund.entity';
 
 export enum PaymentStatus {
-  Unpaid = 0,       
-  Paid = 1,         
-  Failed = 2,       
-  Refunded = 3,     
-  Pending = 4,      
+  Unpaid = 0,
+  Paid = 1,
+  Failed = 2,
+  Refunded = 3,
+  Pending = 4,
 }
 
 @Entity('payments')
@@ -27,7 +27,7 @@ export class Payment {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -53,7 +53,7 @@ export class Payment {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   amount?: number;
 
-  @Column({ type: 'tinyint', default: PaymentStatus.Pending })
+  @Column({ type: 'integer', default: PaymentStatus.Pending })
   status!: PaymentStatus;
 
   @Column({ name: 'paid_at', type: 'timestamp', nullable: true })

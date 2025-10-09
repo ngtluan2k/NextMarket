@@ -16,16 +16,20 @@ export class AffiliateCommissionsService {
     @InjectRepository(OrderItem)
     private orderItemRepository: Repository<OrderItem>,
     @InjectRepository(AffiliateLink)
-    private affiliateLinkRepository: Repository<AffiliateLink>,
+    private affiliateLinkRepository: Repository<AffiliateLink>
   ) {}
 
-  async create(createDto: CreateAffiliateCommissionDto): Promise<AffiliateCommission> {
+  async create(
+    createDto: CreateAffiliateCommissionDto
+  ): Promise<AffiliateCommission> {
     const orderItem = await this.orderItemRepository.findOne({
       where: { id: createDto.orderItemId },
       relations: ['product'],
     });
     if (!orderItem) {
-      throw new NotFoundException(`OrderItem with id ${createDto.orderItemId} not found`);
+      throw new NotFoundException(
+        `OrderItem with id ${createDto.orderItemId} not found`
+      );
     }
 
     const affiliateLink = await this.affiliateLinkRepository.findOne({
@@ -33,17 +37,22 @@ export class AffiliateCommissionsService {
       relations: ['program_id'],
     });
     if (!affiliateLink) {
-      throw new NotFoundException(`AffiliateLink with id ${createDto.linkId} not found`);
+      throw new NotFoundException(
+        `AffiliateLink with id ${createDto.linkId} not found`
+      );
     }
 
     const program = affiliateLink.program_id;
     if (!program) {
-      throw new NotFoundException(`Affiliate program not found for link id ${createDto.linkId}`);
+      throw new NotFoundException(
+        `Affiliate program not found for link id ${createDto.linkId}`
+      );
     }
 
     let amount = createDto.amount;
     if (!amount) {
-      const subtotal = orderItem.subtotal || orderItem.price - (orderItem.discount || 0);
+      const subtotal =
+        orderItem.subtotal || orderItem.price - (orderItem.discount || 0);
       amount =
         program.commission_type === 'percentage'
           ? (subtotal * program.commission_value) / 100
@@ -66,7 +75,9 @@ export class AffiliateCommissionsService {
   }
 
   async findAll(): Promise<AffiliateCommission[]> {
-    return this.repository.find({ relations: ['link_id', 'order_item_id', 'order_item_id.product'] });
+    return this.repository.find({
+      relations: ['link_id', 'order_item_id', 'order_item_id.product'],
+    });
   }
 
   async findOne(id: number): Promise<AffiliateCommission> {
@@ -75,12 +86,17 @@ export class AffiliateCommissionsService {
       relations: ['link_id', 'order_item_id', 'order_item_id.product'],
     });
     if (!commission) {
-      throw new NotFoundException(`Affiliate commission with id ${id} not found`);
+      throw new NotFoundException(
+        `Affiliate commission with id ${id} not found`
+      );
     }
     return commission;
   }
 
-  async update(id: number, updateDto: UpdateAffiliateCommissionDto): Promise<AffiliateCommission> {
+  async update(
+    id: number,
+    updateDto: UpdateAffiliateCommissionDto
+  ): Promise<AffiliateCommission> {
     await this.repository.update(id, updateDto);
     return this.findOne(id);
   }

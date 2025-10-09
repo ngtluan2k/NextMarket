@@ -14,7 +14,7 @@ export class OrderInvoice {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 

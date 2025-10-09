@@ -232,32 +232,36 @@ export class ProductReviewsService {
     return { reviews: mapped, total };
   }
 
-  async rewardUserForReview(userId: number, reviewId: number, rewardAmount: number) {
-  let wallet = await this.walletRepo.findOne({ where: { user_id: userId } });
+  async rewardUserForReview(
+    userId: number,
+    reviewId: number,
+    rewardAmount: number
+  ) {
+    let wallet = await this.walletRepo.findOne({ where: { user_id: userId } });
 
-  if (!wallet) {
-    wallet = this.walletRepo.create({
+    if (!wallet) {
+      wallet = this.walletRepo.create({
+        uuid: crypto.randomUUID(),
+        user_id: userId,
+        balance: 0,
+        currency: 'VND',
+        updated_at: new Date(),
+      });
+      wallet = await this.walletRepo.save(wallet);
+    }
+
+    wallet.balance += rewardAmount;
+    wallet.updated_at = new Date();
+    await this.walletRepo.save(wallet);
+
+    const transaction = this.walletTransactionRepo.create({
       uuid: crypto.randomUUID(),
-      user_id: userId,
-      balance: 0,
-      currency: 'VND',
-      updated_at: new Date(),
+      wallet_id: wallet.id,
+      type: 'review_reward',
+      amount: rewardAmount,
+      reference: `review:${reviewId}`,
+      created_at: new Date(),
     });
-    wallet = await this.walletRepo.save(wallet);
+    await this.walletTransactionRepo.save(transaction);
   }
-
-  wallet.balance += rewardAmount;
-  wallet.updated_at = new Date();
-  await this.walletRepo.save(wallet);
-
-  const transaction = this.walletTransactionRepo.create({
-    uuid: crypto.randomUUID(),
-    wallet_id: wallet.id,
-    type: 'review_reward',
-    amount: rewardAmount,
-    reference: `review:${reviewId}`,
-    created_at: new Date(),
-  });
-  await this.walletTransactionRepo.save(transaction);
-}
 }

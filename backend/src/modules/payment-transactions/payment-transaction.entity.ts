@@ -20,7 +20,7 @@ export class PaymentTransaction {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -39,7 +39,7 @@ export class PaymentTransaction {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   amount?: number;
 
-  @Column({ type: 'tinyint', default: PaymentTransactionStatus.Pending })
+  @Column({ type: 'integer', default: PaymentTransactionStatus.Pending })
   status!: PaymentTransactionStatus;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp', nullable: true })

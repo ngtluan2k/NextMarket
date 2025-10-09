@@ -13,7 +13,13 @@ import { OrderItem } from '../order-items/order-item.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AffiliateLink, AffiliateCommission, AffiliateProgram, Product, OrderItem]),
+    TypeOrmModule.forFeature([
+      AffiliateLink,
+      AffiliateCommission,
+      AffiliateProgram,
+      Product,
+      OrderItem,
+    ]),
     UserModule,
     AffiliateCommissionsModule,
     AffiliateProgramsModule,

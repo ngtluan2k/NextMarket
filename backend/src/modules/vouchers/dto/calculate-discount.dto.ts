@@ -1,6 +1,6 @@
 import { IsArray, IsNumber, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import  {OrderItemDto}  from './apply-voucher.dto';
+import { OrderItemDto } from './apply-voucher.dto';
 
 export class CalculateDiscountDto {
   @IsArray()

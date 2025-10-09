@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Product } from './product.entity';
@@ -203,125 +205,168 @@ export class ProductService {
   // product.service.ts
 
   async updateProduct(id: number, dto: any, userId: number) {
-    // --- Lấy product với tất cả quan hệ ---
-    const product = await this.productRepo.findOne({
-      where: { id },
-      relations: [
-        'store',
-        'brand',
-        'categories',
-        'media',
-        'variants',
-        'variants.inventories',
-        'pricing_rules',
-      ],
-    });
-    if (!product) throw new NotFoundException('Product not found');
+    const pricingRules = typeof dto.pricing_rules === 'string'
+    ? JSON.parse(dto.pricing_rules)
+    : dto.pricing_rules;
 
-    if (product.store.user_id !== userId) {
-      throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
-    }
+  console.log('pricingRules:', pricingRules); // kiểm tra
+  // --- Lấy product với tất cả quan hệ ---
+  const product = await this.productRepo.findOne({
+    where: { id },
+    relations: [
+      'store',
+      'brand',
+      'categories',
+      'media',
+      'variants',
+      'variants.inventories',
+      'pricing_rules',
+    ],
+  });
+  if (!product) throw new NotFoundException('Product not found');
 
-    // --- Cập nhật product chính ---
-    const updatedProduct = await this.productRepo.save({
-      ...product,
-      ...dto,
-      status: dto.status ?? product.status,
-    });
+  if (product.store.user_id !== userId) {
+    throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
+  }
 
-    // --- Update categories (giữ nguyên quan hệ, không delete cũ nếu muốn) ---
-    if (Array.isArray(dto.categories)) {
-      for (const catId of dto.categories) {
-        const exists = product.categories.find((c) => c.id === catId);
-        if (!exists) {
-          await this.productCategoryRepo.save({
-            product: { id },
-            category: { id: catId },
-          });
-        }
+  // --- Cập nhật product chính ---
+  const updatedProduct = await this.productRepo.save({
+    ...product,
+    ...dto,
+    status: dto.status ?? product.status,
+  });
+
+  // --- Update categories ---
+  if (Array.isArray(dto.categories)) {
+    for (const catId of dto.categories) {
+      const exists = product.categories.find((c) => c.id === catId);
+      if (!exists) {
+        await this.productCategoryRepo.save({
+          product: { id },
+          category: { id: catId },
+        });
       }
     }
+  }
 
-    // --- Update media ---
-    if (Array.isArray(dto.media)) {
-      for (const mediaDto of dto.media) {
-        if (mediaDto.id) {
-          await this.mediaRepo.update(mediaDto.id, { ...mediaDto });
-        } else {
-          await this.mediaRepo.save({ ...mediaDto, product: { id } });
-        }
+  // --- Update media ---
+  if (Array.isArray(dto.media)) {
+    for (const mediaDto of dto.media) {
+      if (mediaDto.id) {
+        await this.mediaRepo.update(mediaDto.id, { ...mediaDto });
+      } else {
+        await this.mediaRepo.save({ ...mediaDto, product: { id } });
       }
     }
+  }
 
-    // --- Update variants + inventories ---
-    if (Array.isArray(dto.variants)) {
-      for (const variantDto of dto.variants) {
-        let variant: Variant;
+  // --- Update variants + inventories ---
+  const variantMap: Record<string, Variant> = {}; // Tạo variantMap từ DTO
+  if (Array.isArray(dto.variants)) {
+    for (const variantDto of dto.variants) {
+      let variant: Variant;
+      const { inventories, ...variantData } = variantDto;
 
-        // Tách inventories ra khỏi dữ liệu variant
-        const { inventories, ...variantData } = variantDto;
+      if (variantDto.id) {
+        // Update variant đã có
+        await this.variantRepo.update(variantDto.id, { ...variantData });
+        const found = await this.variantRepo.findOne({ where: { id: variantDto.id } });
+        if (!found) throw new NotFoundException('Variant not found');
+        variant = found;
+      } else {
+        // Thêm variant mới
+        variant = await this.variantRepo.save({ ...variantData, product: { id } });
+      }
 
-        if (variantDto.id) {
-          // Chỉ update variant, không chạm inventories
-          await this.variantRepo.update(variantDto.id, { ...variantData });
+      // Map variant để dùng cho pricing rules
+      if (variant.sku) variantMap[variant.sku] = variant;
 
-          const found = await this.variantRepo.findOne({
-            where: { id: variantDto.id },
-          });
-          if (!found)
-            throw new NotFoundException('Variant not found after update');
-          variant = found!;
-        } else {
-          // Lưu variant mới
-          variant = await this.variantRepo.save({
-            ...variantData,
-            product: { id },
-          });
-        }
-
-        // --- Update inventories riêng ---
-        if (Array.isArray(inventories)) {
-          for (const invDto of inventories) {
-            if (invDto.id) {
-              // Update inventory đã có
-              await this.inventoryRepo.update(invDto.id, {
-                location: invDto.location,
-                quantity: invDto.quantity,
-                used_quantity: invDto.used_quantity,
-                variant: { id: variant.id },
-                product: { id }, // thêm product vào cho chắc chắn
-              });
-            } else {
-              // Thêm inventory mới
-              await this.inventoryRepo.save({
-                location: invDto.location,
-                quantity: invDto.quantity,
-                used_quantity: invDto.used_quantity,
-                variant: { id: variant.id },
-                product: { id }, // BẮT BUỘC
-              });
-            }
+      // --- Update inventories ---
+      if (Array.isArray(inventories)) {
+        for (const invDto of inventories) {
+          if (invDto.id) {
+            await this.inventoryRepo.update(invDto.id, {
+              location: invDto.location,
+              quantity: invDto.quantity,
+              used_quantity: invDto.used_quantity,
+              variant: { id: variant.id },
+              product: { id },
+            });
+          } else {
+            await this.inventoryRepo.save({
+              location: invDto.location,
+              quantity: invDto.quantity,
+              used_quantity: invDto.used_quantity,
+              variant: { id: variant.id },
+              product: { id },
+            });
           }
         }
       }
     }
-
-    // --- Update pricing_rules ---
-    if (Array.isArray(dto.pricing_rules)) {
-      for (const ruleDto of dto.pricing_rules) {
-        if (ruleDto.id) {
-          await this.pricingRuleRepo.update(ruleDto.id, {
-            ...ruleDto,
-            product: { id },
-          });
-        } else {
-          await this.pricingRuleRepo.save({ ...ruleDto, product: { id } });
-        }
-      }
-    }
-
-    return updatedProduct;
   }
+
+if (Array.isArray(dto.pricing_rules)) {
+  for (const ruleDto of dto.pricing_rules) {
+    // --- map variant, nếu không có thì undefined ---
+    const variant = ruleDto.variant_sku ? variantMap[ruleDto.variant_sku] : undefined;
+
+    if (ruleDto.id) {
+      // --- Update existing rule ---
+      const existingRule = await this.pricingRuleRepo.findOne({ where: { id: ruleDto.id } });
+      if (!existingRule) continue;
+
+      // --- LOG trước save ---
+      console.log('Updating PricingRule id:', ruleDto.id);
+      console.log('ruleDto:', ruleDto);
+      console.log('Mapped variant:', variant);
+
+      existingRule.type = ruleDto.type;
+      existingRule.min_quantity = ruleDto.min_quantity;
+      existingRule.price = ruleDto.price;
+      existingRule.cycle = ruleDto.cycle;
+      existingRule.starts_at = ruleDto.starts_at ? new Date(ruleDto.starts_at) : undefined;
+      existingRule.ends_at = ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined;
+      existingRule.variant = variant; // Variant | undefined
+      existingRule.name = ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
+      existingRule.status = ruleDto.status ?? 'active';
+      existingRule.product = { id } as any;
+
+      const savedRule = await this.pricingRuleRepo.save(existingRule);
+
+      // --- LOG sau save ---
+      console.log('Saved PricingRule:', savedRule);
+    } else {
+      // --- Create new rule ---
+      const newRule: DeepPartial<PricingRules> = {
+        type: ruleDto.type,
+        min_quantity: ruleDto.min_quantity,
+        price: ruleDto.price,
+        cycle: ruleDto.cycle,
+        starts_at: ruleDto.starts_at ? new Date(ruleDto.starts_at) : undefined,
+        ends_at: ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined,
+        variant: variant, // Variant | undefined
+        name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
+        status: ruleDto.status ?? 'active',
+        product: { id } as any,
+        uuid: ruleDto.uuid ?? require('uuid').v4(),
+      };
+
+      console.log('Creating new PricingRule:', newRule);
+
+      const savedNewRule = await this.pricingRuleRepo.save(newRule);
+
+      console.log('Saved new PricingRule:', savedNewRule);
+    }
+  }
+}
+
+
+
+
+  return updatedProduct;
+}
+
 
   async updateAndPublishProduct(id: number, dto: any, userId: number) {
     const product = await this.productRepo.findOne({
@@ -447,6 +492,8 @@ export class ProductService {
             name: product.store.name,
             slug: product.store.slug,
             logo_url: product.store.logo_url,
+            avg_rating: product.store.avg_rating,
+            review_count: product.store.review_count,
           }
         : undefined,
     };
@@ -465,6 +512,7 @@ export class ProductService {
         'variants',
         'variants.inventories',
         'pricing_rules',
+        'pricing_rules.variant',
       ],
     });
   }
@@ -533,7 +581,7 @@ export class ProductService {
 
     return similarProducts;
   }
-  
+
   async findById(id: number) {
     const product = await this.productRepo
       .createQueryBuilder('product')
@@ -547,7 +595,7 @@ export class ProductService {
       .leftJoinAndSelect('product.store', 'store')
       .where('product.id = :id', { id })
       .getOne();
-  
+
     if (!product) {
       throw new NotFoundException('Product not found');
     }

@@ -1,5 +1,5 @@
 // src/components/UserRoleManager.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users as UsersIcon,
   Search as SearchIcon,
@@ -7,11 +7,21 @@ import {
   X as XIcon,
   Shield as ShieldIcon,
   AlertTriangle,
-} from "lucide-react";
+} from 'lucide-react';
 
-interface Role { id: number; name: string }
-interface User { id: number; email: string }
-interface UserRole { id: number; user: User; role: Role }
+interface Role {
+  id: number;
+  name: string;
+}
+interface User {
+  id: number;
+  email: string;
+}
+interface UserRole {
+  id: number;
+  user: User;
+  role: Role;
+}
 
 export const UserRoleManager: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -19,7 +29,7 @@ export const UserRoleManager: React.FC = () => {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -33,44 +43,45 @@ export const UserRoleManager: React.FC = () => {
     submitting?: boolean;
   }>({ open: false });
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:3000/users", {
+      const res = await fetch('http://localhost:3000/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setUsers(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
-      console.error("fetchUsers error:", err);
-      alert("Không tải được danh sách users.");
+      console.error('fetchUsers error:', err);
+      alert('Không tải được danh sách users.');
     }
   };
 
   const fetchRoles = async () => {
     try {
-      const res = await fetch("http://localhost:3000/roles", {
+      const res = await fetch('http://localhost:3000/roles', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setRoles(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
-      console.error("fetchRoles error:", err);
-      alert("Không tải được danh sách roles.");
+      console.error('fetchRoles error:', err);
+      alert('Không tải được danh sách roles.');
     }
   };
 
   const fetchUserRoles = async () => {
     try {
-      const res = await fetch("http://localhost:3000/user-roles", {
+      const res = await fetch('http://localhost:3000/user-roles', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setUserRoles(Array.isArray(data) ? data : data.data || []);
     } catch (err) {
-      console.error("fetchUserRoles error:", err);
-      alert("Không tải được gán vai trò người dùng.");
+      console.error('fetchUserRoles error:', err);
+      alert('Không tải được gán vai trò người dùng.');
     }
   };
 
@@ -91,26 +102,44 @@ export const UserRoleManager: React.FC = () => {
     try {
       const res = await fetch(
         `http://localhost:3000/user-roles/users/${selectedUser}/roles/${selectedRole}`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
       );
       if (!res.ok) {
-        alert("Gán vai trò thất bại.");
+        alert('Gán vai trò thất bại.');
         return;
       }
       await fetchUserRoles();
       setSelectedUser(null);
       setSelectedRole(null);
     } catch (err) {
-      console.error("assignRole error:", err);
-      alert("Có lỗi khi gán vai trò.");
+      console.error('assignRole error:', err);
+      alert('Có lỗi khi gán vai trò.');
     } finally {
       setIsAssigning(false);
     }
   };
 
   // mở confirm trước khi xoá
-  const openRemoveConfirm = (userId: number, roleId: number, userEmail: string, roleName: string) => {
-    setConfirm({ open: true, userId, roleId, userEmail, roleName, submitting: false });
+  const openRemoveConfirm = (
+    userId: number,
+    roleId: number,
+    userEmail: string,
+    roleName: string
+  ) => {
+    setConfirm({
+      open: true,
+      userId,
+      roleId,
+      userEmail,
+      roleName,
+      submitting: false,
+    });
   };
 
   const handleConfirmRemove = async () => {
@@ -119,39 +148,52 @@ export const UserRoleManager: React.FC = () => {
       setConfirm((c) => ({ ...c, submitting: true }));
       const res = await fetch(
         `http://localhost:3000/user-roles/users/${confirm.userId}/roles/${confirm.roleId}`,
-        { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
       );
       if (!res.ok) {
-        alert("Xóa vai trò thất bại.");
+        alert('Xóa vai trò thất bại.');
         setConfirm((c) => ({ ...c, submitting: false }));
         return;
       }
       await fetchUserRoles();
       setConfirm({ open: false });
     } catch (err) {
-      console.error("removeUserRole error:", err);
-      alert("Có lỗi khi xóa vai trò.");
+      console.error('removeUserRole error:', err);
+      alert('Có lỗi khi xóa vai trò.');
       setConfirm((c) => ({ ...c, submitting: false }));
     }
   };
 
   const usersWithRolesMap = useMemo(() => {
     return userRoles.reduce((acc, ur) => {
-      if (!acc[ur.user.id]) acc[ur.user.id] = { user: ur.user, roles: [] as Role[] };
+      if (!acc[ur.user.id])
+        acc[ur.user.id] = { user: ur.user, roles: [] as Role[] };
       acc[ur.user.id].roles.push(ur.role);
       return acc;
     }, {} as Record<number, { user: User; roles: Role[] }>);
   }, [userRoles]);
 
   const usersWithRoles = useMemo(
-    () => users.map((user) => ({ user, roles: usersWithRolesMap[user.id]?.roles || [] })),
+    () =>
+      users.map((user) => ({
+        user,
+        roles: usersWithRolesMap[user.id]?.roles || [],
+      })),
     [users, usersWithRolesMap]
   );
 
   const filteredUsers = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return usersWithRoles.filter(
-      ({ user, roles }) => user.email.toLowerCase().includes(q) || roles.some((r) => r.name.toLowerCase().includes(q))
+      ({ user, roles }) =>
+        user.email.toLowerCase().includes(q) ||
+        roles.some((r) => r.name.toLowerCase().includes(q))
     );
   }, [usersWithRoles, searchQuery]);
 
@@ -164,24 +206,32 @@ export const UserRoleManager: React.FC = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
               <UsersIcon className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-3xl font-semibold text-gray-900">Quản lý vai trò người dùng</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">
+              Quản lý vai trò người dùng
+            </h1>
           </div>
-          <p className="text-gray-600">Gán và quản lý vai trò cho người dùng trong hệ thống</p>
+          <p className="text-gray-600">
+            Gán và quản lý vai trò cho người dùng trong hệ thống
+          </p>
         </div>
 
         {/* Assign */}
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <UserPlusIcon className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Gán vai trò mới</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Gán vai trò mới
+            </h2>
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="flex-1">
-              <label className="mb-2 block text-sm font-medium text-gray-700">Chọn người dùng</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Chọn người dùng
+              </label>
               <select
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                value={selectedUser || ""}
+                value={selectedUser || ''}
                 onChange={(e) => setSelectedUser(Number(e.target.value))}
               >
                 <option value="">Chọn người dùng...</option>
@@ -194,10 +244,12 @@ export const UserRoleManager: React.FC = () => {
             </div>
 
             <div className="flex-1">
-              <label className="mb-2 block text-sm font-medium text-gray-700">Chọn vai trò</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Chọn vai trò
+              </label>
               <select
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                value={selectedRole || ""}
+                value={selectedRole || ''}
                 onChange={(e) => setSelectedRole(Number(e.target.value))}
               >
                 <option value="">Chọn vai trò...</option>
@@ -215,7 +267,7 @@ export const UserRoleManager: React.FC = () => {
                 disabled={!selectedUser || !selectedRole || isAssigning}
                 className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isAssigning ? "Đang gán..." : "Gán vai trò"}
+                {isAssigning ? 'Đang gán...' : 'Gán vai trò'}
               </button>
             </div>
           </div>
@@ -246,19 +298,26 @@ export const UserRoleManager: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="px-6 py-12 text-center text-gray-500">Đang tải dữ liệu...</div>
+            <div className="px-6 py-12 text-center text-gray-500">
+              Đang tải dữ liệu...
+            </div>
           ) : (
             <div className="divide-y divide-gray-200">
               {filteredUsers.length === 0 ? (
                 <div className="px-6 py-12 text-center">
                   <UsersIcon className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                   <p className="text-gray-600">
-                    {searchQuery ? "Không tìm thấy người dùng nào" : "Chưa có người dùng nào"}
+                    {searchQuery
+                      ? 'Không tìm thấy người dùng nào'
+                      : 'Chưa có người dùng nào'}
                   </p>
                 </div>
               ) : (
                 filteredUsers.map(({ user, roles: userRolesList }) => (
-                  <div key={user.id} className="px-6 py-4 transition-colors hover:bg-gray-50">
+                  <div
+                    key={user.id}
+                    className="px-6 py-4 transition-colors hover:bg-gray-50"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="mb-2 flex items-center gap-2">
@@ -267,7 +326,9 @@ export const UserRoleManager: React.FC = () => {
                               {user.email.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <span className="font-medium text-gray-900">{user.email}</span>
+                          <span className="font-medium text-gray-900">
+                            {user.email}
+                          </span>
                         </div>
 
                         {userRolesList.length > 0 ? (
@@ -278,11 +339,20 @@ export const UserRoleManager: React.FC = () => {
                                 className="group flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 transition-colors hover:border-blue-300 hover:bg-blue-100"
                               >
                                 <ShieldIcon className="h-3.5 w-3.5 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-700">{role.name}</span>
+                                <span className="text-sm font-medium text-blue-700">
+                                  {role.name}
+                                </span>
 
                                 {/* mở confirm khi xoá */}
                                 <button
-                                  onClick={() => openRemoveConfirm(user.id, role.id, user.email, role.name)}
+                                  onClick={() =>
+                                    openRemoveConfirm(
+                                      user.id,
+                                      role.id,
+                                      user.email,
+                                      role.name
+                                    )
+                                  }
                                   aria-label={`Xóa vai trò ${role.name} khỏi ${user.email}`}
                                   className="rounded p-1 text-blue-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-blue-200"
                                   title="Xóa vai trò"
@@ -320,12 +390,20 @@ export const UserRoleManager: React.FC = () => {
           <div className="relative z-10 w-[92%] max-w-md rounded-xl bg-white p-6 shadow-xl">
             <div className="mb-3 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Xác nhận xoá</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Xác nhận xoá
+              </h3>
             </div>
             <p className="text-sm text-gray-700">
-              Bạn có chắc muốn xoá vai trò{" "}
-              <span className="font-semibold text-gray-900">“{confirm.roleName}”</span> khỏi người dùng{" "}
-              <span className="font-semibold text-gray-900">“{confirm.userEmail}”</span>?
+              Bạn có chắc muốn xoá vai trò{' '}
+              <span className="font-semibold text-gray-900">
+                “{confirm.roleName}”
+              </span>{' '}
+              khỏi người dùng{' '}
+              <span className="font-semibold text-gray-900">
+                “{confirm.userEmail}”
+              </span>
+              ?
             </p>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -341,7 +419,7 @@ export const UserRoleManager: React.FC = () => {
                 onClick={handleConfirmRemove}
                 disabled={confirm.submitting}
               >
-                {confirm.submitting ? "Đang xoá..." : "Xoá"}
+                {confirm.submitting ? 'Đang xoá...' : 'Xoá'}
               </button>
             </div>
           </div>

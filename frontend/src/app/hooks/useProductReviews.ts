@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-import { fetchProductReviews, Review } from "../../service/product_review";
-import { updateProductReview, UpdateProductReviewDto } from "../../service/product_review";
+import { useEffect, useState } from 'react';
+import { fetchProductReviews, Review } from '../../service/product_review';
+import {
+  updateProductReview,
+  UpdateProductReviewDto,
+} from '../../service/product_review';
 
 export function useProductReviews(productId: number, pageSize = 5) {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -16,11 +19,8 @@ export function useProductReviews(productId: number, pageSize = 5) {
     setLoading(true);
     try {
       // API phải trả về object { reviews: Review[], total: number }
-      const { reviews: newReviews, total: totalReviews } = await fetchProductReviews(
-        productId,
-        pageToLoad,
-        pageSize
-      );
+      const { reviews: newReviews, total: totalReviews } =
+        await fetchProductReviews(productId, pageToLoad, pageSize);
       setReviews(newReviews); // replace reviews cũ
       setPage(pageToLoad);
       setTotal(totalReviews);
@@ -40,13 +40,16 @@ export function useProductReviews(productId: number, pageSize = 5) {
   return { reviews, loading, page, totalPages, loadReviews, hasMore };
 }
 
-
 export function useUpdateReview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
 
-  const update = async (reviewId: number, dto: UpdateProductReviewDto, mediaFiles?: File[]) => {
+  const update = async (
+    reviewId: number,
+    dto: UpdateProductReviewDto,
+    mediaFiles?: File[]
+  ) => {
     setLoading(true);
     setError(null);
     try {
@@ -55,7 +58,7 @@ export function useUpdateReview() {
       setLoading(false);
       return res;
     } catch (err: any) {
-      setError(err.message || "Failed to update review");
+      setError(err.message || 'Failed to update review');
       setLoading(false);
       throw err;
     }

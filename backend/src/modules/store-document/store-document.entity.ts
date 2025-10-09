@@ -13,7 +13,7 @@ export class StoreDocument {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -33,6 +33,6 @@ export class StoreDocument {
   @Column({ type: 'boolean', default: false })
   verified!: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   verified_at!: Date | null;
 }

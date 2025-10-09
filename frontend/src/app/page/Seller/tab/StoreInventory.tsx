@@ -48,7 +48,9 @@ import CountUp from 'react-countup';
 import ExportCascader from '../../../components/seller/ExportCascader';
 import { ProductForm } from '../../../components/seller/ProductFormWizard';
 import { EditProductForm } from '../../../components/seller/EditProductForm';
-import ProductDetailModal, { ProductDetail as ProductForDetail } from '../../../components/seller/ProductDetailModal';
+import ProductDetailModal, {
+  ProductDetail as ProductForDetail,
+} from '../../../components/seller/ProductDetailModal';
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
@@ -59,7 +61,7 @@ export interface Product {
   category: string;
   base_price: number;
   brandId: number;
-  brandName?: string;  
+  brandName?: string;
   stock: number;
   sold: number;
   revenue: number;
@@ -101,6 +103,9 @@ export interface Product {
     cycle?: string;
     starts_at?: string | Date;
     ends_at?: string | Date;
+    variant_sku?: string;
+    name?: string;
+    status?: 'active' | 'inactive';
   }[];
   apiId?: number; // To link with backend
 }
@@ -228,7 +233,7 @@ export default function StoreInventory() {
               new Date().toISOString().split('T')[0],
             apiId: apiProduct.id,
             brandId: apiProduct.brand?.id || apiProduct.brand_id || 0,
-            brandName: apiProduct.brand?.name || '', 
+            brandName: apiProduct.brand?.name || '',
 
             categories:
               apiProduct.categories?.map((c) => ({
@@ -245,7 +250,7 @@ export default function StoreInventory() {
                 is_primary: m.is_primary || false,
                 sort_order: m.sort_order,
               })) || [],
-            
+
             variants:
               apiProduct.variants?.map((v) => ({
                 id: v.id,
@@ -266,16 +271,21 @@ export default function StoreInventory() {
 
             // ✅ pricing_rules
             pricing_rules:
-              apiProduct.pricing_rules?.map((rule) => ({
+              (apiProduct.pricing_rules as any[])?.map((rule) => ({
                 type: rule.type,
                 min_quantity: rule.min_quantity,
                 price:
                   typeof rule.price === 'string'
                     ? parseFloat(rule.price)
                     : rule.price,
-                cycle: rule.cycle,
-                starts_at: rule.starts_at,
-                ends_at: rule.ends_at,
+                cycle: rule.cycle || undefined,
+                starts_at: rule.starts_at
+                  ? new Date(rule.starts_at)
+                  : undefined,
+                ends_at: rule.ends_at ? new Date(rule.ends_at) : undefined,
+                variant_sku: rule.variant?.sku || undefined,
+                name: rule.name || '',
+                status: rule.status === 'active' ? 'active' : 'inactive',
               })) || [],
           };
         }
@@ -576,7 +586,7 @@ export default function StoreInventory() {
                 key: 'edit',
                 icon: <EditOutlined />,
                 label: 'Chỉnh Sửa Sản Phẩm',
-                onClick: () => setEditingProduct(record), 
+                onClick: () => setEditingProduct(record),
               },
               {
                 key: 'duplicate',
@@ -613,7 +623,7 @@ export default function StoreInventory() {
   const formatter: StatisticProps['formatter'] = (value) => (
     <CountUp end={value as number} separator="," />
   );
-
+  const uniqueCategories = Array.from(new Set(products.map((p) => p.category)));
   return (
     <Layout>
       <Content className="p-6">
@@ -680,14 +690,18 @@ export default function StoreInventory() {
             <Space wrap>
               <Select
                 placeholder="Danh Mục"
-                style={{ width: 120 }}
+                style={{ width: 200 }}
                 value={categoryFilter}
                 onChange={setCategoryFilter}
               >
                 <Select.Option value="all">Tất Cả Danh Mục</Select.Option>
-                <Select.Option value="Chung">Chung</Select.Option>
-                {/* Thêm các danh mục khác */}
+                {uniqueCategories.map((cat) => (
+                  <Select.Option key={cat} value={cat}>
+                    {cat}
+                  </Select.Option>
+                ))}
               </Select>
+
               <Select
                 placeholder="Trạng Thái"
                 style={{ width: 120 }}
@@ -766,15 +780,15 @@ export default function StoreInventory() {
           </Modal>
         )}
 
-          <ProductDetailModal
-              product={detailProduct as unknown as ProductForDetail | null}
-              onClose={() => setDetailProduct(null)}
-              onEdit={(p) => {
-                // bấm "Chỉnh sửa" trong modal chi tiết → mở modal Edit có sẵn
-                setDetailProduct(null);
-                setEditingProduct(p as unknown as Product);
-              }}
-            />
+        <ProductDetailModal
+          product={detailProduct as unknown as ProductForDetail | null}
+          onClose={() => setDetailProduct(null)}
+          onEdit={(p) => {
+            // bấm "Chỉnh sửa" trong modal chi tiết → mở modal Edit có sẵn
+            setDetailProduct(null);
+            setEditingProduct(p as unknown as Product);
+          }}
+        />
       </Content>
     </Layout>
   );

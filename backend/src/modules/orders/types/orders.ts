@@ -3,7 +3,7 @@ export enum OrderStatuses {
   confirmed = 1,
   processing = 2,
   shipped = 3,
-  delivered = 4,  
+  delivered = 4,
   completed = 5,
   cancelled = 6,
   returned = 7,

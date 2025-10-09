@@ -20,13 +20,13 @@ import { Payment } from '../payments/payment.entity';
 import { Refund } from '../refunds/refund.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
 import { OrderStatuses } from './types/orders';
-
+import { GroupOrder } from '../group_orders/group_orders.entity';
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -45,7 +45,7 @@ export class Order {
   userAddress!: UserAddress;
 
   @Column({
-    type: 'tinyint',
+    type: 'integer',
     default: OrderStatuses.pending,
   })
   status!: OrderStatuses;
@@ -115,4 +115,8 @@ export class Order {
 
   @OneToMany(() => ProductReview, (reviews) => reviews.order)
   reviews!: ProductReview;
+
+  @ManyToOne(() => GroupOrder, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'group_order_id' })
+  group_order!: GroupOrder | null;
 }

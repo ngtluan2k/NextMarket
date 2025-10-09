@@ -18,12 +18,14 @@ import { Subscription } from '../subscription/subscription.entity';
 import { AffiliateRegistration } from '../affiliate-registration/affiliate-registration.entity';
 
 import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
+import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -42,10 +44,10 @@ export class User {
   @Column({ nullable: true, unique: true })
   code!: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   created_at!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   updated_at!: Date;
 
   @Column({ default: false })
@@ -80,4 +82,9 @@ export class User {
   affiliateRegistrations!: AffiliateRegistration[];
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.createdBy)
   inventoryTransactions!: InventoryTransaction[];
+  @OneToMany(() => GroupOrder, (groupOrder) => groupOrder.user)
+  group_orders!: GroupOrder[];
+
+  @OneToMany(() => GroupOrderMember, (member) => member.user)
+  group_order_members!: GroupOrderMember[];
 }

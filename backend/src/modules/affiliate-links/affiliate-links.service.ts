@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
@@ -202,7 +206,9 @@ export class AffiliateLinksService {
 
       const codeParts = link.code.split(':');
       const linkProductId = codeParts[1] || 'unknown';
-      const linkVariantId = codeParts[2] ? parseInt(codeParts[2], 10) : undefined;
+      const linkVariantId = codeParts[2]
+        ? parseInt(codeParts[2], 10)
+        : undefined;
       const baseLink = `http://localhost:4200/product/${linkProductId}?aff=${user.code}`;
 
       return {

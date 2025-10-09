@@ -20,12 +20,14 @@ import {
 import { OrderItem } from '../order-items/order-item.entity';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
+import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
+
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -73,8 +75,6 @@ export class Product {
   @Column({ type: 'int', default: 0 })
   review_count!: number;
 
-  
-
   // === Relations ===
   @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
   categories!: ProductCategory[];
@@ -101,4 +101,6 @@ export class Product {
 
   @OneToMany(() => Subscription, (sub) => sub.product)
   subscriptions!: Subscription[];
+  @OneToMany(() => GroupOrderItem, (item) => item.product)
+  group_order_items!: GroupOrderItem[];
 }

@@ -57,8 +57,14 @@ export class VouchersController {
   @Post('calculate-discount')
   @ApiOperation({ summary: 'Tính toán chiết khấu từ danh sách mã voucher' })
   @UseGuards(JwtAuthGuard)
-  @ApiResponse({ status: 200, description: 'Tổng chiết khấu và danh sách voucher áp dụng' })
-  async calculateDiscount(@Body() calculateDiscountDto: CalculateDiscountDto, @Req() req: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Tổng chiết khấu và danh sách voucher áp dụng',
+  })
+  async calculateDiscount(
+    @Body() calculateDiscountDto: CalculateDiscountDto,
+    @Req() req: any
+  ) {
     const userId = req.user?.userId;
     if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
 

@@ -4,6 +4,8 @@ export type StoreInfo = {
   logo_url?: string;
   user_id?: number;
   slug?: string;
+  avg_rating?: number;
+  review_count?: number;
 };
 
 export type BrandInfo = {

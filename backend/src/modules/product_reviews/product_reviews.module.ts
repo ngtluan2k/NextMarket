@@ -15,7 +15,16 @@ import { Wallet } from '../wallet/wallet.entity';
 import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ProductReview, Product, Order, User, Store, ProductReviewMedia, Wallet, WalletTransaction,]),
+    TypeOrmModule.forFeature([
+      ProductReview,
+      Product,
+      Order,
+      User,
+      Store,
+      ProductReviewMedia,
+      Wallet,
+      WalletTransaction,
+    ]),
     forwardRef(() => UserModule),
     forwardRef(() => ProductModule),
     forwardRef(() => OrdersModule),

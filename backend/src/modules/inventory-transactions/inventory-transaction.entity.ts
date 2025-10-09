@@ -19,7 +19,7 @@ export class InventoryTransaction {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @ManyToOne(() => Variant, (variant) => variant.inventoryTransactions, {
@@ -38,13 +38,13 @@ export class InventoryTransaction {
   quantity!: number;
 
   @Column({
-    type: 'enum',
+    type: 'integer',
     enum: TransactionType,
     default: TransactionType.IMPORT,
   })
   transactionType!: TransactionType;
 
-  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt!: Date;
 
   @Column({ type: 'text', nullable: true })

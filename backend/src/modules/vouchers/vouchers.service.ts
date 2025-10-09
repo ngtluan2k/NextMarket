@@ -75,22 +75,21 @@ export class VouchersService {
   }
 
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
-  const roleList = Array.isArray(roles) ? roles : [roles];
+    const roleList = Array.isArray(roles) ? roles : [roles];
 
-  if (roleList.includes('Admin')) {
-    return this.vouchersRepository.find();
-  } else if (roleList.includes('Seller')) {
-    const ownedStores = await this.storesRepository.find({
-      where: { user: { id: userId } },
-    });
-    const storeIds = ownedStores.map((store) => store.id);
-    return this.vouchersRepository.find({
-      where: { store: { id: In(storeIds) } },
-    });
+    if (roleList.includes('Admin')) {
+      return this.vouchersRepository.find();
+    } else if (roleList.includes('Seller')) {
+      const ownedStores = await this.storesRepository.find({
+        where: { user: { id: userId } },
+      });
+      const storeIds = ownedStores.map((store) => store.id);
+      return this.vouchersRepository.find({
+        where: { store: { id: In(storeIds) } },
+      });
+    }
+    throw new ForbiddenException('Không có quyền xem danh sách voucher');
   }
-  throw new ForbiddenException('Không có quyền xem danh sách voucher');
-}
-
 
   async findOne(
     id: number,

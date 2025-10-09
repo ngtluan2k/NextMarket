@@ -154,33 +154,34 @@ export const CartHeader: React.FC<Props> = ({
               <Checkbox
                 checked={allStoreChecked}
                 indeterminate={storeIndeterminate}
-onChange={() => {
-  // Nếu chưa có selectedType thì lấy type của item đầu tiên trong shop
-  const currentType =
-    selectedType || (items.length > 0 ? items[0].type : null);
+                onChange={() => {
+                  // Nếu chưa có selectedType thì lấy type của item đầu tiên trong shop
+                  const currentType =
+                    selectedType || (items.length > 0 ? items[0].type : null);
 
-  // Lọc theo type đang được chọn
-  const filtered = items.filter((item) => item.type === currentType);
+                  // Lọc theo type đang được chọn
+                  const filtered = items.filter(
+                    (item) => item.type === currentType
+                  );
 
-  // Kiểm tra xem tất cả filtered item đã được chọn chưa
-  const allFilteredChecked = filtered.every((item) =>
-    selectedIds.includes(item.id)
-  );
+                  // Kiểm tra xem tất cả filtered item đã được chọn chưa
+                  const allFilteredChecked = filtered.every((item) =>
+                    selectedIds.includes(item.id)
+                  );
 
-  // Toggle theo trạng thái
-  filtered.forEach((item) => {
-    const isChecked = selectedIds.includes(item.id);
+                  // Toggle theo trạng thái
+                  filtered.forEach((item) => {
+                    const isChecked = selectedIds.includes(item.id);
 
-    if (allFilteredChecked && isChecked) {
-      // Nếu tất cả đã chọn → bỏ chọn hết
-      onToggleOne(item.id);
-    } else if (!allFilteredChecked && !isChecked) {
-      // Nếu chưa chọn hết → chọn tất cả
-      onToggleOne(item.id);
-    }
-  });
-}}
-
+                    if (allFilteredChecked && isChecked) {
+                      // Nếu tất cả đã chọn → bỏ chọn hết
+                      onToggleOne(item.id);
+                    } else if (!allFilteredChecked && !isChecked) {
+                      // Nếu chưa chọn hết → chọn tất cả
+                      onToggleOne(item.id);
+                    }
+                  });
+                }}
               />
 
               <Text strong>{storeName}</Text>

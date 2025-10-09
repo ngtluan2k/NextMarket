@@ -12,7 +12,7 @@ export class ProductMedia {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @ManyToOne(() => Product, (product) => product.media)
