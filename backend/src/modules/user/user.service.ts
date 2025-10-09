@@ -65,7 +65,7 @@ export class UserService {
         throw new BadRequestException('Tên đăng nhập đã tồn tại');
     }
 
-    const hashed = await bcrypt.hash(dto.password, 10);
+    const hashed = await (dto.password, 16);
 
     const user = this.userRepository.create({
       uuid: uuidv4(),
