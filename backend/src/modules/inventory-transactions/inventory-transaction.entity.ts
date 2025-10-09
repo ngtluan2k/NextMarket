@@ -38,7 +38,7 @@ export class InventoryTransaction {
   quantity!: number;
 
   @Column({
-    type: 'tinyint',
+    type: 'enum',
     enum: TransactionType,
     default: TransactionType.IMPORT,
   })
