@@ -48,8 +48,8 @@ export class Store {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  logo_url!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true  })
+  logo_url: string;
 
   @Column({ length: 100, nullable: true })
   email!: string;

@@ -6,21 +6,21 @@ export const orderService = {
   // ========== USER ENDPOINTS ==========
 
   getOrdersByUser: async (userId: number, params?: any) => {
-  try {
-    const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders`, {
-      params,
-    });
-    return res.data;
-  } catch (error: any) {
-    console.error(
-      'Lỗi khi lấy đơn hàng:',
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-},
+    try {
+      const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders`, {
+        params,
+      });
+      return res.data;
+    } catch (error: any) {
+      console.error(
+        'Lỗi khi lấy đơn hàng:',
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
 
-async getOrderByUser(userId: number) {
+  async getOrderByUser(userId: number) {
     try {
       const res = await axios.get(`${API_URL}/user/${userId}`);
       return res.data;
@@ -32,8 +32,6 @@ async getOrderByUser(userId: number) {
       throw error;
     }
   },
-
-
 
   getOrderDetail: async (orderId: number) => {
     // Lấy user và token từ localStorage

@@ -74,22 +74,21 @@ export default function ProductDetailPage({ showMessage }: Props) {
       return stored ? Number(stored) : null;
     }
   );
-useEffect(() => {
-  if (!product?.variants?.length) return;
+  useEffect(() => {
+    if (!product?.variants?.length) return;
 
-  const exists = product.variants?.some((v: VariantInfo) => v.id === selectedVariantId);
+    const exists = product.variants?.some(
+      (v: VariantInfo) => v.id === selectedVariantId
+    );
 
-
-  if (!exists) {
-    if (product.variants.length === 1) {
-      setSelectedVariantId(product.variants[0].id);
-    } else {
-      setSelectedVariantId(null);
+    if (!exists) {
+      if (product.variants.length === 1) {
+        setSelectedVariantId(product.variants[0].id);
+      } else {
+        setSelectedVariantId(null);
+      }
     }
-  }
-}, [product, selectedVariantId]);
-
-
+  }, [product, selectedVariantId]);
 
   const stock = useMemo(() => {
     const v = product?.variants?.find(

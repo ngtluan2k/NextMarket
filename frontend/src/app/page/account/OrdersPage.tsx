@@ -10,7 +10,7 @@ import {
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
 import ReviewModal from '../../components/account/ReviewModal';
-import {Link} from 'react-router-dom';
+import { Link } from 'react-router-dom';
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -71,7 +71,11 @@ export type OrderSummary = {
       id: number;
       name: string;
       media?: Array<{ url: string; is_primary: boolean }>;
-      reviews?: Array<{ id: number; user: { id: number }; order: { id: string | number } }>;
+      reviews?: Array<{
+        id: number;
+        user: { id: number };
+        order: { id: string | number };
+      }>;
     };
   }>;
 };
@@ -162,7 +166,7 @@ export default function OrdersPage() {
               qty: it.quantity,
               price: Number(it.price ?? 0),
               isReviewed,
-              reviewId: existingReview?.id, 
+              reviewId: existingReview?.id,
             };
           }),
         }));
@@ -432,7 +436,7 @@ export default function OrdersPage() {
                                       it.productId?.toString() ?? null
                                     );
                                     setSelectedOrderId(o.id);
-                                     setSelectedReviewId(it.reviewId ?? null); 
+                                    setSelectedReviewId(it.reviewId ?? null);
                                   }}
                                 >
                                   {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
@@ -453,11 +457,11 @@ export default function OrdersPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Link
-                        to={`/account/orders/${o.id}`}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
-                      >
-                        Chi tiết
-                      </Link>
+                            to={`/account/orders/${o.id}`}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                          >
+                            Chi tiết
+                          </Link>
                           {o.status === 'pending' && (
                             <a
                               href={`/checkout?orderId=${o.id}`}

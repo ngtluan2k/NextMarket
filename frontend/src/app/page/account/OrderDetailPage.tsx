@@ -70,7 +70,11 @@ export type OrderSummary = {
       id: number;
       name: string;
       media?: Array<{ url: string; is_primary: boolean }>;
-      reviews?: Array<{ id: number; user: { id: number }; order: { id: string | number } }>;
+      reviews?: Array<{
+        id: number;
+        user: { id: number };
+        order: { id: string | number };
+      }>;
     };
   }>;
 };
@@ -161,7 +165,7 @@ export default function OrdersPage() {
               qty: it.quantity,
               price: Number(it.price ?? 0),
               isReviewed,
-              reviewId: existingReview?.id, 
+              reviewId: existingReview?.id,
             };
           }),
         }));
@@ -431,7 +435,7 @@ export default function OrdersPage() {
                                       it.productId?.toString() ?? null
                                     );
                                     setSelectedOrderId(o.id);
-                                     setSelectedReviewId(it.reviewId ?? null); 
+                                    setSelectedReviewId(it.reviewId ?? null);
                                   }}
                                 >
                                   {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
