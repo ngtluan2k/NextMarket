@@ -67,6 +67,7 @@ export interface Voucher {
   uuid: string;
   code: string;
   title: string;
+  store_id?: number;
   description?: string;
   type: VoucherType;
   discount_type: VoucherDiscountType;
@@ -107,6 +108,7 @@ export interface CreateVoucherPayload {
   title: string;
   description?: string;
   type?: VoucherType;
+  store?: number;
   discount_type: VoucherDiscountType;
   discount_value: number;
   max_discount_amount?: number;
@@ -137,7 +139,7 @@ export interface UpdateVoucherPayload extends Partial<CreateVoucherPayload> {}
 // Apply Voucher DTO
 export interface ApplyVoucherDto {
   code: string;
-  storeId: number;
+  store: number;
   orderItems: OrderItem[];
 }
 
@@ -153,7 +155,7 @@ export interface CalculateDiscountDto {
   voucherCodes: string[];
   userId: number;
   orderItems: OrderItem[];
-  storeId: number;
+  store: number;
   orderAmount: number;
 }
 

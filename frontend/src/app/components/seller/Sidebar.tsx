@@ -16,6 +16,9 @@ import {
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StoreOwnerVoucherManager from './StoreOwnerVoucherManager';
+import { GiftOutlined } from '@ant-design/icons';
+
 const { Sider } = Layout;
 
 type MenuItem = Required<MenuProps>['items'][number];
@@ -36,6 +39,7 @@ const items: MenuItem[] = [
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
   getItem('Hóa Đơn ', 'Invoices', <FileTextOutlined />),
   getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
+  getItem('Quản lý marketing', 'VoucherManagement', <GiftOutlined />),
   getItem('Trở về trang chủ', 'HomePage', <HomeOutlined />),
 ];
 

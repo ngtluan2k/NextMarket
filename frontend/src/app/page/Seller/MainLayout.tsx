@@ -13,6 +13,7 @@ import SellerHeader from '../../components/seller/SellerHeader';
 import { storeService } from '../../../service/store.service';
 import StoreDraftBanner from './StoreDraftBanner';
 import StoreInfoTab from './tab/StoreInfoTab';
+import StoreOwnerVoucherManager from '../../components/seller/StoreOwnerVoucherManager';
 
 const { Content, Footer } = Layout;
 
@@ -23,6 +24,7 @@ const pages: Record<string, React.ReactNode> = {
   Customers: <Customer />,
   Invoices: <Invoice />,
   StoreInfo: <StoreInfoTab />,
+  VoucherManagement:<StoreOwnerVoucherManager/>,
   Home: <Home />,
 };
 

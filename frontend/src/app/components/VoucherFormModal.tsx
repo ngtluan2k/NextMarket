@@ -1,3 +1,4 @@
+// VoucherFormModal.tsx
 import React, { useEffect, useState } from 'react';
 import {
   Modal,
@@ -28,6 +29,8 @@ interface VoucherFormModalProps {
   stores: { id: number; name: string }[];
   categories: { id: number; name: string; store_id?: number }[];
   products: { id: number; name: string; category_id?: number }[];
+  isStoreOwner?: boolean;
+  currentStoreId?: number;
 }
 
 const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
@@ -40,6 +43,8 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   stores,
   categories: initialCategories,
   products: initialProducts,
+  isStoreOwner = false,
+  currentStoreId,
 }) => {
   const [categories, setCategories] = useState<{ id: number; name: string; store_id?: number }[]>(initialCategories);
   const [products, setProducts] = useState<{ id: number; name: string; category_id?: number }[]>(initialProducts);
@@ -48,7 +53,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Theo dõi giá trị của applicable_store_ids và applicable_category_ids
-  const selectedStoreIds = Form.useWatch('applicable_store_ids', form) || [];
+  const selectedStoreIds = Form.useWatch('applicable_store_ids', form) || (isStoreOwner && currentStoreId ? [currentStoreId] : []);
   const selectedCategoryIds = Form.useWatch('applicable_category_ids', form) || [];
 
   // Kiểm tra xem có nên hiển thị các trường hay không
@@ -59,6 +64,11 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   useEffect(() => {
     if (visible) {
       setInitialLoadComplete(false);
+      
+      // Nếu là store owner, set default store_ids
+      if (isStoreOwner && currentStoreId) {
+        form.setFieldsValue({ applicable_store_ids: [currentStoreId] });
+      }
       
       // Nếu đang edit, fetch dữ liệu cần thiết
       const loadInitialData = async () => {
@@ -83,7 +93,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
       setCategories(initialCategories);
       setProducts(initialProducts);
     }
-  }, [visible, editingVoucher]);
+  }, [visible, editingVoucher, isStoreOwner, currentStoreId, form, initialCategories, initialProducts]);
 
   // Hàm fetch categories
   const fetchCategoriesByStoreIds = async (storeIds: number[]) => {
@@ -140,7 +150,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         excluded_product_ids: []
       });
     }
-  }, [selectedStoreIds, visible, initialLoadComplete]);
+  }, [selectedStoreIds, visible, initialLoadComplete, form]);
 
   // Lấy danh sách sản phẩm dựa trên category_ids
   useEffect(() => {
@@ -156,7 +166,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         excluded_product_ids: []
       });
     }
-  }, [selectedCategoryIds, visible, initialLoadComplete]);
+  }, [selectedCategoryIds, visible, initialLoadComplete, form]);
 
   return (
     <Modal
@@ -398,29 +408,58 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item label="Cửa Hàng Áp Dụng (ID)" name="applicable_store_ids">
-              <Select
-                mode="multiple"
-                placeholder="Chọn cửa hàng (để trống nếu áp dụng tất cả)"
-                allowClear
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.children as unknown as string)
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              >
-                {stores.map((store) => (
-                  <Option key={store.id} value={store.id}>
-                    {store.name} (ID: {store.id})
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          {shouldShowCategories && (
+        {!isStoreOwner && (
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Cửa Hàng Áp Dụng (ID)" name="applicable_store_ids">
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn cửa hàng (để trống nếu áp dụng tất cả)"
+                  allowClear
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {stores.map((store) => (
+                    <Option key={store.id} value={store.id}>
+                      {store.name} (ID: {store.id})
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            {shouldShowCategories && (
+              <Col span={12}>
+                <Form.Item label="Danh Mục Áp Dụng (ID)" name="applicable_category_ids">
+                  <Select
+                    mode="multiple"
+                    placeholder="Chọn danh mục (để trống nếu áp dụng tất cả)"
+                    allowClear
+                    showSearch
+                    loading={fetchingCategories}
+                    filterOption={(input, option) =>
+                      (option?.children as unknown as string)
+                        ?.toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  >
+                    {categories.map((category) => (
+                      <Option key={category.id} value={category.id}>
+                        {category.name} (ID: {category.id})
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            )}
+          </Row>
+        )}
+
+        {isStoreOwner && shouldShowCategories && (
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="Danh Mục Áp Dụng (ID)" name="applicable_category_ids">
                 <Select
@@ -443,8 +482,8 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                 </Select>
               </Form.Item>
             </Col>
-          )}
-        </Row>
+          </Row>
+        )}
 
         {shouldShowProducts && (
           <Row gutter={16}>

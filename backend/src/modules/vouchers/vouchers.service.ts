@@ -39,47 +39,93 @@ export class VouchersService {
     private readonly voucherUsageService: VoucherUsageService
   ) {}
 
-  async create(
-    createVoucherDto: CreateVoucherDto,
-    userId: number,
-    role: string
-  ): Promise<Voucher> {
-    if (!this.hasPermission(role, 'add_voucher')) {
-      throw new ForbiddenException('Không có quyền tạo voucher');
-    }
+ async create(
+  createVoucherDto: CreateVoucherDto,
+  userId: number,
+  role: string | string[]
+): Promise<Voucher> {
+  console.log('=== VOUCHER CREATE START ===');
+  console.log('Role:', role);
+  console.log('User ID:', userId);
+  console.log('DTO received:', createVoucherDto);
 
-    if (role === 'seller') {
-      if (
-        !createVoucherDto.applicable_store_ids ||
-        createVoucherDto.applicable_store_ids.length !== 1
-      ) {
-        throw new BadRequestException(
-          'Store owner chỉ có thể tạo voucher cho một store của mình'
-        );
-      }
-      const storeId = createVoucherDto.applicable_store_ids[0];
-      await this.checkStoreOwnership(userId, storeId);
-    }
+  // Convert role to array if it's string
+  const roleArray = Array.isArray(role) ? role : [role];
+  console.log('Role array:', roleArray);
 
-    const voucher = this.vouchersRepository.create({
-      ...createVoucherDto,
-      uuid: uuidv4(),
-      start_date: new Date(createVoucherDto.start_date),
-      end_date: new Date(createVoucherDto.end_date),
-      store:
-        role === 'seller'
-          ? { id: createVoucherDto.applicable_store_ids![0] }
-          : undefined,
-    });
-    return await this.vouchersRepository.save(voucher);
+  if (!this.hasPermission(roleArray, 'add_voucher')) {
+    throw new ForbiddenException('Không có quyền tạo voucher');
   }
 
+  let storeId: number | undefined;
+
+  // Check if user has Seller role (even if they have multiple roles)
+  if (roleArray.includes('Seller')) {
+    console.log('🟡 Processing for Seller role');
+    
+    // Ưu tiên sử dụng store từ payload
+    if (createVoucherDto.store) {
+      storeId = createVoucherDto.store;
+      console.log('🟡 Using store from DTO.store:', storeId);
+    } 
+    // Nếu không có store, thử từ applicable_store_ids
+    else if (
+      createVoucherDto.applicable_store_ids &&
+      createVoucherDto.applicable_store_ids.length === 1
+    ) {
+      storeId = createVoucherDto.applicable_store_ids[0];
+      console.log('🟡 Using store from applicable_store_ids:', storeId);
+    }
+
+    console.log('🟡 Final storeId for Seller:', storeId);
+
+    if (!storeId) {
+      console.log('🔴 No storeId found for Seller');
+      throw new BadRequestException(
+        'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
+      );
+    }
+
+    console.log('🟡 Checking store ownership...');
+    // Kiểm tra quyền sở hữu store
+    await this.checkStoreOwnership(userId, storeId);
+    console.log('🟢 Store ownership check passed');
+  } else {
+    console.log('🟡 User is not Seller, storeId remains undefined');
+  }
+
+  // Tạo voucher data, loại bỏ store để tránh lỗi property không tồn tại
+  const { store, ...voucherData } = createVoucherDto;
+  
+  console.log('🟡 Voucher data after removing store:', voucherData);
+  console.log('🟡 Store relation to set:', storeId ? { id: storeId } : undefined);
+
+  const voucher = this.vouchersRepository.create({
+    ...voucherData,
+    uuid: uuidv4(),
+    start_date: new Date(createVoucherDto.start_date),
+    end_date: new Date(createVoucherDto.end_date),
+    store: storeId ? { id: storeId } : undefined,
+  });
+
+  console.log('🟡 Voucher entity created:', voucher);
+  
+  try {
+    const savedVoucher = await this.vouchersRepository.save(voucher);
+    console.log('🟢 Voucher saved successfully:', savedVoucher);
+    console.log('🟢 Saved voucher store relation:', savedVoucher.store);
+    return savedVoucher;
+  } catch (error) {
+    console.error('🔴 Error saving voucher:', error);
+    throw error;
+  }
+}
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
   const roleList = Array.isArray(roles) ? roles : [roles];
 
   if (roleList.includes('admin')) {
     return this.vouchersRepository.find();
-  } else if (roleList.includes('seller')) {
+  } else if (roleList.includes('Seller')) {
     const ownedStores = await this.storesRepository.find({
       where: { user: { id: userId } },
     });
@@ -123,7 +169,7 @@ export class VouchersService {
       throw new ForbiddenException('Không có quyền cập nhật voucher');
     }
 
-    if (role === 'seller' && updateVoucherDto.applicable_store_ids) {
+    if (role === 'Seller' && updateVoucherDto.applicable_store_ids) {
       await this.checkStoreOwnership(
         userId,
         updateVoucherDto.applicable_store_ids[0]
@@ -564,26 +610,27 @@ export class VouchersService {
   }
 
   private hasPermission(roles: string[] | string, permission: string): boolean {
-    const adminPermissions = [
-      'add_voucher',
-      'view_voucher',
-      'update_voucher',
-      'delete_voucher',
-    ];
-    const storeOwnerPermissions = [
-      'add_voucher',
-      'view_voucher',
-      'update_voucher',
-      'delete_voucher',
-    ];
+  const adminPermissions = [
+    'add_voucher',
+    'view_voucher',
+    'update_voucher',
+    'delete_voucher',
+  ];
+  const storeOwnerPermissions = [
+    'add_voucher',
+    'view_voucher',
+    'update_voucher',
+    'delete_voucher',
+  ];
 
-    const roleList = Array.isArray(roles) ? roles : [roles];
+  // Convert to array if it's string
+  const roleList = Array.isArray(roles) ? roles : [roles];
 
-    if (roleList.includes('admin')) {
-      return adminPermissions.includes(permission);
-    } else if (roleList.includes('Seller')) {
-      return storeOwnerPermissions.includes(permission);
-    }
-    return false;
+  if (roleList.includes('admin')) {
+    return adminPermissions.includes(permission);
+  } else if (roleList.includes('Seller')) {
+    return storeOwnerPermissions.includes(permission);
   }
+  return false;
+}
 }

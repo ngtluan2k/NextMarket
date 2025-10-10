@@ -48,6 +48,10 @@ export class CreateVoucherDto {
   title!: string;
 
   @IsOptional()
+  @IsNumber()
+  store?: number;
+
+  @IsOptional()
   @IsString()
   description?: string;
 

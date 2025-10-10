@@ -1,4 +1,3 @@
-// src/components/EveryMartHeader.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Search,
@@ -16,8 +15,10 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import LoginModal, { LoginPayload } from './LoginModal';
 import AccountMenu from './AccountMenu';
+import AddressModal from '../page/AddressModal'; 
 import debounce from 'lodash.debounce';
-
+import { userApi } from '../api/api';
+import { UserAddress } from '../types/user';
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -70,11 +71,32 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [openLogin, setOpenLogin] = useState(false);
+  const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const { cart } = useCart();
   const totalItems = cart.length;
-
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
+
+  // Lấy danh sách địa chỉ của người dùng
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (me?.id) {
+        try {
+          const data = await userApi.getAddresses(me.id);
+          setAddresses(data);
+          // Chọn địa chỉ mặc định nếu có
+          const defaultAddress =
+            data.find((addr: UserAddress) => addr.isDefault) || data[0];
+          setSelectedAddress(defaultAddress || null);
+        } catch (err) {
+          console.error('Lỗi khi lấy địa chỉ:', err);
+        }
+      }
+    };
+    fetchAddresses();
+  }, [me]);
 
   const handleGoSeller = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -118,14 +140,13 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
       navigate('/seller-registration');
     }
   };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     if (token && user && !me) {
-      // Nếu có token và user trong localStorage nhưng me chưa có
       try {
         const userData = JSON.parse(user);
-        // Gọi API /users/me để xác nhận token hợp lệ
         fetch('http://localhost:3000/users/me', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -134,12 +155,11 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
           .then((res) => res.json())
           .then((json) => {
             if (json.data) {
-              login(json.data, token); // Cập nhật me trong context
+              login(json.data, token);
             } else {
-              // Token không hợp lệ, xóa localStorage
               localStorage.removeItem('token');
               localStorage.removeItem('user');
-              logout(); // Đặt me về null
+              logout();
             }
           })
           .catch(() => {
@@ -178,7 +198,6 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     }
   };
 
-  // Debounce 300ms
   const debouncedFetch = debounce(fetchSuggestions, 300);
 
   useEffect(() => {
@@ -193,6 +212,10 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     if (!query) return;
     navigate(`/search?q=${encodeURIComponent(query)}`);
     setSuggestions([]);
+  };
+
+  const handleAddressSelect = (address: UserAddress) => {
+    setSelectedAddress(address);
   };
 
   return (
@@ -241,7 +264,6 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                 {L.searchButton}
               </button>
 
-              {/* Suggestions dropdown */}
               {suggestions.length > 0 && (
                 <ul className="absolute top-full left-0 right-0 bg-white border border-slate-300 shadow-lg rounded-b-md z-50 max-h-60 overflow-auto">
                   {suggestions.map((p) => (
@@ -263,7 +285,6 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                                 /^\/+/,
                                 ''
                               )}`;
-
                           return (
                             <img
                               src={imageUrl}
@@ -276,7 +297,6 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                             />
                           );
                         })()}
-
                       <span>{p.name}</span>
                       {p.brand?.name && (
                         <span className="text-xs text-slate-500">
@@ -299,7 +319,6 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               <span className="hidden md:inline">{L.home}</span>
             </a>
 
-            {/* Tài khoản */}
             {me ? (
               <AccountMenu className="px-0" />
             ) : (
@@ -332,7 +351,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
           </nav>
         </div>
 
-        {/* Row 2: Categories */}
+        {/* Row 2: Categories and Address */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center mt-[-20px] gap-4 pb-2">
           <div />
           <div className="w-full px-20 ml-8">
@@ -349,12 +368,14 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
           <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
             <MapPin className="h-4 w-4 text-slate-500" />
             <span>{L.deliveryPrefix}</span>
-            <a
-              href="#"
+            <button
+              onClick={() => setIsAddressModalVisible(true)}
               className="truncate max-w-[320px] font-medium underline"
             >
-              {L.address}
-            </a>
+              {selectedAddress
+                ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.province}`
+                : L.address}
+            </button>
           </div>
         </div>
 
@@ -426,8 +447,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
-            login(json.data, json.access_token); // vẫn lưu payload tạm
-            // 👉 gọi thêm /me để cập nhật đầy đủ thông tin
+            login(json.data, json.access_token);
             const profileRes = await fetch('http://localhost:3000/users/me', {
               headers: {
                 Authorization: `Bearer ${json.access_token}`,
@@ -435,7 +455,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
             });
             const profileJson = await profileRes.json();
             if (profileRes.ok) {
-              login(profileJson.data, json.access_token); // update lại me = profile
+              login(profileJson.data, json.access_token);
             }
 
             setOpenLogin(false);
@@ -443,6 +463,14 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
             alert(err.message);
           }
         }}
+      />
+
+      {/* Address Modal */}
+      <AddressModal
+        visible={isAddressModalVisible}
+        onClose={() => setIsAddressModalVisible(false)}
+        onSelect={handleAddressSelect}
+        currentAddressId={selectedAddress?.id}
       />
     </header>
   );
