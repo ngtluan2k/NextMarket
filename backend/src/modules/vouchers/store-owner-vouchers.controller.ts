@@ -35,8 +35,8 @@ export class StoreOwnerVouchersController {
   @ApiOperation({ summary: 'Tạo voucher mới cho store' })
   @ApiResponse({ status: 201, description: 'Voucher được tạo thành công' })
   async create(@Body() createVoucherDto: CreateVoucherDto, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -48,8 +48,8 @@ export class StoreOwnerVouchersController {
   @ApiOperation({ summary: 'Lấy danh sách voucher của store' })
   @ApiResponse({ status: 200, description: 'Danh sách voucher' })
   async findAll(@Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -61,8 +61,8 @@ export class StoreOwnerVouchersController {
   @ApiOperation({ summary: 'Lấy chi tiết voucher của store' })
   @ApiResponse({ status: 200, description: 'Thông tin voucher' })
   async findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -78,8 +78,8 @@ export class StoreOwnerVouchersController {
     @Body() updateVoucherDto: UpdateVoucherDto,
     @Req() req: any
   ) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -91,8 +91,8 @@ export class StoreOwnerVouchersController {
   @ApiOperation({ summary: 'Xóa voucher của store' })
   @ApiResponse({ status: 200, description: 'Voucher được xóa thành công' })
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }

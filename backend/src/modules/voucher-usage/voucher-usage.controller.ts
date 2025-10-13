@@ -36,8 +36,8 @@ export class VoucherUsageController {
     description: 'Bản ghi sử dụng voucher được tạo thành công',
   })
   create(@Body() dto: CreateVoucherUsageDto, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -52,8 +52,8 @@ export class VoucherUsageController {
     description: 'Danh sách bản ghi sử dụng voucher',
   })
   findAll(@Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }
@@ -68,8 +68,8 @@ export class VoucherUsageController {
     description: 'Thông tin bản ghi sử dụng voucher',
   })
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('Người dùng chưa được xác thực');
     }

@@ -1,4 +1,4 @@
-// VoucherManager.tsx
+// StoreOwnerVoucherManager.tsx
 import React, { useEffect, useState } from 'react';
 import {
   Table,
@@ -22,7 +22,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
-import { voucherApi } from '../../api/voucher.api';
+import { storeOwnerVoucherApi } from '../../api/voucher.api';
 import { api, API_ENDPOINTS } from '../../api/api';
 import {
   VoucherType,
@@ -30,6 +30,7 @@ import {
   VoucherStatus,
   Voucher,
   CreateVoucherPayload,
+  UpdateVoucherPayload
 } from '../../types/voucher';
 import VoucherFormModal from '../VoucherFormModal';
 import { Form } from 'antd';
@@ -38,7 +39,7 @@ dayjs.locale('vi');
 
 const { Option } = Select;
 
-const VoucherManager: React.FC = () => {
+const StoreOwnerVoucherManager: React.FC = () => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -48,10 +49,9 @@ const VoucherManager: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<VoucherStatus | null>(null);
   const [typeFilter, setTypeFilter] = useState<VoucherType | null>(null);
   const [stores, setStores] = useState<{ id: number; name: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [products, setProducts] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; store_id?: number }[]>([]);
+  const [products, setProducts] = useState<{ id: number; name: string; category_id?: number }[]>([]);
+  const [currentStoreId, setCurrentStoreId] = useState<number | undefined>(undefined);
   const [form] = Form.useForm();
 
   // Thống kê
@@ -66,28 +66,32 @@ const VoucherManager: React.FC = () => {
     (v) => v.status === VoucherStatus.DEPLETED
   ).length;
 
-  // Lấy dữ liệu từ API
+  // Lấy dữ liệu từ API cho store owner
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [storeResponse, categoryResponse, productResponse] =
-          await Promise.all([
-            api.get(API_ENDPOINTS.stores),
-            api.get(API_ENDPOINTS.categories),
-            api.get(API_ENDPOINTS.products),
-          ]);
-
-        setStores(storeResponse.data?.data || storeResponse.data || []);
-        setCategories(
-          categoryResponse.data?.data || categoryResponse.data || []
-        );
-        setProducts(productResponse.data?.data || productResponse.data || []);
+        // Giả định endpoint để lấy store của owner
+        const ownerStoreResponse = await api.get(`${API_ENDPOINTS.stores}/my-store`);
+        const ownerStore = ownerStoreResponse.data?.data || ownerStoreResponse.data || null;
+        console.log('ownerStore:', ownerStore);
+        if (ownerStore) {
+          setCurrentStoreId(ownerStore.id);
+          setStores([ownerStore]);
+          
+          // Fetch categories cho store này
+          const categoryResponse = await api.get(`${API_ENDPOINTS.categories}?store_ids=${ownerStore.id}`);
+          setCategories(categoryResponse.data?.data || categoryResponse.data || []);
+          
+          // Fetch products cho store này (giả định endpoint hỗ trợ store_ids cho products)
+          const productResponse = await api.get(`${API_ENDPOINTS.products}?store_ids=${ownerStore.id}`);
+          setProducts(productResponse.data?.data || productResponse.data || []);
+        }
         await fetchVouchers();
       } catch (err: any) {
         console.error('Lỗi tải dữ liệu:', err);
         if (err.response?.status === 403) {
-          message.error('Bạn không có quyền xem danh sách cửa hàng');
+          message.error('Bạn không có quyền xem danh sách');
         } else {
           message.error('Không thể tải dữ liệu từ server');
         }
@@ -99,10 +103,6 @@ const VoucherManager: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchVouchers();
-  }, []);
-
-  useEffect(() => {
     handleFilterAndSearch();
   }, [vouchers, searchText, statusFilter, typeFilter]);
 
@@ -110,7 +110,7 @@ const VoucherManager: React.FC = () => {
   const fetchVouchers = async () => {
     try {
       setLoading(true);
-      const data = await voucherApi.getAllVouchers();
+      const data = await storeOwnerVoucherApi.getAllVouchers();
       const voucherData = Array.isArray(data) ? data : [];
       setVouchers(voucherData);
     } catch (err: any) {
@@ -152,6 +152,7 @@ const VoucherManager: React.FC = () => {
   // Create/Update voucher
   const handleSubmit = async () => {
     try {
+      
       const values = await form.validateFields();
       setLoading(true);
 
@@ -205,20 +206,21 @@ const VoucherManager: React.FC = () => {
         priority: values.priority ? Number(values.priority) : 0,
         stackable: !!values.stackable,
         new_user_only: !!values.new_user_only,
-        applicable_store_ids: values.applicable_store_ids || [], 
-        applicable_category_ids: values.applicable_category_ids || [], 
-        applicable_product_ids: values.applicable_product_ids || [], 
-        excluded_product_ids: values.excluded_product_ids || [], 
-        user_conditions: values.user_conditions || undefined, 
-        time_restrictions: values.time_restrictions || undefined, 
+        store: currentStoreId,
+        applicable_store_ids: currentStoreId ? [currentStoreId] : [], 
+        applicable_category_ids: values.applicable_category_ids || [],
+        applicable_product_ids: values.applicable_product_ids || [],
+        excluded_product_ids: values.excluded_product_ids || [],
+        user_conditions: values.user_conditions || undefined,
+        time_restrictions: values.time_restrictions || undefined,
         theme_color: values.theme_color || '#FF6B6B',
       };
-
+      console.log('Payload:', payload);
       if (editingVoucher) {
-        await voucherApi.updateVoucher(editingVoucher.id, payload);
+        await storeOwnerVoucherApi.updateVoucher(editingVoucher.id, payload as UpdateVoucherPayload);
         message.success('Cập nhật voucher thành công!');
       } else {
-        await voucherApi.createVoucher(payload);
+        await storeOwnerVoucherApi.createVoucher(payload);
         message.success('Tạo voucher thành công!');
       }
 
@@ -240,7 +242,7 @@ const VoucherManager: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       setLoading(true);
-      await voucherApi.deleteVoucher(id);
+      await storeOwnerVoucherApi.deleteVoucher(id);
       message.success('Xóa voucher thành công!');
       fetchVouchers();
     } catch (err: any) {
@@ -454,7 +456,7 @@ const VoucherManager: React.FC = () => {
 
       {/* Tiêu đề và tìm kiếm */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-gray-900 m-0">Quản Lý Voucher</h3>
+        <h3 className="text-xl font-bold text-gray-900 m-0">Quản Lý Voucher Cửa Hàng</h3>
         <Space>
           <Input
             placeholder="Tìm mã, tiêu đề, mô tả..."
@@ -538,9 +540,11 @@ const VoucherManager: React.FC = () => {
         stores={stores}
         categories={categories}
         products={products}
+        isStoreOwner={true}
+        currentStoreId={currentStoreId}
       />
     </div>
   );
 };
 
-export default VoucherManager;
+export default StoreOwnerVoucherManager;

@@ -27,7 +27,7 @@ export class VouchersController {
   @ApiOperation({ summary: 'Lấy danh sách voucher đang hoạt động' })
   @ApiResponse({ status: 200, description: 'Danh sách các voucher hoạt động' })
   async getActiveVouchers(@Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
     return this.vouchersService.getAvailableVouchers(userId);
   }
@@ -40,7 +40,7 @@ export class VouchersController {
     @Body() validateVoucherDto: ValidateVoucherDto,
     @Req() req: any
   ) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
 
     const { code, order_amount, store_id } = validateVoucherDto;
@@ -57,15 +57,9 @@ export class VouchersController {
   @Post('calculate-discount')
   @ApiOperation({ summary: 'Tính toán chiết khấu từ danh sách mã voucher' })
   @UseGuards(JwtAuthGuard)
-  @ApiResponse({
-    status: 200,
-    description: 'Tổng chiết khấu và danh sách voucher áp dụng',
-  })
-  async calculateDiscount(
-    @Body() calculateDiscountDto: CalculateDiscountDto,
-    @Req() req: any
-  ) {
-    const userId = req.user?.userId;
+  @ApiResponse({ status: 200, description: 'Tổng chiết khấu và danh sách voucher áp dụng' })
+  async calculateDiscount(@Body() calculateDiscountDto: CalculateDiscountDto, @Req() req: any) {
+    const userId = req.user?.sub;
     if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
 
     return this.vouchersService.calculateDiscount(

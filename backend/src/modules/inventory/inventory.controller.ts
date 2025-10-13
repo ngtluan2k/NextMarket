@@ -35,8 +35,8 @@ export class InventoryController {
   @ApiOperation({ summary: 'Add new inventory' })
   @ApiResponse({ status: 201, description: 'Inventory created successfully' })
   async add(@Body() dto: CreateInventoryDto, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -48,7 +48,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Get all inventories' })
   @ApiResponse({ status: 200, description: 'List of inventories' })
   async findAll(@Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -64,8 +64,8 @@ export class InventoryController {
     @Body() dto: UpdateInventoryDto,
     @Req() req: any
   ) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -77,8 +77,8 @@ export class InventoryController {
   @ApiOperation({ summary: 'Delete inventory' })
   @ApiResponse({ status: 200, description: 'Inventory deleted successfully' })
   async delete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    const userId = req.user?.userId;
-    const role = req.user?.role;
+    const userId = req.user?.sub;
+    const role = req.user?.roles;
     if (!userId) {
       throw new Error('User not authenticated');
     }

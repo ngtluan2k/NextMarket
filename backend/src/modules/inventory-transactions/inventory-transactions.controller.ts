@@ -37,7 +37,7 @@ export class InventoryTransactionController {
   @ApiOperation({ summary: 'Tạo giao dịch tồn kho mới' })
   @ApiResponse({ status: 201, description: 'Tạo thành công' })
   async add(@Body() dto: CreateInventoryTransactionDto, @Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     return this.transactionService.addInventoryTransaction(dto, userId);
   }
 
@@ -56,7 +56,7 @@ export class InventoryTransactionController {
     @Body() dto: UpdateInventoryTransactionDto,
     @Req() req: any
   ) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     return this.transactionService.updateInventoryTransaction(id, dto, userId);
   }
 
