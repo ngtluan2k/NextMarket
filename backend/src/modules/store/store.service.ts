@@ -239,10 +239,9 @@ export class StoreService {
             level: StoreLevelEnum.BASIC,
             upgraded_at: new Date(),
           },
-          ['store_id'], // unique theo store_id
+          ['store_id'] // unique theo store_id
         );
       }
-
 
       return {
         store: savedStore,
@@ -340,7 +339,7 @@ export class StoreService {
           level: StoreLevelEnum.BASIC,
           upgraded_at: new Date(),
         },
-        ['store_id'], 
+        ['store_id']
       );
     }
 

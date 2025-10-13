@@ -13,7 +13,9 @@ export class ProductReviewMedia {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => ProductReview, (review) => review.media, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ProductReview, (review) => review.media, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'review_id' })
   review!: ProductReview;
 

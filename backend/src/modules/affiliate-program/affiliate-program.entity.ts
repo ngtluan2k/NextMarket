@@ -6,7 +6,7 @@ export class AffiliateProgram {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @Column({ length: 255 })
@@ -24,7 +24,7 @@ export class AffiliateProgram {
   @Column({ length: 255 })
   status!: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   created_at!: Date;
 
   @OneToMany(() => AffiliateLink, (link) => link.program_id)

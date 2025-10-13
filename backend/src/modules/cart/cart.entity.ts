@@ -6,6 +6,7 @@ import {
   JoinColumn,
   OneToMany,
   OneToOne,
+  Generated,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
@@ -16,8 +17,9 @@ export class ShoppingCart {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
-  uuid!: string;
+@Column({ type: 'char', unique: true })
+@Generated('uuid')
+uuid!: string;
 
   @OneToOne(() => User, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })
@@ -26,11 +28,11 @@ export class ShoppingCart {
   @Column()
   user_id!: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
   @Column({
-    type: 'datetime',
+    type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
     onUpdate: 'CURRENT_TIMESTAMP',
   })
@@ -45,7 +47,7 @@ export class CartItem {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @ManyToOne(() => ShoppingCart)
@@ -75,10 +77,10 @@ export class CartItem {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   price!: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   added_at!: Date;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar' })
   type!: 'bulk' | 'subscription';
   
   @Column({ type: 'boolean', default: false })

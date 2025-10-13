@@ -79,7 +79,7 @@ export function MySubscriptionsPage() {
     try {
       await execute({
         subscriptionId: currentSubscription.id,
-        usedQuantity: useQuantity, 
+        usedQuantity: useQuantity,
         addressId: selectedAddress.id,
         note,
       });

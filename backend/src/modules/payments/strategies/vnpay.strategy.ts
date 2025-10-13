@@ -56,7 +56,7 @@ export class VnpayStrategy implements PaymentStrategy {
 
     payment.status =
       payload.vnp_ResponseCode === '00'
-        ? PaymentStatus.Completed
+        ? PaymentStatus.Paid
         : PaymentStatus.Failed;
     payment.transactionId = payload.vnp_TransactionNo;
     payment.rawPayload = JSON.stringify(payload);

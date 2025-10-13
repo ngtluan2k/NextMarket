@@ -7,7 +7,7 @@ import { AffiliateRegistrationPlatform } from './affiliate-registration-platform
 export class AffiliateRegistrationPlatformService {
   constructor(
     @InjectRepository(AffiliateRegistrationPlatform)
-    private repo: Repository<AffiliateRegistrationPlatform>,
+    private repo: Repository<AffiliateRegistrationPlatform>
   ) {}
 
   async findAll() {

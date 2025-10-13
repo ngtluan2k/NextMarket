@@ -1,7 +1,10 @@
 // hooks/useUseSubscription.ts
 import { useState } from 'react';
 import { useSubscriptionApi } from '../../service/subscriptionService';
-import { UseSubscriptionBody, UseSubscriptionResponse } from '../types/subscription';
+import {
+  UseSubscriptionBody,
+  UseSubscriptionResponse,
+} from '../types/subscription';
 
 export function useUseSubscription() {
   const [loading, setLoading] = useState(false);
@@ -18,7 +21,11 @@ export function useUseSubscription() {
       const res = await subscriptionApi(body);
       setResult(res);
     } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Failed to use subscription');
+      setError(
+        err?.response?.data?.message ||
+          err.message ||
+          'Failed to use subscription'
+      );
       setResult(null);
     } finally {
       setLoading(false);

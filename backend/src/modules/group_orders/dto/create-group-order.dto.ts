@@ -24,14 +24,17 @@ export class CreateGroupOrderDto {
   @IsInt()
   hostUserId!: number;
 
-  @ApiPropertyOptional({ description: 'Thời điểm hết hạn group (ISO8601)', example: '2025-12-31T23:59:59Z' })
+  @ApiPropertyOptional({
+    description: 'Thời điểm hết hạn group (ISO8601)',
+    example: '2025-12-31T23:59:59Z',
+  })
   @IsOptional()
   @IsDateString()
   expiresAt?: string;
 
   @ApiPropertyOptional({ description: 'Mã mời tham gia (nếu có)' })
   @IsOptional()
-  join_code?: string
+  join_code?: string;
 
   @ApiPropertyOptional({ description: 'Link mời tham gia (nếu có)' })
   @IsOptional()

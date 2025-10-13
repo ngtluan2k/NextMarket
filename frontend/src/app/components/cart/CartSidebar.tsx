@@ -207,14 +207,24 @@ export const CartSidebar: React.FC<Props> = ({
   };
 
   const handleApplyVoucher = (vouchers: Voucher[], totalDiscount: number) => {
-    console.log('Applying vouchers:', vouchers, 'Total discount:', totalDiscount);
+    console.log(
+      'Applying vouchers:',
+      vouchers,
+      'Total discount:',
+      totalDiscount
+    );
     setSelectedVouchers(vouchers);
     setDiscountTotal(Number.isFinite(totalDiscount) ? totalDiscount : 0);
   };
 
   const handleRemoveVoucher = async (voucherId: number) => {
     const updatedVouchers = selectedVouchers.filter((v) => v.id !== voucherId);
-    console.log('Removing voucher:', voucherId, 'Updated vouchers:', updatedVouchers);
+    console.log(
+      'Removing voucher:',
+      voucherId,
+      'Updated vouchers:',
+      updatedVouchers
+    );
     setSelectedVouchers(updatedVouchers);
 
     if (updatedVouchers.length === 0) {
@@ -387,7 +397,6 @@ export const CartSidebar: React.FC<Props> = ({
         orderAmount={selectedTotal}
         onApply={handleApplyVoucher}
         selectedVouchers={selectedVouchers}
-        
       />
 
       <Card>

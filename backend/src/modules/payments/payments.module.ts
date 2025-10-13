@@ -30,7 +30,13 @@ import { EveryCoinStrategy } from './strategies/everycoin.strategy';
       OrderStatusHistory,
     ]),
   ],
-  providers: [PaymentsService, CodStrategy, VnpayStrategy, MomoStrategy, EveryCoinStrategy,],
+  providers: [
+    PaymentsService,
+    CodStrategy,
+    VnpayStrategy,
+    MomoStrategy,
+    EveryCoinStrategy,
+  ],
   controllers: [PaymentsController, PaymentsWebhookController],
   exports: [PaymentsService],
 })

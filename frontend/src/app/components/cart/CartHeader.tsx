@@ -160,7 +160,9 @@ export const CartHeader: React.FC<Props> = ({
                     selectedType || (items.length > 0 ? items[0].type : null);
 
                   // Lọc theo type đang được chọn
-                  const filtered = items.filter((item) => item.type === currentType);
+                  const filtered = items.filter(
+                    (item) => item.type === currentType
+                  );
 
                   // Kiểm tra xem tất cả filtered item đã được chọn chưa
                   const allFilteredChecked = filtered.every((item) =>
@@ -180,7 +182,6 @@ export const CartHeader: React.FC<Props> = ({
                     }
                   });
                 }}
-
               />
 
               <Text strong>{storeName}</Text>

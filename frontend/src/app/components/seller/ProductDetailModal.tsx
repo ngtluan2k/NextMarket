@@ -9,8 +9,8 @@ export interface ProductDetail {
   name: string;
   category: string;
   base_price: number;
-  brandId?: number;        // giữ để tương thích
-  brandName?: string;      // dùng để hiển thị
+  brandId?: number; // giữ để tương thích
+  brandName?: string; // dùng để hiển thị
   stock: number;
   sold: number;
   revenue: number;
@@ -56,7 +56,7 @@ export interface ProductDetail {
 
 type Props = {
   product: ProductDetail | null;
-  open?: boolean;                 // optional: có thể truyền hoặc dựa theo product !== null
+  open?: boolean; // optional: có thể truyền hoặc dựa theo product !== null
   onClose: () => void;
   onEdit?: (p: ProductDetail) => void;
 };
@@ -73,18 +73,23 @@ function formatVND(n: number) {
   }
 }
 
-const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit }) => {
+const ProductDetailModal: React.FC<Props> = ({
+  product,
+  open,
+  onClose,
+  onEdit,
+}) => {
   const isOpen = typeof open === 'boolean' ? open : !!product;
 
   const mainImage =
-    product?.media?.find((m) => m.is_primary && m.media_type === 'image')?.url ||
+    product?.media?.find((m) => m.is_primary && m.media_type === 'image')
+      ?.url ||
     product?.image ||
     '/placeholder.svg';
 
-  const gallery =
-    (product?.media || [])
-      .filter((m) => m.media_type === 'image' && m.url !== mainImage)
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const gallery = (product?.media || [])
+    .filter((m) => m.media_type === 'image' && m.url !== mainImage)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
   return (
     <Modal
@@ -98,7 +103,9 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
             Chỉnh sửa
           </Button>
         ) : null,
-        <Button key="close" onClick={onClose}>Đóng</Button>,
+        <Button key="close" onClick={onClose}>
+          Đóng
+        </Button>,
       ].filter(Boolean)}
       destroyOnClose
     >
@@ -114,7 +121,8 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
                   alt={product.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
+                    (e.currentTarget as HTMLImageElement).src =
+                      '/placeholder.svg';
                   }}
                 />
               </div>
@@ -128,7 +136,8 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
                       src={m.url}
                       className="w-full aspect-square object-cover rounded border"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                        (e.currentTarget as HTMLImageElement).style.visibility =
+                          'hidden';
                       }}
                     />
                   ))}
@@ -140,37 +149,65 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
               <Title level={4} style={{ margin: 0 }}>
                 {product.name}
               </Title>
-              <div className="text-gray-600">{product.short_description || '—'}</div>
+              <div className="text-gray-600">
+                {product.short_description || '—'}
+              </div>
 
               <div className="grid grid-cols-2 gap-3 mt-3">
-                <div><Text type="secondary">SKU:</Text> <Text strong>{product.sku}</Text></div>
-                <div><Text type="secondary">Danh mục:</Text> <Text strong>{product.category || 'Chung'}</Text></div>
-                <div><Text type="secondary">Giá gốc:</Text> <Text strong>{formatVND(product.base_price)}</Text></div>
-                <div><Text type="secondary">Tồn kho:</Text> <Text strong>{product.stock}</Text></div>
+                <div>
+                  <Text type="secondary">SKU:</Text>{' '}
+                  <Text strong>{product.sku}</Text>
+                </div>
+                <div>
+                  <Text type="secondary">Danh mục:</Text>{' '}
+                  <Text strong>{product.category || 'Chung'}</Text>
+                </div>
+                <div>
+                  <Text type="secondary">Giá gốc:</Text>{' '}
+                  <Text strong>{formatVND(product.base_price)}</Text>
+                </div>
+                <div>
+                  <Text type="secondary">Tồn kho:</Text>{' '}
+                  <Text strong>{product.stock}</Text>
+                </div>
 
-       
                 <div>
                   <Text type="secondary">Thương hiệu:</Text>{' '}
                   <Text strong>
                     {product.brandName?.trim()
                       ? product.brandName
-                      : (product.brandId ? `#${product.brandId}` : '—')}
+                      : product.brandId
+                      ? `#${product.brandId}`
+                      : '—'}
                   </Text>
                 </div>
 
                 <div>
                   <Text type="secondary">Trạng thái:</Text>{' '}
-                  <Tag color={product.status === 'Còn Hàng' ? 'green' : product.status === 'Sắp Hết Hàng' ? 'orange' : 'red'}>
+                  <Tag
+                    color={
+                      product.status === 'Còn Hàng'
+                        ? 'green'
+                        : product.status === 'Sắp Hết Hàng'
+                        ? 'orange'
+                        : 'red'
+                    }
+                  >
                     {product.status}
                   </Tag>
                 </div>
                 <div>
                   <Text type="secondary">Tình trạng:</Text>{' '}
-                  <Tag color={product.statusApi === 'active' ? 'blue' : 'default'}>
+                  <Tag
+                    color={product.statusApi === 'active' ? 'blue' : 'default'}
+                  >
                     {product.statusApi}
                   </Tag>
                 </div>
-                <div><Text type="secondary">Ngày tạo:</Text> <Text>{product.createdAt}</Text></div>
+                <div>
+                  <Text type="secondary">Ngày tạo:</Text>{' '}
+                  <Text>{product.createdAt}</Text>
+                </div>
               </div>
             </div>
           </div>
@@ -185,10 +222,24 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
               pagination={false}
               columns={[
                 { title: 'SKU', dataIndex: 'sku', key: 'sku' },
-                { title: 'Tên biến thể', dataIndex: 'variant_name', key: 'variant_name' },
-                { title: 'Giá', dataIndex: 'price', key: 'price', render: (v: number) => formatVND(v) },
+                {
+                  title: 'Tên biến thể',
+                  dataIndex: 'variant_name',
+                  key: 'variant_name',
+                },
+                {
+                  title: 'Giá',
+                  dataIndex: 'price',
+                  key: 'price',
+                  render: (v: number) => formatVND(v),
+                },
                 { title: 'Tồn kho', dataIndex: 'stock', key: 'stock' },
-                { title: 'Barcode', dataIndex: 'barcode', key: 'barcode', render: (v: string) => v || '—' },
+                {
+                  title: 'Barcode',
+                  dataIndex: 'barcode',
+                  key: 'barcode',
+                  render: (v: string) => v || '—',
+                },
               ]}
             />
           </div>
@@ -204,11 +255,35 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
                 pagination={false}
                 columns={[
                   { title: 'Loại', dataIndex: 'type', key: 'type' },
-                  { title: 'SL tối thiểu', dataIndex: 'min_quantity', key: 'min_quantity' },
-                  { title: 'Giá', dataIndex: 'price', key: 'price', render: (v: number) => formatVND(v) },
-                  { title: 'Chu kỳ', dataIndex: 'cycle', key: 'cycle', render: (v: string) => v || '—' },
-                  { title: 'Từ ngày', dataIndex: 'starts_at', key: 'starts_at', render: (v: any) => (v ? String(v).split('T')[0] : '—') },
-                  { title: 'Đến ngày', dataIndex: 'ends_at', key: 'ends_at', render: (v: any) => (v ? String(v).split('T')[0] : '—') },
+                  {
+                    title: 'SL tối thiểu',
+                    dataIndex: 'min_quantity',
+                    key: 'min_quantity',
+                  },
+                  {
+                    title: 'Giá',
+                    dataIndex: 'price',
+                    key: 'price',
+                    render: (v: number) => formatVND(v),
+                  },
+                  {
+                    title: 'Chu kỳ',
+                    dataIndex: 'cycle',
+                    key: 'cycle',
+                    render: (v: string) => v || '—',
+                  },
+                  {
+                    title: 'Từ ngày',
+                    dataIndex: 'starts_at',
+                    key: 'starts_at',
+                    render: (v: any) => (v ? String(v).split('T')[0] : '—'),
+                  },
+                  {
+                    title: 'Đến ngày',
+                    dataIndex: 'ends_at',
+                    key: 'ends_at',
+                    render: (v: any) => (v ? String(v).split('T')[0] : '—'),
+                  },
                 ]}
               />
             </div>
@@ -219,7 +294,9 @@ const ProductDetailModal: React.FC<Props> = ({ product, open, onClose, onEdit })
             <Title level={5}>Mô tả</Title>
             <div
               className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: product.description || '<p>—</p>' }}
+              dangerouslySetInnerHTML={{
+                __html: product.description || '<p>—</p>',
+              }}
             />
           </div>
         </div>

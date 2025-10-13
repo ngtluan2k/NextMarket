@@ -7,7 +7,9 @@ import { OrderItem } from '../order-items/order-item.entity';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AffiliateCommission, OrderItem, AffiliateLink])],
+  imports: [
+    TypeOrmModule.forFeature([AffiliateCommission, OrderItem, AffiliateLink]),
+  ],
   controllers: [AffiliateCommissionsController],
   providers: [AffiliateCommissionsService],
 })

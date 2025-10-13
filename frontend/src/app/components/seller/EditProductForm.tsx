@@ -68,6 +68,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       cycle?: string;
       starts_at?: string | Date;
       ends_at?: string | Date;
+      variant_sku?: string;
+      name?: string;
+      status?: 'active' | 'inactive';
     }[];
   }
 
@@ -84,7 +87,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     pricing_rules: [],
   });
 
-  // Preload brands & categories
+  // Preload brands & categoriesclassName="grid grid-cols
   useEffect(() => {
     const token = localStorage.getItem('token');
 
@@ -118,6 +121,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           // Map pricing rules
           const pricingRules = (product.pricing_rules || []).map((pr: any) => ({
             ...pr,
+            variant_sku: pr.variant_sku || '',
+            name: pr.name || '',
+            status: pr.status || 'active',
             starts_at: pr.starts_at
               ? new Date(pr.starts_at).toISOString().split('T')[0]
               : '',
@@ -244,6 +250,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           cycle: '',
           starts_at: '',
           ends_at: '',
+          variant_sku: '',
+          name: '',
+          status: 'active',
         },
       ],
     }));
@@ -288,6 +297,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       formData.append('categories', JSON.stringify(form.categories));
       formData.append('variants', JSON.stringify(variantsWithStock));
       formData.append('inventory', JSON.stringify(form.inventory));
+      console.log('Submitting pricing rules:', form.pricing_rules);
       formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
       formData.append('status', status);
 
@@ -671,7 +681,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Pricing Rules</h3>
           {form.pricing_rules.map((pr, i) => (
-            <div key={i} className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-2">
+            <div key={i} className="grid grid-cols-1 md:grid-cols-9 gap-4 mb-2">
               <input
                 placeholder="Type"
                 value={pr.type}
@@ -734,6 +744,41 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 }}
                 className="px-3 py-2 border rounded-md"
               />
+              {/* Mới: variant_sku */}
+              <input
+                placeholder="Variant SKU"
+                value={pr.variant_sku || ''}
+                onChange={(e) => {
+                  const newPR = [...form.pricing_rules];
+                  newPR[i].variant_sku = e.target.value;
+                  setForm({ ...form, pricing_rules: newPR });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+              {/* Mới: Name */}
+              <input
+                placeholder="Name"
+                value={pr.name || ''}
+                onChange={(e) => {
+                  const newPR = [...form.pricing_rules];
+                  newPR[i].name = e.target.value;
+                  setForm({ ...form, pricing_rules: newPR });
+                }}
+                className="px-3 py-2 border rounded-md"
+              />
+              {/* Mới: Status */}
+              <select
+                value={pr.status || 'active'}
+                onChange={(e) => {
+                  const newPR = [...form.pricing_rules];
+                  newPR[i].status = e.target.value as 'active' | 'inactive';
+                  setForm({ ...form, pricing_rules: newPR });
+                }}
+                className="px-3 py-2 border rounded-md"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
           ))}
           <button

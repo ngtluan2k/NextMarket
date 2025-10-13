@@ -41,7 +41,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
 import { storeService } from '../../../../service/store.service';
 import 'dayjs/locale/vi';
-import type { Sale, ProductItem, Payment} from '../../../types/order';
+import type { Sale, ProductItem, Payment } from '../../../types/order';
 
 dayjs.locale('vi');
 dayjs.extend(isSameOrAfter);
@@ -50,8 +50,6 @@ dayjs.extend(isSameOrBefore);
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
-
-
 
 const orderStatusMap: Record<number, string> = {
   0: 'Đang Chờ Xác Nhận',
@@ -136,7 +134,7 @@ export default function Sale() {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [storeId, setStoreId] = useState<number | null>(null);
   const [form] = Form.useForm();
-  
+
   const {
     sales,
     loading,
@@ -593,18 +591,19 @@ export default function Sale() {
 
         <Card>
           <Table
+            rowKey="id"
             columns={columns}
-            dataSource={sales}  
+            dataSource={sales}
             rowSelection={rowSelection}
             loading={loading}
             pagination={{
-              ...pagination,  
+              ...pagination,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} trên tổng số ${total} đơn hàng`,
             }}
-            onChange={handleTableChange}  
+            onChange={handleTableChange}
             scroll={{ x: 1200 }}
             className="custom-table"
             onRow={(record) => ({
@@ -773,7 +772,7 @@ export default function Sale() {
                 String(newStatus),
                 note
               );
-               fetchSales();
+              fetchSales();
             }
           }}
         />

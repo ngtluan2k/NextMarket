@@ -1,9 +1,7 @@
-import React from 'react'
+import React from 'react';
 
 const AffiliateTransaction = () => {
-  return (
-    <div>payments</div>
-  )
-}
+  return <div>payments</div>;
+};
 
-export default AffiliateTransaction
+export default AffiliateTransaction;

@@ -33,7 +33,7 @@ export class GroupOrderItem {
   @Column({ type: 'varchar', length: 255, nullable: true })
   note!: string | null;
 
-  @CreateDateColumn({ type: 'datetime' })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 
   @ManyToOne(() => Product, (p) => p.group_order_items, { onDelete: 'CASCADE' })

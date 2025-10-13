@@ -1,14 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { API_BASE_URL } from "../../api/api";
-import { storeService } from "../../../service/store.service";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { API_BASE_URL } from '../../api/api';
+import { storeService } from '../../../service/store.service';
+import { StarFilled } from '@ant-design/icons';
 
 export type StoreInfo = {
   id: string | number;
   name: string;
   logo_url?: string | null;
   isOfficial?: boolean;
-  rating?: number | null;
+  avg_rating?: number | null;
+  review_count?: number | null;
   followers?: number | null;
 };
 
@@ -82,24 +84,32 @@ export default function StoreTopBar({
     ];
   }, [tabs, computedBase]);
 
-
-
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!info?.id) return;
       try {
         const [{ followed }, { count }] = await Promise.all([
-          storeService.isFollowing(Number(info.id)).catch(() => ({ followed: false })),
-          storeService.followersCount(Number(info.id)).catch(() => ({ count: info?.followers ?? 0 })),
+          storeService
+            .isFollowing(Number(info.id))
+            .catch(() => ({ followed: false })),
+          storeService
+            .followersCount(Number(info.id))
+            .catch(() => ({ count: info?.followers ?? 0 })),
         ]);
         if (alive) {
           setFollowing(!!followed);
-          setFollowers(typeof count === "number" ? count : (info?.followers ?? 0));
+          setFollowers(
+            typeof count === 'number' ? count : info?.followers ?? 0
+          );
         }
-      } catch { }
+      } catch (error) {
+        console.error(error);
+      }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [info?.id]);
 
   const handleToggleFollow = async () => {
@@ -108,16 +118,13 @@ export default function StoreTopBar({
       const { followed } = await storeService.toggleFollow(Number(info.id));
       setFollowing(!!followed);
       setFollowers((prev) => {
-        const base = typeof prev === "number" ? prev : (info?.followers ?? 0);
+        const base = typeof prev === 'number' ? prev : info?.followers ?? 0;
         return followed ? base + 1 : Math.max(base - 1, 0);
       });
     } catch (e) {
       // có thể hiện message lỗi nếu muốn
     }
   };
-
-
-
 
   useEffect(() => {
     let alive = true;
@@ -152,6 +159,9 @@ export default function StoreTopBar({
     e.preventDefault();
     onSearch?.(q.trim());
   };
+
+  const rating = parseFloat(info?.avg_rating as any) || 0;
+  const reviews = parseInt(info?.review_count as any) || 0;
 
   return (
     <header
@@ -192,11 +202,25 @@ export default function StoreTopBar({
                         Official
                       </span>
                     )}
+                    <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-600">
+                      <span>{rating.toFixed(1)}</span>
+                      <StarFilled className="text-yellow-400 h-3 w-3" />
+                      <span>({reviews})</span>
+                    </div>
                   </div>
+
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    {typeof followers === "number"
-                      ? <span>• {new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(followers)} người theo dõi</span>
-                      : loading ? <span className="inline-block h-3 w-24 animate-pulse rounded bg-slate-100" /> : null}
+                    {typeof followers === 'number' ? (
+                      <span>
+                        •{' '}
+                        {new Intl.NumberFormat('vi-VN', {
+                          notation: 'compact',
+                        }).format(followers)}{' '}
+                        người theo dõi
+                      </span>
+                    ) : loading ? (
+                      <span className="inline-block h-3 w-24 animate-pulse rounded bg-slate-100" />
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -205,11 +229,13 @@ export default function StoreTopBar({
                 type="button"
                 onClick={handleToggleFollow}
                 className={[
-                  "hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block",
-                  following ? "bg-slate-200 text-slate-800 hover:bg-slate-300" : "bg-blue-600 text-white hover:bg-blue-700",
-                ].join(" ")}
+                  'hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block',
+                  following
+                    ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
+                    : 'bg-blue-600 text-white hover:bg-blue-700',
+                ].join(' ')}
               >
-                {following ? "Đang Theo Dõi" : "+ Theo Dõi"}
+                {following ? 'Đang Theo Dõi' : '+ Theo Dõi'}
               </button>
 
               {showSearch && (
@@ -293,12 +319,8 @@ async function defaultFetchStore(slug: string): Promise<StoreInfo> {
     name: json.data.name,
     logo_url: json.data.logo_url ? toAbs(json.data.logo_url) : null,
     isOfficial: json.data.isOfficial,
-    rating: json.data.rating?.length
-      ? json.data.rating.reduce((sum: number, r: any) => sum + r.value, 0) / json.data.rating.length
-      : 0,
+    avg_rating: json.data.avg_rating ?? 0,
+    review_count: json.data.review_count ?? 0,
     followers: json.data.followers?.length ?? 0,
   };
 }
-
-
-  

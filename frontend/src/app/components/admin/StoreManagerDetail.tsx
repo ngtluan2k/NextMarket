@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeftOutlined,
   ReloadOutlined,
@@ -15,43 +15,43 @@ import {
   StarFilled,
   NumberOutlined,
   TagsOutlined,
-} from "@ant-design/icons";
-import { message, Modal  } from "antd";
-import { storeService } from "../../../service/store.service";
-import AdminHeader from "./AdminHeader";
+} from '@ant-design/icons';
+import { message, Modal } from 'antd';
+import { storeService } from '../../../service/store.service';
+import AdminHeader from './AdminHeader';
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = 'http://localhost:3000';
 
 /** Chuẩn hoá URL ảnh */
 function toAbs(p?: string | null): string {
-  if (!p) return "";
+  if (!p) return '';
   let s = String(p).trim();
   if (/^https?:\/\//i.test(s)) return s;
-  s = s.replace(/\\/g, "/");
-  if (/^[a-zA-Z]:\//.test(s) || s.startsWith("file:/")) {
-    const idx = s.toLowerCase().lastIndexOf("/uploads/");
+  s = s.replace(/\\/g, '/');
+  if (/^[a-zA-Z]:\//.test(s) || s.startsWith('file:/')) {
+    const idx = s.toLowerCase().lastIndexOf('/uploads/');
     if (idx >= 0) s = s.slice(idx + 1);
   }
-  if (!/^\/?uploads\//i.test(s)) s = `uploads/${s.replace(/^\/+/, "")}`;
-  return `${API_BASE_URL}/${s.replace(/^\/+/, "")}`;
+  if (!/^\/?uploads\//i.test(s)) s = `uploads/${s.replace(/^\/+/, '')}`;
+  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
 }
 const fmtDate = (v?: string | number | Date | null) =>
-  v ? new Date(v).toLocaleString() : "-";
+  v ? new Date(v).toLocaleString() : '-';
 
 /** Chip nhỏ */
 function Chip({
-  color = "gray",
+  color = 'gray',
   children,
 }: {
-  color?: "green" | "red" | "gold" | "gray" | "blue";
+  color?: 'green' | 'red' | 'gold' | 'gray' | 'blue';
   children: React.ReactNode;
 }) {
   const colorMap: Record<string, string> = {
-    green: "bg-green-50 text-green-700 ring-green-600/20",
-    red: "bg-red-50 text-red-700 ring-red-600/20",
-    gold: "bg-amber-50 text-amber-700 ring-amber-600/20",
-    gray: "bg-gray-100 text-gray-700 ring-gray-600/20",
-    blue: "bg-blue-50 text-blue-700 ring-blue-600/20",
+    green: 'bg-green-50 text-green-700 ring-green-600/20',
+    red: 'bg-red-50 text-red-700 ring-red-600/20',
+    gold: 'bg-amber-50 text-amber-700 ring-amber-600/20',
+    gray: 'bg-gray-100 text-gray-700 ring-gray-600/20',
+    blue: 'bg-blue-50 text-blue-700 ring-blue-600/20',
   };
   return (
     <span
@@ -67,25 +67,25 @@ function Chip({
 /** 🔎 Chỉ tô đỏ khi thật sự đã xoá */
 const statusToColor = (
   s?: string | null
-): "green" | "red" | "gold" | "gray" => {
-  const x = (s || "").toLowerCase();
-  if (x === "active") return "green";
-  if (x === "deleted") return "red"; // chỉ đỏ khi deleted
-  if (x) return "gold";
-  return "gray";
+): 'green' | 'red' | 'gold' | 'gray' => {
+  const x = (s || '').toLowerCase();
+  if (x === 'active') return 'green';
+  if (x === 'deleted') return 'red'; // chỉ đỏ khi deleted
+  if (x) return 'gold';
+  return 'gray';
 };
 
 /** Helper nhận biết các cờ 'đã xoá' phổ biến */
 const isTruthy = (v: any) =>
   v === true ||
-  v === "true" ||
-  (typeof v === "string" && v.trim().length > 0) ||
-  (typeof v === "number" && !Number.isNaN(v));
+  v === 'true' ||
+  (typeof v === 'string' && v.trim().length > 0) ||
+  (typeof v === 'number' && !Number.isNaN(v));
 
-  const deriveCanRestore = (res: any) => {
-    const st = String(res?.store?.status || "").toLowerCase();
-    return st === "deleted";
-  };
+const deriveCanRestore = (res: any) => {
+  const st = String(res?.store?.status || '').toLowerCase();
+  return st === 'deleted';
+};
 
 const StoreManagerDetail: React.FC = () => {
   const { id } = useParams();
@@ -109,16 +109,16 @@ const StoreManagerDetail: React.FC = () => {
       // ✅ Nếu API trả 404/410 hoặc thông báo có 'deleted' => coi như đã xoá (ẩn record)
       const code = err?.response?.status;
       const msg = String(
-        err?.response?.data?.message || err?.message || ""
+        err?.response?.data?.message || err?.message || ''
       ).toLowerCase();
       const deletedFromHttp =
-        code === 404 || code === 410 || msg.includes("deleted");
+        code === 404 || code === 410 || msg.includes('deleted');
       setCanRestore(deletedFromHttp);
 
       setData(null);
       console.error(err);
       message.error(
-        err?.response?.data?.message || "Không tải được chi tiết cửa hàng"
+        err?.response?.data?.message || 'Không tải được chi tiết cửa hàng'
       );
     } finally {
       setLoading(false);
@@ -130,11 +130,11 @@ const StoreManagerDetail: React.FC = () => {
     try {
       setLoading(true);
       await storeService.restoreStore(Number(id));
-      message.success("Khôi phục cửa hàng thành công");
+      message.success('Khôi phục cửa hàng thành công');
       await load();
     } catch (err: any) {
       console.error(err);
-      message.error(err?.response?.data?.message || "Khôi phục thất bại");
+      message.error(err?.response?.data?.message || 'Khôi phục thất bại');
     } finally {
       setLoading(false);
     }
@@ -142,11 +142,11 @@ const StoreManagerDetail: React.FC = () => {
 
   const confirmRestore = () => {
     Modal.confirm({
-      title: "Khôi phục cửa hàng?",
-      content: "Bạn có chắc chắn muốn khôi phục cửa hàng này không?",
-      okText: "Khôi phục",
-      cancelText: "Huỷ",
-      icon: <SafetyCertificateOutlined style={{ color: "#1677ff" }} />,
+      title: 'Khôi phục cửa hàng?',
+      content: 'Bạn có chắc chắn muốn khôi phục cửa hàng này không?',
+      okText: 'Khôi phục',
+      cancelText: 'Huỷ',
+      icon: <SafetyCertificateOutlined style={{ color: '#1677ff' }} />,
       onOk: () => restore(),
     });
   };
@@ -183,7 +183,7 @@ const StoreManagerDetail: React.FC = () => {
               <ArrowLeftOutlined /> Quay lại
             </button>
             <div className="text-base sm:text-lg font-semibold text-gray-900">
-              {`Cửa hàng ${store?.id ?? ""} - ${store?.name ?? "-"}`}{" "}
+              {`Cửa hàng ${store?.id ?? ''} - ${store?.name ?? '-'}`}{' '}
               {store?.status && (
                 <span className="ml-2 align-middle">
                   <Chip color={statusToColor(store?.status)}>
@@ -200,7 +200,7 @@ const StoreManagerDetail: React.FC = () => {
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-100"
               disabled={loading}
             >
-              <ReloadOutlined className={loading ? "animate-spin" : ""} />
+              <ReloadOutlined className={loading ? 'animate-spin' : ''} />
               Làm mới
             </button>
           </div>
@@ -247,15 +247,15 @@ const StoreManagerDetail: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xl font-semibold text-gray-900">
-                    {store?.name || "-"}{" "}
+                    {store?.name || '-'}{' '}
                     <span className="ml-2 align-middle">
                       <Chip color={statusToColor(store?.status)}>
-                        {store?.status || "-"}
+                        {store?.status || '-'}
                       </Chip>
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-gray-600">
-                    ID: {store?.id} • Slug: {store?.slug || "-"}
+                    ID: {store?.id} • Slug: {store?.slug || '-'}
                   </div>
                 </div>
               </div>
@@ -283,7 +283,7 @@ const StoreManagerDetail: React.FC = () => {
                 </div>
               </div>
             </div>
-            <p className="mt-3 text-gray-700">{store?.description ?? "-"}</p>
+            <p className="mt-3 text-gray-700">{store?.description ?? '-'}</p>
           </div>
 
           {/* Grid sections */}
@@ -296,22 +296,27 @@ const StoreManagerDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2">
                 <div className="flex items-center gap-2">
-                  <MailOutlined className="text-gray-500" /> {store?.email || "-"}
+                  <MailOutlined className="text-gray-500" />{' '}
+                  {store?.email || '-'}
                 </div>
                 <div className="flex items-center gap-2">
-                  <PhoneOutlined className="text-gray-500" /> {store?.phone || "-"}
+                  <PhoneOutlined className="text-gray-500" />{' '}
+                  {store?.phone || '-'}
                 </div>
                 <div className="flex items-center gap-2">
-                  <TagsOutlined className="text-gray-500" /> Slug: {store?.slug || "-"}
+                  <TagsOutlined className="text-gray-500" /> Slug:{' '}
+                  {store?.slug || '-'}
                 </div>
                 <div className="flex items-center gap-2">
                   <NumberOutlined className="text-gray-500" /> ID: {store?.id}
                 </div>
                 <div className="flex items-center gap-2">
-                  <FileTextOutlined className="text-gray-500" /> Tạo: {fmtDate(store?.created_at)}
+                  <FileTextOutlined className="text-gray-500" /> Tạo:{' '}
+                  {fmtDate(store?.created_at)}
                 </div>
                 <div className="flex items-center gap-2">
-                  <ReloadOutlined className="text-gray-500" /> Cập nhật: {fmtDate(store?.updated_at)}
+                  <ReloadOutlined className="text-gray-500" /> Cập nhật:{' '}
+                  {fmtDate(store?.updated_at)}
                 </div>
               </div>
             </section>
@@ -324,19 +329,34 @@ const StoreManagerDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2">
                 <div>
-                  Loại: <span className="font-medium text-gray-900">{storeInformation?.type || "-"}</span>
+                  Loại:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeInformation?.type || '-'}
+                  </span>
                 </div>
                 <div>
-                  Tên pháp lý: <span className="font-medium text-gray-900">{storeInformation?.name || "-"}</span>
+                  Tên pháp lý:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeInformation?.name || '-'}
+                  </span>
                 </div>
                 <div>
-                  MST: <span className="font-medium text-gray-900">{storeInformation?.tax_code || "-"}</span>
+                  MST:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeInformation?.tax_code || '-'}
+                  </span>
                 </div>
                 <div>
-                  Email liên hệ: <span className="font-medium text-gray-900">{storeEmail?.email || "-"}</span>
+                  Email liên hệ:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeEmail?.email || '-'}
+                  </span>
                 </div>
                 <div className="sm:col-span-2">
-                  Địa chỉ: <span className="font-medium text-gray-900">{storeInformation?.addresses || "-"}</span>
+                  Địa chỉ:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeInformation?.addresses || '-'}
+                  </span>
                 </div>
               </div>
             </section>
@@ -349,26 +369,48 @@ const StoreManagerDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
                 <div>
-                  Họ tên: <span className="font-medium text-gray-900">{storeIdentification?.full_name || "-"}</span>
+                  Họ tên:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeIdentification?.full_name || '-'}
+                  </span>
                 </div>
                 <div>
-                  Loại: <span className="font-medium text-gray-900">{storeIdentification?.type || "-"}</span>
+                  Loại:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeIdentification?.type || '-'}
+                  </span>
                 </div>
                 <div className="sm:col-span-2 grid grid-cols-2 gap-4">
                   <figure>
-                    <figcaption className="mb-1 text-xs text-gray-500">Ảnh trước</figcaption>
+                    <figcaption className="mb-1 text-xs text-gray-500">
+                      Ảnh trước
+                    </figcaption>
                     {storeIdentification?.img_front ? (
-                      <img className="h-40 w-full rounded-lg border object-contain" src={toAbs(storeIdentification.img_front)} alt="front" />
+                      <img
+                        className="h-40 w-full rounded-lg border object-contain"
+                        src={toAbs(storeIdentification.img_front)}
+                        alt="front"
+                      />
                     ) : (
-                      <div className="grid h-40 place-items-center rounded-lg border text-gray-400">-</div>
+                      <div className="grid h-40 place-items-center rounded-lg border text-gray-400">
+                        -
+                      </div>
                     )}
                   </figure>
                   <figure>
-                    <figcaption className="mb-1 text-xs text-gray-500">Ảnh sau</figcaption>
+                    <figcaption className="mb-1 text-xs text-gray-500">
+                      Ảnh sau
+                    </figcaption>
                     {storeIdentification?.img_back ? (
-                      <img className="h-40 w-full rounded-lg border object-contain" src={toAbs(storeIdentification.img_back)} alt="back" />
+                      <img
+                        className="h-40 w-full rounded-lg border object-contain"
+                        src={toAbs(storeIdentification.img_back)}
+                        alt="back"
+                      />
                     ) : (
-                      <div className="grid h-40 place-items-center rounded-lg border text-gray-400">-</div>
+                      <div className="grid h-40 place-items-center rounded-lg border text-gray-400">
+                        -
+                      </div>
                     )}
                   </figure>
                 </div>
@@ -383,33 +425,60 @@ const StoreManagerDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2">
                 <div>
-                  Người nhận: <span className="font-medium text-gray-900">{storeAddress?.recipient_name || "-"}</span>
+                  Người nhận:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.recipient_name || '-'}
+                  </span>
                 </div>
                 <div>
-                  SĐT: <span className="font-medium text-gray-900">{storeAddress?.phone || "-"}</span>
+                  SĐT:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.phone || '-'}
+                  </span>
                 </div>
                 <div>
-                  Đường: <span className="font-medium text-gray-900">{storeAddress?.street || "-"}</span>
+                  Đường:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.street || '-'}
+                  </span>
                 </div>
                 <div>
-                  Phường/Xã: <span className="font-medium text-gray-900">{storeAddress?.ward || "-"}</span>
+                  Phường/Xã:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.ward || '-'}
+                  </span>
                 </div>
                 {storeAddress?.district && (
                   <div>
-                    Quận/Huyện: <span className="font-medium text-gray-900">{storeAddress?.district}</span>
+                    Quận/Huyện:{' '}
+                    <span className="font-medium text-gray-900">
+                      {storeAddress?.district}
+                    </span>
                   </div>
                 )}
                 <div>
-                  Tỉnh/TP: <span className="font-medium text-gray-900">{storeAddress?.province || "-"}</span>
+                  Tỉnh/TP:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.province || '-'}
+                  </span>
                 </div>
                 <div>
-                  Quốc gia: <span className="font-medium text-gray-900">{storeAddress?.country || "-"}</span>
+                  Quốc gia:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.country || '-'}
+                  </span>
                 </div>
                 <div>
-                  Mã bưu chính: <span className="font-medium text-gray-900">{storeAddress?.postal_code || "-"}</span>
+                  Mã bưu chính:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.postal_code || '-'}
+                  </span>
                 </div>
                 <div className="sm:col-span-2">
-                  Chi tiết: <span className="font-medium text-gray-900">{storeAddress?.detail || "-"}</span>
+                  Chi tiết:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeAddress?.detail || '-'}
+                  </span>
                 </div>
               </div>
             </section>
@@ -422,10 +491,16 @@ const StoreManagerDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2">
                 <div>
-                  Level: <span className="font-medium text-gray-900">{storeLevel?.level || "-"}</span>
+                  Level:{' '}
+                  <span className="font-medium text-gray-900">
+                    {storeLevel?.level || '-'}
+                  </span>
                 </div>
                 <div>
-                  Nâng cấp lúc: <span className="font-medium text-gray-900">{fmtDate(storeLevel?.upgraded_at)}</span>
+                  Nâng cấp lúc:{' '}
+                  <span className="font-medium text-gray-900">
+                    {fmtDate(storeLevel?.upgraded_at)}
+                  </span>
                 </div>
               </div>
             </section>
@@ -438,13 +513,22 @@ const StoreManagerDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2">
                 <div>
-                  Ngân hàng: <span className="font-medium text-gray-900">{bankAccount?.bank_name || "-"}</span>
+                  Ngân hàng:{' '}
+                  <span className="font-medium text-gray-900">
+                    {bankAccount?.bank_name || '-'}
+                  </span>
                 </div>
                 <div>
-                  Chủ TK: <span className="font-medium text-gray-900">{bankAccount?.account_holder || "-"}</span>
+                  Chủ TK:{' '}
+                  <span className="font-medium text-gray-900">
+                    {bankAccount?.account_holder || '-'}
+                  </span>
                 </div>
                 <div className="sm:col-span-2">
-                  Số TK: <span className="font-mono font-medium text-gray-900">{bankAccount?.account_number || "-"}</span>
+                  Số TK:{' '}
+                  <span className="font-mono font-medium text-gray-900">
+                    {bankAccount?.account_number || '-'}
+                  </span>
                 </div>
               </div>
             </section>
@@ -463,7 +547,7 @@ const StoreManagerDetail: React.FC = () => {
                   onError={(e) => {
                     const el = e.currentTarget as HTMLImageElement;
                     el.onerror = null;
-                    const name = String(documents.file_url).split("/").pop();
+                    const name = String(documents.file_url).split('/').pop();
                     el.src = toAbs(`/uploads/documents/${name}`);
                   }}
                 />

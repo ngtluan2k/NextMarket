@@ -12,7 +12,6 @@ import {
 import { User } from '../../modules/user/user.entity';
 import { AffiliatePlatform } from '../affiliate-platform/affiliate-platform.entity';
 
-
 @Entity('affiliate_registration')
 export class AffiliateRegistration {
   @PrimaryGeneratedColumn()
@@ -27,7 +26,7 @@ export class AffiliateRegistration {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @Column({ type: 'text', nullable: true })
@@ -38,7 +37,7 @@ export class AffiliateRegistration {
 
   @Column({ type: 'text', nullable: true })
   phone?: string;
-  
+
   @Column({
     type: 'enum',
     enum: ['PENDING', 'APPROVED', 'REJECTED'],

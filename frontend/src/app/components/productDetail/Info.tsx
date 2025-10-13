@@ -89,17 +89,15 @@ export default function Info({
 
   /** --------------------- State --------------------- */
   const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
-  const selectedRule = pricingRules.find(r => r.id === selectedRuleId);
-
-
-
+  const selectedRule = pricingRules.find((r) => r.id === selectedRuleId);
 
   /** --------------------- Selected Variant --------------------- */
   const selectedVariant = useMemo(
-    () => product?.variants.find((v: VariantInfo) => v.id === selectedVariantId),
+    () =>
+      product?.variants.find((v: VariantInfo) => v.id === selectedVariantId),
     [product, selectedVariantId]
   );
-    useEffect(() => {
+  useEffect(() => {
     if (selectedRule) {
       setCalculatedPrice(Number(selectedRule.price));
       setSelectedType(selectedRule.type); // lưu bulk/subscription
@@ -107,7 +105,13 @@ export default function Info({
       setCalculatedPrice(selectedVariant.price ?? product?.base_price ?? 0);
       setSelectedType(undefined);
     }
-  }, [selectedRule, selectedVariant, product, setCalculatedPrice, setSelectedType]);
+  }, [
+    selectedRule,
+    selectedVariant,
+    product,
+    setCalculatedPrice,
+    setSelectedType,
+  ]);
 
   /** --------------------- Stock & Max Quantity --------------------- */
   const stock = selectedVariant?.stock ?? 0;
@@ -158,21 +162,28 @@ export default function Info({
     setSelectedRuleId(applicablePricingRules[0]?.id ?? null);
   }, [applicablePricingRules]);
 
+  /** --------------------- Final Price -> set state cha --------------------- */
+  useEffect(() => {
+    if (selectedVariant) {
+      const price: number = selectedRuleId
+        ? product?.pricing_rules?.find((r) => r.id === selectedRuleId)?.price ??
+          selectedVariant.price ??
+          product?.base_price ??
+          0
+        : applicablePricingRules[0]?.price ??
+          selectedVariant.price ??
+          product?.base_price ??
+          0;
 
-
-;
-
-/** --------------------- Final Price -> set state cha --------------------- */
-useEffect(() => {
-  if (selectedVariant) {
-    const price: number =
-      selectedRuleId
-        ? product?.pricing_rules?.find(r => r.id === selectedRuleId)?.price ?? selectedVariant.price ?? product?.base_price ?? 0
-        : applicablePricingRules[0]?.price ?? selectedVariant.price ?? product?.base_price ?? 0;
-
-    setCalculatedPrice(price); // set state cha
-  }
-}, [selectedVariant, selectedRuleId, applicablePricingRules, product, setCalculatedPrice]);
+      setCalculatedPrice(price); // set state cha
+    }
+  }, [
+    selectedVariant,
+    selectedRuleId,
+    applicablePricingRules,
+    product,
+    setCalculatedPrice,
+  ]);
 
   /** --------------------- Handlers --------------------- */
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,48 +291,47 @@ useEffect(() => {
       </div>
 
       {/* Pricing Rules */}
-{pricingRules.length > 0 && (
-  <div className="mt-2 text-sm text-slate-500">
-    <span className="font-medium">Giá sỉ:</span>
-    <div className="mt-1 flex gap-2 flex-wrap">
-      {pricingRules
-        .filter(
-          r => !r.variant_sku || r.variant_sku === selectedVariant?.sku
-        )
-        .sort((a, b) => a.min_quantity - b.min_quantity)
-        .map(r => {
-          const start = new Date(r.starts_at ?? 0);
-          const end = new Date(r.ends_at ?? 8640000000000000);
-          const now = new Date();
-          const isValid =
-            now >= start &&
-            now <= end &&
-            ((r.type === 'bulk' && quantity >= r.min_quantity) ||
-              (r.type === 'subscription' &&
-                quantity >= r.min_quantity &&
-                quantity % r.min_quantity === 0));
+      {pricingRules.length > 0 && (
+        <div className="mt-2 text-sm text-slate-500">
+          <span className="font-medium">Giá sỉ:</span>
+          <div className="mt-1 flex gap-2 flex-wrap">
+            {pricingRules
+              .filter(
+                (r) => !r.variant_sku || r.variant_sku === selectedVariant?.sku
+              )
+              .sort((a, b) => a.min_quantity - b.min_quantity)
+              .map((r) => {
+                const start = new Date(r.starts_at ?? 0);
+                const end = new Date(r.ends_at ?? 8640000000000000);
+                const now = new Date();
+                const isValid =
+                  now >= start &&
+                  now <= end &&
+                  ((r.type === 'bulk' && quantity >= r.min_quantity) ||
+                    (r.type === 'subscription' &&
+                      quantity >= r.min_quantity &&
+                      quantity % r.min_quantity === 0));
 
-          return (
-            <button
-              key={r.id}
-              className={`px-2 py-1 rounded border ${
-                selectedRuleId === r.id
-                  ? 'border-blue-500 bg-blue-50 text-blue-600 font-semibold'
-                  : isValid
-                  ? 'border-rose-500 bg-rose-50 text-rose-600'
-                  : 'border-gray-300'
-              }`}
-              disabled={!isValid}
-              onClick={() => setSelectedRuleId(r.id)}
-            >
-              {r.name} — {r.min_quantity}+ : {vnd(r.price)}
-            </button>
-          );
-        })}
-    </div>
-  </div>
-)}
-
+                return (
+                  <button
+                    key={r.id}
+                    className={`px-2 py-1 rounded border ${
+                      selectedRuleId === r.id
+                        ? 'border-blue-500 bg-blue-50 text-blue-600 font-semibold'
+                        : isValid
+                        ? 'border-rose-500 bg-rose-50 text-rose-600'
+                        : 'border-gray-300'
+                    }`}
+                    disabled={!isValid}
+                    onClick={() => setSelectedRuleId(r.id)}
+                  >
+                    {r.name} — {r.min_quantity}+ : {vnd(r.price)}
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,10 +18,6 @@ import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 
-import TestWallet from './test';
-import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
-
-import OrderDetailPage from './page/account/OrderDetailPage';
 
 import AffiliateGate from './page/affiliate';
 import AffiliateRegister from './page/affiliate/register';
@@ -49,6 +45,12 @@ import BrandPage from './page/BrandPage';
 import SearchPage from './page/SearchPage';
 import CartPage from './page/CartPage';
 import OtpVerifyPage from './page/OtpVerify';
+import TestWallet from './test';
+import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
+import StoreOwnerVoucherManager from '../app/components/seller/StoreOwnerVoucherManager';
+
+import OrderDetailPage from "./page/account/OrderDetailPage";
+
 import ReviewForm from './test';
 import GroupOrders from './components/group_orders/GroupOrders';
 import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
@@ -101,7 +103,8 @@ const App: React.FC = () => {
           <Route path="/seller-registration" element={<SellerRegistration />} />
           {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
           <Route path="/myStores" element={<SellerMainLayout />} />
-
+          <Route path="/storeVoucher" element={<StoreOwnerVoucherManager/>} />
+          
           {/* Account Routes */}
           <Route path="/account" element={<AccountLayout />}>
             <Route index element={<Navigate to="profile" replace />} />

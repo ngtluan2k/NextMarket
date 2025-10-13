@@ -241,9 +241,7 @@ export default function AffiliateProgramDetail({
               {program.commission_type ? (
                 <Tag
                   color={
-                    program.commission_type === 'percentage'
-                      ? 'blue'
-                      : 'green'
+                    program.commission_type === 'percentage' ? 'blue' : 'green'
                   }
                 >
                   {program.commission_type === 'percentage'

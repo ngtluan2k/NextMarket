@@ -65,7 +65,7 @@ export class UserService {
         throw new BadRequestException('Tên đăng nhập đã tồn tại');
     }
 
-    const hashed = await bcrypt.hash(dto.password, 10);
+    const hashed = await (dto.password, 16);
 
     const user = this.userRepository.create({
       uuid: uuidv4(),
@@ -98,7 +98,9 @@ export class UserService {
       throw err;
     }
 
-    const role = await this.roleRepository.findOne({ where: { name: 'Customer' } });
+    const role = await this.roleRepository.findOne({
+      where: { name: 'Customer' },
+    });
     if (!role) throw new BadRequestException('Default role not found');
 
     const userRole = this.userRoleRepository.create({

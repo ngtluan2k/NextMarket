@@ -65,7 +65,7 @@ export class CartController {
   async removeFromCart(
     @Request() req: AuthRequest,
     @Param('productId') productId: number,
-    @Body() body?: { variantId?: number, type?: 'bulk' | 'subscription' }
+    @Body() body?: { variantId?: number; type?: 'bulk' | 'subscription' }
   ) {
     await this.cartService.removeFromCart(
       req.user.userId,

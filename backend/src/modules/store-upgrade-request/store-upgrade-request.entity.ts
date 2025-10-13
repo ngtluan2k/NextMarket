@@ -14,7 +14,7 @@ export class StoreUpgradeRequest {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -41,10 +41,10 @@ export class StoreUpgradeRequest {
   @Column({ type: 'text', nullable: true })
   note!: string;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   reviewed_at!: Date;
 
   @Column({ nullable: true })

@@ -15,7 +15,7 @@ export class PricingRules {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -23,9 +23,9 @@ export class PricingRules {
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
-  @ManyToOne(() => Variant)
+  @ManyToOne(() => Variant, { nullable: true })
   @JoinColumn({ name: 'variant_id' })
-  variant!: Variant;
+  variant?: Variant;
 
   @Column()
   name!: string;

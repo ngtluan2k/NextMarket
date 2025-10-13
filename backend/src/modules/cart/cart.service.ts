@@ -175,11 +175,7 @@ export class CartService {
                 email: item.product.store.email,
               }
             : null,
-          media: item.product.media.filter(
-            (media) =>
-              media.is_primary &&
-              (!item.variant_id || media.id === item.variant_id)
-          ),
+          media: item.product.media.filter((media) => media.is_primary),
         },
         variant: item.variant
           ? {
@@ -214,7 +210,6 @@ export class CartService {
       product_id: productId,
       variant_id: variantId ?? undefined,
       type,
-
     });
     if (result.affected === 0) {
       throw new NotFoundException('Mục giỏ hàng không tìm thấy');
@@ -310,45 +305,48 @@ export class CartService {
     }
     return currentPrice;
   }
-public calculatePriceWithRulesForItem(
-  product: Product,
-  variant: Variant | null,
-  quantity: number,
-  type: 'bulk' | 'subscription' = 'bulk'
-): number {
-  // Giá mặc định: variant.price nếu có, không thì base_price
-  let currentPrice = variant ? Number(variant.price) : Number(product.base_price);
-  const now = new Date();
+  public calculatePriceWithRulesForItem(
+    product: Product,
+    variant: Variant | null,
+    quantity: number,
+    type: 'bulk' | 'subscription' = 'bulk'
+  ): number {
+    // Giá mặc định: variant.price nếu có, không thì base_price
+    let currentPrice = variant
+      ? Number(variant.price)
+      : Number(product.base_price);
+    const now = new Date();
 
-  const validRules = (product.pricing_rules ?? []).filter(rule => {
-    const startsAt = rule.starts_at ? new Date(rule.starts_at) : new Date(0);
-    const endsAt = rule.ends_at ? new Date(rule.ends_at) : new Date(8640000000000000);
-    const minQty = rule.min_quantity ?? 0;
+    const validRules = (product.pricing_rules ?? []).filter((rule) => {
+      const startsAt = rule.starts_at ? new Date(rule.starts_at) : new Date(0);
+      const endsAt = rule.ends_at
+        ? new Date(rule.ends_at)
+        : new Date(8640000000000000);
+      const minQty = rule.min_quantity ?? 0;
 
-    // chỉ áp dụng rule trong khoảng thời gian
-    if (now < startsAt || now > endsAt) return false;
+      // chỉ áp dụng rule trong khoảng thời gian
+      if (now < startsAt || now > endsAt) return false;
 
-    // chỉ áp dụng nếu đúng type
-    if (rule.type !== type) return false;
+      // chỉ áp dụng nếu đúng type
+      if (rule.type !== type) return false;
 
-    // chỉ áp dụng nếu đúng variant (nếu rule gắn variant)
-    if (rule.variant) {
-      if (!variant || rule.variant.id !== variant.id) return false;
-    }
+      // chỉ áp dụng nếu đúng variant (nếu rule gắn variant)
+      if (rule.variant) {
+        if (!variant || rule.variant.id !== variant.id) return false;
+      }
 
-    // kiểm tra quantity
-    if (type === 'subscription') return quantity === minQty;
-    return quantity >= minQty;
-  });
+      // kiểm tra quantity
+      if (type === 'subscription') return quantity === minQty;
+      return quantity >= minQty;
+    });
 
-  // chọn rule có min_quantity lớn nhất
-  const bestRule = validRules.sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0))[0];
+    // chọn rule có min_quantity lớn nhất
+    const bestRule = validRules.sort(
+      (a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0)
+    )[0];
 
-  if (bestRule) currentPrice = Number(bestRule.price);
+    if (bestRule) currentPrice = Number(bestRule.price);
 
-  return currentPrice;
-}
-
-
-
+    return currentPrice;
+  }
 }

@@ -21,7 +21,7 @@ export class Refund {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -39,7 +39,7 @@ export class Refund {
   @Column({ type: 'text', nullable: true })
   reason?: string;
 
-  @Column({ type: 'tinyint', default: RefundStatus.Requested })
+  @Column({ type: 'integer', default: RefundStatus.Requested })
   status!: RefundStatus;
 
   @Column({ name: 'requested_at', type: 'timestamp', nullable: true })

@@ -27,7 +27,7 @@ export class Product {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -75,8 +75,6 @@ export class Product {
   @Column({ type: 'int', default: 0 })
   review_count!: number;
 
-  
-
   // === Relations ===
   @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
   categories!: ProductCategory[];
@@ -105,5 +103,4 @@ export class Product {
   subscriptions!: Subscription[];
   @OneToMany(() => GroupOrderItem, (item) => item.product)
   group_order_items!: GroupOrderItem[];
-
 }

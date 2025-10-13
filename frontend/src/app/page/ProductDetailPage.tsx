@@ -75,6 +75,21 @@ export default function ProductDetailPage({ showMessage }: Props) {
       return stored ? Number(stored) : null;
     }
   );
+  useEffect(() => {
+    if (!product?.variants?.length) return;
+
+    const exists = product.variants?.some(
+      (v: VariantInfo) => v.id === selectedVariantId
+    );
+
+    if (!exists) {
+      if (product.variants.length === 1) {
+        setSelectedVariantId(product.variants[0].id);
+      } else {
+        setSelectedVariantId(null);
+      }
+    }
+  }, [product, selectedVariantId]);
 
   const stock = useMemo(() => {
     const v = product?.variants?.find(
@@ -128,9 +143,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
     setQuantity(1); // mỗi lần product load lại
   }, [product]);
 
-
-  const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
-
+  const totalPrice = useMemo(
+    () => calculatedPrice * quantity,
+    [calculatedPrice, quantity]
+  );
 
   const galleryData = useMemo(() => {
     if (!product || !product.variants) {
@@ -246,9 +262,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
           </div>
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
             <Suspense fallback={<div>Loading reviews...</div>}>
-              <LazyProductReviews
-                productId={product.id}
-              />
+              <LazyProductReviews productId={product.id} />
             </Suspense>
           </div>
 

@@ -1,10 +1,21 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  Patch,
+} from '@nestjs/common';
 import { AffiliateRegistrationService } from './affiliate-registration.service';
 import { AffiliateRegistration } from './affiliate-registration.entity';
 
 @Controller('affiliate-registrations')
 export class AffiliateRegistrationController {
-  constructor(private readonly registrationService: AffiliateRegistrationService) {}
+  constructor(
+    private readonly registrationService: AffiliateRegistrationService
+  ) {}
 
   @Get()
   async findAll(): Promise<AffiliateRegistration[]> {
@@ -17,14 +28,16 @@ export class AffiliateRegistrationController {
   }
 
   @Post()
-  async create(@Body() body: Partial<AffiliateRegistration>): Promise<AffiliateRegistration> {
+  async create(
+    @Body() body: Partial<AffiliateRegistration>
+  ): Promise<AffiliateRegistration> {
     return await this.registrationService.create(body);
   }
 
   @Put(':id')
   async update(
     @Param('id') id: number,
-    @Body() body: Partial<AffiliateRegistration>,
+    @Body() body: Partial<AffiliateRegistration>
   ): Promise<AffiliateRegistration> {
     return await this.registrationService.update(id, body);
   }

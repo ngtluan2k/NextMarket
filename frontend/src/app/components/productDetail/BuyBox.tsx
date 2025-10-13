@@ -7,10 +7,12 @@ import LoginModal from '../LoginModal';
 import { Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 import { API_BASE_URL } from '../../api/api';
-import { Users } from "lucide-react";
+import { Users } from 'lucide-react';
+import { Rate } from 'antd';
 import { log } from 'console';
 import { useAuth } from '../../hooks/useAuth';
 import { useGroupOrderItems } from '../../hooks/useGroupOrderItems';
+import { StarFilled } from '@ant-design/icons';
 
 function toAbs(p?: string) {
   if (!p) return '';
@@ -168,7 +170,11 @@ export default function BuyBox({
   );
   if (!product) return null;
 
-  const handleAddToCart = async (product: Product, quantity: number, type: 'bulk' | 'subscription',) => {
+  const handleAddToCart = async (
+    product: Product,
+    quantity: number,
+    type: 'bulk' | 'subscription'
+  ) => {
     console.log('🛒 Add to Cart clicked:', {
       productId: product.id,
       productName: product.name,
@@ -346,7 +352,9 @@ export default function BuyBox({
             </div>
             <div className="flex items-center gap-1 text-xs text-slate-500">
               <BadgeCheck className="h-4 w-4 text-sky-600" /> OFFICIAL •{' '}
-              {(product?.rating ?? 0).toFixed(1)}
+              {Number(product.store?.avg_rating ?? 0).toFixed(1) || '0'}{' '}
+              <StarFilled style={{ color: '#faad14' }} /> •{' '}
+              {product.store?.review_count ?? 0} đánh giá
             </div>
           </div>
         </div>

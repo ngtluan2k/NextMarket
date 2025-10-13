@@ -15,7 +15,7 @@ export class AffiliateRegistrationService {
     private readonly platformRepo: Repository<AffiliatePlatform>,
 
     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    private readonly userRepo: Repository<User>
   ) {}
 
   async findAll(): Promise<AffiliateRegistration[]> {
@@ -30,7 +30,8 @@ export class AffiliateRegistrationService {
   }
 
   async create(body: any): Promise<AffiliateRegistration> {
-    const { userId, uuid, description, status, platformIds, phone, email } = body;
+    const { userId, uuid, description, status, platformIds, phone, email } =
+      body;
 
     const platforms = platformIds?.length
       ? await this.platformRepo.find({ where: { id: In(platformIds) } })
@@ -58,10 +59,10 @@ export class AffiliateRegistrationService {
     await this.registrationRepo.delete(id);
   }
 
-
   async approveRegistration(id: number) {
     const registration = await this.registrationRepo.findOne({ where: { id } });
-    if (!registration) throw new NotFoundException('Affiliate registration not found');
+    if (!registration)
+      throw new NotFoundException('Affiliate registration not found');
 
     registration.status = 'APPROVED';
     await this.registrationRepo.save(registration);
@@ -73,10 +74,10 @@ export class AffiliateRegistrationService {
     return registration;
   }
 
-
   async rejectRegistration(id: number) {
     const registration = await this.registrationRepo.findOne({ where: { id } });
-    if (!registration) throw new NotFoundException('Affiliate registration not found');
+    if (!registration)
+      throw new NotFoundException('Affiliate registration not found');
 
     registration.status = 'REJECTED';
     await this.registrationRepo.save(registration);

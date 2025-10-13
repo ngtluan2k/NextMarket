@@ -4,9 +4,7 @@ import { AffiliateRegistrationPlatform } from './affiliate-registration-platform
 
 @Controller('affiliate-registration-platforms')
 export class AffiliateRegistrationPlatformController {
-  constructor(
-    private readonly service: AffiliateRegistrationPlatformService,
-  ) {}
+  constructor(private readonly service: AffiliateRegistrationPlatformService) {}
 
   @Get()
   async findAll(): Promise<AffiliateRegistrationPlatform[]> {
@@ -21,7 +19,7 @@ export class AffiliateRegistrationPlatformController {
   @Delete(':registrationId/:platformId')
   async remove(
     @Param('registrationId') registrationId: number,
-    @Param('platformId') platformId: number,
+    @Param('platformId') platformId: number
   ) {
     await this.service.remove(registrationId, platformId);
     return { message: 'Relation removed successfully' };

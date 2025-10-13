@@ -7,7 +7,7 @@ export class Wallet {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   uuid!: string;
 
   @Column()
@@ -28,7 +28,7 @@ export class Wallet {
   @Column({ type: 'varchar', default: 'VND' })
   currency!: string;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   updated_at!: Date;
 
   @OneToMany(() => WalletTransaction, (tx) => tx.wallet)

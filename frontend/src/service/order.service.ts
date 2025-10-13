@@ -7,10 +7,31 @@ export const orderService = {
   // ========== USER ENDPOINTS ==========
 
   getOrdersByUser: async (userId: number, params?: any) => {
-    const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders`, {
-      params,
-    });
-    return res.data;
+    try {
+      const res = await api.get(`${API_ENDPOINTS.users}/${userId}/orders`, {
+        params,
+      });
+      return res.data;
+    } catch (error: any) {
+      console.error(
+        'Lỗi khi lấy đơn hàng:',
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
+
+  async getOrderByUser(userId: number) {
+    try {
+      const res = await axios.get(`${API_URL}/user/${userId}`);
+      return res.data;
+    } catch (error: any) {
+      console.error(
+        'Lỗi khi lấy đơn hàng:',
+        error.response?.data || error.message
+      );
+      throw error;
+    }
   },
 
   getOrderDetail: async (orderId: number) => {
@@ -45,6 +66,32 @@ export const orderService = {
     );
     return res.data;
   },
+  async changeStatus(
+    orderId: number,
+    status: string,
+    token: string,
+    note?: string
+  ) {
+    try {
+      const res = await axios.patch(
+        `${API_URL}/${orderId}/status/${status}`,
+        { note }, // gửi note nếu có
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return res.data;
+    } catch (error: any) {
+      console.error(
+        'Lỗi khi thay đổi trạng thái đơn hàng:',
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
+
   async changeStatus(
     orderId: number,
     status: string,

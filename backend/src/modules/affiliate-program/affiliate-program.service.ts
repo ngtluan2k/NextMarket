@@ -42,7 +42,7 @@ export class AffiliateProgramsService {
 
   async update(
     id: number,
-    updateDto: UpdateAffiliateProgramDto,
+    updateDto: UpdateAffiliateProgramDto
   ): Promise<AffiliateProgram> {
     const program = await this.findOne(id);
     Object.assign(program, updateDto);

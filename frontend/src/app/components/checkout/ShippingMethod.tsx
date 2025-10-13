@@ -119,7 +119,11 @@ export const ShippingMethod: React.FC<Props> = ({
                   }}
                 >
                   <Image
-                    src={it.image || ''}
+                    src={
+                      it.image?.startsWith('http')
+                        ? it.image
+                        : `http://localhost:3000${it.image}`
+                    }
                     alt={it.name}
                     width={56}
                     height={56}

@@ -16,12 +16,10 @@ export class ProductCategory {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
-  @Column({ nullable: false })
-  product_id!: number;
 
   @ManyToOne(() => Product, (product) => product.categories, {
     onDelete: 'CASCADE',

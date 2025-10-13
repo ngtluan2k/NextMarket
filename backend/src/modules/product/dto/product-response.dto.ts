@@ -70,6 +70,11 @@ export class StoreDto {
   slug?: string;
   @ApiProperty({ description: 'Store logo URL' })
   logo_url?: string;
+
+  @ApiProperty({ description: 'Store average rating' })
+  avg_rating?: number;
+  @ApiProperty({ description: 'Store review count' })
+  review_count?: number;
 }
 
 export class ProductResponseDto {

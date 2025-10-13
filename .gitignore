@@ -47,6 +47,8 @@ vite.config.*.timestamp*
 vitest.config.*.timestamp*
 test-output
 /backend/src/config/.env
+/backend/src/config/.env.development
+/backend/src/config/.env.production
 
 .env
 .txt

@@ -3,6 +3,8 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Product } from './product.entity';
@@ -203,6 +205,12 @@ export class ProductService {
   // product.service.ts
 
   async updateProduct(id: number, dto: any, userId: number) {
+    const pricingRules =
+      typeof dto.pricing_rules === 'string'
+        ? JSON.parse(dto.pricing_rules)
+        : dto.pricing_rules;
+
+    console.log('pricingRules:', pricingRules); // kiểm tra
     // --- Lấy product với tất cả quan hệ ---
     const product = await this.productRepo.findOne({
       where: { id },
@@ -229,7 +237,7 @@ export class ProductService {
       status: dto.status ?? product.status,
     });
 
-    // --- Update categories (giữ nguyên quan hệ, không delete cũ nếu muốn) ---
+    // --- Update categories ---
     if (Array.isArray(dto.categories)) {
       for (const catId of dto.categories) {
         const exists = product.categories.find((c) => c.id === catId);
@@ -254,51 +262,49 @@ export class ProductService {
     }
 
     // --- Update variants + inventories ---
+    const variantMap: Record<string, Variant> = {}; // Tạo variantMap từ DTO
     if (Array.isArray(dto.variants)) {
       for (const variantDto of dto.variants) {
         let variant: Variant;
-
-        // Tách inventories ra khỏi dữ liệu variant
         const { inventories, ...variantData } = variantDto;
 
         if (variantDto.id) {
-          // Chỉ update variant, không chạm inventories
+          // Update variant đã có
           await this.variantRepo.update(variantDto.id, { ...variantData });
-
           const found = await this.variantRepo.findOne({
             where: { id: variantDto.id },
           });
-          if (!found)
-            throw new NotFoundException('Variant not found after update');
-          variant = found!;
+          if (!found) throw new NotFoundException('Variant not found');
+          variant = found;
         } else {
-          // Lưu variant mới
+          // Thêm variant mới
           variant = await this.variantRepo.save({
             ...variantData,
             product: { id },
           });
         }
 
-        // --- Update inventories riêng ---
+        // Map variant để dùng cho pricing rules
+        if (variant.sku) variantMap[variant.sku] = variant;
+
+        // --- Update inventories ---
         if (Array.isArray(inventories)) {
           for (const invDto of inventories) {
             if (invDto.id) {
-              // Update inventory đã có
               await this.inventoryRepo.update(invDto.id, {
                 location: invDto.location,
                 quantity: invDto.quantity,
                 used_quantity: invDto.used_quantity,
                 variant: { id: variant.id },
-                product: { id }, // thêm product vào cho chắc chắn
+                product: { id },
               });
             } else {
-              // Thêm inventory mới
               await this.inventoryRepo.save({
                 location: invDto.location,
                 quantity: invDto.quantity,
                 used_quantity: invDto.used_quantity,
                 variant: { id: variant.id },
-                product: { id }, // BẮT BUỘC
+                product: { id },
               });
             }
           }
@@ -306,16 +312,68 @@ export class ProductService {
       }
     }
 
-    // --- Update pricing_rules ---
     if (Array.isArray(dto.pricing_rules)) {
       for (const ruleDto of dto.pricing_rules) {
+        // --- map variant, nếu không có thì undefined ---
+        const variant = ruleDto.variant_sku
+          ? variantMap[ruleDto.variant_sku]
+          : undefined;
+
         if (ruleDto.id) {
-          await this.pricingRuleRepo.update(ruleDto.id, {
-            ...ruleDto,
-            product: { id },
+          // --- Update existing rule ---
+          const existingRule = await this.pricingRuleRepo.findOne({
+            where: { id: ruleDto.id },
           });
+          if (!existingRule) continue;
+
+          // --- LOG trước save ---
+          console.log('Updating PricingRule id:', ruleDto.id);
+          console.log('ruleDto:', ruleDto);
+          console.log('Mapped variant:', variant);
+
+          existingRule.type = ruleDto.type;
+          existingRule.min_quantity = ruleDto.min_quantity;
+          existingRule.price = ruleDto.price;
+          existingRule.cycle = ruleDto.cycle;
+          existingRule.starts_at = ruleDto.starts_at
+            ? new Date(ruleDto.starts_at)
+            : undefined;
+          existingRule.ends_at = ruleDto.ends_at
+            ? new Date(ruleDto.ends_at)
+            : undefined;
+          existingRule.variant = variant; // Variant | undefined
+          existingRule.name =
+            ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
+          existingRule.status = ruleDto.status ?? 'active';
+          existingRule.product = { id } as any;
+
+          const savedRule = await this.pricingRuleRepo.save(existingRule);
+
+          // --- LOG sau save ---
+          console.log('Saved PricingRule:', savedRule);
         } else {
-          await this.pricingRuleRepo.save({ ...ruleDto, product: { id } });
+          // --- Create new rule ---
+          const newRule: DeepPartial<PricingRules> = {
+            type: ruleDto.type,
+            min_quantity: ruleDto.min_quantity,
+            price: ruleDto.price,
+            cycle: ruleDto.cycle,
+            starts_at: ruleDto.starts_at
+              ? new Date(ruleDto.starts_at)
+              : undefined,
+            ends_at: ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined,
+            variant: variant, // Variant | undefined
+            name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
+            status: ruleDto.status ?? 'active',
+            product: { id } as any,
+            uuid: ruleDto.uuid ?? require('uuid').v4(),
+          };
+
+          console.log('Creating new PricingRule:', newRule);
+
+          const savedNewRule = await this.pricingRuleRepo.save(newRule);
+
+          console.log('Saved new PricingRule:', savedNewRule);
         }
       }
     }
@@ -447,6 +505,8 @@ export class ProductService {
             name: product.store.name,
             slug: product.store.slug,
             logo_url: product.store.logo_url,
+            avg_rating: product.store.avg_rating,
+            review_count: product.store.review_count,
           }
         : undefined,
     };
@@ -465,6 +525,7 @@ export class ProductService {
         'variants',
         'variants.inventories',
         'pricing_rules',
+        'pricing_rules.variant',
       ],
     });
   }
@@ -533,7 +594,7 @@ export class ProductService {
 
     return similarProducts;
   }
-  
+
   async findById(id: number) {
     const product = await this.productRepo
       .createQueryBuilder('product')
@@ -547,7 +608,7 @@ export class ProductService {
       .leftJoinAndSelect('product.store', 'store')
       .where('product.id = :id', { id })
       .getOne();
-  
+
     if (!product) {
       throw new NotFoundException('Product not found');
     }

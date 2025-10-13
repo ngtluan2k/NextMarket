@@ -112,7 +112,7 @@ export class SubscriptionService {
   async getUserSubscriptions(userId: number): Promise<Subscription[]> {
     return this.subRepo.find({
       where: { user: { id: userId } },
-      relations: ['product', 'variant', 'product.store','product.media'],
+      relations: ['product', 'variant', 'product.store', 'product.media'],
       order: { endDate: 'ASC' },
     });
   }

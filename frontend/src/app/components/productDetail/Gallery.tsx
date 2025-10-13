@@ -58,7 +58,7 @@ export default function Gallery({
             alt=""
             className="h-full w-full object-cover"
             onError={(e) => {
-              (e.target as HTMLImageElement).src =""
+              (e.target as HTMLImageElement).src = '';
             }}
           />
         ) : (
@@ -92,7 +92,7 @@ export default function Gallery({
                 alt=""
                 className="h-full w-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =""
+                  (e.target as HTMLImageElement).src = '';
                 }}
               />
             </button>

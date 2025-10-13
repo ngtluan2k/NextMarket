@@ -1,6 +1,10 @@
 // src/api/voucher.api.ts
-import { api } from "./api";
-import type { Voucher, CreateVoucherPayload, UpdateVoucherPayload } from '../types/voucher';
+import { api } from './api';
+import type {
+  Voucher,
+  CreateVoucherPayload,
+  UpdateVoucherPayload,
+} from '../types/voucher';
 
 const ENDPOINTS = {
   adminVouchers: '/admin/vouchers',
@@ -32,7 +36,10 @@ export const voucherApi = {
   },
 
   // Update voucher
-  updateVoucher: async (id: number, payload: UpdateVoucherPayload): Promise<Voucher> => {
+  updateVoucher: async (
+    id: number,
+    payload: UpdateVoucherPayload
+  ): Promise<Voucher> => {
     const res = await api.patch(`${ENDPOINTS.adminVouchers}/${id}`, payload);
     return res.data;
   },
@@ -67,8 +74,14 @@ export const storeOwnerVoucherApi = {
   },
 
   // Update voucher
-  updateVoucher: async (id: number, payload: UpdateVoucherPayload): Promise<Voucher> => {
-    const res = await api.patch(`${ENDPOINTS.storeOwnerVouchers}/${id}`, payload);
+  updateVoucher: async (
+    id: number,
+    payload: UpdateVoucherPayload
+  ): Promise<Voucher> => {
+    const res = await api.patch(
+      `${ENDPOINTS.storeOwnerVouchers}/${id}`,
+      payload
+    );
     return res.data;
   },
 
@@ -145,7 +158,10 @@ export const publicVoucherApi = {
       error: string;
     }>;
   }> => {
-    const res = await api.post(`${ENDPOINTS.vouchers}/calculate-discount`, payload);
+    const res = await api.post(
+      `${ENDPOINTS.vouchers}/calculate-discount`,
+      payload
+    );
     return res.data;
   },
 };

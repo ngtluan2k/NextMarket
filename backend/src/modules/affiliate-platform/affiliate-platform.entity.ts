@@ -12,6 +12,9 @@ export class AffiliatePlatform {
   @Column({ type: 'varchar', length: 100 })
   name!: string;
 
-  @ManyToMany(() => AffiliateRegistration, (registration) => registration.platforms)
+  @ManyToMany(
+    () => AffiliateRegistration,
+    (registration) => registration.platforms
+  )
   registrations!: AffiliateRegistration[];
 }

@@ -30,7 +30,10 @@ export class ReferralsController {
   constructor(private readonly service: ReferralsService) {}
 
   @Post('create')
-  async create(@Request() req: AuthRequest, @Body() createDto: CreateReferralDto) {
+  async create(
+    @Request() req: AuthRequest,
+    @Body() createDto: CreateReferralDto
+  ) {
     return this.service.createForUser(req.user.id, createDto);
   }
 

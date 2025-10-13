@@ -28,14 +28,16 @@ import { RequirePermissions as Permissions } from '../../common/auth/permission.
 @Controller('inventory-transactions')
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class InventoryTransactionController {
-  constructor(private readonly transactionService: InventoryTransactionService) {}
+  constructor(
+    private readonly transactionService: InventoryTransactionService
+  ) {}
 
   @Post()
   @Permissions('add_inventory_transaction')
   @ApiOperation({ summary: 'Tạo giao dịch tồn kho mới' })
   @ApiResponse({ status: 201, description: 'Tạo thành công' })
   async add(@Body() dto: CreateInventoryTransactionDto, @Req() req: any) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     return this.transactionService.addInventoryTransaction(dto, userId);
   }
 
@@ -52,9 +54,9 @@ export class InventoryTransactionController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateInventoryTransactionDto,
-    @Req() req: any,
+    @Req() req: any
   ) {
-    const userId = req.user?.userId;
+    const userId = req.user?.sub;
     return this.transactionService.updateInventoryTransaction(id, dto, userId);
   }
 

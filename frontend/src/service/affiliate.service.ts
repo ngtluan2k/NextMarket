@@ -25,9 +25,12 @@ const handleApiError = (error: unknown) => {
 
 export async function isAffiliateUser(userId: number) {
   try {
-    const res = await axios.get(`${API_BASE_URL}/users/${userId}/is-affiliate`, {
-      headers: getAuthHeaders(),
-    });
+    const res = await axios.get(
+      `${API_BASE_URL}/users/${userId}/is-affiliate`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
     return res.data;
   } catch (error) {
     handleApiError(error);
@@ -47,13 +50,13 @@ export async function getAllAffiliatePrograms() {
 
 export async function updateAffiliateProgram(
   programId: number,
-  programData: Partial<AffiliateProgram>,
+  programData: Partial<AffiliateProgram>
 ) {
   try {
     const res = await axios.patch(
       `${API_BASE_URL}/affiliate-programs/${programId}`,
       programData,
-      { headers: getAuthHeaders() },
+      { headers: getAuthHeaders() }
     );
     return res.data;
   } catch (error) {
@@ -61,11 +64,17 @@ export async function updateAffiliateProgram(
   }
 }
 
-export async function createAffiliateProgram(programData: CreateAffiliateProgramDto) {
+export async function createAffiliateProgram(
+  programData: CreateAffiliateProgramDto
+) {
   try {
-    const res = await axios.post(`${API_BASE_URL}/affiliate-programs/`, programData, {
-      headers: getAuthHeaders(),
-    });
+    const res = await axios.post(
+      `${API_BASE_URL}/affiliate-programs/`,
+      programData,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
     return res.data;
   } catch (error) {
     handleApiError(error);
@@ -74,9 +83,13 @@ export async function createAffiliateProgram(programData: CreateAffiliateProgram
 
 export async function deleteAffiliateProgram(programId: number) {
   try {
-    const res = await axios.post(`${API_BASE_URL}/affiliate-programs/delete/${programId}`, {}, {
-      headers: getAuthHeaders(),
-    });
+    const res = await axios.post(
+      `${API_BASE_URL}/affiliate-programs/delete/${programId}`,
+      {},
+      {
+        headers: getAuthHeaders(),
+      }
+    );
     return res.data;
   } catch (error) {
     handleApiError(error);
@@ -85,16 +98,18 @@ export async function deleteAffiliateProgram(programId: number) {
 
 export async function reopenAffiliateProgram(programId: number) {
   try {
-    const res = await axios.post(`${API_BASE_URL}/affiliate-programs/reopen/${programId}`, {}, {
-      headers: getAuthHeaders(),
-    });
+    const res = await axios.post(
+      `${API_BASE_URL}/affiliate-programs/reopen/${programId}`,
+      {},
+      {
+        headers: getAuthHeaders(),
+      }
+    );
     return res.data;
   } catch (error) {
     handleApiError(error);
   }
 }
-
-
 
 export async function getAffiliateProgramDetail(id: number) {
   try {

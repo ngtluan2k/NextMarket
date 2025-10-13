@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
 import { UserRole } from '../user-role/user-role.entity';
 import { RolePermission } from '../role-permission/role-permission.entity';
 import { Generated } from 'typeorm';
@@ -18,7 +18,7 @@ export class Role {
   @Column({ nullable: true })
   description!: string;
 
-  @Column()
+  @CreateDateColumn({ name: 'created_at' })
   created_at!: Date;
 
   @OneToMany(() => UserRole, (ur) => ur.role)

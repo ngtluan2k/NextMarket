@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Referral } from './referrals.entity';
@@ -12,24 +16,33 @@ export class ReferralsService {
   constructor(
     @InjectRepository(Referral)
     private repository: Repository<Referral>,
-    private userService: UserService,
+    private userService: UserService
   ) {}
 
-  async createForUser(userId: number, createDto: CreateReferralDto): Promise<Referral> {
+  async createForUser(
+    userId: number,
+    createDto: CreateReferralDto
+  ): Promise<Referral> {
     const referrer = await this.userService.findOne(userId);
     if (!referrer || !referrer.is_affiliate) {
-      throw new ForbiddenException('User is not an affiliate or does not exist');
+      throw new ForbiddenException(
+        'User is not an affiliate or does not exist'
+      );
     }
 
     const referee = await this.userService.findOne(createDto.referee_id);
     if (!referee) {
-      throw new NotFoundException(`Referee with id ${createDto.referee_id} not found`);
+      throw new NotFoundException(
+        `Referee with id ${createDto.referee_id} not found`
+      );
     }
 
     const entity = this.repository.create({
       referrer: { id: userId } as any,
       referee: { id: createDto.referee_id } as any,
-      code: createDto.code || `REF${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+      code:
+        createDto.code ||
+        `REF${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
       status: 'pending',
       uuid: crypto.randomUUID(),
       created_at: new Date(),
@@ -41,7 +54,9 @@ export class ReferralsService {
   async findUserReferrals(userId: number): Promise<Referral[]> {
     const user = await this.userService.findOne(userId);
     if (!user || !user.is_affiliate) {
-      throw new ForbiddenException('User is not an affiliate or does not exist');
+      throw new ForbiddenException(
+        'User is not an affiliate or does not exist'
+      );
     }
 
     return this.repository.find({
