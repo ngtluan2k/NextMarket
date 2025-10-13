@@ -4,6 +4,7 @@ export interface CartItem {
   id: number;
   quantity: number;
   price: number;
+  is_group?: boolean;
   product: {
     id: number;
     name: string;

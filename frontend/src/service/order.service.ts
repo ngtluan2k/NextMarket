@@ -1,4 +1,7 @@
 import { api, API_ENDPOINTS } from '../app/api/api';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:3000/orders';
 
 export const orderService = {
   // ========== USER ENDPOINTS ==========
@@ -41,6 +44,31 @@ export const orderService = {
       payload
     );
     return res.data;
+  },
+  async changeStatus(
+    orderId: number,
+    status: string,
+    token: string,
+    note?: string
+  ) {
+    try {
+      const res = await axios.patch(
+        `${API_URL}/${orderId}/status/${status}`,
+        { note }, // gửi note nếu có
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return res.data;
+    } catch (error: any) {
+      console.error(
+        'Lỗi khi thay đổi trạng thái đơn hàng:',
+        error.response?.data || error.message
+      );
+      throw error;
+    }
   },
 
   changeStatusByUser: async (

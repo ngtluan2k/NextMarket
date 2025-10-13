@@ -1,29 +1,54 @@
 import React, { useState } from "react";
 import { Pencil, Info, Users } from "lucide-react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 export default function GroupOrderCreate() {
     const navigate = useNavigate();
+    const { storeId } = useParams(); 
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
+    const { user } = useAuth();
+
+    const storeIdFromRoute = Number(storeId);
+    const storeIdFromQuery = Number(searchParams.get("storeId"));
+    const storeIdFromState = (location.state as any)?.storeId;
+    const resolvedStoreId =
+        (Number.isFinite(storeIdFromRoute) && storeIdFromRoute) ||
+        (Number.isFinite(storeIdFromQuery) && storeIdFromQuery) ||
+        (Number.isFinite(Number(storeIdFromState)) && Number(storeIdFromState)) ||
+        null;
+
     const [groupName, setGroupName] = useState("Đơn hàng nhóm của Nguyễn");
     const [paymentType, setPaymentType] = useState("Mọi người tự thanh toán phần của mình");
     const [extraTime, setExtraTime] = useState("Không có");
+
     const handleCreate = async () => {
         try {
-            // TODO: lấy đúng hostUserId và storeId từ context/screen trước đó
+            const hostUserId = user?.id ?? null;
+
+            if (!resolvedStoreId || !hostUserId) {
+                alert("Thiếu storeId hoặc thông tin người dùng. Vui lòng kiểm tra lại.");
+                return;
+            }
+
             const payload = {
                 name: groupName,
-                storeId: 46,         // <== thay bằng storeId thực tế
-                hostUserId: 2,      // <== thay bằng userId thực tế
+                storeId: resolvedStoreId,
+                hostUserId,
                 // expiresAt: new Date(Date.now() + 2*60*60*1000).toISOString(),
             };
-            const res = await axios.post('http://localhost:3000/group-orders', payload);
+
+            const res = await axios.post("http://localhost:3000/group-orders", payload);
             const group = res.data;
             const storeSlug = group?.store?.slug; // service trả về group kèm relations
+
             if (!group?.id || !storeSlug) {
                 alert("Tạo nhóm thành công nhưng thiếu dữ liệu điều hướng.");
                 return;
             }
+
             // Điều hướng sang trang cửa hàng với query groupId để show InfoBar
             navigate(`/stores/slug/${storeSlug}?groupId=${group.id}`);
         } catch (e: any) {
@@ -31,9 +56,6 @@ export default function GroupOrderCreate() {
             alert(e?.response?.data?.message ?? "Tạo nhóm thất bại");
         }
     };
-
-
-
 
     return (
         <div className="min-h-screen bg-slate-50 flex justify-center py-10">
@@ -167,7 +189,6 @@ export default function GroupOrderCreate() {
                         Tạo Đơn Hàng Nhóm
                     </button>
                 </div>
-
             </div>
         </div>
     );

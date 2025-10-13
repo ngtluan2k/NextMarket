@@ -1,29 +1,33 @@
 // frontend/src/app/page/GroupOrderDetail.tsx
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../../../api/api';
 import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import dayjs from 'dayjs';
-
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function GroupOrderDetail() {
     const { id } = useParams(); // group id
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [group, setGroup] = React.useState<any>(null);
     const groupId = Number(id);
+    const [groupItems, setGroupItems] = React.useState<any[]>([]);
 
     React.useEffect(() => {
         if (!id) return;
         (async () => {
             try {
                 setLoading(true);
-                const res = await axios.get(`http://localhost:3000/group-orders/${id}`);
+                const res = await api.get(`http://localhost:3000/group-orders/${id}`);
                 setGroup(res.data);
+                const itemsRes = await api.get(`http://localhost:3000/group-orders/${id}/items`);
+                setGroupItems(itemsRes.data || []);
                 setError(null);
-            } catch (e: any) {
+            } catch {
                 setError('Không tải được thông tin nhóm');
             } finally {
                 setLoading(false);
@@ -31,36 +35,83 @@ export default function GroupOrderDetail() {
         })();
     }, [id]);
     const refresh = async () => {
-        const res = await axios.get(`http://localhost:3000/group-orders/${groupId}`);
+        const res = await api.get(`http://localhost:3000/group-orders/${groupId}`);
         setGroup(res.data);
+        const itemsRes = await api.get(`http://localhost:3000/group-orders/${groupId}/items`);
+        setGroupItems(itemsRes.data || []);
     };
+
+
 
     const onEditName = async () => {
         const name = prompt('Nhập tên nhóm mới:', group?.name ?? '');
         if (!name) return;
-        await axios.patch(`http://localhost:3000/group-orders/${groupId}`, { name });
+        await api.patch(`http://localhost:3000/group-orders/${groupId}`, { name });
         await refresh();
     };
     const onEditDeadline = async () => {
         const def = group?.expires_at ? dayjs(group.expires_at).format('YYYY-MM-DD HH:mm:ss') : '';
         const value = prompt('Nhập thời hạn (YYYY-MM-DD HH:mm:ss, để trống = bỏ hạn):', def);
         const payload = value ? { expiresAt: dayjs(value).toISOString() } : { expiresAt: null };
-        await axios.patch(`http://localhost:3000/group-orders/${groupId}`, payload);
+        await api.patch(`http://localhost:3000/group-orders/${groupId}`, payload);
         await refresh();
     };
 
     const onAddMember = async () => {
         const userId = Number(prompt('Nhập userId muốn thêm vào nhóm:'));
         if (!userId) return;
-        await axios.post(`http://localhost:3000/group-orders/${groupId}/join`, { userId });
+        await api.post(`http://localhost:3000/group-orders/${groupId}/join`, { userId });
         await refresh();
     };
 
     const onDeleteGroup = async () => {
         if (!confirm('Xóa nhóm? Hành động này không thể hoàn tác.')) return;
-        await axios.delete(`http://localhost:3000/group-orders/${groupId}`);
+        await api.delete(`http://localhost:3000/group-orders/${groupId}`);
         // quay lại cửa hàng
         if (group?.store?.slug) navigate(`/stores/slug/${group.store.slug}`);
+    };
+    //  THÊM: thêm note
+    const onEditItemNote = async (itemId: number, currentNote: string) => {
+        const newNote = prompt('Nhập ghi chú mới:', currentNote || '');
+        if (newNote === null) return; // User cancelled
+
+        try {
+            await api.patch(`/group-orders/${groupId}/items/${itemId}`, { note: newNote });
+            await refresh();
+            alert('Cập nhật ghi chú thành công!');
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || 'Không thể cập nhật ghi chú';
+            alert(errorMessage);
+        }
+    };
+
+    //  THÊM: Xóa item
+    const onDeleteItem = async (itemId: number, productName: string) => {
+        if (!confirm(`Xóa sản phẩm "${productName}"? Hành động này không thể hoàn tác.`)) return;
+
+        try {
+            await api.delete(`/group-orders/${groupId}/items/${itemId}`);
+            await refresh();
+            alert('Xóa sản phẩm thành công!');
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || 'Không thể xóa sản phẩm';
+            alert(errorMessage);
+        }
+    };
+
+    const canEditItem = (item: any) => {
+        if (!user?.id) return false;
+
+        // Kiểm tra qua member.user.id
+        if (item?.member?.user?.id === user.id) return true;
+
+        // Kiểm tra qua user_id trực tiếp trong item
+        if (item?.user_id === user.id) return true;
+
+        // Kiểm tra qua member.user_id
+        if (item?.member?.user_id === user.id) return true;
+
+        return false;
     };
 
 
@@ -103,7 +154,6 @@ export default function GroupOrderDetail() {
                 ) : error ? (
                     <div className="text-red-600">{error}</div>
                 ) : (
-
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Cột trái: Thông tin nhóm */}
                         <section className="bg-white rounded-xl shadow border p-4">
@@ -127,7 +177,7 @@ export default function GroupOrderDetail() {
                             <ul className="space-y-2">
                                 {(group?.members ?? []).map((m: any) => (
                                     <li key={m.id} className="flex items-center justify-between text-sm">
-                                        <span>{ m?.user?.username}</span>
+                                        <span>{m?.user?.username}</span>
                                         <span className="text-slate-500">{m.status}{m.is_host ? ' • Host' : ''}</span>
                                     </li>
                                 ))}
@@ -147,19 +197,51 @@ export default function GroupOrderDetail() {
                                                 <th className="py-2 pr-3">SL</th>
                                                 <th className="py-2 pr-3">Giá</th>
                                                 <th className="py-2">Ghi chú</th>
+                                                <th className="py-2">Thao tác</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {group.items.map((it: any) => (
+                                        {(Array.isArray(groupItems) && groupItems.length > 0
+                                            ? groupItems
+                                            : (Array.isArray(group?.items) ? group.items : [])
+                                        ).map((it: any) => {
+                                            const canEdit = canEditItem(it);
+
+                                            return (
                                                 <tr key={it.id} className="border-t">
-                                                    <td className="py-2 pr-3">{it?.member?.user?.email ?? `#${it?.member?.id}`}</td>
-                                                    <td className="py-2 pr-3">{it?.product?.name ?? `Product #${it?.product?.id ?? ''}`}</td>
+                                                    <td className="py-2 pr-3">
+                                                        {it?.member?.user?.username
+                                                            ?? it?.member?.user?.email
+                                                            ?? `Thành viên #${it?.member?.id ?? ''}`}
+                                                    </td>
+                                                    <td className="py-2 pr-3">
+                                                        {it?.product?.name ?? `Product #${it?.product?.id ?? ''}`}
+                                                    </td>
                                                     <td className="py-2 pr-3">{it?.quantity}</td>
                                                     <td className="py-2 pr-3">{Number(it?.price).toLocaleString()} đ</td>
                                                     <td className="py-2">{it?.note ?? ''}</td>
+                                                    <td className="py-2">
+                                                        {canEdit ? (
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => onEditItemNote(it.id, it.note)}
+                                                                    className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                                >
+                                                                    Thêm ghi chú
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => onDeleteItem(it.id, it?.product?.name || 'Sản phẩm')}
+                                                                    className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                                                >
+                                                                    Xóa sản phẩm
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-400 text-xs">—</span>
+                                                        )}
+                                                    </td>
                                                 </tr>
-                                            ))}
-                                        </tbody>
+                                            );
+                                        })}
                                     </table>
                                 </div>
                             ) : (

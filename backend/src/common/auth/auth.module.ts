@@ -10,7 +10,7 @@ import { UserRole } from '../../modules/user-role/user-role.entity';
 import { RolePermission } from '../../modules/role-permission/role-permission.entity';
 import { Permission } from '../../modules/permission/permission.entity';
 import { JwtModule } from '@nestjs/jwt';
-// import { GoogleStrategy } from './google.strategy';
+import { GoogleStrategy } from './google.strategy';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -26,8 +26,7 @@ import { JwtModule } from '@nestjs/jwt';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  // providers: [AuthService, GoogleStrategy],
-  providers: [AuthService],
+  providers: [AuthService, GoogleStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

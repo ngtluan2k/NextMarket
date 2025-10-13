@@ -53,4 +53,11 @@ export class GroupOrdersController {
 	getByUuid(@Param('uuid') uuid: string) {
 		return this.service.getGroupOrderByUuid(uuid);
 	}
+
+	@Get('user/:userId/active')
+	getUserActiveGroups(@Param('userId', ParseIntPipe) userId: number) {
+		return this.service.getUserActiveGroupOrders(userId);
+
+	}
+
 }

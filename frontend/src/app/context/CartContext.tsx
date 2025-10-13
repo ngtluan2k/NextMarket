@@ -6,14 +6,15 @@ interface CartContextType {
     productId: number,
     quantity?: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription',
+    isGroup?: boolean
   ) => Promise<void>;
   removeFromCart: (productId: number, variantId?: number, type?: 'bulk' | 'subscription') => Promise<void>;
   updateQuantity: (
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription',
   ) => Promise<void>;
   clearCart: () => void;
   loadCart: () => void;
@@ -51,7 +52,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         const data = await response.json();
-        console.log("value inside cart: "+JSON.stringify(data.items))
+        console.log("value inside cart: " + JSON.stringify(data.items))
         setCart(data.items);
       } else {
         setCart([]);
@@ -89,7 +90,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     productId: number,
     quantity = 1,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription',
+    isGroup = false
   ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
@@ -102,7 +104,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type  }),
+        body: JSON.stringify({ productId, quantity, variantId, type, isGroup }),
       });
       if (response.ok) {
         await loadCart();
@@ -160,7 +162,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type  }),
+        body: JSON.stringify({ productId, quantity, variantId, type }),
       });
       if (response.ok) {
         await loadCart();

@@ -16,6 +16,8 @@ import { CartModule } from '../cart/cart.module';
 import { UserOrdersController } from './UserOrdersController';
 import { StoreOrdersController } from './StoreOrdersController';
 import { AdminOrdersController } from './AdminOrdersController';
+import{OrdersController} from './orders.controller'
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -33,7 +35,7 @@ import { AdminOrdersController } from './AdminOrdersController';
     forwardRef(() => ProductReviewsModule),
   ],
   controllers: [
-    // OrdersController,         
+    OrdersController,         
     UserOrdersController,     
     StoreOrdersController,  
     AdminOrdersController,   

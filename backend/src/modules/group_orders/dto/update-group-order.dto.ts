@@ -1,4 +1,3 @@
-// backend/src/modules/group_orders/dto/update-group-order.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 

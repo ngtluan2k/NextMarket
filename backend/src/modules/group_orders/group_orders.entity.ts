@@ -25,7 +25,7 @@ export class GroupOrder {
     @Column({ type: 'char', length: 36, unique: true })
     @Generated('uuid')
     uuid!: string;
-    
+
     @Column({ type: 'varchar', length: 100, nullable: false })
     name!: string;
 
@@ -64,5 +64,8 @@ export class GroupOrder {
 
     @OneToMany(() => Order, (o) => o.group_order)
     orders!: Order[];
+    
+    @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+    discount_percent!: number | null;
 
 }

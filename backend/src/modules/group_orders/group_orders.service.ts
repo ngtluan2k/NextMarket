@@ -7,6 +7,8 @@ import { Order } from '../orders/order.entity';
 import { CreateGroupOrderDto } from './dto/create-group-order.dto';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { Store } from '../store/store.entity';
+
 import { LessThan } from 'typeorm';
 
 @Injectable()
@@ -15,6 +17,7 @@ export class GroupOrdersService {
         @InjectRepository(GroupOrder) private readonly groupOrderRepo: Repository<GroupOrder>,
         @InjectRepository(GroupOrderMember) private readonly memberRepo: Repository<GroupOrderMember>,
         @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
+        @InjectRepository(Store) private readonly storeRepo: Repository<Store>,
         private readonly config: ConfigService,
     ) { }
 
@@ -38,6 +41,8 @@ export class GroupOrdersService {
     }
 
     async createGroupOrder(dto: CreateGroupOrderDto) {
+        const store = await this.storeRepo.findOne({ where: { id: dto.storeId } });
+        if (!store) throw new NotFoundException('Store not found');
         const now = new Date();
         const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
         if (expiresAt && expiresAt <= now) {
@@ -80,7 +85,8 @@ export class GroupOrdersService {
     async getGroupOrderById(id: number) {
         const group = await this.groupOrderRepo.findOne({
             where: { id } as FindOptionsWhere<GroupOrder>,
-            relations: ['store', 'user', 'members', 'items', 'orders','members.user'],
+            relations: ['store', 'user', 'members', 'items', 'orders', 'members.user','items.member','items.member.user',  'items.product',],
+            loadEagerRelations: true,
         });
         if (!group) throw new NotFoundException('Group order not found');
         return group;
@@ -173,4 +179,32 @@ export class GroupOrdersService {
         if (!group) throw new NotFoundException('Group order not found');
         return group;
     }
+
+    async getUserActiveGroups(userId: number) {
+        return this.memberRepo.find({
+            where: {
+                user: { id: userId } as any,
+                status: 'joined'
+            },
+            relations: ['group_order', 'group_order.store', 'group_order.user'],
+            order: { joined_at: 'DESC' }
+        });
+    }
+
+    async getUserActiveGroupOrders(userId: number) {
+        const members = await this.getUserActiveGroups(userId);
+        return members
+            .filter(member => member.group_order) // Lọc bỏ những member có group_order null
+            .map(member => ({
+                id: member.group_order.id,
+                name: member.group_order.name,
+                status: member.group_order.status,
+                expires_at: member.group_order.expires_at,
+                is_host: member.is_host,
+                store: member.group_order.store,
+                host: member.group_order.user,
+                joined_at: member.joined_at
+            }));
+    }
+
 }

@@ -80,5 +80,7 @@ export class CartItem {
 
   @Column({ type: 'varchar', length: 20 })
   type!: 'bulk' | 'subscription';
-
+  
+  @Column({ type: 'boolean', default: false })
+  is_group!: boolean
 }
