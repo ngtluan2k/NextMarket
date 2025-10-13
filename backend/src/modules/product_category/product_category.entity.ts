@@ -20,8 +20,6 @@ export class ProductCategory {
   @Generated('uuid')
   uuid!: string;
 
-  @Column({ nullable: false })
-  product_id!: number;
 
   @ManyToOne(() => Product, (product) => product.categories, {
     onDelete: 'CASCADE',
