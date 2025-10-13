@@ -6,6 +6,7 @@ import {
   JoinColumn,
   OneToMany,
   OneToOne,
+  Generated,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
@@ -16,8 +17,9 @@ export class ShoppingCart {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', unique: true })
-  uuid!: string;
+@Column({ type: 'char', unique: true })
+@Generated('uuid')
+uuid!: string;
 
   @OneToOne(() => User, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })

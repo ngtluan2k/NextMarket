@@ -34,11 +34,11 @@ import { OrdersController } from './orders.controller';
     forwardRef(() => ProductReviewsModule),
   ],
   controllers: [
-    // OrdersController,         
-    UserOrdersController,     
-    StoreOrdersController,  
-    AdminOrdersController,   
-    OrdersController
+    // OrdersController,
+    UserOrdersController,
+    StoreOrdersController,
+    AdminOrdersController,
+    OrdersController,
   ],
   providers: [OrdersService],
   exports: [OrdersService],
