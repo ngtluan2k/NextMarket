@@ -13,6 +13,8 @@ import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { CreateGroupOrderItemDto } from './dto/create-group-order-item.dto';
 import { UpdateGroupOrderItemDto } from './dto/update-group-order-item.dto';
+import { Inject, forwardRef } from '@nestjs/common';
+import { GroupOrdersGateway } from '../group_orders/group_orders.gateway';
 
 
 @Injectable()
@@ -30,6 +32,8 @@ export class GroupOrderItemsService {
 		private readonly variantRepo: Repository<Variant>,
 		@InjectRepository(PricingRules)
 		private readonly pricingRulesRepo: Repository<PricingRules>,
+		@Inject(forwardRef(() => GroupOrdersGateway))
+		private readonly gateway: GroupOrdersGateway,
 	) { }
 
 	// Kiểm tra group còn mở
@@ -139,7 +143,13 @@ export class GroupOrderItemsService {
 			note: dto.note ?? null,
 		});
 
-		return await this.itemRepo.save(item);
+		const saved = await this.itemRepo.save(item);
+		const full = await this.itemRepo.findOne({
+			where: { id: saved.id },
+			relations: ['member', 'member.user', 'product', 'variant'],
+		});
+		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', { item: full });
+		return full;
 	}
 
 	// Danh sách tất cả item trong group
@@ -185,7 +195,14 @@ export class GroupOrderItemsService {
 			item.note = dto.note ?? null;
 		}
 
-		return await this.itemRepo.save(item);
+		const updated = await this.itemRepo.save(item);
+		const full = await this.itemRepo.findOne({
+			where: { id: updated.id },
+			relations: ['member', 'member.user', 'product', 'variant'],
+		});
+		console.log('[WS] item-added emit', { groupId, id: full?.id });
+		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', { item: full });
+		return full;
 	}
 
 	// Xóa item (chỉ chủ sở hữu)
@@ -200,6 +217,8 @@ export class GroupOrderItemsService {
 			throw new BadRequestException('Không có quyền xoá item của người khác');
 
 		await this.itemRepo.delete(item.id);
+		console.log('[WS] item-removed emit', { groupId, itemId });
+		await this.gateway.broadcastGroupUpdate(groupId, 'item-removed', { itemId });
 		return { success: true };
 	}
 }

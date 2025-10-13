@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
 import { GroupOrder } from './group_orders.entity';
@@ -8,6 +8,7 @@ import { CreateGroupOrderDto } from './dto/create-group-order.dto';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Store } from '../store/store.entity';
+import { GroupOrdersGateway } from './group_orders.gateway';
 
 import { LessThan } from 'typeorm';
 
@@ -19,6 +20,8 @@ export class GroupOrdersService {
         @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
         @InjectRepository(Store) private readonly storeRepo: Repository<Store>,
         private readonly config: ConfigService,
+        @Inject(forwardRef(() => GroupOrdersGateway))
+        private readonly gateway: GroupOrdersGateway,
     ) { }
 
     // @Cron(CronExpression.EVERY_MINUTE)
@@ -38,6 +41,9 @@ export class GroupOrdersService {
             .set({ status: 'locked' })
             .whereInIds(expired.map(g => g.id))
             .execute();
+        for (const g of expired) {
+            await this.gateway.broadcastGroupUpdate(g.id, 'group-locked', { groupId: g.id });
+        }
     }
 
     async createGroupOrder(dto: CreateGroupOrderDto) {
@@ -78,6 +84,10 @@ export class GroupOrdersService {
             status: 'joined',
         });
         await this.memberRepo.save(hostMember);
+        await this.gateway.notifyUser(dto.hostUserId, 'group-created', {
+            groupId: saved.id,
+            invite_link: inviteLink,
+        });
 
         return this.getGroupOrderById(saved.id);
     }
@@ -85,7 +95,7 @@ export class GroupOrdersService {
     async getGroupOrderById(id: number) {
         const group = await this.groupOrderRepo.findOne({
             where: { id } as FindOptionsWhere<GroupOrder>,
-            relations: ['store', 'user', 'members', 'items', 'orders', 'members.user','items.member','items.member.user',  'items.product',],
+            relations: ['store', 'user', 'members', 'items', 'orders', 'members.user', 'items.member', 'items.member.user', 'items.product',],
             loadEagerRelations: true,
         });
         if (!group) throw new NotFoundException('Group order not found');
@@ -116,7 +126,15 @@ export class GroupOrdersService {
             is_host: false,
             status: 'joined',
         });
-        return this.memberRepo.save(member);
+        const savedMember = await this.memberRepo.save(member);
+
+        // Broadcast cho mọi người trong group biết có người mới tham gia
+        await this.gateway.broadcastGroupUpdate(groupId, 'member-joined', {
+            userId,
+            member: savedMember,
+        });
+
+        return savedMember;
     }
 
     async listOrdersInGroup(groupId: number) {
@@ -161,13 +179,25 @@ export class GroupOrdersService {
         }
 
         await this.groupOrderRepo.update({ id }, patch);
-        return this.getGroupOrderById(id);
+        const updated = await this.getGroupOrderById(id);
+
+        // Broadcast cập nhật group
+        await this.gateway.broadcastGroupUpdate(id, 'group-updated', {
+            group: updated,
+        });
+
+        return updated;
     }
 
     async deleteGroupOrder(id: number) {
         const group = await this.groupOrderRepo.findOne({ where: { id } });
         if (!group) throw new NotFoundException('Group order not found');
+
         await this.groupOrderRepo.delete(id);
+
+        // Broadcast xóa group
+        await this.gateway.broadcastGroupUpdate(id, 'group-deleted', { groupId: id });
+
         return { success: true };
     }
 

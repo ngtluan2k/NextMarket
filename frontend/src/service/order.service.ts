@@ -91,33 +91,7 @@ export const orderService = {
       throw error;
     }
   },
-
-  async changeStatus(
-    orderId: number,
-    status: string,
-    token: string,
-    note?: string
-  ) {
-    try {
-      const res = await axios.patch(
-        `${API_URL}/${orderId}/status/${status}`,
-        { note }, // gửi note nếu có
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      return res.data;
-    } catch (error: any) {
-      console.error(
-        'Lỗi khi thay đổi trạng thái đơn hàng:',
-        error.response?.data || error.message
-      );
-      throw error;
-    }
-  },
-
+  
   changeStatusByUser: async (
     userId: number,
     orderId: number,

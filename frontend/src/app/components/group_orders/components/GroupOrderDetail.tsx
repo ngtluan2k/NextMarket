@@ -6,6 +6,7 @@ import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import dayjs from 'dayjs';
 import { useAuth } from '../../../hooks/useAuth';
+import { useGroupOrderSocket } from './../../../hooks/useGroupOrderSocket';
 
 export default function GroupOrderDetail() {
     const { id } = useParams(); // group id
@@ -16,6 +17,50 @@ export default function GroupOrderDetail() {
     const [group, setGroup] = React.useState<any>(null);
     const groupId = Number(id);
     const [groupItems, setGroupItems] = React.useState<any[]>([]);
+    const [members, setMembers] = React.useState<any[]>([]);
+    const { socketService } = useGroupOrderSocket(Number(id), (event, data) => {
+        switch (event) {
+            case 'group-state':
+                if (data?.group) setGroup(data.group);
+                setGroupItems(Array.isArray(data?.items) ? data.items : []);
+                if (Array.isArray(data?.members)) setMembers(data.members);
+                break;
+            case 'member-joined':
+                if (data?.member) setMembers((prev) => [data.member, ...prev]);
+                break;
+            case 'member-left':
+                if (data?.userId) {
+                    setMembers((prev) => prev.filter((m) => m?.user?.id !== data.userId));
+                }
+                break;
+            case 'item-added':
+                if (data?.item) setGroupItems((prev) => [...prev, data.item]);
+                break;
+            case 'item-updated':
+                if (data?.item) setGroupItems((prev) =>
+                    prev.map((it) => Number(it.id) === Number(data.item.id) ? data.item : it)
+                );
+                break;
+            case 'item-removed':
+                if (data?.itemId != null) {
+                    const rmId = Number(data.itemId);
+                    setGroupItems((prev) => prev.filter((it) => Number(it.id) !== rmId));
+                }
+                break;
+            case 'group-locked':
+                setGroup((g: any) => (g ? { ...g, status: 'locked' } : g));
+                break;
+            case 'group-updated':
+                if (data?.group) setGroup(data.group);
+                break;
+            case 'group-deleted':
+                navigate('/');
+                break;
+        }
+    });
+
+
+
 
     React.useEffect(() => {
         if (!id) return;
@@ -24,6 +69,7 @@ export default function GroupOrderDetail() {
                 setLoading(true);
                 const res = await api.get(`http://localhost:3000/group-orders/${id}`);
                 setGroup(res.data);
+                setMembers(res.data?.members ?? []);
                 const itemsRes = await api.get(`http://localhost:3000/group-orders/${id}/items`);
                 setGroupItems(itemsRes.data || []);
                 setError(null);
@@ -37,6 +83,7 @@ export default function GroupOrderDetail() {
     const refresh = async () => {
         const res = await api.get(`http://localhost:3000/group-orders/${groupId}`);
         setGroup(res.data);
+        setMembers(res.data?.members ?? []);
         const itemsRes = await api.get(`http://localhost:3000/group-orders/${groupId}/items`);
         setGroupItems(itemsRes.data || []);
     };
@@ -175,7 +222,7 @@ export default function GroupOrderDetail() {
                         <section className="bg-white rounded-xl shadow border p-4">
                             <h2 className="font-semibold mb-3">Thành viên</h2>
                             <ul className="space-y-2">
-                                {(group?.members ?? []).map((m: any) => (
+                                {members.map((m: any) => (
                                     <li key={m.id} className="flex items-center justify-between text-sm">
                                         <span>{m?.user?.username}</span>
                                         <span className="text-slate-500">{m.status}{m.is_host ? ' • Host' : ''}</span>
@@ -187,7 +234,7 @@ export default function GroupOrderDetail() {
                         {/* Cột phải: Món đã chọn */}
                         <section className="bg-white rounded-xl shadow border p-4 lg:col-span-2">
                             <h2 className="font-semibold mb-3">Mọi người đã chọn</h2>
-                            {Array.isArray(group?.items) && group.items.length > 0 ? (
+                            {Array.isArray(groupItems) && groupItems.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full text-sm">
                                         <thead>
@@ -200,48 +247,50 @@ export default function GroupOrderDetail() {
                                                 <th className="py-2">Thao tác</th>
                                             </tr>
                                         </thead>
-                                        {(Array.isArray(groupItems) && groupItems.length > 0
-                                            ? groupItems
-                                            : (Array.isArray(group?.items) ? group.items : [])
-                                        ).map((it: any) => {
-                                            const canEdit = canEditItem(it);
+                                        <tbody>
+                                            {(Array.isArray(groupItems) && groupItems.length > 0
+                                                ? groupItems
+                                                : (Array.isArray(group?.items) ? group.items : [])
+                                            ).map((it: any) => {
+                                                const canEdit = canEditItem(it);
+                                                return (
+                                                    <tr key={it.id} className="border-t">
+                                                        <td className="py-2 pr-3">
+                                                            {it?.member?.user?.username
+                                                                ?? it?.member?.user?.email
+                                                                ?? `Thành viên #${it?.member?.id ?? ''}`}
+                                                        </td>
+                                                        <td className="py-2 pr-3">
+                                                            {it?.product?.name ?? `Product #${it?.product?.id ?? ''}`}
+                                                        </td>
+                                                        <td className="py-2 pr-3">{it?.quantity}</td>
+                                                        <td className="py-2 pr-3">{Number(it?.price).toLocaleString()} đ</td>
+                                                        <td className="py-2">{it?.note ?? ''}</td>
+                                                        <td className="py-2">
+                                                            {canEdit ? (
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        onClick={() => onEditItemNote(it.id, it.note)}
+                                                                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                                                    >
+                                                                        Thêm ghi chú
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => onDeleteItem(it.id, it?.product?.name || 'Sản phẩm')}
+                                                                        className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                                                    >
+                                                                        Xóa sản phẩm
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-slate-400 text-xs">—</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
 
-                                            return (
-                                                <tr key={it.id} className="border-t">
-                                                    <td className="py-2 pr-3">
-                                                        {it?.member?.user?.username
-                                                            ?? it?.member?.user?.email
-                                                            ?? `Thành viên #${it?.member?.id ?? ''}`}
-                                                    </td>
-                                                    <td className="py-2 pr-3">
-                                                        {it?.product?.name ?? `Product #${it?.product?.id ?? ''}`}
-                                                    </td>
-                                                    <td className="py-2 pr-3">{it?.quantity}</td>
-                                                    <td className="py-2 pr-3">{Number(it?.price).toLocaleString()} đ</td>
-                                                    <td className="py-2">{it?.note ?? ''}</td>
-                                                    <td className="py-2">
-                                                        {canEdit ? (
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={() => onEditItemNote(it.id, it.note)}
-                                                                    className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                                                                >
-                                                                    Thêm ghi chú
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => onDeleteItem(it.id, it?.product?.name || 'Sản phẩm')}
-                                                                    className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
-                                                                >
-                                                                    Xóa sản phẩm
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-slate-400 text-xs">—</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
                                     </table>
                                 </div>
                             ) : (
