@@ -58,7 +58,7 @@ export default function BuyBox({
     type: 'success' | 'error' | 'warning',
     content: string
   ) => void;
-  selectedType?: 'bulk' | 'subscription';
+  selectedType?: 'bulk' | 'subscription' | 'normal';
   groupId?: number | null;
 }) {
   const navigate = useNavigate();
@@ -173,7 +173,7 @@ export default function BuyBox({
   const handleAddToCart = async (
     product: Product,
     quantity: number,
-    type: 'bulk' | 'subscription'
+    type: 'bulk' | 'subscription' | 'normal'
   ) => {
     console.log('🛒 Add to Cart clicked:', {
       productId: product.id,
@@ -410,7 +410,7 @@ export default function BuyBox({
               </button>
               <button
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => handleAddToCart(product as any, quantity, selectedType ?? 'bulk')}
+                onClick={() => handleAddToCart(product as any, quantity, selectedType ?? 'normal')}
                 disabled={loading}
               >
                 Thêm vào giỏ
@@ -429,7 +429,7 @@ export default function BuyBox({
               </button>
               <button
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => handleAddToCart(product as any, quantity, selectedType ?? 'bulk')}
+                onClick={() => handleAddToCart(product as any, quantity, selectedType ?? 'normal')}
                 disabled={loading}
               >
                 Thêm vào giỏ

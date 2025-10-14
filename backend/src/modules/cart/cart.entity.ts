@@ -81,7 +81,7 @@ export class CartItem {
   added_at!: Date;
 
   @Column({ type: 'varchar' })
-  type!: 'bulk' | 'subscription';
+  type!: 'bulk' | 'subscription'| 'normal';
   
   @Column({ type: 'boolean', default: false })
   is_group!: boolean

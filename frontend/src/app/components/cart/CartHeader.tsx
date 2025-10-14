@@ -51,7 +51,7 @@ export const CartHeader: React.FC<Props> = ({
     productId: number,
     productName: string,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription' | 'normal'
   ) => {
     try {
       console.log(productId);

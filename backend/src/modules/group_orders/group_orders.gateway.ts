@@ -14,14 +14,16 @@ import { GroupOrdersService } from './group_orders.service';
 
 @WebSocketGateway({
   cors: {
-    origin: [process.env.FE_BASE_URL, process.env.BE_BASE_URL].filter(Boolean) as string[],
+    origin: [process.env.FE_BASE_URL, process.env.BE_BASE_URL].filter(
+      Boolean
+    ) as string[],
     credentials: true,
   },
   namespace: '/group-orders',
 })
 export class GroupOrdersGateway
-
-  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   @WebSocketServer()
   server!: Server;
 
@@ -33,7 +35,7 @@ export class GroupOrdersGateway
   constructor(
     @Inject(forwardRef(() => GroupOrdersService))
     private readonly groupOrdersService: GroupOrdersService
-  ) { }
+  ) {}
 
   afterInit(server: Server) {
     this.server = server;
@@ -58,31 +60,56 @@ export class GroupOrdersGateway
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const group = await this.groupOrdersService.getGroupOrderById(data.groupId);
-      const room = this.roomName(data.groupId);
+      const groupId = data.groupId;
+      const userId = data.userId;
+      const room = this.roomName(groupId);
 
-      this.userSockets.set(data.userId, client.id);
-      if (!this.groupRooms.has(data.groupId)) {
-        this.groupRooms.set(data.groupId, new Set());
+      // ✅ Nếu socket đã ở trong room -> bỏ qua (tránh join trùng)
+      const joinedSockets = this.groupRooms.get(groupId);
+      if (joinedSockets?.has(client.id)) {
+        console.log(
+          `[WS] Socket ${client.id} đã ở trong room ${room}, bỏ qua join trùng`
+        );
+        return;
       }
-      this.groupRooms.get(data.groupId)!.add(client.id);
 
+      // Lưu mapping userId -> socketId
+      this.userSockets.set(userId, client.id);
+
+      // Tạo group room nếu chưa có
+      if (!this.groupRooms.has(groupId)) {
+        this.groupRooms.set(groupId, new Set());
+      }
+
+      // Thêm socket vào room
+      this.groupRooms.get(groupId)!.add(client.id);
       await client.join(room);
-      const member = (group.members ?? []).find((m: any) => m?.user?.id === data.userId) ?? null;
 
+      // Lấy lại group từ DB/service
+      const group = await this.groupOrdersService.getGroupOrderById(groupId);
+
+      // Tìm thông tin member
+      const member =
+        (group.members ?? []).find((m: any) => m?.user?.id === userId) ?? null;
+
+      // Thông báo cho các thành viên khác (trừ chính user này)
       client.to(room).emit('member-joined', {
-        groupId: data.groupId,
-        userId: data.userId,
+        groupId,
+        userId,
         member,
         timestamp: new Date(),
       });
 
+      // Gửi trạng thái nhóm hiện tại cho chính user mới join
       client.emit('group-state', {
         group,
         members: group.members ?? [],
         items: group.items ?? [],
       });
+
+      console.log(`[WS] User ${userId} joined group ${groupId}`);
     } catch (e) {
+      console.error('[WS] join-group error:', e);
       client.emit('error', { message: 'Cannot join group' });
     }
   }
@@ -182,6 +209,4 @@ export class GroupOrdersGateway
   private roomName(groupId: number) {
     return `group-${groupId}`;
   }
-
-
 }

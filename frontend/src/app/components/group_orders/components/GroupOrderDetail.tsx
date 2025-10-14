@@ -80,6 +80,7 @@ export default function GroupOrderDetail() {
             }
         })();
     }, [id]);
+    console.log('GroupOrderDetail render', { group, members, groupItems, loading, error });
     const refresh = async () => {
         const res = await api.get(`http://localhost:3000/group-orders/${groupId}`);
         setGroup(res.data);
@@ -211,7 +212,7 @@ export default function GroupOrderDetail() {
                                 Mã tham gia: <span className="font-mono">{group?.join_code ?? '—'}</span>
                             </div>
                             <div className="text-sm text-slate-600">
-                                Chủ nhóm: <span className="font-semibold">{group?.user?.username ?? '—'}</span>
+                                Chủ nhóm: <span className="font-semibold">{group?.user.profile?.full_name ?? '—'}</span>
                             </div>
                             <div className="text-sm text-slate-600">
                                 Hết hạn: {group?.expires_at ? new Date(group.expires_at).toLocaleString() : '—'}
@@ -224,7 +225,7 @@ export default function GroupOrderDetail() {
                             <ul className="space-y-2">
                                 {members.map((m: any) => (
                                     <li key={m.id} className="flex items-center justify-between text-sm">
-                                        <span>{m?.user?.username}</span>
+                                        <span>{m?.user?.profile?.full_name}</span>
                                         <span className="text-slate-500">{m.status}{m.is_host ? ' • Host' : ''}</span>
                                     </li>
                                 ))}
@@ -256,7 +257,7 @@ export default function GroupOrderDetail() {
                                                 return (
                                                     <tr key={it.id} className="border-t">
                                                         <td className="py-2 pr-3">
-                                                            {it?.member?.user?.username
+                                                            {it?.member?.user?.profile?.full_name
                                                                 ?? it?.member?.user?.email
                                                                 ?? `Thành viên #${it?.member?.id ?? ''}`}
                                                         </td>

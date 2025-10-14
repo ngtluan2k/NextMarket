@@ -49,7 +49,7 @@ export class Store {
   description!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true  })
-  logo_url: string;
+  logo_url!: string;
 
   @Column({ length: 100, nullable: true })
   email!: string;
