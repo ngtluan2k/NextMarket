@@ -4,9 +4,7 @@ import { Trash2 } from 'lucide-react';
 
 export const ProductForm: React.FC = () => {
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>(
-    []
-  );
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const getErr = (path: string) => errors[path];
@@ -47,7 +45,6 @@ export const ProductForm: React.FC = () => {
       cycle?: string;
       starts_at?: string | Date;
       ends_at?: string | Date;
-      // === thêm mới theo yêu cầu ===
       variant_sku?: string;
       name?: string;
       status?: 'active' | 'inactive';
@@ -69,36 +66,20 @@ export const ProductForm: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://localhost:3000/brands', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch('http://localhost:3000/brands', { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.json())
       .then((data) =>
-        setBrands(
-          (data.data || []).map((b: any) => ({
-            id: Number(b.id),
-            name: b.name,
-          }))
-        )
+        setBrands((data.data || []).map((b: any) => ({ id: Number(b.id), name: b.name })))
       );
-    fetch('http://localhost:3000/categories', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch('http://localhost:3000/categories', { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.json())
       .then((data) =>
-        setCategories(
-          (data.data || []).map((c: any) => ({
-            id: Number(c.id),
-            name: c.name,
-          }))
-        )
+        setCategories((data.data || []).map((c: any) => ({ id: Number(c.id), name: c.name })))
       );
   }, []);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
     setForm((prev) => ({
@@ -116,133 +97,108 @@ export const ProductForm: React.FC = () => {
     }));
   };
 
-  const addMedia = () =>
-    setForm((prev) => ({
-      ...prev,
-      media: [
-        ...prev.media,
-        {
-          media_type: 'image',
-          url: '',
-          is_primary: false,
-          sort_order: prev.media.length + 1,
-        },
-      ],
-    }));
   const addVariant = () =>
     setForm((prev) => ({
       ...prev,
-      variants: [
-        ...prev.variants,
-        { sku: '', variant_name: '', price: 0, stock: 0 },
-      ],
+      variants: [...prev.variants, { sku: '', variant_name: '', price: 0, stock: 0 }],
     }));
+
   const addInventory = () =>
     setForm((prev) => ({
       ...prev,
       inventory: [
         ...prev.inventory,
-        {
-          variant_sku: '',
-          variant_id: undefined,
-          product_id: undefined,
-          location: '',
-          quantity: 0,
-        },
+        { variant_sku: '', variant_id: undefined, product_id: undefined, location: '', quantity: 0 },
       ],
     }));
+
   const addPricingRule = () =>
     setForm((prev) => ({
       ...prev,
       pricing_rules: [
         ...prev.pricing_rules,
-        {
-          type: '',
-          min_quantity: 0,
-          price: 0,
-          cycle: '',
-          starts_at: '',
-          ends_at: '',
-          // === default cho field mới ===
-          variant_sku: '',
-          name: '',
-          status: 'active',
-        },
+        { type: '', min_quantity: 0, price: 0, cycle: '', starts_at: '', ends_at: '', variant_sku: '', name: '', status: 'active' },
       ],
     }));
 
-  const coverFileRef = useRef<HTMLInputElement | null>(null);
-  const smallFileRefs = useRef<Array<HTMLInputElement | null>>([]);
+  // ====== Media helpers: 1 input multiple + cờ thay cover ======
+  const multiFileRef = useRef<HTMLInputElement | null>(null);
+  const replaceCoverAfterPickRef = useRef(false);
 
-  const openCoverPicker = () => coverFileRef.current?.click();
-  const openSmallPicker = (i: number) => smallFileRefs.current[i]?.click();
+  const openMultiPickerAppend = () => {
+    replaceCoverAfterPickRef.current = false;
+    multiFileRef.current?.click();
+  };
 
-  const addSmallSlot = () => {
+  const openMultiPickerReplaceCover = () => {
+    replaceCoverAfterPickRef.current = true;
+    multiFileRef.current?.click();
+  };
+
+  const reindexSort = (arr: ProductFormState['media']) =>
+    arr.map((m, idx) => ({ ...m, sort_order: idx + 1 }));
+
+  const onMultiPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setForm((prev) => {
+      let media = [...prev.media];
+
+      if (replaceCoverAfterPickRef.current) {
+        // Click từ ô to: file đầu làm/thay cover, các file còn lại append
+        const [first, ...rest] = files;
+        if (first) {
+          const firstUrl = URL.createObjectURL(first);
+          if (media.length === 0) {
+            media.push({ media_type: 'image', url: firstUrl, file: first, sort_order: 1 });
+          } else {
+            media[0] = { ...media[0], media_type: 'image', url: firstUrl, file: first, sort_order: 1 };
+          }
+        }
+        rest.forEach((f) => {
+          media.push({ media_type: 'image', url: URL.createObjectURL(f), file: f, sort_order: media.length + 1 });
+        });
+      } else {
+        // Click từ ô "+" nhỏ: chỉ append; nếu chưa có cover thì file đầu làm cover
+        files.forEach((file, idx) => {
+          const url = URL.createObjectURL(file);
+          if (media.length === 0 && idx === 0) {
+            media.push({ media_type: 'image', url, file, sort_order: 1 });
+          } else {
+            media.push({ media_type: 'image', url, file, sort_order: media.length + 1 });
+          }
+        });
+      }
+
+      replaceCoverAfterPickRef.current = false;
+      return { ...prev, media: reindexSort(media) };
+    });
+
+    e.target.value = '';
+  };
+
+  const setAsCover = (i: number) => {
+    if (i === 0) return;
     setForm((prev) => {
       const media = [...prev.media];
-      if (media.length === 0) media.push({ media_type: 'image', url: '', sort_order: 1 });
-      media.push({ media_type: 'image', url: '', sort_order: media.length + 1 });
-      media.forEach((m, idx) => (m.sort_order = idx + 1));
-      return { ...prev, media };
+      const [picked] = media.splice(i, 1);
+      media.unshift(picked);
+      return { ...prev, media: reindexSort(media) };
     });
   };
 
   const removeMediaAt = (i: number) => {
     setForm((prev) => {
       const media = prev.media.filter((_, idx) => idx !== i);
-      media.forEach((m, idx) => (m.sort_order = idx + 1));
-      return { ...prev, media };
+      return { ...prev, media: reindexSort(media) };
     });
-  };
-
-  const onCoverPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setForm((prev) => {
-      const media = [...prev.media];
-      if (media.length === 0) media.push({ media_type: 'image', url, file, sort_order: 1 });
-      else media[0] = { ...media[0], media_type: 'image', url, file, sort_order: 1 };
-      media.forEach((m, idx) => (m.sort_order = idx + 1));
-      return { ...prev, media };
-    });
-    e.target.value = '';
-  };
-
-  const onSmallPicked = (e: React.ChangeEvent<HTMLInputElement>, i: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setForm((prev) => {
-      const media = [...prev.media];
-      if (i < media.length) {
-        media[i] = { ...media[i], media_type: 'image', url, file, sort_order: i + 1 };
-      } else {
-        media.push({ media_type: 'image', url, file, sort_order: media.length + 1 });
-      }
-      media.forEach((m, idx) => (m.sort_order = idx + 1));
-      return { ...prev, media };
-    });
-    e.target.value = '';
-  };
-
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const previewUrl = URL.createObjectURL(file);
-    const newMedia = [...form.media];
-    newMedia[index] = { ...newMedia[index], file, url: previewUrl };
-    setForm({ ...form, media: newMedia });
   };
 
   const submitForm = async (isDraft: boolean) => {
     try {
       setErrors({});
 
-      // 1) Ghép stock cho variants theo inventory
       const variantsWithStock = form.variants.map((v) => {
         const totalStock = form.inventory
           .filter((inv) => inv.variant_sku === v.sku)
@@ -251,9 +207,7 @@ export const ProductForm: React.FC = () => {
       });
 
       const dataForValidate = { ...form, variants: variantsWithStock };
-
-      // 3) Validate (publish: bắt buộc đủ, draft: thoải mái)
-      const result = validateProduct(dataForValidate, isDraft ? "draft" : "publish");
+      const result = validateProduct(dataForValidate, isDraft ? 'draft' : 'publish');
 
       if (!isDraft && !result.success) {
         const mapped = mapErrors(result.error.errors);
@@ -263,11 +217,8 @@ export const ProductForm: React.FC = () => {
         return;
       }
 
-      // 4) Build FormData + gọi API
       const token = localStorage.getItem('token');
-      const url = isDraft
-        ? 'http://localhost:3000/products'
-        : 'http://localhost:3000/products/publish';
+      const url = isDraft ? 'http://localhost:3000/products' : 'http://localhost:3000/products/publish';
 
       const fd = new FormData();
       fd.append('name', String(form.name || ''));
@@ -279,15 +230,9 @@ export const ProductForm: React.FC = () => {
       fd.append('variants', JSON.stringify(variantsWithStock || []));
       fd.append('inventory', JSON.stringify(form.inventory || []));
       fd.append('pricing_rules', JSON.stringify(form.pricing_rules || []));
-
       (form.media || []).forEach((m) => m.file && fd.append('media', m.file));
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-
+      const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to submit product');
 
@@ -301,12 +246,23 @@ export const ProductForm: React.FC = () => {
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 5));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
+  const displayDate = (v?: string | Date) => {
+    if (!v) return '—';
+    try {
+      const d = typeof v === 'string' ? new Date(v) : v;
+      if (Number.isNaN(d.getTime())) return String(v);
+      return d.toISOString().slice(0, 10);
+    } catch {
+      return String(v);
+    }
+  };
+
   return (
     <form
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        submitForm(false); // Publish
+        submitForm(false);
       }}
     >
       <h2 className="text-2xl font-bold text-center mb-6">Create Product</h2>
@@ -316,9 +272,7 @@ export const ProductForm: React.FC = () => {
         {[1, 2, 3, 4, 5].map((s) => (
           <div
             key={s}
-            className={`flex-1 text-center py-2 border-b-2 ${
-              step === s ? 'border-blue-600 font-semibold' : 'border-gray-300'
-            }`}
+            className={`flex-1 text-center py-2 border-b-2 ${step === s ? 'border-blue-600 font-semibold' : 'border-gray-300'}`}
           >
             Step {s}
           </div>
@@ -339,12 +293,10 @@ export const ProductForm: React.FC = () => {
                 required
                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {getErr("name") && <p className="text-sm text-red-600 mt-1">{getErr("name")}</p>}
+              {getErr('name') && <p className="text-sm text-red-600 mt-1">{getErr('name')}</p>}
             </div>
             <div>
-              <label className="block font-medium mb-1">
-                Short Description
-              </label>
+              <label className="block font-medium mb-1">Short Description</label>
               <input
                 name="short_description"
                 value={form.short_description}
@@ -372,7 +324,7 @@ export const ProductForm: React.FC = () => {
                 required
                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {getErr("base_price") && <p className="text-sm text-red-600 mt-1">{getErr("base_price")}</p>}
+              {getErr('base_price') && <p className="text-sm text-red-600 mt-1">{getErr('base_price')}</p>}
             </div>
             <div>
               <label className="block font-medium mb-1">Brand</label>
@@ -395,7 +347,7 @@ export const ProductForm: React.FC = () => {
                   </option>
                 ))}
               </select>
-              {getErr("brandId") && <p className="text-sm text-red-600 mt-1">{getErr("brandId")}</p>}
+              {getErr('brandId') && <p className="text-sm text-red-600 mt-1">{getErr('brandId')}</p>}
             </div>
             <div className="md:col-span-2">
               <label className="block font-medium mb-1">Categories</label>
@@ -412,19 +364,19 @@ export const ProductForm: React.FC = () => {
                   </label>
                 ))}
               </div>
-              {getErr("categories") && <p className="text-sm text-red-600 mt-1">{getErr("categories")}</p>}
+              {getErr('categories') && <p className="text-sm text-red-600 mt-1">{getErr('categories')}</p>}
             </div>
           </div>
         </section>
       )}
 
-      {/* Step 2: Media (giữ nguyên UI nâng cao) */}
+      {/* Step 2: Media */}
       {step === 2 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Media</h3>
 
-          <div className="space-y-4">
-            {/* ẢNH LỚN (cover)  */}
+          {/* Ô to (cover) – click chọn N ảnh; ảnh đầu sẽ làm/thay cover */}
+          <div className="space-y-2">
             <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 h-80 w-80">
               {form.media[0]?.url ? (
                 <>
@@ -432,18 +384,15 @@ export const ProductForm: React.FC = () => {
                     src={form.media[0].url}
                     alt="cover"
                     className="w-full h-full object-cover cursor-pointer"
-                    onClick={openCoverPicker}
-                    title="Click để đổi ảnh"
+                    onClick={openMultiPickerReplaceCover}
+                    title="Chọn nhiều ảnh; ảnh đầu sẽ thay cover, các ảnh còn lại sẽ thêm vào"
                   />
-                  {getErr("media.0.url") && <p className="text-sm text-red-600 mt-2">{getErr("media.0.url")}</p>}
-                  <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">
-                    Cover
-                  </span>
+                  <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Cover</span>
                   <button
                     type="button"
                     onClick={() => removeMediaAt(0)}
                     className="absolute right-2 top-2 bg-white/90 px-2 py-1 rounded shadow text-sm"
-                    title="Remove"
+                    title="Remove cover"
                   >
                     ×
                   </button>
@@ -451,103 +400,86 @@ export const ProductForm: React.FC = () => {
               ) : (
                 <button
                   type="button"
-                  onClick={openCoverPicker}
+                  onClick={openMultiPickerReplaceCover}
                   className="w-full h-full flex flex-col items-center justify-center text-gray-600 hover:text-black"
+                  title="Chọn nhiều ảnh; ảnh đầu sẽ làm cover"
                 >
                   <div className="text-5xl leading-none">+</div>
                   <div className="text-sm mt-1">Thêm ảnh đại diện</div>
                 </button>
               )}
-
-              <input
-                ref={coverFileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onCoverPicked}
-              />
             </div>
-            {getErr("media.0.url") && (
-              <p className="text-sm text-red-600">{getErr("media.0.url")}</p>
-            )}
 
-            {/* HÀNG THUMBNAIL BÊN DƯỚI (cuộn ngang) */}
-            <div className="flex items-center gap-3 overflow-x-auto pb-1">
-              {form.media.slice(1).map((m, idx) => {
-                const i = idx + 1;
-                return (
-                  <div
-                    key={i}
-                    className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
-                  >
-                    {m.url ? (
-                      <>
-                        <img
-                          src={m.url}
-                          alt={`media-${i}`}
-                          className="w-full h-full object-cover cursor-pointer"
-                          onClick={() => openSmallPicker(i)}
-                          title="Click để đổi ảnh"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeMediaAt(i)}
-                          className="absolute right-1 top-1 bg-white/90 px-1.5 leading-none rounded shadow"
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </>
-                    ) : (
+            {getErr('media.0.url') && <p className="text-sm text-red-600">{getErr('media.0.url')}</p>}
+          </div>
+
+          {/* Thumbnails (click để đặt làm cover) + ô “+” để append ảnh */}
+          <div className="flex items-center gap-3 overflow-x-auto pb-1">
+            {form.media.slice(1).map((m, idx) => {
+              const i = idx + 1;
+              return (
+                <div
+                  key={i}
+                  className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
+                  title="Click để đặt làm ảnh đại diện"
+                >
+                  {m.url && (
+                    <>
+                      <img
+                        src={m.url}
+                        alt={`media-${i}`}
+                        className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => setAsCover(i)}
+                      />
                       <button
                         type="button"
-                        onClick={() => openSmallPicker(i)}
-                        className="w-full h-full flex flex-col items-center justify-center text-gray-600 hover:text-black"
-                        title="Chọn ảnh"
+                        onClick={() => removeMediaAt(i)}
+                        className="absolute right-1 top-1 bg-white/90 p-1 rounded shadow"
+                        title="Xoá ảnh"
                       >
-                        <span className="text-2xl leading-none">+</span>
-                        <span className="text-[11px] mt-0.5">Thêm ảnh</span>
+                        <Trash2 className="h-4 w-4 text-red-600" />
                       </button>
-                    )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
 
-                    <input
-                      ref={(el) => {
-                        smallFileRefs.current[i] = el;
-                      }}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => onSmallPicked(e, i)}
-                    />
-                  </div>
-                );
-              })}
+            {/* Ô '+' để thêm nhiều ảnh (append) */}
+            <button
+              type="button"
+              onClick={openMultiPickerAppend}
+              className="w-20 h-20 shrink-0 rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-400
+                         bg-white flex items-center justify-center text-gray-500 hover:text-black"
+              title="Thêm ảnh"
+            >
+              <span className="text-2xl leading-none">+</span>
+            </button>
 
-              {/* Ô thêm slot ở cuối hàng */}
-              <button
-                type="button"
-                onClick={addSmallSlot}
-                className="w-20 h-20 shrink-0 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-600 hover:text-black"
-                title="Thêm khung ảnh"
-              >
-                <span className="text-2xl leading-none">+</span>
-              </button>
-            </div>
+            {/* input ẩn duy nhất phục vụ cả 2 luồng */}
+            <input
+              ref={multiFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={onMultiPicked}
+            />
           </div>
 
           <p className="text-xs text-gray-500">
-            * Ảnh lớn phía trên là ảnh đại diện. Hàng bên dưới là thumbnail có thể cuộn ngang.
+            * Click ô to để chọn nhiều ảnh. Ảnh đầu làm/thay cover; ảnh còn lại sẽ thêm vào. Ô “+” chỉ thêm ảnh (không thay cover).
           </p>
         </section>
       )}
 
-      {/* Step 3: Variants & Inventory (giữ nguyên) */}
+      {/* Step 3: Variants & Inventory */}
       {step === 3 && (
         <section className="space-y-4">
           <h3 className="font-semibold text-lg">Variants &amp; Inventory</h3>
 
-          {getErr("variants") && <p className="text-sm text-red-600">{getErr("variants")}</p>}
-          {getErr("inventory") && <p className="text-sm text-red-600">{getErr("inventory")}</p>}
+          {getErr('variants') && <p className="text-sm text-red-600">{getErr('variants')}</p>}
+          {getErr('inventory') && <p className="text-sm text-red-600">{getErr('inventory')}</p>}
 
           {/* Variants */}
           {form.variants.map((v, i) => {
@@ -569,9 +501,7 @@ export const ProductForm: React.FC = () => {
                     }}
                     className={`px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.sku`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
                   />
-                  {getErr(`variants.${i}.sku`) && (
-                    <p className="text-xs text-red-600">{getErr(`variants.${i}.sku`)}</p>
-                  )}
+                  {getErr(`variants.${i}.sku`) && <p className="text-xs text-red-600">{getErr(`variants.${i}.sku`)}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -586,9 +516,7 @@ export const ProductForm: React.FC = () => {
                     }}
                     className={`px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.variant_name`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
                   />
-                  {getErr(`variants.${i}.variant_name`) && (
-                    <p className="text-xs text-red-600">{getErr(`variants.${i}.variant_name`)}</p>
-                  )}
+                  {getErr(`variants.${i}.variant_name`) && <p className="text-xs text-red-600">{getErr(`variants.${i}.variant_name`)}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -604,9 +532,7 @@ export const ProductForm: React.FC = () => {
                     }}
                     className={`px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.price`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
                   />
-                  {getErr(`variants.${i}.price`) && (
-                    <p className="text-xs text-red-600">{getErr(`variants.${i}.price`)}</p>
-                  )}
+                  {getErr(`variants.${i}.price`) && <p className="text-xs text-red-600">{getErr(`variants.${i}.price`)}</p>}
                 </div>
 
                 <div>
@@ -653,11 +579,7 @@ export const ProductForm: React.FC = () => {
             );
           })}
 
-          <button
-            type="button"
-            onClick={addVariant}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
+          <button type="button" onClick={addVariant} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
             Add Variant
           </button>
 
@@ -676,9 +598,7 @@ export const ProductForm: React.FC = () => {
                   }}
                   className={`px-3 py-2 border rounded-md w-full ${getErr(`inventory.${i}.variant_sku`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
                 />
-                {getErr(`inventory.${i}.variant_sku`) && (
-                  <p className="text-xs text-red-600">{getErr(`inventory.${i}.variant_sku`)}</p>
-                )}
+                {getErr(`inventory.${i}.variant_sku`) && <p className="text-xs text-red-600">{getErr(`inventory.${i}.variant_sku`)}</p>}
               </div>
 
               <div className="space-y-1">
@@ -693,9 +613,7 @@ export const ProductForm: React.FC = () => {
                   }}
                   className={`px-3 py-2 border rounded-md w-full ${getErr(`inventory.${i}.location`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
                 />
-                {getErr(`inventory.${i}.location`) && (
-                  <p className="text-xs text-red-600">{getErr(`inventory.${i}.location`)}</p>
-                )}
+                {getErr(`inventory.${i}.location`) && <p className="text-xs text-red-600">{getErr(`inventory.${i}.location`)}</p>}
               </div>
 
               <div className="space-y-1">
@@ -727,34 +645,25 @@ export const ProductForm: React.FC = () => {
                     <Trash2 size={20} />
                   </button>
                 </div>
-                {getErr(`inventory.${i}.quantity`) && (
-                  <p className="text-xs text-red-600">{getErr(`inventory.${i}.quantity`)}</p>
-                )}
+                {getErr(`inventory.${i}.quantity`) && <p className="text-xs text-red-600">{getErr(`inventory.${i}.quantity`)}</p>}
               </div>
             </div>
           ))}
 
-          <button
-            type="button"
-            onClick={addInventory}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
+          <button type="button" onClick={addInventory} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
             Add Inventory
           </button>
         </section>
       )}
 
+      {/* Step 4: Pricing Rules */}
       {step === 4 && (
         <section className="space-y-5 md:space-y-6 max-w-[1200px] mx-auto">
           <h3 className="font-semibold text-lg">Pricing Rules</h3>
 
           {(form.pricing_rules || []).map((pr, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-gray-200 bg-white p-4 md:p-5"
-            >
+            <div key={i} className="rounded-xl border border-gray-200 bg-white p-4 md:p-5">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
-                {/* Type */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Type</label>
                   <input
@@ -769,7 +678,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Min Qty */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Min Qty</label>
                   <input
@@ -785,7 +693,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Price */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Price</label>
                   <input
@@ -801,7 +708,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Cycle */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Cycle</label>
                   <input
@@ -816,7 +722,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Starts */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Starts</label>
                   <input
@@ -831,7 +736,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Ends */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Ends</label>
                   <input
@@ -846,7 +750,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Variant SKU */}
                 <div className="md:col-span-3 min-w-0">
                   <label className="block text-sm font-medium mb-1">Variant SKU</label>
                   <input
@@ -861,7 +764,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Rule Name */}
                 <div className="md:col-span-4 min-w-0">
                   <label className="block text-sm font-medium mb-1">Rule Name</label>
                   <input
@@ -876,7 +778,6 @@ export const ProductForm: React.FC = () => {
                   />
                 </div>
 
-                {/* Status */}
                 <div className="md:col-span-2 min-w-0">
                   <label className="block text-sm font-medium mb-1">Status</label>
                   <select
@@ -913,19 +814,15 @@ export const ProductForm: React.FC = () => {
             </div>
           ))}
 
-          <button
-            type="button"
-            onClick={addPricingRule}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
+          <button type="button" onClick={addPricingRule} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
             Add Pricing Rule
           </button>
         </section>
       )}
 
-      {/* Step 5: Review & Confirm (giữ nguyên) */}
+      {/* Step 5: Review & Confirm */}
       {step === 5 && (
-        <section className="space-y-6">
+        <section className="space-y-6 max-w-[1200px] mx-auto">
           <h3 className="font-semibold text-lg">Review &amp; Confirm</h3>
 
           <div className="flex flex-wrap gap-2 text-sm">
@@ -939,38 +836,30 @@ export const ProductForm: React.FC = () => {
             <div className="space-y-3">
               <h4 className="font-semibold">Product Info</h4>
               <div className="text-sm space-y-1">
-                <div><span className="font-medium">Name:</span> {form.name || "—"}</div>
+                <div><span className="font-medium">Name:</span> {form.name || '—'}</div>
                 <div><span className="font-medium">Base price:</span> {Number(form.base_price) || 0}</div>
-                <div><span className="font-medium">Brand:</span> {(brands.find((b) => b.id === form.brandId) || {}).name || "—"}</div>
-                <div><span className="font-medium">Categories:</span> {(categories.filter((c) => (form.categories || []).includes(c.id)).map((c) => c.name).join(", ")) || "—"}</div>
+                <div><span className="font-medium">Brand:</span> {(brands.find((b) => b.id === form.brandId) || {}).name || '—'}</div>
+                <div><span className="font-medium">Categories:</span> {(categories.filter((c) => (form.categories || []).includes(c.id)).map((c) => c.name).join(', ')) || '—'}</div>
               </div>
               <div>
                 <h5 className="font-semibold">Short Description</h5>
-                <p className="text-sm whitespace-pre-wrap text-gray-800">{form.short_description || "—"}</p>
+                <p className="text-sm whitespace-pre-wrap text-gray-800">{form.short_description || '—'}</p>
               </div>
               <div>
                 <h5 className="font-semibold">Description</h5>
-                <p className="text-sm whitespace-pre-wrap text-gray-800">{form.description || "—"}</p>
+                <p className="text-sm whitespace-pre-wrap text-gray-800">{form.description || '—'}</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <h4 className="font-semibold">Media</h4>
-
               <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 h-64 w-64">
                 {form.media?.[0]?.url ? (
-                  <img
-                    src={form.media[0].url}
-                    alt="cover"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={form.media[0].url} alt="cover" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                    No cover
-                  </div>
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No cover</div>
                 )}
               </div>
-
               <div className="flex items-center gap-2 overflow-x-auto">
                 {(form.media || [])
                   .slice(1)
@@ -983,7 +872,6 @@ export const ProductForm: React.FC = () => {
                       className="w-16 h-16 shrink-0 rounded-xl border border-gray-200 object-cover"
                     />
                   ))}
-
                 {!((form.media || []).slice(1).filter((m) => m?.url).length) && (
                   <span className="text-sm text-gray-400">No extra images</span>
                 )}
@@ -1012,11 +900,11 @@ export const ProductForm: React.FC = () => {
                         .reduce((s, inv) => s + Number(inv.quantity || 0), 0);
                       return (
                         <tr key={i}>
-                          <td className="p-2 border">{v.sku || "—"}</td>
-                          <td className="p-2 border">{v.variant_name || "—"}</td>
+                          <td className="p-2 border">{v.sku || '—'}</td>
+                          <td className="p-2 border">{v.variant_name || '—'}</td>
                           <td className="p-2 border">{Number(v.price) || 0}</td>
                           <td className="p-2 border">{stock}</td>
-                          <td className="p-2 border">{v.barcode || "—"}</td>
+                          <td className="p-2 border">{v.barcode || '—'}</td>
                         </tr>
                       );
                     })}
@@ -1043,8 +931,8 @@ export const ProductForm: React.FC = () => {
                   <tbody>
                     {(form.inventory || []).map((inv, i) => (
                       <tr key={i}>
-                        <td className="p-2 border">{inv.variant_sku || "—"}</td>
-                        <td className="p-2 border">{inv.location || "—"}</td>
+                        <td className="p-2 border">{inv.variant_sku || '—'}</td>
+                        <td className="p-2 border">{inv.location || '—'}</td>
                         <td className="p-2 border">{Number(inv.quantity) || 0}</td>
                       </tr>
                     ))}
@@ -1069,17 +957,31 @@ export const ProductForm: React.FC = () => {
                       <th className="p-2 border">Cycle</th>
                       <th className="p-2 border">Starts</th>
                       <th className="p-2 border">Ends</th>
+                      <th className="p-2 border">Variant SKU</th>
+                      <th className="p-2 border">Rule Name</th>
+                      <th className="p-2 border">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(form.pricing_rules || []).map((pr, i) => (
+                    {(form.pricing_rules || []).map((r, i) => (
                       <tr key={i}>
-                        <td className="p-2 border">{pr.type || "—"}</td>
-                        <td className="p-2 border">{Number(pr.min_quantity) || 0}</td>
-                        <td className="p-2 border">{Number(pr.price) || 0}</td>
-                        <td className="p-2 border">{pr.cycle || "—"}</td>
-                        <td className="p-2 border">{pr.starts_at ? String(pr.starts_at).split('T')[0] : '—'}</td>
-                        <td className="p-2 border">{pr.ends_at ? String(pr.ends_at).split('T')[0] : '—'}</td>
+                        <td className="p-2 border">{r.type || '—'}</td>
+                        <td className="p-2 border">{Number(r.min_quantity) || 0}</td>
+                        <td className="p-2 border">{Number(r.price) || 0}</td>
+                        <td className="p-2 border">{r.cycle || '—'}</td>
+                        <td className="p-2 border">{displayDate(r.starts_at)}</td>
+                        <td className="p-2 border">{displayDate(r.ends_at)}</td>
+                        <td className="p-2 border">{r.variant_sku || '—'}</td>
+                        <td className="p-2 border">{r.name || '—'}</td>
+                        <td className="p-2 border">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              (r.status || 'active') === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {r.status || 'active'}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1099,38 +1001,21 @@ export const ProductForm: React.FC = () => {
       {/* Navigation */}
       <div className="flex justify-between mt-6 gap-2">
         {step > 1 && (
-          <button
-            type="button"
-            onClick={prevStep}
-            className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
-          >
+          <button type="button" onClick={prevStep} className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
             Previous
           </button>
         )}
         {step < 5 && (
-          <button
-            type="button"
-            onClick={nextStep}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
+          <button type="button" onClick={nextStep} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
             Next
           </button>
         )}
         {step === 5 && (
           <div className="flex gap-2">
-            <button
-              type="submit"
-              onClick={() => submitForm(false)}
-              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-            >
+            <button type="submit" onClick={() => submitForm(false)} className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
               Publish
             </button>
-
-            <button
-              type="button"
-              onClick={() => submitForm(true)} // Save Draft
-              className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
-            >
+            <button type="button" onClick={() => submitForm(true)} className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
               Save Draft
             </button>
           </div>

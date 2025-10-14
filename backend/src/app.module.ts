@@ -55,6 +55,7 @@ import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registr
 import { InventoryTransactionModule } from './modules/inventory-transactions/inventory-transactions.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -104,9 +105,9 @@ import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
-        ssl: { rejectUnauthorized: false },
+        
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
         logging: true,
       }),
     }),
@@ -160,6 +161,7 @@ import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
     AffiliateRegistrationPlatformModule,
     InventoryTransactionModule,
     GroupOrdersModule,
+    AdminModule,
   ],
   providers: [],
 })

@@ -53,6 +53,9 @@ import ReviewForm from './test';
 import GroupOrders from './components/group_orders/GroupOrders';
 import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
 import GroupJoin from './components/group_orders/components/GroupJoin';
+import ShopXuPage from './components/account/ShopXuPage';
+import FlashSalePage from './page/FlashSalePage';
+
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -101,6 +104,8 @@ const App: React.FC = () => {
           <Route path="/seller-registration" element={<SellerRegistration />} />
           {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
           <Route path="/myStores" element={<SellerMainLayout />} />
+          <Route path="/flash-sale" element={<FlashSalePage />} />
+
 
           {/* Account Routes */}
           <Route path="/account" element={<AccountLayout />}>
@@ -112,6 +117,7 @@ const App: React.FC = () => {
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />
             <Route path="addresses/create" element={<AddressCreatePage />} />
+            <Route path="xu" element={<ShopXuPage />} />
             <Route path="subscription" element={<MySubscriptionsPage />} />
           </Route>
 
