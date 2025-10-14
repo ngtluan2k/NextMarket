@@ -33,7 +33,6 @@ import AffiliateLinkResolver from './page/AffiliateLinkResolver';
 import { ProductForm } from './components/AddProduct';
 import StoreManagerDetail from './components/admin/StoreManagerDetail';
 import AddressBook from './components/account/AddressBook';
-import AddressCreatePage from './page/account/AddressCreatePage';
 import StoreLayout from './page/StoreLayout';
 import StoreAllProductsTab from './components/store/storetab/StoreAllProductsTab';
 import StoreHomeTab from './components/store/storetab/StoreHomeTab';
@@ -114,7 +113,7 @@ const App: React.FC = () => {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="returns" element={<ReturnsPage />} />
             <Route path="addresses" element={<AddressBook />} />
-            <Route path="addresses/create" element={<AddressCreatePage />} />
+            {/* <Route path="addresses/create" element={<AddressCreatePage />} /> */}
             <Route path="subscription" element={<MySubscriptionsPage />} />
           </Route>
 

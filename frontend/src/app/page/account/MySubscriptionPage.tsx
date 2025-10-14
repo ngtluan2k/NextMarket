@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/api';
 import dayjs from 'dayjs';
 import { InputNumber } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -37,6 +38,7 @@ export function MySubscriptionsPage() {
     useState<Subscription | null>(null);
   const [note, setNote] = useState('');
   const [useQuantity, setUseQuantity] = useState(1);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDefaultAddress = async () => {
@@ -144,9 +146,19 @@ export function MySubscriptionsPage() {
               <Text strong style={{ fontSize: 16 }}>
                 {sub.name}
               </Text>
-              <p>
+              <p
+                onClick={() =>
+                  sub.product?.slug &&
+                  navigate(`/products/slug/${sub.product.slug}`)
+                }
+                style={{
+                  cursor: sub.product?.slug ? 'pointer' : 'default',
+                  color: sub.product?.slug ? '#1677ff' : 'inherit',
+                }}
+              >
                 {sub.product?.name || '—'} ({sub.variant?.variant_name || '—'})
               </p>
+
               {sub.product?.store && (
                 <Text type="secondary">
                   {sub.product.store.logo_url && (
@@ -154,8 +166,8 @@ export function MySubscriptionsPage() {
                       src={getImageUrl(sub.product.store.logo_url)}
                       alt={sub.product.store.name}
                       style={{
-                        width: 20,
-                        height: 20,
+                        width: 50,
+                        height: 50,
                         borderRadius: '50%',
                         marginRight: 4,
                       }}

@@ -15,6 +15,7 @@ export interface Product {
   updated_at: string;
   store_id?: number;
   brand_id?: number;
+  avg_rating?: number;
   store?: {
     id: number;
     uuid: string;

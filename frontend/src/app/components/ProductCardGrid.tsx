@@ -41,7 +41,7 @@ export default function ProductCardGrid({ products }: Props) {
       name: p.name,
       image:
         primaryMedia?.url ||
-        'https://via.placeholder.com/220x220?text=No+Image',
+        '',
       price: mainVariant?.price || p.base_price || '0',
       brandName: p.brand?.name,
       categories: categoryIds,
@@ -62,7 +62,7 @@ export default function ProductCardGrid({ products }: Props) {
             className="w-full aspect-square object-cover rounded-lg"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src =
-                'https://via.placeholder.com/220x220?text=No+Image';
+                '';
             }}
           />
           <h3 className="mt-2 text-sm font-bold line-clamp-2">{p.name}</h3>

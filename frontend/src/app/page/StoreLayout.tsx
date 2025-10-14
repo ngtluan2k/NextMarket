@@ -66,7 +66,6 @@ export default function StoreLayout() {
           <p>Đang tải cửa hàng...</p>
         ) : store ? (
           <>
-            <p>{store.description}</p>
             <Outlet />
           </>
         ) : (

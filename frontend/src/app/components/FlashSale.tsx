@@ -72,7 +72,7 @@ export default function ProductFlashSale({
                     /^\/+/,
                     ''
                   )}` // đường dẫn local
-              : 'https://via.placeholder.com/220x220?text=No+Image',
+              : '',
 
             price: Number(mainVariant?.price || p.base_price || 0),
             originalPrice: p.originalPrice

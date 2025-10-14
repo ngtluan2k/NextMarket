@@ -373,27 +373,29 @@ export class OrdersService {
   }
 
   async findOne(id: number): Promise<Order> {
-    const order = await this.ordersRepository.findOne({
-      where: { id },
-      relations: [
-        'user',
-        'store',
-        'userAddress',
-        'orderItem',
-        'orderItem.product',
-        'orderItem.product.media',
-        'orderItem.variant',
-        'voucherUsages',
-        'voucherUsages.voucher',
-        'orderItem.product.reviews',
-      ],
-    });
+  const order = await this.ordersRepository
+    .createQueryBuilder('order')
+    .leftJoinAndSelect('order.user', 'user')
+    .leftJoinAndSelect('order.store', 'store')
+    .leftJoinAndSelect('order.userAddress', 'userAddress')
+    .leftJoinAndSelect('order.orderItem', 'orderItem')
+    .leftJoinAndSelect('orderItem.product', 'product')
+    .leftJoinAndSelect('product.media', 'media')
+    .leftJoinAndSelect('orderItem.variant', 'variant')
+    .leftJoinAndSelect('variant.pricingRules', 'pricingRules') // ✅ dùng QueryBuilder mới join được
+    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+    .leftJoinAndSelect('product.reviews', 'reviews')
+    .leftJoinAndSelect('order.payment', 'payment')
+    .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+    .where('order.id = :id', { id })
+    .getOne();
 
-    if (!order) {
-      throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
-    }
-    return order;
+  if (!order) {
+    throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
   }
+  return order;
+}
 
   async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
     const order = await this.findOne(id);

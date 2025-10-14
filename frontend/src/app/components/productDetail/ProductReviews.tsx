@@ -103,7 +103,7 @@ export default function ProductReviews({
 
   const getImageUrl = (url?: string) =>
     !url
-      ? 'https://via.placeholder.com/220x220?text=No+Image'
+      ? ''
       : url.startsWith('http')
       ? url
       : `http://localhost:3000/${url.replace(/^\/+/, '')}`;

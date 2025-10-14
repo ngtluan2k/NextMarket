@@ -99,7 +99,7 @@ import {AdminModule} from './modules/admin/admin.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: config.get('DB_TYPE'),
+        type: 'mysql',
         host: config.get('DB_HOST'),
         port: +config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),

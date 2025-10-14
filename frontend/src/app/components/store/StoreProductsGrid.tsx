@@ -15,7 +15,7 @@ export type StoreProduct = {
   imageUrl: string;
   price: number;
   originalPrice?: number;
-  rating?: number;
+  avg_rating?: number;
   sold?: number;
   badges?: string[];
 };
@@ -207,8 +207,8 @@ export default function StoreProductsGrid({
                     {p.name}
                   </div>
                   <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                    {typeof p.rating === 'number' && (
-                      <span>⭐ {p.rating.toFixed(1)}</span>
+                    {typeof p.avg_rating === 'number' && (
+                      <span>⭐ {p.avg_rating.toFixed(1)}</span>
                     )}
                     {typeof p.sold === 'number' && (
                       <span>· Đã bán {p.sold.toLocaleString('vi-VN')}</span>
@@ -287,7 +287,7 @@ async function defaultFetchProducts({
       ? primaryMedia.url.startsWith('http')
         ? primaryMedia.url
         : `http://localhost:3000/${primaryMedia.url.replace(/^\/+/, '')}`
-      : 'https://via.placeholder.com/220x220?text=No+Image';
+      : '';
 
     return {
       id: p.id,
@@ -296,7 +296,7 @@ async function defaultFetchProducts({
       imageUrl,
       price: Number(p.base_price) || 0,
       originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-      rating: p.rating ?? 0,
+      avg_rating: Number(p.avg_rating ?? p.rating ?? 0),
       sold: p.sold ?? 0,
       badges: p.badges ?? [],
     };

@@ -293,7 +293,7 @@ export default function Info({
       {/* Pricing Rules */}
       {pricingRules.length > 0 && (
         <div className="mt-2 text-sm text-slate-500">
-          <span className="font-medium">Giá sỉ:</span>
+          <span className="font-medium">Dịch vụ:</span>
           <div className="mt-1 flex gap-2 flex-wrap">
             {pricingRules
               .filter(

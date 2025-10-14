@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Req, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Get,
+  Param,
+} from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard'; // hoặc đường dẫn guard JWT của bạn
 
@@ -28,4 +36,11 @@ export class SubscriptionController {
     const userId = req.user.sub;
     return this.subscriptionService.getUserSubscriptions(userId);
   }
+
+@UseGuards(JwtAuthGuard)
+@Get('/store/:storeId')
+async getStoreSubscriptionsById(@Param('storeId') storeId: number) {
+  return this.subscriptionService.getStoreSubscriptionsById(storeId);
+}
+
 }
