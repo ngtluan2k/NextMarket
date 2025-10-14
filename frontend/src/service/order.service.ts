@@ -1,6 +1,7 @@
 import { api, API_ENDPOINTS } from '../app/api/api';
 import axios from 'axios';
-const API_URL = 'http://localhost:3000/orders'; // đổi thành baseURL của backend
+
+const API_URL = 'http://localhost:3000/orders';
 
 export const orderService = {
   // ========== USER ENDPOINTS ==========
@@ -65,7 +66,6 @@ export const orderService = {
     );
     return res.data;
   },
-
   async changeStatus(
     orderId: number,
     status: string,
@@ -91,7 +91,7 @@ export const orderService = {
       throw error;
     }
   },
-
+  
   changeStatusByUser: async (
     userId: number,
     orderId: number,

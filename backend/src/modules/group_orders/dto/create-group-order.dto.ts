@@ -1,15 +1,5 @@
-import { join } from 'path';
-// backend/src/modules/group_orders/dto/create-group-order.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsDateString,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Max,
-  MaxLength,
-} from 'class-validator';
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, IsNumber,Min } from 'class-validator';
 
 export class CreateGroupOrderDto {
   @ApiProperty({ description: 'tên nhóm' })
@@ -17,6 +7,12 @@ export class CreateGroupOrderDto {
   @IsString()
   @MaxLength(250)
   name!: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discount_percent?: number;
 
   @ApiProperty({ description: 'ID cửa hàng tạo group order' })
   @IsNotEmpty()

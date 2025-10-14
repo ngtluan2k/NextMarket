@@ -177,11 +177,21 @@ export default function StoreProductsGrid({
             {data.items.map((p) => (
               <div
                 key={p.id}
-                onClick={() =>
-                  navigate(`/products/slug/${p.slug}`, {
-                    state: { product: p },
-                  })
-                }
+                onClick={() => {
+                  const params = new URLSearchParams(window.location.search);
+                  const gid = params.get('groupId');
+
+                  const to = gid
+                    ? `/products/slug/${p.slug}?groupId=${gid}`
+                    : `/products/slug/${p.slug}`;
+
+                  navigate(to, {
+                    state: {
+                      product: p,
+                      groupId: gid ? Number(gid) : null,
+                    },
+                  });
+                }}
                 className="cursor-pointer group overflow-hidden rounded-lg border border-slate-200 bg-white hover:-translate-y-[1px] hover:shadow-md transition"
               >
                 <div className="relative">

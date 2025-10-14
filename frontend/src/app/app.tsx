@@ -174,7 +174,7 @@ const App: React.FC = () => {
             <Route path="/affiliate/dashboard/support" element={<Support />} />
           </Route>
           <Route path="/product/:id" element={<AffiliateLinkResolver />} />
-          <Route path="/group-orders/:id" element={<GroupOrders />} />
+          <Route path="/group-orders/store/:storeId/create" element={<GroupOrders />} />
           <Route
             path="/group-orders/:id/detail"
             element={<GroupOrderDetail />}

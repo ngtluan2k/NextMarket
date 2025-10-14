@@ -192,12 +192,12 @@ export const CartHeader: React.FC<Props> = ({
               const mediaArray = Array.isArray(item.product?.media)
                 ? item.product.media
                 : item.product?.media
-                ? [item.product.media]
-                : [];
+                  ? [item.product.media]
+                  : [];
               const imageUrl = toImageUrl(
                 mediaArray.find((m: any) => m?.is_primary)?.url ||
-                  mediaArray[0]?.url ||
-                  item.product?.url
+                mediaArray[0]?.url ||
+                item.product?.url
               );
 
               const checked = selectedIds.includes(item.id);
@@ -209,7 +209,8 @@ export const CartHeader: React.FC<Props> = ({
               return (
                 <div
                   key={item.id}
-                  className="items-center border-b py-4 w-full"
+                  className={`items-center border-b py-4 w-full ${item.is_group ? 'bg-blue-50 border-blue-200' : ''
+                    }`} // thêm style cho group items
                   style={{ display: 'grid', gridTemplateColumns: GRID }}
                 >
                   {/* Checkbox từng sản phẩm */}
@@ -230,9 +231,18 @@ export const CartHeader: React.FC<Props> = ({
                       preview={false}
                     />
                     <div>
-                      <Text className="block font-medium">
-                        {item.product?.name}
-                      </Text>
+                      <div className="flex items-center gap-2">
+                        <Text className="block font-medium">
+                          {item.product?.name}
+                        </Text>
+                        {item.is_group && (
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            🛒 Mua chung
+                          </span>
+                        )}
+                      </div>
+
+
                       {item.variant && (
                         <Text type="secondary" className="block text-xs">
                           Variant: {item.variant.variant_name}
@@ -319,7 +329,8 @@ export const CartHeader: React.FC<Props> = ({
                         handleRemoveFromCart(
                           item.product.id,
                           item.product.name,
-                          item.variant?.id
+                          item.variant?.id,
+                          item.type
                         )
                       }
                     />

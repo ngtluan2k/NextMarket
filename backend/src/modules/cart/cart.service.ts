@@ -55,7 +55,8 @@ export class CartService {
     productId: number,
     quantity = 1,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription',
+    isGroup = false
   ): Promise<CartItem> {
     const product = await this.productRepository.findOne({
       where: { id: productId },
@@ -88,6 +89,7 @@ export class CartService {
         product_id: productId,
         variant_id: variantId ?? undefined,
         type,
+        is_group: isGroup,
       },
     });
 
@@ -110,6 +112,7 @@ export class CartService {
         quantity,
         price: variant ? variant.price : product.base_price,
         type,
+        is_group: isGroup,
         added_at: new Date(),
       });
     }
@@ -155,6 +158,7 @@ export class CartService {
         quantity: item.quantity,
         price: calculatedPrice,
         type: item.type ?? 'subscription',
+        is_group: item.is_group,
         added_at: item.added_at,
         product: {
           id: item.product.id,
@@ -217,7 +221,8 @@ export class CartService {
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription',
+    isGroup?: boolean
   ): Promise<CartItem> {
     console.log('updateQuantity body:', {
       productId,

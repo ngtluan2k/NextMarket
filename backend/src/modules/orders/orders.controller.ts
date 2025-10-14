@@ -48,17 +48,17 @@ export class OrdersController {
     return this.ordersService.remove(id);
   }
 
-  @Patch(':id/status/:status')
-  @UseGuards(JwtAuthGuard)
-  changeStatus(
-    @Param('id', ParseIntPipe) id: number,
-    @Param('status') status: string,
-    @Body('note') note: string,
-    @Req() req: any
-  ) {
-    const user = { ...req.user, id: req.user.sub };
-    return this.ordersService.changeStatus(id, status, user, note);
-  }
+@Patch(':id/status/:status')
+@UseGuards(JwtAuthGuard)
+changeStatus(
+  @Param('id', ParseIntPipe) id: number,
+  @Param('status') status: string,
+  @Body('note') note: string,
+  @Req() req: any
+) {
+  const user = { ...req.user, id: req.user.sub };
+  return this.ordersService.changeStatus(id, status, user, note);
+}
 
   @Get('user/:userId')
   findByUser(@Param('userId', ParseIntPipe) userId: number) {

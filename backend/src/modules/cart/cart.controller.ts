@@ -24,13 +24,7 @@ export class CartController {
   @Post('add')
   async addToCart(
     @Request() req: AuthRequest,
-    @Body()
-    body: {
-      productId: number;
-      quantity?: number;
-      variantId?: number;
-      type?: 'bulk' | 'subscription';
-    }
+    @Body() body: { productId: number; quantity?: number; variantId?: number, type?: 'bulk' | 'subscription';isGroup?: boolean; }
   ) {
     console.log(
       '{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}userId for add cart : ' +
@@ -42,7 +36,8 @@ export class CartController {
       body.productId,
       body.quantity,
       body.variantId,
-      body.type
+      body.type ,
+      body.isGroup
     );
   }
 
@@ -54,20 +49,15 @@ export class CartController {
   @Put('update')
   async updateQuantity(
     @Request() req: AuthRequest,
-    @Body()
-    body: {
-      productId: number;
-      quantity: number;
-      variantId?: number;
-      type?: 'bulk' | 'subscription';
-    }
+    @Body() body: { productId: number; quantity: number; variantId?: number; type?: 'bulk' | 'subscription';  isGroup?: boolean; }
   ) {
     return this.cartService.updateQuantity(
       req.user.userId,
       body.productId,
       body.quantity,
       body.variantId,
-      body.type
+      body.type,
+      body.isGroup
     );
   }
 

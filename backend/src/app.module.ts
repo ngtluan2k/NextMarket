@@ -55,10 +55,13 @@ import { AffiliateRegistrationPlatformModule } from './modules/affiliate-registr
 import { InventoryTransactionModule } from './modules/inventory-transactions/inventory-transactions.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
-import {AdminModule} from './modules/admin/admin.module';
+import { AdminModule } from './modules/admin/admin.module';
+
+
 
 @Module({
   imports: [
+
     ScheduleModule.forRoot(),
     // Đọc file .env
     ConfigModule.forRoot({
@@ -74,27 +77,7 @@ import {AdminModule} from './modules/admin/admin.module';
       serveRoot: '/uploads',
     }),
 
-    //     TypeOrmModule.forRootAsync({
-    //       imports: [ConfigModule],
-    //       inject: [ConfigService],
-    //       useFactory: (config: ConfigService) => {
-    //         console.log('DB_HOST:', config.get('DB_HOST'));
-    //         console.log('DB_NAME:', config.get('DB_USERNAME'));
-    //         console.log('DB_PASSWORD:', config.get('DB_PASSWORD'));
-    //
-    //         return {
-    //           type: config.get<string>('DB_TYPE'),
-    //           host: config.get<string>('DB_HOST'),
-    //           port: config.get<number>('DB_PORT'),
-    //           username: config.get<string>('DB_USERNAME'),
-    //           password: config.get<string>('DB_PASSWORD'),
-    //           database: config.get<string>('DB_NAME'),
-    //           autoLoadEntities: true,
-    //           synchronize: true,
-    //           logging: true,
-    //         };
-    //       },
-    //     }),
+    // Cấu hình DB dùng ConfigService
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -161,8 +144,11 @@ import {AdminModule} from './modules/admin/admin.module';
     AffiliateRegistrationPlatformModule,
     InventoryTransactionModule,
     GroupOrdersModule,
-    AdminModule,
+    AdminModule
+   
+    
+
   ],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

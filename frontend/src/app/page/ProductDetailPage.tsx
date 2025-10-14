@@ -6,7 +6,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams,useLocation  } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
@@ -24,6 +24,8 @@ import {
 } from '../components/productDetail';
 import { VariantInfo } from '../types/product';
 import { fetchProductReviews, Review } from '../../service/product_review';
+import GroupOrderInfoBar from '../components/group_orders/components/GroupOrderInfoBar';
+
 
 interface Props {
   showMessage?: (
@@ -51,16 +53,15 @@ const MemoizedBuyBox = React.memo(BuyBox);
 
 export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
+    const location = useLocation(); 
   const slug = params.slug ?? '';
+  const groupId = location.state?.groupId ||
+    new URLSearchParams(location.search).get('groupId')
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [calculatedPrice, setCalculatedPrice] = useState<number>(
-    product?.base_price ?? 0
-  );
-  const [selectedType, setSelectedType] = useState<
-    'bulk' | 'subscription' | undefined
-  >(undefined);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_price ?? 0);
+  const [selectedType, setSelectedType] = useState<'bulk' | 'subscription' | undefined>(undefined);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewPage, setReviewPage] = useState(1);
@@ -169,11 +170,11 @@ export default function ProductDetailPage({ showMessage }: Props) {
     return images.length > 0
       ? { images, variantMap }
       : {
-          images: Array.isArray(product.media)
-            ? product.media.map((m: { url: string }) => m.url)
-            : [],
-          variantMap: {},
-        };
+        images: Array.isArray(product.media)
+          ? product.media.map((m: { url: string }) => m.url)
+          : [],
+        variantMap: {},
+      };
   }, [product]);
 
   if (loading && !product) {
@@ -191,6 +192,8 @@ export default function ProductDetailPage({ showMessage }: Props) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <EveryMartHeader />
+      {/* Thêm GroupOrderInfoBar khi có groupId */}
+      {groupId && <GroupOrderInfoBar groupId={Number(groupId)} />}
       <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
         <div
           className="grid gap-4 lg:grid-cols-[var(--left)_minmax(0,1fr)_var(--right)] items-start"
@@ -222,7 +225,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               setCalculatedPrice={setCalculatedPrice}
               maxQuantity={stock}
               selectedType={selectedType}
-              setSelectedType={setSelectedType}
+              setSelectedType={setSelectedType} 
             />
             <MemoizedShipping />
             <MemoizedComboStrip items={combos} />
@@ -253,6 +256,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 minHeight={L.buyBoxMinHeight}
                 showMessage={showMessage}
                 selectedType={selectedType}
+                groupId={ groupId? Number(groupId) : null}
               />
             </div>
           </div>
