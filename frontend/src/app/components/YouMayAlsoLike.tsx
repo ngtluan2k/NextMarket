@@ -8,7 +8,6 @@ type Props = {
   skeletonCount?: number;
 };
 
-/* ==== Helpers ==== */
 const ph = (w = 220, h = 220) =>
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -25,7 +24,11 @@ const FALLBACK: LikeItem[] = Array.from({ length: 10 }).map((_, i) => ({
   imageUrl: ph(),
 }));
 
-/* ==== Component ==== */
+const toVND = (n: number | string | null | undefined) => {
+  const num = typeof n === 'string' ? Number(n) : n ?? 0;
+  if (!Number.isFinite(num)) return '—';
+  return new Intl.NumberFormat('vi-VN').format(num) + 'đ';
+};
 export default function YouMayAlsoLikeProducts({
   title = 'Bạn có thể thích',
   className = '',
@@ -39,11 +42,9 @@ export default function YouMayAlsoLikeProducts({
   const [canNext, setCanNext] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch products API
   useEffect(() => {
     let cancelled = false;
-
-    const fetchProducts = async () => {
+    (async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
@@ -67,10 +68,10 @@ export default function YouMayAlsoLikeProducts({
             : undefined;
 
           const buildImageUrl = (url?: string) => {
-            if (!url) return ph(); // fallback svg
+            if (!url) return ph();
             return url.startsWith('http')
-              ? url // nếu đã là URL web thì giữ nguyên
-              : `http://localhost:3000/${url.replace(/^\/+/, '')}`; // nếu là path local thì ghép base
+              ? url
+              : `http://localhost:3000/${url.replace(/^\/+/, '')}`;
           };
 
           return {
@@ -85,30 +86,24 @@ export default function YouMayAlsoLikeProducts({
         });
 
         if (!cancelled) setList(mapped);
-      } catch (e: any) {
+      } catch (e) {
         console.error(e);
       } finally {
         if (!cancelled) setLoading(false);
       }
-    };
-
-    fetchProducts();
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Scroll arrow state
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-
     const update = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = el;
-      setCanPrev(scrollLeft > 0);
-      setCanNext(scrollLeft + clientWidth < scrollWidth - 1);
+      setCanPrev(el.scrollLeft > 0);
+      setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
     };
-
     update();
     el.addEventListener('scroll', update, { passive: true });
     const ro = new ResizeObserver(update);
@@ -124,22 +119,16 @@ export default function YouMayAlsoLikeProducts({
   const scrollByCards = (dir: 'next' | 'prev') => {
     const el = scrollerRef.current;
     if (!el) return;
-    const CARD = 176;
-    el.scrollBy({
-      left: dir === 'next' ? CARD * 3 : -CARD * 3,
-      behavior: 'smooth',
-    });
+    const CARD = 184; // khớp chiều rộng card
+    el.scrollBy({ left: dir === 'next' ? CARD * 3 : -CARD * 3, behavior: 'smooth' });
   };
 
-  const handleClick = (slug?: string) => {
-    if (!slug) return;
-    navigate(`/products/slug/${slug}`);
-  };
+  const goDetail = (slug?: string) => slug && navigate(`/products/slug/${slug}`);
+  const buyNow = (slug?: string) =>
+    slug && navigate(`/products/slug/${slug}?buyNow=1`);
 
   return (
-    <section
-      className={`rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 p-4 ${className}`}
-    >
+    <section className={`rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 p-4 ${className}`}>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">{title}</h3>
       </div>
@@ -153,13 +142,7 @@ export default function YouMayAlsoLikeProducts({
                      bg-sky-500 text-white hover:bg-sky-600 transition disabled:opacity-0 disabled:pointer-events-none"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M15 6l-6 6 6 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
 
@@ -171,13 +154,7 @@ export default function YouMayAlsoLikeProducts({
                      bg-sky-500 text-white hover:bg-sky-600 transition disabled:opacity-0 disabled:pointer-events-none"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M9 6l6 6-6 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
 
@@ -190,49 +167,63 @@ export default function YouMayAlsoLikeProducts({
             Array.from({ length: skeletonCount }).map((_, i) => (
               <div
                 key={i}
-                className="snap-start shrink-0 w-[160px] animate-pulse rounded-xl bg-slate-100 h-[200px]"
+                className="snap-start h-[320px] w-[184px] shrink-0 animate-pulse rounded-xl bg-slate-100"
               />
             ))}
 
           {data.map((p) => (
             <div
               key={p.id}
-              className="snap-start shrink-0 w-[160px] rounded-xl border border-slate-200 bg-white p-3 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => handleClick(p.slug)}
+              className="snap-start h-[320px] w-[184px] shrink-0 cursor-pointer rounded-xl border border-slate-200 bg-white p-3
+                         ring-1 ring-slate-100 hover:shadow-md transition-shadow flex flex-col"
+              onClick={() => goDetail(p.slug)}
             >
-              <div className="rounded-lg bg-slate-50">
+              <div className="relative mb-2 h-[150px] rounded-lg bg-slate-50">
+                {typeof p.percentOff === 'number' && isFinite(p.percentOff) && p.percentOff > 0 && (
+                  <span className="absolute left-1 top-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600 ring-1 ring-rose-100">
+                    -{p.percentOff}%
+                  </span>
+                )}
                 <img
                   src={p.imageUrl || ph()}
                   alt={p.name}
-                  className="aspect-[3/4] w-full rounded-lg object-contain"
+                  className="h-full w-full rounded-lg object-contain"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (img.dataset.fallback !== '1') {
+                      img.src = ph();
+                      img.dataset.fallback = '1';
+                    }
+                  }}
                 />
               </div>
-              <div className="mt-2 line-clamp-2 min-h-[34px] text-xs text-slate-900">
+
+              <h4
+                className="min-h-[34px] text-xs text-slate-900 line-clamp-2"
+                title={p.name}
+              >
                 {p.name}
+              </h4>
+
+              <div className="mt-1">
+                {typeof p.price === 'number' && (
+                  <div className="text-sm font-semibold text-rose-600">{toVND(p.price)}</div>
+                )}
+                <div className={`h-4 text-[11px] ${p.oldPrice ? 'text-slate-400 line-through' : 'invisible'}`}>
+                  {p.oldPrice ? toVND(p.oldPrice) : '—'}
+                </div>
               </div>
-              {p.price != null && (
-                <div className="mt-1 text-sm font-semibold text-slate-900">
-                  {typeof p.price === 'number'
-                    ? p.price.toLocaleString('vi-VN') + 'đ'
-                    : p.price}
-                </div>
-              )}
-              {(p.percentOff != null || p.oldPrice != null) && (
-                <div className="mt-0.5 flex items-center gap-2">
-                  {p.percentOff != null && (
-                    <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-600">
-                      -{p.percentOff}%
-                    </span>
-                  )}
-                  {p.oldPrice != null && (
-                    <span className="text-[11px] text-slate-400 line-through">
-                      {typeof p.oldPrice === 'number'
-                        ? p.oldPrice.toLocaleString('vi-VN') + 'đ'
-                        : p.oldPrice}
-                    </span>
-                  )}
-                </div>
-              )}
+
+              {/* Nút mua ngay bám đáy card */}
+              <button
+                className="mt-auto w-full rounded-md bg-slate-900 px-2 py-1.5 text-[11px] font-medium text-white hover:bg-black/90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  buyNow(p.slug);
+                }}
+              >
+                Mua Ngay
+              </button>
             </div>
           ))}
         </div>

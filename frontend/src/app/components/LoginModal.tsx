@@ -10,6 +10,8 @@ import {
   Eye,
   EyeOff,
   Globe,
+  ChevronDown,
+  Check, // NEW
 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +21,7 @@ import {
   validateLogin as validateLoginPayload,
   validateRegister as validateRegisterPayload,
 } from '../../validation/auth.validation';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 export type LoginPayload = { email: string; password: string };
 export type RegisterPayload = {
@@ -67,7 +70,7 @@ export default function LoginModal({
   open,
   onClose,
   onLogin,
-  onRegister,
+  onRegister, // (chưa dùng)
   title = 'Xin chào,',
   sideImageUrl,
   apiBase = 'http://localhost:3000',
@@ -99,14 +102,21 @@ export default function LoginModal({
   });
   const [showRegPw, setShowRegPw] = useState(false);
 
+  // confirm password
+  const [regConfirmPw, setRegConfirmPw] = useState('');
+  const [showRegConfirmPw, setShowRegConfirmPw] = useState(false);
+
   const [countries, setCountries] = useState<{ name: string; code: string }[]>(
     []
   );
   const [submitting, setSubmitting] = useState(false);
 
-  // ⬇️ TÁCH LỖI THEO TAB
+  // lỗi theo tab
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
   const [errorRegister, setErrorRegister] = useState<string | null>(null);
+
+  // modal "Quên mật khẩu"
+  const [showForgot, setShowForgot] = useState(false);
 
   const navigate = useNavigate();
   const emailRef = useRef<HTMLInputElement>(null);
@@ -115,7 +125,8 @@ export default function LoginModal({
     if (!fieldName) return;
     const el =
       document.querySelector<HTMLInputElement>(`input[name="${fieldName}"]`) ||
-      document.querySelector<HTMLInputElement>(`select[name="${fieldName}"]`);
+      document.querySelector<HTMLInputElement>(`select[name="${fieldName}"]`) ||
+      document.querySelector<HTMLElement>(`[data-focus="${fieldName}"]`); // NEW for custom select
     el?.focus();
   }
 
@@ -134,7 +145,6 @@ export default function LoginModal({
     if (open) setTimeout(() => emailRef.current?.focus(), 80);
   }, [open, mode]);
 
-  // ⬇️ Khi đổi tab: xoá lỗi của tab kia
   useEffect(() => {
     if (mode === 'login') setErrorRegister(null);
     else setErrorLogin(null);
@@ -198,6 +208,13 @@ export default function LoginModal({
       focusFirstError(result.errors[0].field as string);
       return;
     }
+
+    if (reg.password !== regConfirmPw) {
+      setErrorRegister('Mật khẩu và Nhập lại mật khẩu không khớp');
+      focusFirstError('confirm_password');
+      return;
+    }
+
     setErrorRegister(null);
     setSubmitting(true);
     try {
@@ -253,18 +270,11 @@ export default function LoginModal({
   const RightArt = sideImageUrl || defaultSide;
 
   return (
-    <div
-      aria-modal
-      role="dialog"
-      className="fixed inset-0 z-[100] overflow-y-auto"
-    >
+    <div aria-modal role="dialog" className="fixed inset-0 z-[100] overflow-y-auto">
       {/* overlay */}
-      <div
-        className="fixed inset-0 bg-black/55 backdrop-blur-[1px]"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/55 backdrop-blur-[1px]" onClick={onClose} />
 
-      {/* modal: hai cột bằng nhau */}
+      {/* modal */}
       <div
         className="relative z-[101] mx-auto my-6 w-[min(1000px,96vw)]
                    rounded-[24px] overflow-hidden bg-white/95 shadow-2xl ring-1 ring-black/5"
@@ -364,11 +374,7 @@ export default function LoginModal({
                       onClick={() => setShowPw((v) => !v)}
                       aria-label={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     >
-                      {showPw ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   }
                 />
@@ -383,19 +389,20 @@ export default function LoginModal({
                     />
                     Ghi nhớ đăng nhập
                   </label>
+
                   <a
                     href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowForgot(true);
+                    }}
                     className="text-xs font-medium text-sky-600 hover:underline"
                   >
                     Quên mật khẩu?
                   </a>
                 </div>
 
-                <FancyButton
-                  loading={submitting}
-                  type="submit"
-                  className="mt-2 rounded-full"
-                >
+                <FancyButton loading={submitting} type="submit" className="mt-2 rounded-full">
                   Tiếp tục
                 </FancyButton>
 
@@ -411,152 +418,139 @@ export default function LoginModal({
                 </div>
               </form>
             ) : (
-              // REGISTER
-              <form
-                onSubmit={handleRegister}
-                className="mt-6 grid grid-cols-1 gap-4"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field
-                    name="username"
-                    label="Username"
-                    placeholder="Tên đăng nhập"
-                    value={reg.username}
-                    onChange={(v) => setReg({ ...reg, username: v })}
-                    iconLeft={<User className="h-4 w-4" />}
-                  />
-                  <Field
-                    name="full_name"
-                    label="Họ và tên"
-                    placeholder="Nguyễn Văn A"
-                    value={reg.full_name}
-                    onChange={(v) => setReg({ ...reg, full_name: v })}
-                    iconLeft={<BadgeCheck className="h-4 w-4" />}
-                  />
-                </div>
+              // REGISTER FORM
+              <form onSubmit={handleRegister} className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Hàng 1: Username | Họ và tên */}
+                <Field
+                  name="username"
+                  label="Username"
+                  placeholder="Tên đăng nhập"
+                  value={reg.username}
+                  onChange={(v) => setReg({ ...reg, username: v })}
+                  iconLeft={<User className="h-4 w-4" />}
+                />
+                <Field
+                  name="full_name"
+                  label="Họ và tên"
+                  placeholder="Nguyễn Văn A"
+                  value={reg.full_name}
+                  onChange={(v) => setReg({ ...reg, full_name: v })}
+                  iconLeft={<BadgeCheck className="h-4 w-4" />}
+                />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field
-                    name="dob"
-                    label="Ngày sinh"
-                    value={reg.dob}
-                    onChange={(v) => setReg({ ...reg, dob: v })}
-                    iconLeft={<Calendar className="h-4 w-4" />}
-                    type="date"
-                  />
-                  <Field
-                    name="phone"
-                    label="Số điện thoại"
-                    placeholder="09xx xxx xxx"
-                    value={reg.phone}
-                    onChange={(v) => setReg({ ...reg, phone: v })}
-                    iconLeft={<Phone className="h-4 w-4" />}
-                  />
-                </div>
+                {/* Hàng 2: Ngày sinh | Số điện thoại */}
+                <Field
+                  name="dob"
+                  label="Ngày sinh"
+                  value={reg.dob}
+                  onChange={(v) => setReg({ ...reg, dob: v })}
+                  iconLeft={<Calendar className="h-4 w-4" />}
+                  type="date"
+                />
+                <Field
+                  name="phone"
+                  label="Số điện thoại"
+                  placeholder="09xx xxx xxx"
+                  value={reg.phone}
+                  onChange={(v) => setReg({ ...reg, phone: v })}
+                  iconLeft={<Phone className="h-4 w-4" />}
+                />
 
-                {/* giới tính */}
-                <div>
-                  <div className="mb-1 text-sm font-medium text-slate-700">
-                    Giới tính
-                  </div>
-                  <input type="hidden" name="gender" value={reg.gender} />
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { key: 'male', label: 'Nam' },
-                      { key: 'female', label: 'Nữ' },
-                      { key: 'other', label: 'Khác' },
-                    ].map((g) => {
-                      const active = reg.gender === g.key;
-                      return (
-                        <button
-                          key={g.key}
-                          type="button"
-                          onClick={() => setReg({ ...reg, gender: g.key })}
-                          aria-pressed={active}
-                          className={`h-8 rounded-full border px-3 text-sm transition ${
-                            active
-                              ? 'border-sky-500 bg-sky-50 text-sky-700 ring-2 ring-sky-100'
-                              : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          {g.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field
-                    name="email"
-                    label="Email"
-                    placeholder="nhapemail@domain.com"
-                    value={reg.email}
-                    onChange={(v) => setReg({ ...reg, email: v })}
-                    iconLeft={<Mail className="h-4 w-4" />}
-                    type="email"
-                    autoComplete="email"
-                  />
-                  <Field
-                    name="password"
-                    label="Mật khẩu"
-                    placeholder="mật khẩu"
-                    value={reg.password}
-                    onChange={(v) => setReg({ ...reg, password: v })}
-                    iconLeft={<Lock className="h-4 w-4" />}
-                    type={showRegPw ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    rightSlot={
-                      <button
-                        type="button"
-                        className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
-                        onClick={() => setShowRegPw((v) => !v)}
-                        aria-label={showRegPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                      >
-                        {showRegPw ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    }
-                  />
-                </div>
-
-                {/* country */}
-                <div className="group">
-                  <label className="mb-1 block text-sm font-medium text-slate-700">
-                    Đất nước
-                  </label>
-                  <div className="relative flex items-center rounded-2xl border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100">
-                    <span className="pointer-events-none absolute left-3 text-slate-400">
-                      <Globe className="h-4 w-4" />
-                    </span>
-                    <select
-                      name="country"
-                      value={reg.country}
-                      onChange={(e) =>
-                        setReg({ ...reg, country: e.target.value })
-                      }
-                      className="w-full rounded-2xl bg-transparent h-10 pl-10 pr-3 text-sm text-slate-900 outline-none"
+                {/* Hàng 3: Mật khẩu | Nhập lại mật khẩu */}
+                <Field
+                  name="password"
+                  label="Mật khẩu"
+                  placeholder="mật khẩu"
+                  value={reg.password}
+                  onChange={(v) => setReg({ ...reg, password: v })}
+                  iconLeft={<Lock className="h-4 w-4" />}
+                  type={showRegPw ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  rightSlot={
+                    <button
+                      type="button"
+                      className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                      onClick={() => setShowRegPw((v) => !v)}
+                      aria-label={showRegPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     >
-                      <option value="Vietnam">Vietnam</option>
-                      {countries.map((c) => (
-                        <option key={c.code} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      {showRegPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  }
+                />
+                <Field
+                  name="confirm_password"
+                  label="Nhập lại mật khẩu"
+                  placeholder="nhập lại mật khẩu"
+                  value={regConfirmPw}
+                  onChange={setRegConfirmPw}
+                  iconLeft={<Lock className="h-4 w-4" />}
+                  type={showRegConfirmPw ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  rightSlot={
+                    <button
+                      type="button"
+                      className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                      onClick={() => setShowRegConfirmPw((v) => !v)}
+                      aria-label={showRegConfirmPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    >
+                      {showRegConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  }
+                />
+
+                {/* Cảnh báo không khớp */}
+                {regConfirmPw && reg.password && reg.password !== regConfirmPw && (
+                  <p className="md:col-span-2 -mt-2 text-xs text-rose-600">Mật khẩu không khớp.</p>
+                )}
+
+                {/* Hàng 4: Email | Giới tính (CUSTOM SELECT) */}
+                <Field
+                  name="email"
+                  label="Email"
+                  placeholder="nhapemail@domain.com"
+                  value={reg.email}
+                  onChange={(v) => setReg({ ...reg, email: v })}
+                  iconLeft={<Mail className="h-4 w-4" />}
+                  type="email"
+                  autoComplete="email"
+                />
+
+                <SelectField
+                  name="gender"
+                  label="Giới tính"
+                  value={reg.gender}
+                  onChange={(v) => setReg({ ...reg, gender: v })}
+                  options={[
+                    { label: 'Nam', value: 'male' },
+                    { label: 'Nữ', value: 'female' },
+                    { label: 'Khác', value: 'other' },
+                  ]}
+                  placeholder="Chọn giới tính"
+                  iconLeft={<User className="h-4 w-4" />}
+                />
+
+                {/* Hàng 5: Country (CUSTOM SELECT full width) */}
+                <div className="md:col-span-2">
+                  <SelectField
+                    name="country"
+                    label="Đất nước"
+                    value={reg.country}
+                    onChange={(v) => setReg({ ...reg, country: v })}
+                    options={[
+                      { label: 'Vietnam', value: 'Vietnam' },
+                      ...countries.map((c) => ({ label: c.name, value: c.name })),
+                    ]}
+                    placeholder="Chọn quốc gia"
+                    iconLeft={<Globe className="h-4 w-4" />}
+                  />
                 </div>
 
-                <FancyButton
-                  loading={submitting}
-                  type="submit"
-                  className="mt-1 rounded-full"
-                >
-                  Tạo tài khoản
-                </FancyButton>
+                {/* Submit */}
+                <div className="md:col-span-2">
+                  <FancyButton loading={submitting} type="submit" className="mt-1 rounded-full">
+                    Tạo tài khoản
+                  </FancyButton>
+                </div>
               </form>
             )}
 
@@ -584,12 +578,16 @@ export default function LoginModal({
               <div className="text-base font-semibold text-slate-900">
                 Mua sắm tại EveryMart
               </div>
-              <div className="mt-1 text-sm text-slate-600">
-                Nhiều ưu đãi mỗi ngày
-              </div>
+              <div className="mt-1 text-sm text-slate-600">Nhiều ưu đãi mỗi ngày</div>
             </div>
           </div>
         </div>
+
+        <ForgotPasswordModal
+          open={showForgot}
+          onClose={() => setShowForgot(false)}
+          apiBase={apiBase}
+        />
       </div>
     </div>
   );
@@ -651,6 +649,133 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
   );
 });
 
+/* ===== Select (custom dropdown) ===== */
+type SelectOption = { label: string; value: string };
+
+function cx(...s: (string | false | undefined)[]) {
+  return s.filter(Boolean).join(' ');
+}
+
+function useOutside(handler: () => void) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) handler();
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [handler]);
+  return ref;
+}
+
+function SelectField({
+  name,
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = 'Chọn…',
+  iconLeft,
+}: {
+  name: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+  iconLeft?: React.ReactNode;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState(-1);
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+  const wrapRef = useOutside(() => setOpen(false));
+
+  const current = options.find((o) => o.value === value);
+
+  function commit(idx: number) {
+    if (idx < 0 || idx >= options.length) return;
+    onChange(options[idx].value);
+    setOpen(false);
+    btnRef.current?.focus();
+  }
+
+  function onKey(e: React.KeyboardEvent) {
+    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      setOpen(true);
+      setActiveIndex(Math.max(0, options.findIndex((o) => o.value === value)));
+      return;
+    }
+    if (!open) return;
+    if (e.key === 'Escape') { setOpen(false); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((i) => Math.min(options.length - 1, (i < 0 ? 0 : i + 1))); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); setActiveIndex((i) => Math.max(0, (i < 0 ? 0 : i - 1))); }
+    if (e.key === 'Enter')     { e.preventDefault(); commit(activeIndex); }
+  }
+
+  return (
+    <div className="group" ref={wrapRef}>
+      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <div className="relative">
+        <input type="hidden" name={name} value={value} />
+        <button
+          ref={btnRef}
+          data-focus={name}
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          onKeyDown={onKey}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          className={cx(
+            'flex w-full items-center justify-between rounded-2xl border bg-white py-2.5 text-left text-sm',
+            'border-slate-300 pl-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-500'
+          )}
+        >
+          <span className="flex items-center gap-2">
+            {iconLeft && <span className="text-slate-400">{iconLeft}</span>}
+            <span className={cx('truncate', !current && 'text-slate-400')}>
+              {current ? current.label : placeholder}
+            </span>
+          </span>
+          <ChevronDown className="absolute right-3 h-4 w-4 text-slate-400" />
+        </button>
+
+        {open && (
+          <ul
+            role="listbox"
+            tabIndex={-1}
+            className="absolute z-20 mt-2 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl max-h-60"
+          >
+            {options.map((opt, idx) => {
+              const selected = opt.value === value;
+              const active = idx === activeIndex;
+              return (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={selected}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => commit(idx)}
+                  className={cx(
+                    'flex cursor-pointer items-center justify-between px-3 py-2 text-sm',
+                    active && 'bg-sky-50 text-sky-700',
+                    !active && 'text-slate-700'
+                  )}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {selected && <Check className="h-4 w-4" />}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FancyButton({
   children,
   loading,
@@ -668,18 +793,8 @@ function FancyButton({
       {loading ? (
         <span className="inline-flex items-center gap-2">
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              className="fill-none stroke-white/30"
-              strokeWidth="4"
-            />
-            <path
-              d="M22 12a10 10 0 0 1-10 10"
-              className="fill-none stroke-white"
-              strokeWidth="4"
-            />
+            <circle cx="12" cy="12" r="10" className="fill-none stroke-white/30" strokeWidth="4" />
+            <path d="M22 12a10 10 0 0 1-10 10" className="fill-none stroke-white" strokeWidth="4" />
           </svg>
           Đang xử lý...
         </span>
