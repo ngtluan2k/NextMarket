@@ -20,9 +20,9 @@ export class AffiliateCommission {
   @JoinColumn({ name: 'link_id' })
   link_id!: AffiliateLink;
 
-  @ManyToOne(() => OrderItem, (orderItem) => orderItem.commissions)
+  @ManyToOne(() => OrderItem, (orderItem) => orderItem.commissions, { nullable: true })
   @JoinColumn({ name: 'order_item_id' })
-  order_item_id!: OrderItem;
+  order_item_id?: OrderItem;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount!: number;

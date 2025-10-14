@@ -1,4 +1,5 @@
 import React from 'react';
+import { X, Mail } from 'lucide-react';
 
 interface EmailFormData {
   email: string;
@@ -15,6 +16,10 @@ interface EmailModalProps {
   onSave: () => void;
 }
 
+const baseInput =
+  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-100';
+const baseLabel = 'text-sm font-medium text-slate-700';
+
 const EmailModal: React.FC<EmailModalProps> = ({
   show,
   editingEmail,
@@ -26,31 +31,30 @@ const EmailModal: React.FC<EmailModalProps> = ({
   if (!show) return null;
 
   return (
-    <div
-      className="modal show d-block"
-      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-    >
-      <div className="modal-dialog">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">
-              {editingEmail
-                ? '✏️ Chỉnh sửa email nhận hóa đơn'
-                : '📧 Thêm email nhận hóa đơn'}
-            </h5>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+      <div className="w-full max-w-lg">
+        <div className="rounded-2xl bg-white shadow-xl ring-1 ring-slate-100">
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+            <h3 className="text-lg font-semibold text-slate-800">
+              {editingEmail ? 'Chỉnh sửa email nhận hóa đơn' : 'Thêm email nhận hóa đơn'}
+            </h3>
             <button
               type="button"
-              className="btn-close"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
               onClick={onClose}
-            ></button>
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div className="modal-body">
-            <form>
-              <div className="mb-3">
-                <label className="form-label">Địa chỉ email *</label>
+
+          <div className="px-6 py-5">
+            <form className="space-y-4">
+              <div>
+                <label className={baseLabel}>Địa chỉ email *</label>
                 <input
                   type="email"
-                  className="form-control"
+                  className={baseInput}
                   value={emailFormData.email}
                   onChange={(e) => onInputChange('email', e.target.value)}
                   placeholder="example@company.com"
@@ -59,15 +63,21 @@ const EmailModal: React.FC<EmailModalProps> = ({
               </div>
             </form>
           </div>
-          <div className="modal-footer">
+
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
             <button
               type="button"
-              className="btn btn-secondary"
               onClick={onClose}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50"
             >
               Hủy
             </button>
-            <button type="button" className="btn btn-primary" onClick={onSave}>
+            <button
+              type="button"
+              onClick={onSave}
+              className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-700 active:bg-sky-800"
+            >
+              <Mail className="mr-2 h-4 w-4" />
               {editingEmail ? 'Cập nhật email' : 'Thêm email'}
             </button>
           </div>

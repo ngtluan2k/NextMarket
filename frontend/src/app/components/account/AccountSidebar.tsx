@@ -137,6 +137,10 @@ const DEFAULT_ITEMS: AccountMenuItem[] = [
     icon: <HelpCircle className="h-4 w-4" />,
     to: '/account/support',
   },
+  { key: "shopxu", 
+    label: "Nạp Xu", 
+    icon: <Coins className="h-4 w-4" />, 
+    to: "/account/xu" },
 ];
 
 export default function AccountSidebar({

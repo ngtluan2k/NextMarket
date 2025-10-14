@@ -27,7 +27,6 @@ import { GoogleStrategy } from './google.strategy';
     }),
   ],
   providers: [AuthService, GoogleStrategy],
-  // providers: [AuthService],
   controllers: [AuthController],
   exports: [AuthService],
 })
