@@ -71,7 +71,7 @@ export class GroupOrderItemsService {
 			if (!variant)
 				throw new BadRequestException('Biến thể không hợp lệ cho sản phẩm này');
 
-			// ✅ SỬA: Ưu tiên variant price, chỉ fallback về product base_price nếu variant price không hợp lệ
+			// SỬA: Ưu tiên variant price, chỉ fallback về product base_price nếu variant price không hợp lệ
 			if (variant.price && Number(variant.price) > 0) {
 				basePrice = Number(variant.price);
 			} else {

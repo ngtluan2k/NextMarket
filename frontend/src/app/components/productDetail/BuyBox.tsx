@@ -320,7 +320,7 @@ export default function BuyBox({
               <img
                 src={toAbs(product.store.logo_url)}
                 alt={product?.store?.name ?? 'Store'}
-                className="h-full w-full object-cover"
+                className="h-10 w-10 object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -328,7 +328,7 @@ export default function BuyBox({
               />
             ) : (
               <svg
-                className="h-10 w-full text-slate-400 bg-white"
+                className="h-10 w-10 text-slate-400 bg-white"
                 viewBox="0 0 24 24"
                 fill="none"
               >

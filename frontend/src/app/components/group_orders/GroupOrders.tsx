@@ -20,7 +20,7 @@ export default function GroupOrderCreate() {
         (Number.isFinite(Number(storeIdFromState)) && Number(storeIdFromState)) ||
         null;
 
-    const [groupName, setGroupName] = useState("Đơn hàng nhóm của Nguyễn");
+    const [groupName, setGroupName] = useState("Đơn hàng nhóm của");
     const [paymentType, setPaymentType] = useState("Mọi người tự thanh toán phần của mình");
     const [extraTime, setExtraTime] = useState("Không có");
 

@@ -12,7 +12,9 @@ export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event:
         const raw = localStorage.getItem('token');
         const token = raw ?? undefined;
         socketService.connect(token);
-        socketService.joinGroup(groupId, user.id);
+        if (!socketService['joinedOnce']) {
+            socketService.joinGroup(groupId, user.id);
+        }
 
         // Lắng nghe các sự kiện real-time
         socketService.onGroupState((data) => onRealtimeUpdate?.('group-state', data));

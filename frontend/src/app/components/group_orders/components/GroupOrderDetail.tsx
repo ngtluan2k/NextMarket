@@ -25,9 +25,16 @@ export default function GroupOrderDetail() {
                 setGroupItems(Array.isArray(data?.items) ? data.items : []);
                 if (Array.isArray(data?.members)) setMembers(data.members);
                 break;
+
             case 'member-joined':
-                if (data?.member) setMembers((prev) => [data.member, ...prev]);
+                if (data?.member) {
+                    setMembers((prev) => {
+                        const exists = prev.some(m => m?.user?.id === data.member?.user?.id);
+                        return exists ? prev : [data.member, ...prev];
+                    });
+                }
                 break;
+
             case 'member-left':
                 if (data?.userId) {
                     setMembers((prev) => prev.filter((m) => m?.user?.id !== data.userId));
@@ -80,6 +87,7 @@ export default function GroupOrderDetail() {
             }
         })();
     }, [id]);
+    console.log({ group, members, groupItems, loading, error });
     const refresh = async () => {
         const res = await api.get(`http://localhost:3000/group-orders/${groupId}`);
         setGroup(res.data);
@@ -211,7 +219,7 @@ export default function GroupOrderDetail() {
                                 Mã tham gia: <span className="font-mono">{group?.join_code ?? '—'}</span>
                             </div>
                             <div className="text-sm text-slate-600">
-                                Chủ nhóm: <span className="font-semibold">{group?.user?.username ?? '—'}</span>
+                                Chủ nhóm: <span className="font-semibold">{group?.user?.profile?.full_name ?? '—'}</span>
                             </div>
                             <div className="text-sm text-slate-600">
                                 Hết hạn: {group?.expires_at ? new Date(group.expires_at).toLocaleString() : '—'}
@@ -222,9 +230,11 @@ export default function GroupOrderDetail() {
                         <section className="bg-white rounded-xl shadow border p-4">
                             <h2 className="font-semibold mb-3">Thành viên</h2>
                             <ul className="space-y-2">
-                                {members.map((m: any) => (
-                                    <li key={m.id} className="flex items-center justify-between text-sm">
-                                        <span>{m?.user?.username}</span>
+                                {Array.from(
+                                    new Map(members.map(m => [m?.user?.id, m])).values()
+                                ).map((m: any) => (
+                                    <li key={m.user.id} className="flex items-center justify-between text-sm">
+                                        <span>{m?.user?.profile?.full_name}</span>
                                         <span className="text-slate-500">{m.status}{m.is_host ? ' • Host' : ''}</span>
                                     </li>
                                 ))}
@@ -256,7 +266,7 @@ export default function GroupOrderDetail() {
                                                 return (
                                                     <tr key={it.id} className="border-t">
                                                         <td className="py-2 pr-3">
-                                                            {it?.member?.user?.username
+                                                            {it?.member?.user?.profile?.full_name
                                                                 ?? it?.member?.user?.email
                                                                 ?? `Thành viên #${it?.member?.id ?? ''}`}
                                                         </td>

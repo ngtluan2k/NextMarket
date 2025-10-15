@@ -5,6 +5,7 @@ export class SocketService {
     private baseURL = 'http://localhost:3000';
 
     private lastJoin: { groupId: number; userId: number } | null = null;
+    private joinedOnce = false;
 
     connect(token?: string) {
         if (this.socket?.connected) return this.socket;
@@ -20,12 +21,15 @@ export class SocketService {
             console.log('[WS] Connected to group orders socket, id=', this.socket?.id);
             // NEW: tự re-join room nếu có lịch sử
             if (this.lastJoin) {
+                this.joinedOnce = true;
                 this.joinGroup(this.lastJoin.groupId, this.lastJoin.userId);
+               
             }
         });
 
         this.socket.on('disconnect', () => {
             console.log('Disconnected from group orders socket');
+             this.joinedOnce = false;
         });
 
         return this.socket;
@@ -43,6 +47,7 @@ export class SocketService {
 
             this.lastJoin = { groupId, userId };
             this.socket.emit('join-group', { groupId, userId });
+            this.joinedOnce = true;
         }
     }
 
@@ -53,6 +58,7 @@ export class SocketService {
         }
         if (this.lastJoin && this.lastJoin.groupId === groupId && this.lastJoin.userId === userId) {
             this.lastJoin = null;
+            this.joinedOnce = false;
         }
     }
 

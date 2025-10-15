@@ -95,7 +95,7 @@ export class GroupOrdersService {
     async getGroupOrderById(id: number) {
         const group = await this.groupOrderRepo.findOne({
             where: { id } as FindOptionsWhere<GroupOrder>,
-            relations: ['store', 'user', 'members', 'items', 'orders', 'members.user', 'items.member', 'items.member.user', 'items.product',],
+            relations: ['store', 'user','user.profile','members', 'items', 'orders', 'members.user', 'members.user.profile','items.member', 'items.member.user', 'items.product',],
             loadEagerRelations: true,
         });
         if (!group) throw new NotFoundException('Group order not found');
