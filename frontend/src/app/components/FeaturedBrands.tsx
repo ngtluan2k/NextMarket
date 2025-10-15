@@ -247,7 +247,7 @@ export default function FeaturedBrands({
                 </div>
 
                 <div className="mt-3 flex items-center gap-2">
-                  {b.logoUrl && (
+                  {/* {b.logoUrl && (
                     <img
                       src={b.logoUrl}
                       alt={displayName || 'logo'}
@@ -257,7 +257,7 @@ export default function FeaturedBrands({
                         if (DEBUG) console.warn('[FeaturedBrands] logo image error → hide element');
                       }}
                     />
-                  )}
+                  )} */}
                   <div className="text-xs font-semibold text-slate-900 line-clamp-1">
                     {displayName}
                   </div>
