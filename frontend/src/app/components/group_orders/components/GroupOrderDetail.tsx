@@ -87,7 +87,7 @@ export default function GroupOrderDetail() {
             }
         })();
     }, [id]);
-    console.log({ group, members, groupItems, loading, error });
+    console.log('GroupOrderDetail render', { group, members, groupItems, loading, error });
     const refresh = async () => {
         const res = await api.get(`http://localhost:3000/group-orders/${groupId}`);
         setGroup(res.data);
@@ -219,7 +219,7 @@ export default function GroupOrderDetail() {
                                 Mã tham gia: <span className="font-mono">{group?.join_code ?? '—'}</span>
                             </div>
                             <div className="text-sm text-slate-600">
-                                Chủ nhóm: <span className="font-semibold">{group?.user?.profile?.full_name ?? '—'}</span>
+                                Chủ nhóm: <span className="font-semibold">{group?.user.profile?.full_name ?? '—'}</span>
                             </div>
                             <div className="text-sm text-slate-600">
                                 Hết hạn: {group?.expires_at ? new Date(group.expires_at).toLocaleString() : '—'}

@@ -538,7 +538,7 @@ export class ProductService {
         { slug: Like(`%${query}%`), status: 'active' },
         { description: Like(`%${query}%`), status: 'active' },
       ],
-      relations: ['store', 'media', 'brand'],
+      relations: ['store', 'media', 'brand', 'categories'],
       take: 10,
     });
   }

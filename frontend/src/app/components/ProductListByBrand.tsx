@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '../../service/product.service'; // import từ service
+import { Rate } from 'antd';
 
 type Props = {
   brandIds: number[];
@@ -68,7 +69,7 @@ const ProductListByBrand: React.FC<Props> = ({
           ? primaryMedia.url.startsWith('http')
             ? primaryMedia.url // đã là URL web
             : `http://localhost:3000/${primaryMedia.url.replace(/^\/+/, '')}` // đường dẫn local
-          : 'https://via.placeholder.com/220x220?text=No+Image';
+          : '';
 
         return (
           <div
@@ -85,7 +86,7 @@ const ProductListByBrand: React.FC<Props> = ({
                   alt={p.name}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src =
-                      'https://via.placeholder.com/220x220?text=No+Image';
+                      '';
                   }}
                   className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                 />
@@ -99,6 +100,17 @@ const ProductListByBrand: React.FC<Props> = ({
                   {Number(p.base_price).toLocaleString('vi-VN')}₫
                 </p>
               )}
+              <div className="mt-1 flex items-center gap-1">
+                <Rate
+                  disabled
+                  allowHalf
+                  value={Number(p.avg_rating) || 0} // ép về number
+                  style={{ fontSize: 14 }}
+                />
+                <span className="text-xs text-slate-500">
+                  ({(Number(p.avg_rating) || 0).toFixed(1)})
+                </span>
+              </div>
             </div>
           </div>
         );

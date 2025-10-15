@@ -121,13 +121,11 @@ export const SellerRegistration: React.FC = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          // No token, start fresh
           setFormData(defaultSellerFormData);
           setCurrentStep(1);
           return;
         }
 
-        // Check if user has existing store draft
         const res = await fetch('http://localhost:3000/stores/my-store', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -135,27 +133,19 @@ export const SellerRegistration: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           if (data?.data?.id) {
-            // Load server draft first
             await loadFullDraftData(data.data.id, null, false);
             return;
           }
         }
 
-        // No server draft, check localStorage
-        const savedFormData = localStorage.getItem(
-          'seller_registration_form_data'
-        );
-        const savedStep = localStorage.getItem(
-          'seller_registration_current_step'
-        );
-        const savedAddresses = localStorage.getItem(
-          'seller_registration_addresses'
-        );
+        const savedFormData = localStorage.getItem('seller_registration_form_data');
+        const savedStep = localStorage.getItem('seller_registration_current_step');
+        const savedAddresses = localStorage.getItem('seller_registration_addresses');
 
         if (savedFormData) {
           const parsed = JSON.parse(savedFormData);
           setFormData({ ...defaultSellerFormData, ...parsed });
-          setMessage('📝 Đã tải thông tin đã lưu từ phiên trước');
+          setMessage('Đã tải thông tin đã lưu từ phiên trước');
           setMessageType('info');
         } else {
           setFormData(defaultSellerFormData);
@@ -178,6 +168,7 @@ export const SellerRegistration: React.FC = () => {
       }
     };
     loadSavedData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load full draft from server
@@ -191,22 +182,16 @@ export const SellerRegistration: React.FC = () => {
       setLoading(true);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:3000/stores/${sid}/draft-data`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await fetch(`http://localhost:3000/stores/${sid}/draft-data`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!response.ok) return;
 
       const result = await response.json();
       const draft = result.data;
 
       const mapped: SellerFormData = {
-        name:
-          draft.store?.name && draft.store.name !== 'undefined'
-            ? draft.store.name
-            : '',
+        name: draft.store?.name && draft.store.name !== 'undefined' ? draft.store.name : '',
         description: draft.store?.description || '',
         email: draft.store?.email || '',
         phone: draft.store?.phone || '',
@@ -232,10 +217,7 @@ export const SellerRegistration: React.FC = () => {
           recipient_name: draft.storeAddress?.recipient_name || '',
           phone: draft.storeAddress?.phone || '',
           street: draft.storeAddress?.street || '',
-          city:
-            (draft.storeAddress as any)?.district ||
-            draft.storeAddress?.city ||
-            '',
+          city: (draft.storeAddress as any)?.district || draft.storeAddress?.city || '',
           province: draft.storeAddress?.province || '',
           country: draft.storeAddress?.country || 'Vietnam',
           postal_code: draft.storeAddress?.postal_code || '',
@@ -270,10 +252,7 @@ export const SellerRegistration: React.FC = () => {
             recipient_name: draft.storeAddress.recipient_name || '',
             phone: draft.storeAddress.phone || '',
             street: draft.storeAddress.street || '',
-            district:
-              (draft.storeAddress as any).district ||
-              draft.storeAddress.city ||
-              '',
+            district: (draft.storeAddress as any).district || draft.storeAddress.city || '',
             province: draft.storeAddress.province || '',
             country: draft.storeAddress.country || 'Vietnam',
             ward: draft.storeAddress.ward || '',
@@ -293,38 +272,26 @@ export const SellerRegistration: React.FC = () => {
         setFormData(hasLocal ? { ...mapped, ...local } : mapped);
       }
 
-      // Determine current step based on data completeness
       let determinedStep = 1;
       if (mapped.name && mapped.email && mapped.phone && addresses.length > 0) {
         determinedStep = 2;
       }
-      if (
-        mapped.store_information?.name &&
-        mapped.store_information?.addresses &&
-        emails.length > 0
-      ) {
+      if (mapped.store_information?.name && mapped.store_information?.addresses && emails.length > 0) {
         determinedStep = 3;
       }
-      if (
-        mapped.store_identification?.full_name ||
-        mapped.bank_account?.bank_name
-      ) {
+      if (mapped.store_identification?.full_name || mapped.bank_account?.bank_name) {
         determinedStep = 4;
       }
-
       setCurrentStep(determinedStep);
 
       if (!suppressMessage) {
-        setMessage(
-          `✅ Đã tải đầy đủ thông tin bản nháp từ server! (Step ${determinedStep})`
-        );
+        setMessage(`Đã tải đầy đủ thông tin bản nháp từ server! (Step ${determinedStep})`);
         setMessageType('info');
       }
 
-      // Clear file states when loading from server (since we have URLs now)
       clearAllFiles();
     } catch {
-      setMessage('⚠️ Không thể tải bản nháp từ server');
+      setMessage('Không thể tải bản nháp từ server');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -341,29 +308,23 @@ export const SellerRegistration: React.FC = () => {
 
       const defaultAddress = addresses.find((a) => a.is_default);
       if (!formData.store_information_email.email) {
-        setMessage('❌ Vui lòng nhập email hóa đơn');
+        setMessage('Vui lòng nhập email hóa đơn');
         setMessageType('error');
         setLoading(false);
         return;
       }
       if (!defaultAddress) {
-        setMessage('❌ Vui lòng thêm địa chỉ và chọn địa chỉ mặc định');
+        setMessage('Vui lòng thêm địa chỉ và chọn địa chỉ mặc định');
         setMessageType('error');
         setLoading(false);
         return;
       }
-      // district tạm thời không bắt buộc (để hỗ trợ V2)
-      const required = [
-        'recipient_name',
-        'phone',
-        'street',
-        'province',
-        'postal_code',
-      ] as const;
+
+      const required = ['recipient_name', 'phone', 'street', 'province', 'postal_code'] as const;
       const missing = required.filter((k) => !(defaultAddress as any)[k]);
       if (missing.length) {
         setMessage(
-          '❌ Vui lòng điền đầy đủ địa chỉ: người nhận, điện thoại, đường, thành phố, tỉnh, mã bưu điện'
+          'Vui lòng điền đầy đủ địa chỉ: người nhận, điện thoại, đường, thành phố, tỉnh, mã bưu điện'
         );
         setMessageType('error');
         setLoading(false);
@@ -384,7 +345,6 @@ export const SellerRegistration: React.FC = () => {
         store_information_email: {
           email: formData.store_information_email.email,
         },
-        // Đính kèm tài liệu hiện có (ví dụ: BUSINESS_LICENSE)
         ...(Array.isArray(formData.documents) &&
         formData.documents.filter((d) => d?.file_url && d?.doc_type).length > 0
           ? {
@@ -403,8 +363,6 @@ export const SellerRegistration: React.FC = () => {
           recipient_name: defaultAddress.recipient_name,
           phone: defaultAddress.phone,
           street: defaultAddress.street,
-          // Backend hiện yêu cầu district là string không rỗng.
-          // Với V2 khi không có district, tạm thời fallback sang ward để tránh 400.
           district:
             (defaultAddress as any).district &&
             String((defaultAddress as any).district).trim()
@@ -422,7 +380,6 @@ export const SellerRegistration: React.FC = () => {
         ...(storeId ? { store_id: storeId } : {}),
       };
 
-      // CHỈ thêm block định danh khi có dữ liệu hợp lệ
       const hasIdentificationData =
         !!formData.store_identification.full_name ||
         !!formData.store_identification.img_front ||
@@ -430,9 +387,7 @@ export const SellerRegistration: React.FC = () => {
 
       if (hasIdentificationData) {
         if (!formData.store_identification.full_name) {
-          setMessage(
-            '❌ Vui lòng nhập Họ tên trong phần Thông tin định danh hoặc bỏ trống toàn bộ mục này.'
-          );
+          setMessage('Vui lòng nhập Họ tên trong phần Thông tin định danh hoặc bỏ trống mục này.');
           setMessageType('error');
           setLoading(false);
           return;
@@ -444,7 +399,7 @@ export const SellerRegistration: React.FC = () => {
           img_back: formData.store_identification.img_back,
         };
       }
-      // >>> Include store_id on final submit if available
+
       if (storeId) {
         stepData.store_id = storeId;
       }
@@ -460,20 +415,19 @@ export const SellerRegistration: React.FC = () => {
 
       const data = await res.json();
       if (res.ok) {
-        // clear cache and redirect to your store page
         localStorage.removeItem('seller_registration_form_data');
         localStorage.removeItem('seller_registration_current_step');
         localStorage.removeItem('seller_registration_addresses');
-        setMessage('✅ Đăng ký thành công!');
+        setMessage('Đăng ký thành công!');
         setMessageType('success');
         navigate('/myStores');
         return;
       } else {
-        setMessage(`❌ Lỗi đăng ký: ${data.message || 'Thất bại'}`);
+        setMessage(`Lỗi đăng ký: ${data.message || 'Thất bại'}`);
         setMessageType('error');
       }
     } catch {
-      setMessage('❌ Lỗi kết nối');
+      setMessage('Lỗi kết nối');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -486,7 +440,6 @@ export const SellerRegistration: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Validate current step
       let validationErrors: string[] = [];
 
       switch (currentStep) {
@@ -508,15 +461,12 @@ export const SellerRegistration: React.FC = () => {
         return;
       }
 
-      // 2. Upload files if needed
       if (currentStep === 2 && selectedDocFile) {
         await uploadBusinessLicense((fileUrl) => {
           setFormData((prev) => ({
             ...prev,
             documents: [
-              ...(prev.documents || []).filter(
-                (d) => d.doc_type !== 'BUSINESS_LICENSE'
-              ),
+              ...(prev.documents || []).filter((d) => d.doc_type !== 'BUSINESS_LICENSE'),
               { doc_type: 'BUSINESS_LICENSE', file_url: fileUrl },
             ],
           }));
@@ -536,7 +486,6 @@ export const SellerRegistration: React.FC = () => {
         });
       }
 
-      // 3. Save draft
       const newStoreId = await saveDraft(
         currentStep,
         formData,
@@ -558,7 +507,6 @@ export const SellerRegistration: React.FC = () => {
         setStoreId(newStoreId);
       }
 
-      // 4. Move to next step
       nextStep();
     } catch (error: any) {
       setMessage(`❌ Lỗi: ${error.message || 'Có lỗi xảy ra'}`);
@@ -606,7 +554,6 @@ export const SellerRegistration: React.FC = () => {
       setShowSaveModal(false);
       setPendingExit(false);
       if (pendingExit) {
-        // Clear local changes and navigate
         clearSavedData();
         navigate('/');
       }
@@ -621,7 +568,6 @@ export const SellerRegistration: React.FC = () => {
   const handleDontSave = () => {
     setShowSaveModal(false);
     setPendingExit(false);
-    // Clear all local data and navigate
     clearSavedData();
     setFormData(defaultSellerFormData);
     setAddresses([]);
@@ -649,7 +595,6 @@ export const SellerRegistration: React.FC = () => {
     handleInputChange('bank_account', field, value);
   };
 
-  // Render current step
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
@@ -660,7 +605,6 @@ export const SellerRegistration: React.FC = () => {
             onBasicChange={handleBasicChange}
             onAddressChange={setAddresses}
             onShowAddressModal={() => setShowAddressModal(true)}
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
             onShowSelectAddressModal={() => {}}
             onEditAddress={handleEditAddress}
             onSetDefaultAddress={handleSetDefaultAddress}
@@ -674,24 +618,17 @@ export const SellerRegistration: React.FC = () => {
             emails={emails}
             selectedDocFile={selectedDocFile}
             businessLicenseUrl={
-              formData.documents?.find((d) => d.doc_type === 'BUSINESS_LICENSE')
-                ?.file_url || ''
+              formData.documents?.find((d) => d.doc_type === 'BUSINESS_LICENSE')?.file_url || ''
             }
             onInputChange={handleStoreInformationChange}
             onShowEmailModal={() => setShowEmailModal(true)}
-            // eslint-disable-next-line @typescript-eslint/no-empty-function
             onShowSelectEmailModal={() => {}}
             onEditEmail={handleEditEmail}
-            // IMPORTANT: update root-level store_information_email via handleBasicChange
             onSetDefaultEmail={(id) =>
-              handleSetDefaultEmail(id, (field, value) =>
-                handleBasicChange(field as any, value)
-              )
+              handleSetDefaultEmail(id, (field, value) => handleBasicChange(field as any, value))
             }
             onDeleteEmail={(id) =>
-              handleDeleteEmail(id, (field, value) =>
-                handleBasicChange(field as any, value)
-              )
+              handleDeleteEmail(id, (field, value) => handleBasicChange(field as any, value))
             }
             onDocFileChange={setSelectedDocFile}
           />
@@ -723,8 +660,17 @@ export const SellerRegistration: React.FC = () => {
     }
   };
 
+  const messageColors =
+    messageType === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : messageType === 'error'
+      ? 'border-rose-200 bg-rose-50 text-rose-800'
+      : messageType === 'warning'
+      ? 'border-amber-200 bg-amber-50 text-amber-800'
+      : 'border-sky-200 bg-sky-50 text-sky-800';
+
   return (
-    <div className="container mt-4">
+    <div className="container mx-auto mt-6 max-w-5xl px-3">
       <UnsavedChangesBanner
         hasUnsavedChanges={hasUnsavedChanges}
         loading={loading || saveLoading}
@@ -759,44 +705,30 @@ export const SellerRegistration: React.FC = () => {
 
       <StepProgress steps={steps} currentStep={currentStep} />
 
-      <div className="row justify-content-center">
-        <div className="col-md-10">
-          {renderCurrentStep()}
+      <div className="mx-auto max-w-4xl">
+        {renderCurrentStep()}
 
-          <StepNavigation
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            loading={loading || saveLoading}
-            onPrevStep={prevStep}
-            onNextStep={handleNextStep}
-            onClearData={() => {
-              clearSavedData();
-              setFormData(defaultSellerFormData);
-              setAddresses([]);
-              setEmails([]);
-              setCurrentStep(1);
-              clearAllFiles();
-              setMessage('✅ Đã xóa dữ liệu form');
-              setMessageType('success');
-            }}
-          />
+        <StepNavigation
+          currentStep={currentStep}
+          totalSteps={steps.length}
+          loading={loading || saveLoading}
+          onPrevStep={prevStep}
+          onNextStep={handleNextStep}
+          onClearData={() => {
+            clearSavedData();
+            setFormData(defaultSellerFormData);
+            setAddresses([]);
+            setEmails([]);
+            setCurrentStep(1);
+            clearAllFiles();
+            setMessage('Đã xóa dữ liệu form');
+            setMessageType('success');
+          }}
+        />
 
-          {message && (
-            <div
-              className={`alert mt-3 ${
-                messageType === 'success'
-                  ? 'alert-success'
-                  : messageType === 'error'
-                  ? 'alert-danger'
-                  : messageType === 'warning'
-                  ? 'alert-warning'
-                  : 'alert-info'
-              }`}
-            >
-              {message}
-            </div>
-          )}
-        </div>
+        {message && (
+          <div className={`mt-4 rounded-2xl border px-4 py-3 ${messageColors}`}>{message}</div>
+        )}
       </div>
 
       <AddressModal
@@ -836,11 +768,8 @@ export const SellerRegistration: React.FC = () => {
           setEmailFormData({ email: '', description: '', is_default: true });
         }}
         onInputChange={handleEmailInputChange}
-        // IMPORTANT: update root-level email in formData
         onSave={() =>
-          handleAddEmail(setMessage, (field, value) =>
-            handleBasicChange(field as any, value)
-          )
+          handleAddEmail(setMessage, (field, value) => handleBasicChange(field as any, value))
         }
       />
 

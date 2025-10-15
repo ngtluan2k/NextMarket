@@ -37,7 +37,7 @@ const items: MenuItem[] = [
   getItem('Quản lý bán hàng', 'SalesManagement', <BarChartOutlined />),
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
   getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
-  getItem('Hóa Đơn ', 'Invoices', <FileTextOutlined />),
+  getItem('Gói Đăng ký ', 'Invoices', <FileTextOutlined />),
   getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
   getItem('Quản lý marketing', 'VoucherManagement', <GiftOutlined />),
   getItem('Trở về trang chủ', 'HomePage', <HomeOutlined />),

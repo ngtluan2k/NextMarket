@@ -1,6 +1,6 @@
 // src/components/ProductCard.tsx
 import React from 'react';
-
+import { Rate } from 'antd';
 export interface Product {
   id: number;
   name: string;
@@ -11,6 +11,7 @@ export interface Product {
   brandName?: string;
   categoryId?: number;
   categoryName?: string;
+  avg_rating?: number;
 }
 
 const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
@@ -31,6 +32,13 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         <p className="mt-1 text-sm font-semibold">
           {product.price.toLocaleString()}₫
         </p>
+        {/* ⭐ hiển thị sao trung bình */}
+            <div className="mt-1 flex items-center gap-1">
+              <Rate disabled allowHalf value={product.avg_rating} style={{ fontSize: 14 }} />
+              <span className="text-xs text-slate-500">
+                ({product.avg_rating?.toFixed(1) ?? 0})
+              </span>
+            </div>
       </div>
     </div>
   );

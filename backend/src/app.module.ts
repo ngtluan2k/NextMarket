@@ -81,23 +81,18 @@ import { AdminModule } from './modules/admin/admin.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        console.log('DB_HOST:', configService.get('DB_HOST'));
-        console.log('DB_NAME:', configService.get('DB_USERNAME'));
-        console.log('DB_PASSWORD:', configService.get('DB_PASSWORD'));
-
-        return {
-          type: 'mysql',
-          host: configService.get<string>('DB_HOST'),
-          port: configService.get<number>('DB_PORT'),
-          username: configService.get<string>('DB_USERNAME'),
-          password: configService.get<string>('DB_PASSWORD'),
-          database: configService.get<string>('DB_NAME'),
-          autoLoadEntities: true,
-          synchronize: false,
-          logging: true,
-        };
-      },
+      useFactory: (config: ConfigService) => ({
+        type: 'mysql',
+        host: config.get('DB_HOST'),
+        port: +config.get('DB_PORT'),
+        username: config.get('DB_USERNAME'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_NAME'),
+        
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: true,
+      }),
     }),
 
     ProductModule,

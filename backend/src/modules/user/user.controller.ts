@@ -24,6 +24,7 @@ import {
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../../common/utils/multer.config';
+import { RequestPasswordResetDto, ResetPasswordByOtpDto } from './dto/password-reset.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -167,5 +168,21 @@ export class UserController {
       message: 'Affiliate status checked',
       data: { is_affiliate: isAffiliate },
     };
+  }
+
+  @Post('password/forgot')
+  @ApiOperation({ summary: 'Gửi OTP đặt lại mật khẩu vào email' })
+  async forgotPassword(@Body() dto: RequestPasswordResetDto) {
+    return this.userService.requestPasswordReset(dto);
+  }
+
+  @Post('password/reset')
+  @ApiOperation({ summary: 'Xác thực OTP và đổi mật khẩu' })
+  async resetPassword(@Body() dto: ResetPasswordByOtpDto) {
+    return this.userService.resetPasswordByOtp(dto);
+  }
+  @Post('password/verify-otp')
+  async verifyPasswordOtp(@Body() dto: { email: string; code: string }) {
+    return this.userService.verifyPasswordOtp(dto);
   }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, Save, RotateCcw } from 'lucide-react';
 
 interface UnsavedChangesBannerProps {
   hasUnsavedChanges: boolean;
@@ -16,26 +17,33 @@ const UnsavedChangesBanner: React.FC<UnsavedChangesBannerProps> = ({
   if (!hasUnsavedChanges) return null;
 
   return (
-    <div className="alert alert-warning alert-dismissible fade show">
-      <i className="bi bi-exclamation-triangle" /> <strong>Chú ý:</strong> Bạn
-      có thay đổi chưa được lưu.
-      <button
-        className="btn btn-sm btn-outline-primary ms-2"
-        onClick={onSaveDraft}
-        disabled={loading}
-      >
-        {loading ? 'Đang lưu...' : '💾 Lưu nháp'}
-      </button>
-      <button
-        className="btn btn-sm btn-outline-danger ms-2"
-        onClick={() => {
-          if (window.confirm('Bạn có chắc muốn hủy tất cả thay đổi?')) {
-            onDiscardChanges();
-          }
-        }}
-      >
-        🔄 Hủy thay đổi
-      </button>
+    <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="flex items-center gap-2 text-amber-800">
+        <AlertTriangle className="h-5 w-5" />
+        <strong>Chú ý:</strong>
+        <span>Bạn có thay đổi chưa được lưu.</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          onClick={onSaveDraft}
+          disabled={loading}
+        >
+          <Save className="mr-2 h-4 w-4" />
+          {loading ? 'Đang lưu...' : 'Lưu nháp'}
+        </button>
+        <button
+          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+          onClick={() => {
+            if (window.confirm('Bạn có chắc muốn hủy tất cả thay đổi?')) {
+              onDiscardChanges();
+            }
+          }}
+        >
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Hủy thay đổi
+        </button>
+      </div>
     </div>
   );
 };

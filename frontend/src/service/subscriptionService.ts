@@ -16,6 +16,14 @@ export async function fetchMySubscriptions(): Promise<Subscription[]> {
   return res.data;
 }
 
+export async function fetchStoreSubscriptions(storeId: number) {
+  const token = localStorage.getItem('token');
+  const res = await axios.get(`${API_BASE}/store/${storeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+}
+
 export async function useSubscriptionApi(
   body: UseSubscriptionBody
 ): Promise<UseSubscriptionResponse> {

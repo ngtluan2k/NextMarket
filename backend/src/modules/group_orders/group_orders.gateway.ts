@@ -14,14 +14,16 @@ import { GroupOrdersService } from './group_orders.service';
 
 @WebSocketGateway({
   cors: {
-    origin: [process.env.FE_BASE_URL, process.env.BE_BASE_URL].filter(Boolean) as string[],
+    origin: [process.env.FE_BASE_URL, process.env.BE_BASE_URL].filter(
+      Boolean
+    ) as string[],
     credentials: true,
   },
   namespace: '/group-orders',
 })
 export class GroupOrdersGateway
-
-  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   @WebSocketServer()
   server!: Server;
 
@@ -33,7 +35,7 @@ export class GroupOrdersGateway
   constructor(
     @Inject(forwardRef(() => GroupOrdersService))
     private readonly groupOrdersService: GroupOrdersService
-  ) { }
+  ) {}
 
   afterInit(server: Server) {
     this.server = server;
@@ -205,6 +207,4 @@ export class GroupOrdersGateway
   private roomName(groupId: number) {
     return `group-${groupId}`;
   }
-
-
 }

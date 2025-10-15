@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -13,39 +14,36 @@ interface StepProgressProps {
 
 const StepProgress: React.FC<StepProgressProps> = ({ steps, currentStep }) => {
   return (
-    <div className="row mb-4">
-      <div className="col-12">
-        <div className="d-flex align-items-center justify-content-center">
-          {steps.map((step, index) => (
+    <div className="mb-6">
+      <div className="flex items-center justify-center gap-6">
+        {steps.map((step, index) => {
+          const reached = currentStep >= step.id;
+          const passed = currentStep > step.id;
+          return (
             <React.Fragment key={step.id}>
               <div className="text-center">
                 <div
-                  className={`rounded-circle d-flex align-items-center justify-content-center ${
-                    currentStep >= step.id
-                      ? 'bg-danger text-white'
-                      : 'bg-light text-muted'
+                  className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full ${
+                    reached ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500'
                   }`}
-                  style={{ width: '40px', height: '40px' }}
                 >
-                  {step.id}
+                  {passed ? <Check className="h-5 w-5" /> : step.id}
                 </div>
                 <div className="mt-2">
-                  <small className="fw-bold">{step.title}</small>
-                  <br />
-                  <small className="text-muted">{step.description}</small>
+                  <div className="text-sm font-semibold text-slate-800">{step.title}</div>
+                  <div className="text-xs text-slate-500">{step.description}</div>
                 </div>
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`mx-4 ${
-                    currentStep > step.id ? 'bg-danger' : 'bg-light'
+                  className={`h-0.5 w-24 ${
+                    currentStep > step.id ? 'bg-sky-600' : 'bg-slate-200'
                   }`}
-                  style={{ height: '2px', width: '100px' }}
                 />
               )}
             </React.Fragment>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );

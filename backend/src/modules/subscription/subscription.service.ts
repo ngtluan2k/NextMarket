@@ -3,12 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Subscription } from './subscription.entity';
 import { SubscriptionUsage } from '../subscription_usages/subscription_usage.entity';
-import { Order, OrderStatuses } from '../orders/order.entity';
+import { Order } from '../orders/order.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 import { User } from '../user/user.entity';
 import { UserAddress } from '../user_address/user_address.entity';
 import { Store } from '../store/store.entity';
-
+import { OrderStatuses } from '../orders/types/orders';
 @Injectable()
 export class SubscriptionService {
   constructor(
@@ -116,4 +116,13 @@ export class SubscriptionService {
       order: { endDate: 'ASC' },
     });
   }
+
+  // subscription.service.ts
+async getStoreSubscriptionsById(storeId: number) {
+  return this.subRepo.find({
+    where: { product: { store: { id: storeId } } },
+    relations: ['product', 'variant', 'user', 'user.profile','product.store', 'product.media'],
+    order: { endDate: 'ASC' },
+  });
+}
 }

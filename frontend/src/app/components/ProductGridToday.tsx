@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Rate } from 'antd';
 
 type ProductRaw = {
   id: number;
@@ -9,6 +10,7 @@ type ProductRaw = {
   base_price?: string;
   variants?: { price: string }[];
   brand?: { name: string };
+  avg_rating?: number; 
 };
 
 type ProductCardData = {
@@ -18,6 +20,7 @@ type ProductCardData = {
   image: string;
   price: string;
   brandName?: string;
+  avg_rating?: number;  
 };
 
 type Props = {
@@ -60,10 +63,12 @@ export default function ProductGridToday({
                     /^\/+/,
                     ''
                   )}` // đường dẫn local
-              : 'https://via.placeholder.com/220x220?text=No+Image',
+              : '',
 
             price: mainVariant?.price || p.base_price || '0',
             brandName: p.brand?.name,
+            avg_rating: Number(p.avg_rating ?? 0),
+
           };
         });
 
@@ -111,6 +116,13 @@ export default function ProductGridToday({
             <p className="mt-1 text-sm font-semibold">
               {Number(p.price).toLocaleString('vi-VN')}đ
             </p>
+            {/* ⭐ hiển thị sao trung bình */}
+            <div className="mt-1 flex items-center gap-1">
+              <Rate disabled allowHalf value={p.avg_rating} style={{ fontSize: 14 }} />
+              <span className="text-xs text-slate-500">
+                ({p.avg_rating?.toFixed(1) ?? 0})
+              </span>
+            </div>
           </div>
         </div>
       ))}

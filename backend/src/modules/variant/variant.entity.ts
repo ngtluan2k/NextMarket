@@ -65,7 +65,7 @@ export class Variant {
   @OneToMany(() => Subscription, (sub) => sub.variant)
   subscriptions!: Subscription[];
   @OneToMany(() => PricingRules, (rule) => rule.variant)
-  variant!: Variant;
+  pricingRules!: PricingRules[];
 
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.variant)
   inventoryTransactions!: InventoryTransaction[];

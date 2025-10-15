@@ -6,19 +6,19 @@ interface CartContextType {
     productId: number,
     quantity?: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription',
+    type?: 'bulk' | 'subscription' | 'normal',
     isGroup?: boolean
   ) => Promise<void>;
   removeFromCart: (
     productId: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription' | 'normal'
   ) => Promise<void>;
   updateQuantity: (
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription',
+    type?: 'bulk' | 'subscription' | 'normal',
   ) => Promise<void>;
   clearCart: () => void;
   loadCart: () => void;
@@ -56,7 +56,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('value inside cart: ' + JSON.stringify(data.items));
         setCart(data.items);
       } else {
         setCart([]);
@@ -94,7 +93,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     productId: number,
     quantity = 1,
     variantId?: number,
-    type?: 'bulk' | 'subscription',
+    type?: 'bulk' | 'subscription' | 'normal',
     isGroup = false
   ) => {
     const currentToken = localStorage.getItem('token');
@@ -124,7 +123,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const removeFromCart = async (
     productId: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription' | 'normal'
   ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
@@ -156,7 +155,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'
+    type?: 'bulk' | 'subscription' | 'normal'
   ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
