@@ -72,7 +72,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
 
   // Load product categories and available vouchers
   useEffect(() => {
-    if (visible && me?.id) {
+    if (visible && me?.user_id) {
       fetchProductCategories();
       fetchAvailableVouchers();
     } else if (visible && !me?.id) {
@@ -107,7 +107,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       setLoading(false);
     }
   };
-
+console.log('Product categories:', productCategories);
   const isVoucherValid = (voucher: Voucher) => {
 
     // Kiểm tra trạng thái
@@ -203,6 +203,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       setLoading(false);
     }
   };
+  console.log('Vouchers after filtering:', vouchers);
 
   const calculateAllDiscounts = async () => {
     const discounts: Record<number, number> = {};

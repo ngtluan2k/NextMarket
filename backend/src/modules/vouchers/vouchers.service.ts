@@ -373,7 +373,6 @@ export class VouchersService {
       },
       relations: ['usages', 'store'],
     });
-
     const availableVouchers = [];
     for (const voucher of vouchers) {
       if (

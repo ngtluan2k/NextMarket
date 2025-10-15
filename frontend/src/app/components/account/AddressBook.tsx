@@ -54,10 +54,10 @@ export default function AddressBook() {
   const [isDefault, setIsDefault] = useState(false);
 
   useEffect(() => {
-    if (me?.id) {
+    if (me?.user_id) {
       fetchAddresses();
     }
-  }, [me?.id]);
+  }, [me?.user_id]);
 
   useEffect(() => {
     loadProvinces();
@@ -65,7 +65,7 @@ export default function AddressBook() {
 
   const fetchAddresses = async () => {
     try {
-      const res = await api.get(`/users/${me?.id}/addresses`);
+      const res = await api.get(`/users/${me?.user_id}/addresses`);
       setAddresses(res.data);
       const defaultAddress =
         res.data.find((a: UserAddress) => a.isDefault) || res.data[0] || null;
@@ -194,7 +194,7 @@ export default function AddressBook() {
     setLoading(true);
 
     try {
-      const userId = me?.user_id || me?.id || Number(localStorage.getItem('user_id') || 0);
+      const userId = me?.user_id || me?.user_id || Number(localStorage.getItem('user_id') || 0);
 
       if (!userId) {
         alert('Vui lòng đăng nhập để thêm địa chỉ');
@@ -254,7 +254,7 @@ export default function AddressBook() {
 
   const handleSetDefault = async (addressId: number) => {
     try {
-      const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+      const userId = me?.user_id || Number(localStorage.getItem('userId') || 0);
       const address = addresses.find((a) => a.id === addressId);
 
       if (!address) return;
@@ -281,10 +281,10 @@ export default function AddressBook() {
   };
 
   const handleDelete = async (addressId: number) => {
-    if (!confirm('Xóa địa chỉ này?')) return;
+    if (!window.confirm('Xóa địa chỉ này?')) return;
 
     try {
-      const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+      const userId = me?.user_id || Number(localStorage.getItem('userId') || 0);
       await api.delete(`/users/${userId}/addresses/${addressId}`);
       await fetchAddresses();
 
