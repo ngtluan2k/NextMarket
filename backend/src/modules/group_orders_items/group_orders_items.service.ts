@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { GroupOrder } from '../group_orders/group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { GroupOrderItem } from './group_orders_item.entity';
@@ -15,7 +15,7 @@ import { CreateGroupOrderItemDto } from './dto/create-group-order-item.dto';
 import { UpdateGroupOrderItemDto } from './dto/update-group-order-item.dto';
 import { Inject, forwardRef } from '@nestjs/common';
 import { GroupOrdersGateway } from '../group_orders/group_orders.gateway';
-
+import { Inventory } from '../inventory/inventory.entity';
 
 @Injectable()
 export class GroupOrderItemsService {
@@ -34,6 +34,8 @@ export class GroupOrderItemsService {
 		private readonly pricingRulesRepo: Repository<PricingRules>,
 		@Inject(forwardRef(() => GroupOrdersGateway))
 		private readonly gateway: GroupOrdersGateway,
+		@InjectRepository(Inventory)
+		private readonly inventoryRepo: Repository<Inventory>
 	) { }
 
 	// Kiểm tra group còn mở
@@ -48,17 +50,38 @@ export class GroupOrderItemsService {
 	// Kiểm tra người dùng có trong group
 	private async ensureMember(groupId: number, userId: number) {
 		const member = await this.memberRepo.findOne({
-			where: { group_order: { id: groupId }, user: { id: userId }, status: 'joined' },
+			where: {
+				group_order: { id: groupId },
+				user: { id: userId },
+				status: 'joined',
+			},
 			relations: ['group_order', 'user'],
 		});
 		if (!member)
-			throw new BadRequestException('Người dùng chưa tham gia group hoặc không hợp lệ');
+			throw new BadRequestException(
+				'Người dùng chưa tham gia group hoặc không hợp lệ'
+			);
 		return member;
 	}
 
+	private calculateDiscountPercent(memberCount: number): number {
+		if (memberCount >= 8) return 10;
+		if (memberCount >= 5) return 6;
+		if (memberCount >= 3) return 4;
+		if (memberCount >= 2) return 2;
+		return 0;
+	}
+
 	// Hàm tính giá sản phẩm giống logic order
-	private async calculateItemPrice(productId: number, variantId?: number, quantity = 1): Promise<number> {
-		const product = await this.productRepo.findOne({ where: { id: productId } });
+	private async calculateItemPrice(
+		productId: number,
+		variantId?: number,
+		quantity = 1,
+		groupId?: number
+	): Promise<number> {
+		const product = await this.productRepo.findOne({
+			where: { id: productId },
+		});
 		if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
 
 		let variant: Variant | null = null;
@@ -85,6 +108,39 @@ export class GroupOrderItemsService {
 
 		if (!basePrice || basePrice <= 0)
 			throw new BadRequestException('Không xác định được đơn giá hợp lệ');
+
+		// 3. KIỂM TRA TỒN KHO
+		const inventory = await this.inventoryRepo.findOne({
+			where: {
+				product: { id: productId },
+				variant: variantId ? { id: variantId } : IsNull(),
+			},
+		});
+
+		if (!inventory) {
+			throw new BadRequestException(
+				`Không tìm thấy kho cho sản phẩm #${productId}`
+			);
+		}
+
+		// Tính số lượng có sẵn
+		const { available } = await this.inventoryRepo
+			.createQueryBuilder('inv')
+			.select(
+				'COALESCE(SUM(inv.quantity - COALESCE(inv.used_quantity, 0)), 0)',
+				'available'
+			)
+			.where('inv.variant_id = :variantId', {
+				variantId: variantId ?? null,
+			})
+			.andWhere('inv.product_id = :productId', { productId })
+			.getRawOne();
+
+		if (Number(available) < quantity) {
+			throw new BadRequestException(
+				`Không đủ hàng trong kho. Có sẵn: ${available}, Yêu cầu: ${quantity}`
+			);
+		}
 
 		// Tìm rule phù hợp
 		const now = new Date();
@@ -116,22 +172,42 @@ export class GroupOrderItemsService {
 		if (appliedRule) {
 			basePrice = Number(appliedRule.price);
 		}
+		// Áp dụng giảm giá theo số thành viên trong group
+		if (groupId) {
+			const group = await this.groupOrderRepo.findOne({
+				where: { id: groupId },
+				relations: ['members']
+			});
+
+			if (group) {
+				const memberCount = group.members?.length || 0;
+				const discountPercent = this.calculateDiscountPercent(memberCount);
+
+				if (discountPercent > 0) {
+					basePrice = basePrice * (1 - discountPercent / 100);
+				}
+			}
+		}
 
 		return basePrice;
 	}
 
 	// Thêm sản phẩm vào group
-	async addItem(groupId: number, dto: CreateGroupOrderItemDto & { userId: number }) {
+	async addItem(
+		groupId: number,
+		dto: CreateGroupOrderItemDto & { userId: number }
+	) {
 		const group = await this.ensureGroupOpen(groupId);
 		const member = await this.ensureMember(groupId, dto.userId);
 
 		// 💰 Tính đơn giá theo logic order
-		let unitPrice = await this.calculateItemPrice(dto.productId, dto.variantId, dto.quantity);
+		let unitPrice = await this.calculateItemPrice(
+			dto.productId,
+			dto.variantId,
+			dto.quantity,
+			groupId
+		);
 
-		// Nếu group có discount riêng (ví dụ giảm 5%)
-		if (group.discount_percent && group.discount_percent > 0) {
-			unitPrice = unitPrice * (1 - group.discount_percent / 100);
-		}
 
 		const item = this.itemRepo.create({
 			group_order: { id: groupId } as GroupOrder,
@@ -148,15 +224,41 @@ export class GroupOrderItemsService {
 			where: { id: saved.id },
 			relations: ['member', 'member.user', 'product', 'variant'],
 		});
-		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', { item: full });
+		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', {
+			item: full,
+		});
 		return full;
+	}
+	// Cập nhật discount của group dựa trên số thành viên
+	async updateGroupDiscount(groupId: number) {
+		const group = await this.groupOrderRepo.findOne({
+			where: { id: groupId },
+			relations: ['members']
+		});
+
+		if (!group) return;
+
+		const memberCount = group.members?.length || 0;
+		const discountPercent = this.calculateDiscountPercent(memberCount);
+
+		await this.groupOrderRepo.update(groupId, {
+			discount_percent: discountPercent
+		});
+
+		// Broadcast cập nhật discount
+		await this.gateway.broadcastGroupUpdate(groupId, 'discount-updated', {
+			discountPercent,
+			memberCount
+		});
+
+		return discountPercent;
 	}
 
 	// Danh sách tất cả item trong group
 	async listGroupItems(groupId: number) {
 		return this.itemRepo.find({
 			where: { group_order: { id: groupId } },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'variant','member.user.profile'],
 			order: { id: 'DESC' },
 		});
 	}
@@ -171,14 +273,20 @@ export class GroupOrderItemsService {
 	}
 
 	// Cập nhật item (chỉ chủ sở hữu)
-	async updateItem(groupId: number, itemId: number, dto: UpdateGroupOrderItemDto, userId: number) {
+	async updateItem(
+		groupId: number,
+		itemId: number,
+		dto: UpdateGroupOrderItemDto,
+		userId: number
+	) {
 		await this.ensureGroupOpen(groupId);
 
 		const item = await this.itemRepo.findOne({
 			where: { id: itemId, group_order: { id: groupId } },
 			relations: ['member', 'member.user'],
 		});
-		if (!item) throw new NotFoundException('Item không tồn tại trong group này');
+		if (!item)
+			throw new NotFoundException('Item không tồn tại trong group này');
 		if (item.member?.user?.id !== userId)
 			throw new BadRequestException('Không có quyền sửa item của người khác');
 
@@ -187,7 +295,12 @@ export class GroupOrderItemsService {
 				throw new BadRequestException('Số lượng tối thiểu là 1');
 			item.quantity = dto.quantity;
 			// Tính lại giá nếu thay đổi số lượng
-			const unitPrice = await this.calculateItemPrice(item.product.id, item.variant?.id, dto.quantity);
+			const unitPrice = await this.calculateItemPrice(
+				item.product.id,
+				item.variant?.id,
+				dto.quantity,
+				groupId
+			);
 			item.price = unitPrice * dto.quantity;
 		}
 
@@ -201,7 +314,9 @@ export class GroupOrderItemsService {
 			relations: ['member', 'member.user', 'product', 'variant'],
 		});
 		console.log('[WS] item-added emit', { groupId, id: full?.id });
-		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', { item: full });
+		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {
+			item: full,
+		});
 		return full;
 	}
 
@@ -212,13 +327,18 @@ export class GroupOrderItemsService {
 			where: { id: itemId, group_order: { id: groupId } },
 			relations: ['member', 'member.user'],
 		});
-		if (!item) throw new NotFoundException('Item không tồn tại trong group này');
+		if (!item)
+			throw new NotFoundException('Item không tồn tại trong group này');
 		if (item.member?.user?.id !== userId)
 			throw new BadRequestException('Không có quyền xoá item của người khác');
 
 		await this.itemRepo.delete(item.id);
 		console.log('[WS] item-removed emit', { groupId, itemId });
-		await this.gateway.broadcastGroupUpdate(groupId, 'item-removed', { itemId });
+		await this.gateway.broadcastGroupUpdate(groupId, 'item-removed', {
+			itemId,
+		});
 		return { success: true };
 	}
+
+
 }

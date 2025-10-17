@@ -8,14 +8,17 @@ import {
   Post,
   Patch,
   Delete,
+  Req,
 } from '@nestjs/common';
 import { GroupOrdersService } from './group_orders.service';
 import { CreateGroupOrderDto } from './dto/create-group-order.dto';
 import { JoinGroupOrderDto } from './dto/join-group-order.dto';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 
 @Controller('group-orders') //tạo group mới.
 export class GroupOrdersController {
-  constructor(private readonly service: GroupOrdersService) {}
+  constructor(private readonly service: GroupOrdersService) { }
 
   @Post()
   create(@Body() dto: CreateGroupOrderDto) {
@@ -42,28 +45,33 @@ export class GroupOrdersController {
     return this.service.joinGroupOrderByUuid(dto.userId, uuid);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: { name?: string; expiresAt?: string | null }
+    @Body() dto: any,
+    @Req() req: any,
   ) {
-    return this.service.updateGroupOrder(id, dto);
+    const userId = req.user.userId; // hoặc req.user.sub
+    return this.service.updateGroupOrder(id, userId, dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.service.deleteGroupOrder(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any,
+  ) {
+    const userId = req.user.userId; // hoặc req.user.sub
+    return this.service.deleteGroupOrder(id, userId);
+  }
+  @Get('uuid/:uuid')
+  getByUuid(@Param('uuid') uuid: string) {
+    return this.service.getGroupOrderByUuid(uuid);
   }
 
-	@Get('uuid/:uuid')
-	getByUuid(@Param('uuid') uuid: string) {
-		return this.service.getGroupOrderByUuid(uuid);
-	}
-
-	@Get('user/:userId/active')
-	getUserActiveGroups(@Param('userId', ParseIntPipe) userId: number) {
-		return this.service.getUserActiveGroupOrders(userId);
-
-	}
-
+  @Get('user/:userId/active')
+  getUserActiveGroups(@Param('userId', ParseIntPipe) userId: number) {
+    return this.service.getUserActiveGroupOrders(userId);
+  }
 }

@@ -205,6 +205,7 @@ export const CartSidebar: React.FC<Props> = ({
       setLoading(false);
     }
   };
+  
 
   const handleApplyVoucher = (vouchers: Voucher[], totalDiscount: number) => {
     console.log(

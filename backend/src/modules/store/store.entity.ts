@@ -39,7 +39,7 @@ export class Store {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, unique: true })
   name!: string;
 
   @Column({ length: 255, unique: true })

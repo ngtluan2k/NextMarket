@@ -1,4 +1,10 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import {
+    Injectable,
+    BadRequestException,
+    NotFoundException,
+    Inject,
+    forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
 import { GroupOrder } from './group_orders.entity';
@@ -9,19 +15,24 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Store } from '../store/store.entity';
 import { GroupOrdersGateway } from './group_orders.gateway';
+import { GroupOrderItemsService } from '../group_orders_items/group_orders_items.service';
 
 import { LessThan } from 'typeorm';
 
 @Injectable()
 export class GroupOrdersService {
     constructor(
-        @InjectRepository(GroupOrder) private readonly groupOrderRepo: Repository<GroupOrder>,
-        @InjectRepository(GroupOrderMember) private readonly memberRepo: Repository<GroupOrderMember>,
+        @InjectRepository(GroupOrder)
+        private readonly groupOrderRepo: Repository<GroupOrder>,
+        @InjectRepository(GroupOrderMember)
+        private readonly memberRepo: Repository<GroupOrderMember>,
         @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
         @InjectRepository(Store) private readonly storeRepo: Repository<Store>,
         private readonly config: ConfigService,
         @Inject(forwardRef(() => GroupOrdersGateway))
         private readonly gateway: GroupOrdersGateway,
+        @Inject(forwardRef(() => GroupOrderItemsService))
+        private readonly groupOrderItemsService: GroupOrderItemsService
     ) { }
 
     // @Cron(CronExpression.EVERY_MINUTE)
@@ -39,10 +50,12 @@ export class GroupOrdersService {
             .createQueryBuilder()
             .update(GroupOrder)
             .set({ status: 'locked' })
-            .whereInIds(expired.map(g => g.id))
+            .whereInIds(expired.map((g) => g.id))
             .execute();
         for (const g of expired) {
-            await this.gateway.broadcastGroupUpdate(g.id, 'group-locked', { groupId: g.id });
+            await this.gateway.broadcastGroupUpdate(g.id, 'group-locked', {
+                groupId: g.id,
+            });
         }
     }
 
@@ -72,9 +85,11 @@ export class GroupOrdersService {
         const baseUrl = this.config.get<string>('FE_BASE_URL');
         const inviteLink = `${baseUrl}/group/${saved.uuid}`;
         if (saved.invite_link !== inviteLink) {
-            await this.groupOrderRepo.update({ id: saved.id }, { invite_link: inviteLink });
+            await this.groupOrderRepo.update(
+                { id: saved.id },
+                { invite_link: inviteLink }
+            );
         }
-
 
         // ensure host is a member
         const hostMember = this.memberRepo.create({
@@ -95,7 +110,19 @@ export class GroupOrdersService {
     async getGroupOrderById(id: number) {
         const group = await this.groupOrderRepo.findOne({
             where: { id } as FindOptionsWhere<GroupOrder>,
-            relations: ['store', 'user','user.profile','members', 'items', 'orders', 'members.user', 'members.user.profile','items.member', 'items.member.user', 'items.product',],
+            relations: [
+                'store',
+                'user',
+                'user.profile',
+                'members',
+                'items',
+                'orders',
+                'members.user',
+                'members.user.profile',
+                'items.member',
+                'items.member.user',
+                'items.product',
+            ],
             loadEagerRelations: true,
         });
         if (!group) throw new NotFoundException('Group order not found');
@@ -127,6 +154,8 @@ export class GroupOrdersService {
             status: 'joined',
         });
         const savedMember = await this.memberRepo.save(member);
+        // Cập nhật lại discount của group
+        await this.groupOrderItemsService.updateGroupDiscount(groupId);
 
         // Broadcast cho mọi người trong group biết có người mới tham gia
         await this.gateway.broadcastGroupUpdate(groupId, 'member-joined', {
@@ -161,22 +190,21 @@ export class GroupOrdersService {
         return this.joinGroupOrder(userId, group.id);
     }
 
-
-    async updateGroupOrder(id: number, dto: { name?: string; expiresAt?: string | null }) {
-        const group = await this.groupOrderRepo.findOne({ where: { id } });
+    async updateGroupOrder(id: number, userId: number, dto: { name?: string }) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id },
+            relations: ['user'], // để lấy host
+        });
         if (!group) throw new NotFoundException('Group order not found');
 
-        const patch: Partial<GroupOrder> = {};
-        if (typeof dto.name === 'string' && dto.name.trim()) patch.name = dto.name.trim();
-
-        if (dto.expiresAt === null) {
-            patch.expires_at = null;
-        } else if (dto.expiresAt) {
-            const d = new Date(dto.expiresAt);
-            if (isNaN(d.getTime())) throw new BadRequestException('Invalid expiresAt');
-            if (d <= new Date()) throw new BadRequestException('expiresAt must be in the future');
-            patch.expires_at = d;
+        // 🔒 Kiểm tra quyền
+        if (group.user.id !== userId) {
+            throw new BadRequestException('Bạn không có quyền sửa nhóm này');
         }
+
+        const patch: Partial<GroupOrder> = {};
+        if (typeof dto.name === 'string' && dto.name.trim())
+            patch.name = dto.name.trim();
 
         await this.groupOrderRepo.update({ id }, patch);
         const updated = await this.getGroupOrderById(id);
@@ -189,14 +217,24 @@ export class GroupOrdersService {
         return updated;
     }
 
-    async deleteGroupOrder(id: number) {
-        const group = await this.groupOrderRepo.findOne({ where: { id } });
+    async deleteGroupOrder(id: number, userId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id },
+            relations: ['user'], // cần để biết host là ai
+        });
         if (!group) throw new NotFoundException('Group order not found');
+
+        // 🔒 Kiểm tra quyền
+        if (group.user.id !== userId) {
+            throw new BadRequestException('Bạn không có quyền xóa nhóm này');
+        }
 
         await this.groupOrderRepo.delete(id);
 
         // Broadcast xóa group
-        await this.gateway.broadcastGroupUpdate(id, 'group-deleted', { groupId: id });
+        await this.gateway.broadcastGroupUpdate(id, 'group-deleted', {
+            groupId: id,
+        });
 
         return { success: true };
     }
@@ -214,18 +252,18 @@ export class GroupOrdersService {
         return this.memberRepo.find({
             where: {
                 user: { id: userId } as any,
-                status: 'joined'
+                status: 'joined',
             },
             relations: ['group_order', 'group_order.store', 'group_order.user'],
-            order: { joined_at: 'DESC' }
+            order: { joined_at: 'DESC' },
         });
     }
 
     async getUserActiveGroupOrders(userId: number) {
         const members = await this.getUserActiveGroups(userId);
         return members
-            .filter(member => member.group_order) // Lọc bỏ những member có group_order null
-            .map(member => ({
+            .filter((member) => member.group_order) // Lọc bỏ những member có group_order null
+            .map((member) => ({
                 id: member.group_order.id,
                 name: member.group_order.name,
                 status: member.group_order.status,
@@ -233,8 +271,7 @@ export class GroupOrdersService {
                 is_host: member.is_host,
                 store: member.group_order.store,
                 host: member.group_order.user,
-                joined_at: member.joined_at
+                joined_at: member.joined_at,
             }));
     }
-
 }

@@ -18,18 +18,20 @@ export class SocketService {
         });
 
         this.socket.on('connect', () => {
-            console.log('[WS] Connected to group orders socket, id=', this.socket?.id);
+            console.log(
+                '[WS] Connected to group orders socket, id=',
+                this.socket?.id
+            );
             // NEW: tự re-join room nếu có lịch sử
             if (this.lastJoin) {
                 this.joinedOnce = true;
                 this.joinGroup(this.lastJoin.groupId, this.lastJoin.userId);
-               
             }
         });
 
         this.socket.on('disconnect', () => {
             console.log('Disconnected from group orders socket');
-             this.joinedOnce = false;
+            this.joinedOnce = false;
         });
 
         return this.socket;
@@ -44,19 +46,21 @@ export class SocketService {
 
     joinGroup(groupId: number, userId: number) {
         if (this.socket) {
-
             this.lastJoin = { groupId, userId };
             this.socket.emit('join-group', { groupId, userId });
             this.joinedOnce = true;
         }
     }
 
-
     leaveGroup(groupId: number, userId: number) {
         if (this.socket) {
             this.socket.emit('leave-group', { groupId, userId });
         }
-        if (this.lastJoin && this.lastJoin.groupId === groupId && this.lastJoin.userId === userId) {
+        if (
+            this.lastJoin &&
+            this.lastJoin.groupId === groupId &&
+            this.lastJoin.userId === userId
+        ) {
             this.lastJoin = null;
             this.joinedOnce = false;
         }
@@ -104,13 +108,16 @@ export class SocketService {
         }
     }
 
-    onGroupUpdated(callback: (data: any) => void) { // <-- thêm
+    onGroupUpdated(callback: (data: any) => void) {
+        // <-- thêm
         this.socket?.on('group-updated', callback);
     }
-    onGroupLocked(callback: () => void) { // <-- thêm
+    onGroupLocked(callback: () => void) {
+        // <-- thêm
         this.socket?.on('group-locked', callback);
     }
-    onGroupDeleted(callback: () => void) { // <-- thêm
+    onGroupDeleted(callback: () => void) {
+        // <-- thêm
         this.socket?.on('group-deleted', callback);
     }
 
@@ -119,7 +126,6 @@ export class SocketService {
             this.socket.removeAllListeners();
         }
     }
-
 
     // === Emit functions ===
     emitAddItem(groupId: number, userId: number, item: any) {
@@ -134,6 +140,9 @@ export class SocketService {
         this.socket?.emit('remove-item', { groupId, userId, itemId });
     }
 
+    onDiscountUpdated(callback: (data: any) => void) {
+        this.socket?.on('discount-updated', callback);
+    }
 }
 
 export const socketService = new SocketService();

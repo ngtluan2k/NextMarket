@@ -107,6 +107,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       setLoading(false);
     }
   };
+  console.log ("Product category",productCategories);
 
   const isVoucherValid = (voucher: Voucher) => {
 
@@ -188,6 +189,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
         }
         return isVoucherValid(v);
       });
+      console.log({res});
       setVouchers(filtered);
     } catch (error: any) {
       const errorMessage =
@@ -203,6 +205,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
       setLoading(false);
     }
   };
+  console.log ('voucher,', vouchers);
 
   const calculateAllDiscounts = async () => {
     const discounts: Record<number, number> = {};
