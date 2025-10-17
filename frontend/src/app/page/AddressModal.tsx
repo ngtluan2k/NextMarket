@@ -42,11 +42,11 @@ const AddressModal: React.FC<Props> = ({
 
   // Load addresses khi modal mở hoặc user thay đổi
   useEffect(() => {
-    if (!visible || !me?.id) return;
+    if (!visible || !me?.user_id) return;
 
     const fetchAddresses = async () => {
       try {
-        const res = await api.get(`/users/${me.id}/addresses`);
+        const res = await api.get(`/users/${me.user_id}/addresses`);
         setAddresses(res.data);
         const defaultAddress =
           res.data.find((a: UserAddress) => a.id === currentAddressId) ||
