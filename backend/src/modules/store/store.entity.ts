@@ -22,6 +22,7 @@ import { StoreBankAccount } from '../store-bank-account/store-bank-account.entit
 import { StoreFollower } from '../store-follower/store-follower.entity';
 import { Voucher } from '../vouchers/vouchers.entity';
 import { GroupOrder } from '../group_orders/group_orders.entity';
+import { CampaignStore } from '../campaigns/entities/campaign_stores.ts.entity';
 
 @Entity('stores')
 export class Store {
@@ -48,7 +49,7 @@ export class Store {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true  })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   logo_url!: string;
 
   @Column({ length: 100, nullable: true })
@@ -125,4 +126,9 @@ export class Store {
   vouchers?: Voucher[];
   @OneToMany(() => GroupOrder, (groupOrder) => groupOrder.store)
   group_orders!: GroupOrder[];
+
+  @OneToMany(() => CampaignStore, (cs) => cs.store, {
+    cascade: true,
+  })
+  campaignStores!: CampaignStore[];
 }

@@ -56,12 +56,10 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
-
-
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 
 @Module({
   imports: [
-
     ScheduleModule.forRoot(),
     // Đọc file .env
     ConfigModule.forRoot({
@@ -88,7 +86,7 @@ import { AdminModule } from './modules/admin/admin.module';
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
-        
+
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
@@ -144,11 +142,9 @@ import { AdminModule } from './modules/admin/admin.module';
     AffiliateRegistrationPlatformModule,
     InventoryTransactionModule,
     GroupOrdersModule,
-    AdminModule
-   
-    
-
+    AdminModule,
+    CampaignsModule,
   ],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

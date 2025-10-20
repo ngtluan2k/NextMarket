@@ -16,6 +16,7 @@ import { Subscription } from '../subscription/subscription.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
 import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
+import { CampaignStoreProduct } from '../campaigns/entities/campaign_store_products.entity';
 
 @Entity('variants')
 export class Variant {
@@ -69,4 +70,10 @@ export class Variant {
 
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.variant)
   inventoryTransactions!: InventoryTransaction[];
+
+  @OneToMany(
+    () => CampaignStoreProduct,
+    (csp) => csp.variant // 👈 liên kết ngược lại
+  )
+  campaignStoreProducts!: CampaignStoreProduct[];
 }

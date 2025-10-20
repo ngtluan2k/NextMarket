@@ -13,9 +13,15 @@ import StoreManager from './StoreManager';
 import AffiliateProgramDashboard from './AffiliateProgramDashboard';
 import AffiliateRegistration from './AffiliateRegistrationManager';
 import { Empty } from 'antd';
+import CampaignPage from './CampaignPage';
+import { Campaign } from '../../../service/campaign.service';
+import CampaignDetailPage from './campaigns_components/CampaignDetailPage';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
+    null
+  );
 
   const Wip: React.FC<{ title?: string; desc?: string; img?: string }> = ({
     title = 'Chức năng đang phát triển...',
@@ -102,11 +108,25 @@ export const AdminDashboard: React.FC = () => {
         return <VoucherManager />;
       case '8-2':
         return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
+          <CampaignPage
+            onSelectCampaign={(c) => {
+              setSelectedCampaign(c);
+              setActiveKey('8-2-detail'); // 👈 chuyển sang tab chi tiết
+            }}
           />
         );
+
+      case '8-2-detail':
+        return (
+          <CampaignDetailPage
+            campaign={selectedCampaign}
+            onBack={() => {
+              setSelectedCampaign(null);
+              setActiveKey('8-2');
+            }}
+          />
+        );
+
       case '9':
         return (
           <Empty
