@@ -145,8 +145,6 @@ import { AdminModule } from './modules/admin/admin.module';
     InventoryTransactionModule,
     GroupOrdersModule,
     AdminModule
-   
-    
 
   ],
   providers: [],

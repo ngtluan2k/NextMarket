@@ -127,10 +127,10 @@ export class UserService {
         'roles.role.rolePermissions.permission',
       ],
     });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    if (!isMatch) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
     const roles = user.roles.map((ur) => ur.role.name);
     const permissions = user.roles.flatMap((ur) =>

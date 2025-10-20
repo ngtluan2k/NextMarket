@@ -9,9 +9,9 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { useSaveDraft } from './hooks/useSaveDraft';
 
 // Components
-import Step1BasicInfo from './components/Step1BasicInfo';
-import Step2BusinessInfo from './components/Step2BusinessInfo';
-import Step3Identification from './components/Step3Identification';
+import Step1BasicInfo, { Step1BasicInfoHandle } from './components/Step1BasicInfo';
+import Step2BusinessInfo, { Step2BusinessInfoHandle } from './components/Step2BusinessInfo';
+import Step3Identification, { Step3IdentificationHandle } from './components/Step3Identification';
 import Step4Confirmation from './components/Step4Confirmation';
 import AddressModal from './components/AddressModal';
 import EmailModal from './components/EmailModal';
@@ -26,9 +26,14 @@ import {
   validateStep2,
   validateStep3,
 } from './utils/validation';
+import ClearConfirmModal from './components/ClearConfirmModal';
 
 export const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
+  
+  const step1Ref = React.useRef<Step1BasicInfoHandle>(null);
+  const step2Ref = React.useRef<Step2BusinessInfoHandle>(null);
+  const step3Ref = React.useRef<Step3IdentificationHandle>(null);
 
   // Core form state
   const {
@@ -170,6 +175,19 @@ export const SellerRegistration: React.FC = () => {
     loadSavedData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const [showClearModal, setShowClearModal] = useState(false);
+
+  const performClearAll = () => {
+    clearSavedData();
+    setFormData(defaultSellerFormData);
+    setAddresses([]);
+    setEmails([]);
+    setCurrentStep(1);
+    clearAllFiles();
+    setMessage('Đã xóa dữ liệu form');
+    setMessageType('success');
+    setShowClearModal(false);
+  };
 
   // Load full draft from server
   const loadFullDraftData = async (
@@ -434,34 +452,24 @@ export const SellerRegistration: React.FC = () => {
     }
   };
 
-  // Step navigation with validation and save
-  const handleNextStep = async () => {
-    setMessage('');
-    setLoading(true);
+  // ... trong SellerRegistration
 
-    try {
-      let validationErrors: string[] = [];
+const handleNextStep = async () => {
+  setMessage('');
+  setLoading(true);
+  try {
+    if (currentStep === 1) {
+      const ok1 = step1Ref.current?.validateAll?.() ?? false;
+      const list1 = validateStep1(formData, addresses);
+      if (!ok1 || list1.length) { setLoading(false); return; }
+    }
 
-      switch (currentStep) {
-        case 1:
-          validationErrors = validateStep1(formData, addresses);
-          break;
-        case 2:
-          validationErrors = validateStep2(formData, emails);
-          break;
-        case 3:
-          validationErrors = validateStep3(formData);
-          break;
-      }
-
-      if (validationErrors.length > 0) {
-        setMessage(`❌ ${validationErrors.join(', ')}`);
-        setMessageType('error');
-        setLoading(false);
-        return;
-      }
-
-      if (currentStep === 2 && selectedDocFile) {
+    if (currentStep === 2) {
+      const ok2 = step2Ref.current?.validateAll?.() ?? false;
+      const list2 = validateStep2(formData, emails, selectedDocFile);
+      if (!ok2 || list2.length) { setLoading(false); return; }
+      // upload giấy phép (nếu có) SAU khi đã hợp lệ
+      if (selectedDocFile) {
         await uploadBusinessLicense((fileUrl) => {
           setFormData((prev) => ({
             ...prev,
@@ -472,49 +480,45 @@ export const SellerRegistration: React.FC = () => {
           }));
         });
       }
+    }
 
-      if (currentStep === 3 && (cccdFrontFile || cccdBackFile)) {
+    if (currentStep === 3) {
+      // ✅ chỉ validate 1 lần và TRUYỀN file vào validateStep3
+      const ok3 = step3Ref.current?.validateAll?.() ?? false;
+      const list3 = validateStep3(formData, { front: cccdFrontFile, back: cccdBackFile });
+      if (!ok3 || list3.length) { setLoading(false); return; }
+
+      // upload CCCD (nếu có chọn)
+      if (cccdFrontFile || cccdBackFile) {
         await uploadCCCD(storeId, (frontUrl, backUrl) => {
           setFormData((prev) => ({
             ...prev,
             store_identification: {
               ...prev.store_identification,
               img_front: frontUrl || prev.store_identification.img_front,
-              img_back: backUrl || prev.store_identification.img_back,
+              img_back:  backUrl  || prev.store_identification.img_back,
             },
           }));
         });
       }
-
-      const newStoreId = await saveDraft(
-        currentStep,
-        formData,
-        addresses,
-        emails,
-        storeId,
-        (message) => {
-          setMessage(message);
-          setMessageType('success');
-          markAsSaved();
-        },
-        (message) => {
-          setMessage(message);
-          setMessageType('error');
-        }
-      );
-
-      if (newStoreId) {
-        setStoreId(newStoreId);
-      }
-
-      nextStep();
-    } catch (error: any) {
-      setMessage(`❌ Lỗi: ${error.message || 'Có lỗi xảy ra'}`);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
     }
-  };
+
+    const newStoreId = await saveDraft(
+      currentStep, formData, addresses, emails, storeId,
+      (m) => { setMessage(m); setMessageType('success'); markAsSaved(); },
+      (m) => { setMessage(m); setMessageType('error'); }
+    );
+    if (newStoreId) setStoreId(newStoreId);
+
+    nextStep();
+  } catch (e: any) {
+    setMessage(`❌ Lỗi: ${e.message || 'Có lỗi xảy ra'}`);
+    setMessageType('error');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Enhanced beforeunload with save-before-exit modal
   useEffect(() => {
@@ -600,6 +604,7 @@ export const SellerRegistration: React.FC = () => {
       case 1:
         return (
           <Step1BasicInfo
+            ref={step1Ref}
             formData={formData}
             addresses={addresses}
             onBasicChange={handleBasicChange}
@@ -614,38 +619,41 @@ export const SellerRegistration: React.FC = () => {
       case 2:
         return (
           <Step2BusinessInfo
-            formData={formData}
-            emails={emails}
-            selectedDocFile={selectedDocFile}
-            businessLicenseUrl={
-              formData.documents?.find((d) => d.doc_type === 'BUSINESS_LICENSE')?.file_url || ''
-            }
-            onInputChange={handleStoreInformationChange}
-            onShowEmailModal={() => setShowEmailModal(true)}
-            onShowSelectEmailModal={() => {}}
-            onEditEmail={handleEditEmail}
-            onSetDefaultEmail={(id) =>
-              handleSetDefaultEmail(id, (field, value) => handleBasicChange(field as any, value))
-            }
-            onDeleteEmail={(id) =>
-              handleDeleteEmail(id, (field, value) => handleBasicChange(field as any, value))
-            }
-            onDocFileChange={setSelectedDocFile}
-          />
+              ref={step2Ref}
+              formData={formData}
+              emails={emails}
+              selectedDocFile={selectedDocFile}
+              businessLicenseUrl={
+                formData.documents?.find((d) => d.doc_type === 'BUSINESS_LICENSE')?.file_url || ''
+              }
+              onInputChange={handleStoreInformationChange}
+              onShowEmailModal={() => setShowEmailModal(true)}
+              onShowSelectEmailModal={() => {}}
+              onEditEmail={handleEditEmail}
+              onSetDefaultEmail={(id) =>
+                handleSetDefaultEmail(id, (f, v) => handleBasicChange(f as any, v))
+              }
+              onDeleteEmail={(id) =>
+                handleDeleteEmail(id, (f, v) => handleBasicChange(f as any, v))
+              }
+              onDocFileChange={setSelectedDocFile}
+            />
         );
       case 3:
         return (
           <Step3Identification
-            formData={formData}
-            onInputChange={handleStoreIdentificationChange}
-            onBankAccountChange={handleBankAccountChange}
-            onFileSelected={(side, file) => {
-              if (side === 'front') setCccdFrontFile(file);
-              else setCccdBackFile(file);
-            }}
-            frontFile={cccdFrontFile}
-            backFile={cccdBackFile}
-          />
+          ref={step3Ref}
+          formData={formData}
+          onInputChange={handleStoreIdentificationChange}
+          onBankAccountChange={handleBankAccountChange}
+          onFileSelected={(side, file) => {
+            if (side === 'front') setCccdFrontFile(file);
+            else setCccdBackFile(file);
+          }}
+          frontFile={cccdFrontFile}
+          backFile={cccdBackFile}
+        />
+        
         );
       case 4:
         return (
@@ -670,7 +678,7 @@ export const SellerRegistration: React.FC = () => {
       : 'border-sky-200 bg-sky-50 text-sky-800';
 
   return (
-    <div className="container mx-auto mt-6 max-w-5xl px-3">
+    <div className="container mx-auto mt-4 max-w-7xl px-4">
       <UnsavedChangesBanner
         hasUnsavedChanges={hasUnsavedChanges}
         loading={loading || saveLoading}
@@ -705,7 +713,8 @@ export const SellerRegistration: React.FC = () => {
 
       <StepProgress steps={steps} currentStep={currentStep} />
 
-      <div className="mx-auto max-w-4xl">
+      {/* ⬇️ vùng nội dung rộng hơn */}
+      <div className="mx-auto max-w-6xl">
         {renderCurrentStep()}
 
         <StepNavigation
@@ -714,21 +723,8 @@ export const SellerRegistration: React.FC = () => {
           loading={loading || saveLoading}
           onPrevStep={prevStep}
           onNextStep={handleNextStep}
-          onClearData={() => {
-            clearSavedData();
-            setFormData(defaultSellerFormData);
-            setAddresses([]);
-            setEmails([]);
-            setCurrentStep(1);
-            clearAllFiles();
-            setMessage('Đã xóa dữ liệu form');
-            setMessageType('success');
-          }}
+          onClearData={() => setShowClearModal(true)} 
         />
-
-        {message && (
-          <div className={`mt-4 rounded-2xl border px-4 py-3 ${messageColors}`}>{message}</div>
-        )}
       </div>
 
       <AddressModal
@@ -779,6 +775,12 @@ export const SellerRegistration: React.FC = () => {
         onDontSave={handleDontSave}
         onCancel={handleCancelExit}
         loading={loading}
+      />
+
+       <ClearConfirmModal
+        show={showClearModal}
+        onCancel={() => setShowClearModal(false)}
+        onConfirm={performClearAll}
       />
     </div>
   );

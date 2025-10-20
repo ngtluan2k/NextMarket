@@ -16,10 +16,11 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   loading,
   onPrevStep,
   onNextStep,
-  onClearData,
+  onClearData, // sẽ dùng để mở modal
 }) => {
   return (
     <div className="mt-6 flex items-center justify-between">
+      {/* Quay lại */}
       <button
         className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
         onClick={onPrevStep}
@@ -29,14 +30,11 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
         Quay lại
       </button>
 
+      {/* Clear -> chỉ gọi onClearData (mở modal) */}
       <div className="flex items-center gap-2">
         <button
           className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            if (window.confirm('Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?')) {
-              onClearData();
-            }
-          }}
+          onClick={onClearData}
           title="Xóa tất cả dữ liệu đã nhập"
         >
           <Trash2 className="mr-2 h-4 w-4" />
@@ -44,6 +42,7 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
         </button>
       </div>
 
+      {/* Tiếp theo */}
       {currentStep < totalSteps && (
         <button
           className="inline-flex items-center rounded-xl bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-700 disabled:opacity-60"

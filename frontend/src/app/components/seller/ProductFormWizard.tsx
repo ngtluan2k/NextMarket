@@ -1,14 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Trash2, Tag, FileText, DollarSign, Building2, ListChecks, X, Search,
+  Image as ImageIcon, Upload, MoveLeft, MoveRight, Package, Boxes, MapPin, Plus
+} from 'lucide-react';
 import { validateProduct, mapErrors, firstErrorStep } from "../../../validation/productValidator";
-import { Trash2 } from 'lucide-react';
 
 export const ProductForm: React.FC = () => {
-  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [step, setStep] = useState(1);
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
   const getErr = (path: string) => errors[path];
 
+  // --------- State giống Edit ----------
   interface ProductFormState {
     name: string;
     short_description?: string;
@@ -56,7 +61,7 @@ export const ProductForm: React.FC = () => {
     short_description: '',
     description: '',
     base_price: 0,
-    brandId: 4,
+    brandId: 0,
     categories: [],
     media: [],
     variants: [],
@@ -64,115 +69,81 @@ export const ProductForm: React.FC = () => {
     pricing_rules: [],
   });
 
+  // --------- Load brands/categories ----------
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://localhost:3000/brands', { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.json())
-      .then((data) =>
-        setBrands((data.data || []).map((b: any) => ({ id: Number(b.id), name: b.name })))
-      );
-    fetch('http://localhost:3000/categories', { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.json())
-      .then((data) =>
-        setCategories((data.data || []).map((c: any) => ({ id: Number(c.id), name: c.name })))
-      );
+    Promise.all([
+      fetch('http://localhost:3000/brands', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch('http://localhost:3000/categories', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ]).then(([bRes, cRes]) => {
+      setBrands(bRes.data || []);
+      setCategories(cRes.data || []);
+    }).catch(console.error);
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }));
+  // --------- Handlers chung ----------
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target as any;
+    let next: any = type === 'number' ? Number(value) : value;
+    if (name === 'brandId') next = Number(value);
+    setForm(prev => ({ ...prev, [name]: next }));
   };
-
-  const handleCategoryChange = (id: number) => {
-    setForm((prev) => ({
+  const toggleCategory = (id: number) => {
+    setForm(prev => ({
       ...prev,
       categories: prev.categories.includes(id)
-        ? prev.categories.filter((c) => c !== id)
-        : [...prev.categories, id],
+        ? prev.categories.filter(c => c !== id)
+        : [...prev.categories, id]
     }));
   };
 
   const addVariant = () =>
-    setForm((prev) => ({
-      ...prev,
-      variants: [...prev.variants, { sku: '', variant_name: '', price: 0, stock: 0 }],
-    }));
+    setForm(prev => ({ ...prev, variants: [...prev.variants, { sku: '', variant_name: '', price: 0, stock: 0 }] }));
+  const removeVariantAt = (i: number) =>
+    setForm(prev => ({ ...prev, variants: prev.variants.filter((_, idx) => idx !== i) }));
 
   const addInventory = () =>
-    setForm((prev) => ({
-      ...prev,
-      inventory: [
-        ...prev.inventory,
-        { variant_sku: '', variant_id: undefined, product_id: undefined, location: '', quantity: 0 },
-      ],
-    }));
+    setForm(prev => ({ ...prev, inventory: [...prev.inventory, { variant_sku: '', location: '', quantity: 0 }] }));
+  const removeInventoryAt = (i: number) =>
+    setForm(prev => ({ ...prev, inventory: prev.inventory.filter((_, idx) => idx !== i) }));
 
   const addPricingRule = () =>
-    setForm((prev) => ({
+    setForm(prev => ({
       ...prev,
-      pricing_rules: [
-        ...prev.pricing_rules,
-        { type: '', min_quantity: 0, price: 0, cycle: '', starts_at: '', ends_at: '', variant_sku: '', name: '', status: 'active' },
-      ],
+      pricing_rules: [...prev.pricing_rules, { type: '', min_quantity: 0, price: 0, cycle: '', starts_at: '', ends_at: '', variant_sku: '', name: '', status: 'active' }]
     }));
 
-  // ====== Media helpers: 1 input multiple + cờ thay cover ======
+  // --------- Media helpers (giống Edit) ----------
   const multiFileRef = useRef<HTMLInputElement | null>(null);
   const replaceCoverAfterPickRef = useRef(false);
+  const reindexSort = (arr: ProductFormState['media']) => arr.map((m, idx) => ({ ...m, sort_order: idx + 1 }));
+  const normalizePrimary = (arr: ProductFormState['media']) => arr.map((m, idx) => ({ ...m, is_primary: idx === 0 }));
 
-  const openMultiPickerAppend = () => {
-    replaceCoverAfterPickRef.current = false;
-    multiFileRef.current?.click();
-  };
-
-  const openMultiPickerReplaceCover = () => {
-    replaceCoverAfterPickRef.current = true;
-    multiFileRef.current?.click();
-  };
-
-  const reindexSort = (arr: ProductFormState['media']) =>
-    arr.map((m, idx) => ({ ...m, sort_order: idx + 1 }));
+  const openMultiPickerAppend = () => { replaceCoverAfterPickRef.current = false; multiFileRef.current?.click(); };
+  const openMultiPickerReplaceCover = () => { replaceCoverAfterPickRef.current = true; multiFileRef.current?.click(); };
 
   const onMultiPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    setForm((prev) => {
+    setForm(prev => {
       let media = [...prev.media];
-
       if (replaceCoverAfterPickRef.current) {
-        // Click từ ô to: file đầu làm/thay cover, các file còn lại append
         const [first, ...rest] = files;
         if (first) {
-          const firstUrl = URL.createObjectURL(first);
-          if (media.length === 0) {
-            media.push({ media_type: 'image', url: firstUrl, file: first, sort_order: 1 });
-          } else {
-            media[0] = { ...media[0], media_type: 'image', url: firstUrl, file: first, sort_order: 1 };
-          }
+          const url = URL.createObjectURL(first);
+          if (media.length === 0) media.unshift({ media_type: 'image', url, file: first, sort_order: 1, is_primary: true });
+          else media[0] = { ...media[0], media_type: 'image', url, file: first };
         }
-        rest.forEach((f) => {
-          media.push({ media_type: 'image', url: URL.createObjectURL(f), file: f, sort_order: media.length + 1 });
-        });
+        rest.forEach(f => media.push({ media_type: 'image', url: URL.createObjectURL(f), file: f, sort_order: media.length + 1 }));
       } else {
-        // Click từ ô "+" nhỏ: chỉ append; nếu chưa có cover thì file đầu làm cover
         files.forEach((file, idx) => {
           const url = URL.createObjectURL(file);
-          if (media.length === 0 && idx === 0) {
-            media.push({ media_type: 'image', url, file, sort_order: 1 });
-          } else {
-            media.push({ media_type: 'image', url, file, sort_order: media.length + 1 });
-          }
+          media.push({ media_type: 'image', url, file, sort_order: media.length + 1, is_primary: media.length === 0 && idx === 0 });
         });
       }
-
       replaceCoverAfterPickRef.current = false;
-      return { ...prev, media: reindexSort(media) };
+      return { ...prev, media: normalizePrimary(reindexSort(media)) };
     });
 
     e.target.value = '';
@@ -180,632 +151,627 @@ export const ProductForm: React.FC = () => {
 
   const setAsCover = (i: number) => {
     if (i === 0) return;
-    setForm((prev) => {
+    setForm(prev => {
       const media = [...prev.media];
-      const [picked] = media.splice(i, 1);
-      media.unshift(picked);
-      return { ...prev, media: reindexSort(media) };
+      const [m] = media.splice(i, 1);
+      media.unshift(m);
+      return { ...prev, media: normalizePrimary(reindexSort(media)) };
     });
   };
-
   const removeMediaAt = (i: number) => {
-    setForm((prev) => {
-      const media = prev.media.filter((_, idx) => idx !== i);
-      return { ...prev, media: reindexSort(media) };
+    setForm(prev => {
+      const media = [...prev.media];
+      media.splice(i, 1);
+      return { ...prev, media: normalizePrimary(reindexSort(media)) };
+    });
+  };
+  const moveMedia = (i: number, dir: -1 | 1) => {
+    setForm(prev => {
+      const media = [...prev.media];
+      const j = i + dir; if (j < 0 || j >= media.length) return prev;
+      [media[i], media[j]] = [media[j], media[i]];
+      return { ...prev, media: normalizePrimary(reindexSort(media)) };
     });
   };
 
-  const submitForm = async (isDraft: boolean) => {
+  // --------- Step 1 helpers ----------
+  const [priceText, setPriceText] = useState('');
+  useEffect(() => {
+    setPriceText(form.base_price ? new Intl.NumberFormat('vi-VN').format(form.base_price) : '');
+  }, [form.base_price]);
+  const shortCount = form.short_description?.length ?? 0;
+
+  // category dropdown giống Edit
+  const [catOpen, setCatOpen] = useState(false);
+  const [catQuery, setCatQuery] = useState('');
+  const catWrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => { if (catWrapRef.current && !catWrapRef.current.contains(e.target as Node)) setCatOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+  const filteredCategories = useMemo(
+    () => categories.filter((c: any) => (c.name || '').toLowerCase().includes(catQuery.toLowerCase())),
+    [categories, catQuery]
+  );
+  const selectedCats = useMemo(
+    () => categories.filter((c: any) => form.categories.includes(c.id)),
+    [categories, form.categories]
+  );
+  const previewCats = selectedCats.slice(0, 6);
+  const remain = selectedCats.length - previewCats.length;
+
+  function onPriceChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
+    const n = onlyDigits ? Number(onlyDigits) : 0;
+    setPriceText(onlyDigits ? new Intl.NumberFormat('vi-VN').format(n) : '');
+    setForm(prev => ({ ...prev, base_price: n }));
+  }
+
+  // --------- Submit ----------
+  const submitForm = async (status: 'draft' | 'active') => {
     try {
+      setSubmitting(true);
       setErrors({});
 
-      const variantsWithStock = form.variants.map((v) => {
-        const totalStock = form.inventory
-          .filter((inv) => inv.variant_sku === v.sku)
-          .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0);
+      const variantsWithStock = form.variants.map(v => {
+        const totalStock = form.inventory.filter(inv => inv.variant_sku === v.sku)
+          .reduce((s, inv) => s + Number(inv.quantity || 0), 0);
         return { ...v, stock: totalStock };
       });
 
-      const dataForValidate = { ...form, variants: variantsWithStock };
-      const result = validateProduct(dataForValidate, isDraft ? 'draft' : 'publish');
-
-      if (!isDraft && !result.success) {
-        const mapped = mapErrors(result.error.errors);
-        setErrors(mapped);
-        const keys = Object.keys(mapped);
-        setStep(firstErrorStep(keys));
-        return;
+      if (status === 'active') {
+        const res = validateProduct({ ...form, variants: variantsWithStock }, 'publish');
+        if (!res.success) {
+          const mapped = mapErrors(res.error.errors);
+          setErrors(mapped);
+          const keys = Object.keys(mapped);
+          const goto =
+            keys.some(k => /^(name|base_price|brandId|categories)(\.|$)?/.test(k)) ? 1 :
+            keys.some(k => /^media(\.|$)/.test(k)) ? 2 :
+            keys.some(k => /^(variants|inventory)(\.|$)?/.test(k)) ? 3 :
+            keys.some(k => /^pricing_rules(\.|$)?/.test(k)) ? 4 : 1;
+          setStep(goto);
+          setSubmitting(false);
+          return;
+        }
       }
 
+      // gọi API tạo mới (giữ nguyên logic submit của bạn)
       const token = localStorage.getItem('token');
-      const url = isDraft ? 'http://localhost:3000/products' : 'http://localhost:3000/products/publish';
+      const url = status === 'active' ? 'http://localhost:3000/products/publish' : 'http://localhost:3000/products';
 
       const fd = new FormData();
-      fd.append('name', String(form.name || ''));
-      fd.append('short_description', String(form.short_description || ''));
-      fd.append('description', String(form.description || ''));
-      fd.append('base_price', Number(form.base_price || 0).toString());
-      fd.append('brandId', Number(form.brandId || 0).toString());
-      fd.append('categories', JSON.stringify(form.categories || []));
-      fd.append('variants', JSON.stringify(variantsWithStock || []));
-      fd.append('inventory', JSON.stringify(form.inventory || []));
-      fd.append('pricing_rules', JSON.stringify(form.pricing_rules || []));
-      (form.media || []).forEach((m) => m.file && fd.append('media', m.file));
+      fd.append('name', form.name);
+      fd.append('short_description', form.short_description || '');
+      fd.append('description', form.description || '');
+      fd.append('base_price', String(form.base_price));
+      fd.append('brandId', String(form.brandId));
+      fd.append('categories', JSON.stringify(form.categories));
+      fd.append('variants', JSON.stringify(variantsWithStock));
+      fd.append('inventory', JSON.stringify(form.inventory));
+      fd.append('pricing_rules', JSON.stringify(form.pricing_rules));
+      form.media.forEach(m => m.file && fd.append('media', m.file));
 
       const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to submit product');
-
-      alert(isDraft ? 'Product saved as draft!' : 'Product published successfully!');
-    } catch (err: any) {
-      alert(err.message);
+      if (!res.ok) throw new Error(data?.message || 'Submit failed');
+      alert(status === 'active' ? 'Product published!' : 'Saved as draft!');
+    } catch (e: any) {
+      alert(e?.message || 'Submit failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Step navigation
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 5));
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+  const nextStep = () => setStep(s => Math.min(4, s + 1));
+  const prevStep = () => setStep(s => Math.max(1, s - 1));
 
-  const displayDate = (v?: string | Date) => {
-    if (!v) return '—';
-    try {
-      const d = typeof v === 'string' ? new Date(v) : v;
-      if (Number.isNaN(d.getTime())) return String(v);
-      return d.toISOString().slice(0, 10);
-    } catch {
-      return String(v);
-    }
-  };
-
+  // --------- UI (đồng bộ 4 bước như Edit) ----------
   return (
     <form
+      onSubmit={(e) => { e.preventDefault(); submitForm('active'); }}
       noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        submitForm(false);
-      }}
+      className="space-y-6"
     >
-      <h2 className="text-2xl font-bold text-center mb-6">Create Product</h2>
+      <div className="flex items-center justify-between pr-16 md:pr-24">
+        <h2 className="text-2xl font-bold">Create Product</h2>
 
-      {/* Step Indicators */}
-      <div className="flex justify-between mb-6">
-        {[1, 2, 3, 4, 5].map((s) => (
-          <div
-            key={s}
-            className={`flex-1 text-center py-2 border-b-2 ${step === s ? 'border-blue-600 font-semibold' : 'border-gray-300'}`}
-          >
-            Step {s}
-          </div>
-        ))}
+        <nav className="flex items-center gap-3 select-none">
+          {[1,2,3,4].map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStep(s)}
+              aria-current={step === s ? 'step' : undefined}
+              aria-label={`Bước ${s}`}
+              title={`Bước ${s}`}
+              className={[
+                'grid place-items-center rounded-full border font-medium transition-all',
+                'h-8 w-8 md:h-9 md:w-9',
+                step === s ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              ].join(' ')}
+            >{s}</button>
+          ))}
+        </nav>
       </div>
 
-      {/* Step 1 */}
+      {/* STEP 1: Product Info */}
       {step === 1 && (
-        <section className="space-y-4">
-          <h3 className="font-semibold text-lg">Product Info</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-medium mb-1">Product Name</label>
-              <input
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {getErr('name') && <p className="text-sm text-red-600 mt-1">{getErr('name')}</p>}
+        <section className="space-y-6">
+          <header className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-blue-100 flex items-center justify-center">
+              <Tag className="h-5 w-5 text-blue-700" />
             </div>
             <div>
-              <label className="block font-medium mb-1">Short Description</label>
-              <input
-                name="short_description"
-                value={form.short_description}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <h3 className="text-lg font-semibold text-slate-900">Thông tin sản phẩm</h3>
+              <p className="text-sm text-slate-500">Điền những trường cơ bản để người mua hiểu rõ về sản phẩm của bạn.</p>
             </div>
-            <div className="md:col-span-2">
-              <label className="block font-medium mb-1">Description</label>
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Base Price</label>
-              <input
-                type="number"
-                name="base_price"
-                value={form.base_price}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {getErr('base_price') && <p className="text-sm text-red-600 mt-1">{getErr('base_price')}</p>}
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Brand</label>
-              <select
-                name="brandId"
-                value={form.brandId}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    brandId: Number(e.target.value),
-                  }))
-                }
-                required
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={0}>-- Select Brand --</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              {getErr('brandId') && <p className="text-sm text-red-600 mt-1">{getErr('brandId')}</p>}
-            </div>
-            <div className="md:col-span-2">
-              <label className="block font-medium mb-1">Categories</label>
-              <div className="flex flex-wrap gap-3">
-                {categories.map((c) => (
-                  <label key={c.id} className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={form.categories.includes(c.id)}
-                      onChange={() => handleCategoryChange(c.id)}
-                      className="w-4 h-4"
-                    />{' '}
-                    {c.name}
-                  </label>
-                ))}
+          </header>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Trái */}
+            <div className="lg:col-span-8 space-y-5">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <FileText className="h-4 w-4 text-slate-500" /> Tên sản phẩm <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  name="name" value={form.name} onChange={handleChange}
+                  placeholder="Ví dụ: Áo thun unisex EveryMart"
+                  className={'mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-200 ' + (getErr('name') ? 'border-rose-400' : 'border-slate-300')}
+                />
+                {getErr('name') && <p className="mt-1 text-xs text-rose-600">{getErr('name')}</p>}
               </div>
-              {getErr('categories') && <p className="text-sm text-red-600 mt-1">{getErr('categories')}</p>}
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <ListChecks className="h-4 w-4 text-slate-500" /> Mô tả ngắn
+                  </label>
+                  <span className={`text-xs ${shortCount > 160 ? 'text-rose-600' : 'text-slate-400'}`}>{shortCount}/160</span>
+                </div>
+                <input
+                  name="short_description" value={form.short_description || ''} maxLength={200} onChange={handleChange}
+                  placeholder="Tóm tắt 1–2 câu nổi bật (khuyến nghị ≤ 160 ký tự)"
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <FileText className="h-4 w-4 text-slate-500" /> Mô tả chi tiết
+                </label>
+                <textarea
+                  name="description" value={form.description || ''} onChange={handleChange} rows={5}
+                  placeholder="Nội dung mô tả chi tiết, chất liệu, hướng dẫn sử dụng, bảo hành…"
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                />
+              </div>
+            </div>
+
+            {/* Phải */}
+            <div className="lg:col-span-4 space-y-5">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <DollarSign className="h-4 w-4 text-slate-500" /> Giá cơ bản <span className="text-rose-600">*</span>
+                </label>
+                <div className={`mt-1 flex items-center rounded-xl border ${getErr('base_price') ? 'border-rose-400' : 'border-slate-300'} bg-white px-3`}>
+                  <span className="text-slate-400">₫</span>
+                  <input
+                    inputMode="numeric" value={priceText} onChange={onPriceChange} placeholder="0"
+                    className="w-full bg-transparent px-2 py-2.5 text-sm outline-none"
+                  />
+                </div>
+                {getErr('base_price') && <p className="mt-1 text-xs text-rose-600">{getErr('base_price')}</p>}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <Building2 className="h-4 w-4 text-slate-500" /> Thương hiệu <span className="text-rose-600">*</span>
+                </label>
+                <select
+                  name="brandId" value={form.brandId} onChange={handleChange}
+                  className={`mt-1 w-full rounded-xl border ${getErr('brandId') ? 'border-rose-400' : 'border-slate-300'} bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-200`}
+                >
+                  <option value={0}>— Chọn thương hiệu —</option>
+                  {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+                {getErr('brandId') && <p className="mt-1 text-xs text-rose-600">{getErr('brandId')}</p>}
+              </div>
+
+              {/* Danh mục giống Edit */}
+              <div ref={catWrapRef}>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <ListChecks className="h-4 w-4 text-slate-500" /> Danh mục <span className="text-rose-600">*</span>
+                </label>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {previewCats.map((c: any) => (
+                    <span key={c.id} className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
+                      {c.name}
+                      <button type="button" onClick={() => toggleCategory(c.id)} className="text-slate-400 hover:text-rose-600">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {remain > 0 && (
+                    <button type="button" onClick={() => setCatOpen(true)} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-200">
+                      +{remain} nữa
+                    </button>
+                  )}
+                  <button
+                    type="button" onClick={() => setCatOpen(!catOpen)}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs md:text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    {catOpen ? 'Đóng danh sách' : 'Chọn danh mục'}
+                  </button>
+                  {selectedCats.length > 0 && (
+                    <button type="button" onClick={() => setForm(p => ({ ...p, categories: [] }))} className="rounded-full bg-rose-50 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-100 border border-rose-200">
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+
+                {catOpen && (
+                  <div className="relative">
+                    <div className="absolute z-30 mt-2 w-[min(28rem,90vw)] rounded-xl border border-slate-200 bg-white shadow-xl">
+                      <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
+                        <Search className="h-4 w-4 text-slate-400" />
+                        <input value={catQuery} onChange={(e) => setCatQuery(e.target.value)} placeholder="Tìm danh mục…" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" />
+                      </div>
+                      <ul className="max-h-72 overflow-auto p-2">
+                        {filteredCategories.map((c: any) => {
+                          const checked = form.categories.includes(c.id);
+                          return (
+                            <li key={c.id} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-slate-50">
+                              <input type="checkbox" checked={checked} onChange={() => toggleCategory(c.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                              <span className="truncate text-slate-700">{c.name}</span>
+                            </li>
+                          );
+                        })}
+                        {filteredCategories.length === 0 && (
+                          <li className="px-3 py-6 text-sm text-slate-500">Không có kết quả phù hợp</li>
+                        )}
+                      </ul>
+                      <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5 text-xs text-slate-500">
+                        <span>Đã chọn: {form.categories.length}</span>
+                        <button type="button" onClick={() => setCatOpen(false)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700">Xong</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {getErr('categories') && <p className="mt-2 text-xs text-rose-600">{getErr('categories')}</p>}
             </div>
           </div>
         </section>
       )}
 
-      {/* Step 2: Media */}
+      {/* STEP 2: Media */}
       {step === 2 && (
-        <section className="space-y-4">
-          <h3 className="font-semibold text-lg">Media</h3>
-
-          {/* Ô to (cover) – click chọn N ảnh; ảnh đầu sẽ làm/thay cover */}
-          <div className="space-y-2">
-            <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 h-80 w-80">
-              {form.media[0]?.url ? (
-                <>
-                  <img
-                    src={form.media[0].url}
-                    alt="cover"
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={openMultiPickerReplaceCover}
-                    title="Chọn nhiều ảnh; ảnh đầu sẽ thay cover, các ảnh còn lại sẽ thêm vào"
-                  />
-                  <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Cover</span>
-                  <button
-                    type="button"
-                    onClick={() => removeMediaAt(0)}
-                    className="absolute right-2 top-2 bg-white/90 px-2 py-1 rounded shadow text-sm"
-                    title="Remove cover"
-                  >
-                    ×
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={openMultiPickerReplaceCover}
-                  className="w-full h-full flex flex-col items-center justify-center text-gray-600 hover:text-black"
-                  title="Chọn nhiều ảnh; ảnh đầu sẽ làm cover"
-                >
-                  <div className="text-5xl leading-none">+</div>
-                  <div className="text-sm mt-1">Thêm ảnh đại diện</div>
-                </button>
-              )}
+        <section className="space-y-6">
+          <header className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-purple-100 flex items-center justify-center">
+              <ImageIcon className="h-5 w-5 text-purple-700" />
             </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Hình ảnh & Media</h3>
+              <p className="text-sm text-slate-500">Chọn ảnh đại diện (cover) và thêm nhiều ảnh phụ để mô tả sản phẩm.</p>
+            </div>
+          </header>
 
-            {getErr('media.0.url') && <p className="text-sm text-red-600">{getErr('media.0.url')}</p>}
+          {/* Cover card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
+            <div className="flex items-start gap-4">
+              <div className="relative h-56 w-56 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                {form.media[0]?.url ? (
+                  <>
+                    <img src={form.media[0].url} alt="cover" className="h-full w-full object-cover" />
+                    <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Cover</span>
+                    <div className="absolute inset-x-2 bottom-2 flex gap-2">
+                      <button type="button" onClick={openMultiPickerReplaceCover} className="inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-xs shadow hover:bg-white"><Upload className="h-3.5 w-3.5" /> Thay ảnh</button>
+                      <button type="button" onClick={() => removeMediaAt(0)} className="inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-xs text-rose-600 shadow hover:bg-white"><Trash2 className="h-3.5 w-3.5" /> Xóa</button>
+                    </div>
+                  </>
+                ) : (
+                  <button type="button" onClick={openMultiPickerReplaceCover} className="h-full w-full flex flex-col items-center justify-center text-slate-500 hover:text-slate-700">
+                    <Upload className="h-6 w-6" />
+                    <div className="mt-1 text-sm">Chọn ảnh đại diện</div>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-3">
+                <p className="text-sm text-slate-600">Ảnh đầu là cover. Nhấp ảnh phụ để đặt làm cover hoặc dùng mũi tên đổi vị trí.</p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={openMultiPickerAppend} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
+                    <Plus className="h-4 w-4" /> Thêm ảnh
+                  </button>
+                  <input ref={multiFileRef} type="file" accept="image/*" multiple className="hidden" onChange={onMultiPicked} />
+                </div>
+                {getErr('media.0.url') && <p className="text-xs text-rose-600">{getErr('media.0.url')}</p>}
+              </div>
+            </div>
           </div>
 
-          {/* Thumbnails (click để đặt làm cover) + ô “+” để append ảnh */}
-          <div className="flex items-center gap-3 overflow-x-auto pb-1">
-            {form.media.slice(1).map((m, idx) => {
-              const i = idx + 1;
+          {/* Thumbnails */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
+            {form.media.length <= 1 ? (
+              <p className="text-sm text-slate-500">Chưa có ảnh phụ. Nhấn “Thêm ảnh”.</p>
+            ) : (
+              <div className="flex items-stretch gap-3 overflow-x-auto">
+                {form.media.slice(1).map((m, idx) => {
+                  const i = idx + 1;
+                  return (
+                    <div key={i} className="group relative w-28 h-28 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                      {m.url && (
+                        <>
+                          <img src={m.url} alt={`media-${i}`} className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 hidden group-hover:flex items-center justify-center gap-1 bg-black/30">
+                            <button type="button" onClick={() => moveMedia(i, -1)} className="rounded-md bg-white/95 p-1 shadow" title="Sang trái">
+                              <MoveLeft className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => setAsCover(i)} className="rounded-md bg-white/95 px-2 py-1 text-xs shadow" title="Đặt làm cover">
+                              Cover
+                            </button>
+                            <button type="button" onClick={() => moveMedia(i, +1)} className="rounded-md bg-white/95 p-1 shadow" title="Sang phải">
+                              <MoveRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <button type="button" onClick={() => removeMediaAt(i)} className="absolute right-1 top-1 bg-white/95 p-1 rounded shadow" title="Xoá ảnh">
+                            <Trash2 className="h-4 w-4 text-rose-600" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="mt-2 text-xs text-slate-400">* Gợi ý: Ảnh ≥ 800px, tỷ lệ 1:1 hoặc 4:3 hiển thị đẹp.</p>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 3: Variants & Inventory (đúng style Edit) */}
+      {step === 3 && (
+        <section className="space-y-6">
+          <header className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-amber-100 flex items-center justify-center">
+              <Boxes className="h-5 w-5 text-amber-700" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Biến thể & Tồn kho</h3>
+              <p className="text-sm text-slate-500">Quản lý SKU, giá biến thể và tổng tồn kho theo từng SKU.</p>
+            </div>
+          </header>
+
+          {/* Variants */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-slate-800 flex items-center gap-2">
+                <Package className="h-4 w-4 text-slate-500" /> Biến thể ({form.variants.length})
+              </h4>
+              <button type="button" onClick={addVariant} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
+                <Plus className="h-4 w-4" /> Thêm biến thể
+              </button>
+            </div>
+
+            {form.variants.length === 0 && (
+              <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">Chưa có biến thể. Nhấn “Thêm biến thể”.</div>
+            )}
+
+            {form.variants.map((v, i) => {
+              const totalStock = form.inventory.filter(inv => inv.variant_sku === v.sku)
+                .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0);
+
               return (
-                <div
-                  key={i}
-                  className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
-                  title="Click để đặt làm ảnh đại diện"
-                >
-                  {m.url && (
-                    <>
-                      <img
-                        src={m.url}
-                        alt={`media-${i}`}
-                        className="w-full h-full object-cover cursor-pointer"
-                        onClick={() => setAsCover(i)}
+                <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium">SKU</label>
+                      <input
+                        value={v.sku}
+                        onChange={(e) => { const next = [...form.variants]; next[i].sku = e.target.value; setForm({ ...form, variants: next }); }}
+                        className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.sku`) ? 'border-rose-400' : 'border-slate-300'}`}
+                        placeholder="SKU"
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeMediaAt(i)}
-                        className="absolute right-1 top-1 bg-white/90 p-1 rounded shadow"
-                        title="Xoá ảnh"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </button>
-                    </>
-                  )}
+                      {getErr(`variants.${i}.sku`) && <p className="text-xs text-rose-600 mt-1">{getErr(`variants.${i}.sku`)}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium">Tên biến thể</label>
+                      <input
+                        value={v.variant_name}
+                        onChange={(e) => { const next = [...form.variants]; next[i].variant_name = e.target.value; setForm({ ...form, variants: next }); }}
+                        className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.variant_name`) ? 'border-rose-400' : 'border-slate-300'}`}
+                        placeholder="Ví dụ: Đỏ / XL"
+                      />
+                      {getErr(`variants.${i}.variant_name`) && <p className="text-xs text-rose-600 mt-1">{getErr(`variants.${i}.variant_name`)}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium">Giá biến thể</label>
+                      <input
+                        type="number" value={v.price}
+                        onChange={(e) => { const next = [...form.variants]; next[i].price = +e.target.value; setForm({ ...form, variants: next }); }}
+                        className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.price`) ? 'border-rose-400' : 'border-slate-300'}`}
+                        placeholder="0"
+                      />
+                      {getErr(`variants.${i}.price`) && <p className="text-xs text-rose-600 mt-1">{getErr(`variants.${i}.price`)}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium">Tổng tồn (tự tính)</label>
+                      <input type="number" value={totalStock} readOnly className="mt-1 px-3 py-2 border rounded-md bg-slate-100 w-full" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium">Barcode</label>
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          value={v.barcode || ''} onChange={(e) => { const next = [...form.variants]; next[i].barcode = e.target.value; setForm({ ...form, variants: next }); }}
+                          className="px-3 py-2 border rounded-md w-full border-slate-300" placeholder="Tuỳ chọn"
+                        />
+                        <button type="button" onClick={() => removeVariantAt(i)} className="inline-flex items-center justify-center rounded-md border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Xóa biến thể">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
-
-            {/* Ô '+' để thêm nhiều ảnh (append) */}
-            <button
-              type="button"
-              onClick={openMultiPickerAppend}
-              className="w-20 h-20 shrink-0 rounded-xl border-2 border-dashed border-gray-300 hover:border-gray-400
-                         bg-white flex items-center justify-center text-gray-500 hover:text-black"
-              title="Thêm ảnh"
-            >
-              <span className="text-2xl leading-none">+</span>
-            </button>
-
-            {/* input ẩn duy nhất phục vụ cả 2 luồng */}
-            <input
-              ref={multiFileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={onMultiPicked}
-            />
           </div>
 
-          <p className="text-xs text-gray-500">
-            * Click ô to để chọn nhiều ảnh. Ảnh đầu làm/thay cover; ảnh còn lại sẽ thêm vào. Ô “+” chỉ thêm ảnh (không thay cover).
-          </p>
-        </section>
-      )}
-
-      {/* Step 3: Variants & Inventory */}
-      {step === 3 && (
-        <section className="space-y-4">
-          <h3 className="font-semibold text-lg">Variants &amp; Inventory</h3>
-
-          {getErr('variants') && <p className="text-sm text-red-600">{getErr('variants')}</p>}
-          {getErr('inventory') && <p className="text-sm text-red-600">{getErr('inventory')}</p>}
-
-          {/* Variants */}
-          {form.variants.map((v, i) => {
-            const totalStock = form.inventory
-              .filter((inv) => inv.variant_sku === v.sku)
-              .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0);
-
-            return (
-              <div key={i} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3">
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium">SKU</label>
-                  <input
-                    placeholder="SKU"
-                    value={v.sku}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].sku = e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className={`px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.sku`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-                  />
-                  {getErr(`variants.${i}.sku`) && <p className="text-xs text-red-600">{getErr(`variants.${i}.sku`)}</p>}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium">Variant Name</label>
-                  <input
-                    placeholder="Name"
-                    value={v.variant_name}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].variant_name = e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className={`px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.variant_name`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-                  />
-                  {getErr(`variants.${i}.variant_name`) && <p className="text-xs text-red-600">{getErr(`variants.${i}.variant_name`)}</p>}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium">Price</label>
-                  <input
-                    type="number"
-                    placeholder="Price"
-                    value={v.price}
-                    onChange={(e) => {
-                      const newVar = [...form.variants];
-                      newVar[i].price = +e.target.value;
-                      setForm({ ...form, variants: newVar });
-                    }}
-                    className={`px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.price`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-                  />
-                  {getErr(`variants.${i}.price`) && <p className="text-xs text-red-600">{getErr(`variants.${i}.price`)}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium">Total Stock (auto)</label>
-                  <input
-                    type="number"
-                    placeholder="Stock"
-                    value={totalStock}
-                    readOnly
-                    className="px-3 py-2 border rounded-md bg-gray-100 w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium">Barcode (tuỳ chọn)</label>
-                  <div className="flex  items-center gap-2">
-                    <input
-                      placeholder="Barcode"
-                      value={v.barcode || ''}
-                      onChange={(e) => {
-                        const newVar = [...form.variants];
-                        newVar[i].barcode = e.target.value;
-                        setForm({ ...form, variants: newVar });
-                      }}
-                      className="px-3 py-2 border rounded-md w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          variants: prev.variants.filter((_, idx) => idx !== i),
-                        }))
-                      }
-                      className="inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700 cursor-pointer bg-transparent"
-                      aria-label="Remove variant"
-                      title="Remove"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          <button type="button" onClick={addVariant} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Add Variant
-          </button>
-
-          {/* Inventory */}
-          {form.inventory.map((inv, i) => (
-            <div key={i} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-              <div className="space-y-1">
-                <label className="block text-sm font-medium">Variant SKU</label>
-                <input
-                  placeholder="Variant SKU"
-                  value={inv.variant_sku}
-                  onChange={(e) => {
-                    const newInv = [...form.inventory];
-                    newInv[i].variant_sku = e.target.value;
-                    setForm({ ...form, inventory: newInv });
-                  }}
-                  className={`px-3 py-2 border rounded-md w-full ${getErr(`inventory.${i}.variant_sku`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-                />
-                {getErr(`inventory.${i}.variant_sku`) && <p className="text-xs text-red-600">{getErr(`inventory.${i}.variant_sku`)}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-sm font-medium">Location</label>
-                <input
-                  placeholder="Location"
-                  value={inv.location}
-                  onChange={(e) => {
-                    const newInv = [...form.inventory];
-                    newInv[i].location = e.target.value;
-                    setForm({ ...form, inventory: newInv });
-                  }}
-                  className={`px-3 py-2 border rounded-md w-full ${getErr(`inventory.${i}.location`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-                />
-                {getErr(`inventory.${i}.location`) && <p className="text-xs text-red-600">{getErr(`inventory.${i}.location`)}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-sm font-medium">Quantity</label>
-                <div className="flex  items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Quantity"
-                    value={inv.quantity}
-                    onChange={(e) => {
-                      const newInv = [...form.inventory];
-                      newInv[i].quantity = +e.target.value;
-                      setForm({ ...form, inventory: newInv });
-                    }}
-                    className={`px-3 py-2 border rounded-md w-full ${getErr(`inventory.${i}.quantity`) ? 'border-red-500 focus:ring-red-400' : 'focus:ring-blue-500'}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        inventory: prev.inventory.filter((_, idx) => idx !== i),
-                      }))
-                    }
-                    className="inline-flex items-center justify-center p-1 text-red-600 hover:text-red-700 cursor-pointer bg-transparent"
-                    aria-label="Remove inventory row"
-                    title="Remove"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </div>
-                {getErr(`inventory.${i}.quantity`) && <p className="text-xs text-red-600">{getErr(`inventory.${i}.quantity`)}</p>}
-              </div>
+          {/* Inventory như card */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-slate-800 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-slate-500" /> Tồn kho theo vị trí ({form.inventory.length})
+              </h4>
+              <button type="button" onClick={addInventory} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
+                <Plus className="h-4 w-4" /> Thêm dòng tồn kho
+              </button>
             </div>
-          ))}
 
-          <button type="button" onClick={addInventory} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Add Inventory
-          </button>
+            {form.inventory.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">Chưa có dòng tồn kho. Nhấn “Thêm dòng tồn kho”.</div>
+            ) : (
+              <div className="space-y-4">
+                {form.inventory.map((inv, i) => (
+                  <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium">Variant SKU</label>
+                        <input
+                          value={inv.variant_sku}
+                          onChange={(e) => { const next = [...form.inventory]; next[i].variant_sku = e.target.value; setForm({ ...form, inventory: next }); }}
+                          className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${getErr(`inventory.${i}.variant_sku`) ? 'border-rose-400' : 'border-slate-300'}`}
+                          placeholder="SKU liên kết"
+                        />
+                        {getErr(`inventory.${i}.variant_sku`) && <p className="mt-1 text-xs text-rose-600">{getErr(`inventory.${i}.variant_sku`)}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium">Vị trí</label>
+                        <input
+                          value={inv.location}
+                          onChange={(e) => { const next = [...form.inventory]; next[i].location = e.target.value; setForm({ ...form, inventory: next }); }}
+                          className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${getErr(`inventory.${i}.location`) ? 'border-rose-400' : 'border-slate-300'}`}
+                          placeholder="Kho / Kệ"
+                        />
+                        {getErr(`inventory.${i}.location`) && <p className="mt-1 text-xs text-rose-600">{getErr(`inventory.${i}.location`)}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium">Số lượng</label>
+                        <input
+                          type="number" value={inv.quantity}
+                          onChange={(e) => { const next = [...form.inventory]; next[i].quantity = +e.target.value; setForm({ ...form, inventory: next }); }}
+                          className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${getErr(`inventory.${i}.quantity`) ? 'border-rose-400' : 'border-slate-300'}`}
+                          placeholder="0"
+                        />
+                        {getErr(`inventory.${i}.quantity`) && <p className="mt-1 text-xs text-rose-600">{getErr(`inventory.${i}.quantity`)}</p>}
+                      </div>
+
+                      <div className="flex items-end justify-end">
+                        <button type="button" onClick={() => removeInventoryAt(i)} className="inline-flex h-11 items-center justify-center rounded-md border border-rose-200 px-3 text-rose-600 hover:bg-rose-50" title="Xóa dòng">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       )}
 
-      {/* Step 4: Pricing Rules */}
+      {/* STEP 4: Pricing Rules */}
       {step === 4 && (
-        <section className="space-y-5 md:space-y-6 max-w-[1200px] mx-auto">
-          <h3 className="font-semibold text-lg">Pricing Rules</h3>
+        <section className="space-y-6">
+          <header className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-emerald-700" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Quy tắc giá</h3>
+              <p className="text-sm text-slate-500">Thiết lập giảm giá theo số lượng, chu kỳ, hoặc gắn theo SKU.</p>
+            </div>
+          </header>
+
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-slate-800">Tổng: {form.pricing_rules.length} rule</h4>
+            <button type="button" onClick={addPricingRule} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
+              <Plus className="h-4 w-4" /> Thêm rule
+            </button>
+          </div>
+
+          {(form.pricing_rules || []).length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">Chưa có rule. Nhấn “Thêm rule”.</div>
+          )}
 
           {(form.pricing_rules || []).map((pr, i) => (
-            <div key={i} className="rounded-xl border border-gray-200 bg-white p-4 md:p-5">
+            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Type</label>
-                  <input
-                    placeholder="e.g. bulk / tier"
-                    value={pr.type}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].type = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input value={pr.type} onChange={(e) => { const next = [...form.pricing_rules]; next[i].type = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="bulk / tier" />
                 </div>
 
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Min Qty</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 10"
-                    value={pr.min_quantity}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].min_quantity = +e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input type="number" value={pr.min_quantity} onChange={(e) => { const next = [...form.pricing_rules]; next[i].min_quantity = +e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="10" />
                 </div>
 
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Price</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 99000"
-                    value={pr.price}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].price = +e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input type="number" value={pr.price} onChange={(e) => { const next = [...form.pricing_rules]; next[i].price = +e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="99000" />
                 </div>
 
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Cycle</label>
-                  <input
-                    placeholder="e.g. monthly"
-                    value={pr.cycle || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].cycle = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input value={pr.cycle || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].cycle = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="monthly" />
                 </div>
 
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Starts</label>
-                  <input
-                    type="date"
-                    value={(pr.starts_at as string) || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].starts_at = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input type="date" value={(pr.starts_at as string) || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].starts_at = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" />
                 </div>
 
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Ends</label>
-                  <input
-                    type="date"
-                    value={(pr.ends_at as string) || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].ends_at = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input type="date" value={(pr.ends_at as string) || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].ends_at = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" />
                 </div>
 
-                <div className="md:col-span-3 min-w-0">
+                <div className="md:col-span-3">
                   <label className="block text-sm font-medium mb-1">Variant SKU</label>
-                  <input
-                    placeholder="Liên kết với SKU biến thể"
-                    value={pr.variant_sku || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].variant_sku = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input value={pr.variant_sku || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].variant_sku = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="Link SKU" />
                 </div>
 
-                <div className="md:col-span-4 min-w-0">
+                <div className="md:col-span-4">
                   <label className="block text-sm font-medium mb-1">Rule Name</label>
-                  <input
-                    placeholder="Tên hiển thị (ví dụ: Giảm giá theo bậc)"
-                    value={pr.name || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].name = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <input value={pr.name || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].name = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="Tên hiển thị" />
                 </div>
 
-                <div className="md:col-span-2 min-w-0">
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Status</label>
-                  <select
-                    value={pr.status || 'active'}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].status = e.target.value as 'active' | 'inactive';
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={pr.status || 'active'} onChange={(e) => { const next = [...form.pricing_rules]; next[i].status = e.target.value as 'active' | 'inactive'; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
 
-                <div className="flex justify-end self-end md:col-span-1 md:col-start-12 md:justify-self-end ">
+                <div className="flex justify-end self-end md:col-span-1 md:col-start-12 md:justify-self-end">
                   <button
                     type="button"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        pricing_rules: prev.pricing_rules.filter((_, idx) => idx !== i),
-                      }))
-                    }
-                    className="h-11 w-11 inline-flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                    onClick={() => setForm(prev => ({ ...prev, pricing_rules: prev.pricing_rules.filter((_, idx) => idx !== i) }))}
+                    className="h-11 w-11 inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
                     title="Remove rule"
-                    aria-label="Remove pricing rule"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
@@ -813,213 +779,46 @@ export const ProductForm: React.FC = () => {
               </div>
             </div>
           ))}
-
-          <button type="button" onClick={addPricingRule} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Add Pricing Rule
-          </button>
         </section>
       )}
 
-      {/* Step 5: Review & Confirm */}
-      {step === 5 && (
-        <section className="space-y-6 max-w-[1200px] mx-auto">
-          <h3 className="font-semibold text-lg">Review &amp; Confirm</h3>
-
-          <div className="flex flex-wrap gap-2 text-sm">
-            <button type="button" onClick={() => setStep(1)} className="px-3 py-1 rounded border hover:bg-gray-50">Edit Step 1</button>
-            <button type="button" onClick={() => setStep(2)} className="px-3 py-1 rounded border hover:bg-gray-50">Edit Step 2</button>
-            <button type="button" onClick={() => setStep(3)} className="px-3 py-1 rounded border hover:bg-gray-50">Edit Step 3</button>
-            <button type="button" onClick={() => setStep(4)} className="px-3 py-1 rounded border hover:bg-gray-50">Edit Step 4</button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <h4 className="font-semibold">Product Info</h4>
-              <div className="text-sm space-y-1">
-                <div><span className="font-medium">Name:</span> {form.name || '—'}</div>
-                <div><span className="font-medium">Base price:</span> {Number(form.base_price) || 0}</div>
-                <div><span className="font-medium">Brand:</span> {(brands.find((b) => b.id === form.brandId) || {}).name || '—'}</div>
-                <div><span className="font-medium">Categories:</span> {(categories.filter((c) => (form.categories || []).includes(c.id)).map((c) => c.name).join(', ')) || '—'}</div>
-              </div>
-              <div>
-                <h5 className="font-semibold">Short Description</h5>
-                <p className="text-sm whitespace-pre-wrap text-gray-800">{form.short_description || '—'}</p>
-              </div>
-              <div>
-                <h5 className="font-semibold">Description</h5>
-                <p className="text-sm whitespace-pre-wrap text-gray-800">{form.description || '—'}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-semibold">Media</h4>
-              <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 h-64 w-64">
-                {form.media?.[0]?.url ? (
-                  <img src={form.media[0].url} alt="cover" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No cover</div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 overflow-x-auto">
-                {(form.media || [])
-                  .slice(1)
-                  .filter((m) => m?.url)
-                  .map((m, i) => (
-                    <img
-                      key={i}
-                      src={m.url}
-                      alt={`m-${i}`}
-                      className="w-16 h-16 shrink-0 rounded-xl border border-gray-200 object-cover"
-                    />
-                  ))}
-                {!((form.media || []).slice(1).filter((m) => m?.url).length) && (
-                  <span className="text-sm text-gray-400">No extra images</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-2">Variants</h4>
-            {(form.variants || []).length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-2 border">SKU</th>
-                      <th className="p-2 border">Name</th>
-                      <th className="p-2 border">Price</th>
-                      <th className="p-2 border">Stock</th>
-                      <th className="p-2 border">Barcode</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(form.variants || []).map((v, i) => {
-                      const stock = (form.inventory || [])
-                        .filter((inv) => inv.variant_sku === v.sku)
-                        .reduce((s, inv) => s + Number(inv.quantity || 0), 0);
-                      return (
-                        <tr key={i}>
-                          <td className="p-2 border">{v.sku || '—'}</td>
-                          <td className="p-2 border">{v.variant_name || '—'}</td>
-                          <td className="p-2 border">{Number(v.price) || 0}</td>
-                          <td className="p-2 border">{stock}</td>
-                          <td className="p-2 border">{v.barcode || '—'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No variants added.</p>
-            )}
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-2">Inventory</h4>
-            {(form.inventory || []).length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-2 border">Variant SKU</th>
-                      <th className="p-2 border">Location</th>
-                      <th className="p-2 border">Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(form.inventory || []).map((inv, i) => (
-                      <tr key={i}>
-                        <td className="p-2 border">{inv.variant_sku || '—'}</td>
-                        <td className="p-2 border">{inv.location || '—'}</td>
-                        <td className="p-2 border">{Number(inv.quantity) || 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No inventory rows.</p>
-            )}
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-2">Pricing Rules</h4>
-            {(form.pricing_rules || []).length ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-2 border">Type</th>
-                      <th className="p-2 border">Min Qty</th>
-                      <th className="p-2 border">Price</th>
-                      <th className="p-2 border">Cycle</th>
-                      <th className="p-2 border">Starts</th>
-                      <th className="p-2 border">Ends</th>
-                      <th className="p-2 border">Variant SKU</th>
-                      <th className="p-2 border">Rule Name</th>
-                      <th className="p-2 border">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(form.pricing_rules || []).map((r, i) => (
-                      <tr key={i}>
-                        <td className="p-2 border">{r.type || '—'}</td>
-                        <td className="p-2 border">{Number(r.min_quantity) || 0}</td>
-                        <td className="p-2 border">{Number(r.price) || 0}</td>
-                        <td className="p-2 border">{r.cycle || '—'}</td>
-                        <td className="p-2 border">{displayDate(r.starts_at)}</td>
-                        <td className="p-2 border">{displayDate(r.ends_at)}</td>
-                        <td className="p-2 border">{r.variant_sku || '—'}</td>
-                        <td className="p-2 border">{r.name || '—'}</td>
-                        <td className="p-2 border">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                              (r.status || 'active') === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            {r.status || 'active'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No pricing rules.</p>
-            )}
-          </div>
-
-          <div className="text-xs text-gray-500">
-            Kiểm tra lại thông tin trước khi Publish. Bạn có thể quay lại các bước để chỉnh sửa bằng các nút "Edit Step" ở trên.
-          </div>
-        </section>
-      )}
-
-      {/* Navigation */}
-      <div className="flex justify-between mt-6 gap-2">
-        {step > 1 && (
-          <button type="button" onClick={prevStep} className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
-            Previous
-          </button>
-        )}
-        {step < 5 && (
-          <button type="button" onClick={nextStep} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Next
-          </button>
-        )}
-        {step === 5 && (
-          <div className="flex gap-2">
-            <button type="submit" onClick={() => submitForm(false)} className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-              Publish
+      {/* Navigation Buttons – giống Edit */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          {step > 1 && (
+            <button type="button" onClick={prevStep} className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50">
+              Previous
             </button>
-            <button type="button" onClick={() => submitForm(true)} className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
-              Save Draft
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          {step < 4 && (
+            <button type="button" onClick={nextStep} className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+              Next
             </button>
-          </div>
-        )}
+          )}
+
+          {step === 4 && (
+            <>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-6 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {submitting ? 'Publishing…' : 'Publish'}
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => submitForm('draft')}
+                className="px-6 py-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60"
+              >
+                {submitting ? 'Saving…' : 'Save Draft'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </form>
   );
