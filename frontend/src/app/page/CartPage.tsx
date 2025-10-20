@@ -178,7 +178,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                           )}
                         </div>
                         <Text type="secondary" className="text-sm">
-                          Cửa hàng: {group.store.name}
+                          Cửa hàng: {group.store?.name ?? 'Không xác định'}
                         </Text>
                         <br />
                         <Text type="secondary" className="text-xs">

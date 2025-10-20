@@ -6,7 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 
 export default function GroupOrderCreate() {
     const navigate = useNavigate();
-    const { storeId } = useParams(); 
+    const { storeId } = useParams();
     const location = useLocation();
     const [searchParams] = useSearchParams();
     const { user } = useAuth();
@@ -20,9 +20,10 @@ export default function GroupOrderCreate() {
         (Number.isFinite(Number(storeIdFromState)) && Number(storeIdFromState)) ||
         null;
 
-    const [groupName, setGroupName] = useState("Đơn hàng nhóm của Nguyễn");
+    const [groupName, setGroupName] = useState("Đơn hàng nhóm của");
     const [paymentType, setPaymentType] = useState("Mọi người tự thanh toán phần của mình");
     const [extraTime, setExtraTime] = useState("Không có");
+    const [discountPercent, setDiscountPercent] = useState(0);
 
     const handleCreate = async () => {
         try {
@@ -57,6 +58,15 @@ export default function GroupOrderCreate() {
         }
     };
 
+    const calculateDiscount = (memberCount: number) => {
+        if (memberCount >= 8) return 10;
+        if (memberCount >= 5) return 6;
+        if (memberCount >= 3) return 4;
+        if (memberCount >= 2) return 2;
+        return 0;
+    };
+
+
     return (
         <div className="min-h-screen bg-slate-50 flex justify-center py-10">
             <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -80,25 +90,31 @@ export default function GroupOrderCreate() {
 
                     {/* Thanh phần trăm */}
                     <div className="relative w-full h-2 bg-slate-200 rounded-full mb-2">
-                        <div className="absolute left-0 top-0 h-2 w-1/3 bg-sky-500 rounded-full transition-all" />
+                        <div className="absolute left-0 top-0 h-2 w-1/3 bg-sky-500 rounded-full transition-all"
+                            style={{ width: `${(discountPercent / 10) * 100}%` }} />
+                    </div>
+                    {/* 🎯 THÊM: Hiển thị discount hiện tại */}
+                    <div className="text-center mb-4">
+                        <span className="text-2xl font-bold text-sky-600">{discountPercent}%</span>
+                        <span className="text-sm text-slate-600 ml-2">giảm giá hiện tại</span>
                     </div>
 
                     {/* Mốc số lượng */}
                     <div className="flex justify-between text-xs text-slate-600">
                         <div className="flex flex-col items-center">
-                            <span className="font-semibold text-sky-600">2%</span>
+                            <span className={`font-semibold ${discountPercent >= 2 ? 'text-sky-600' : 'text-slate-400'}`}>2%</span>
                             <span>2 người</span>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="font-semibold text-sky-600">4%</span>
+                            <span className={`font-semibold ${discountPercent >= 4 ? 'text-sky-600' : 'text-slate-400'}`}>4%</span>
                             <span>3 người</span>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="font-semibold text-sky-600">6%</span>
+                            <span className={`font-semibold ${discountPercent >= 6 ? 'text-sky-600' : 'text-slate-400'}`}>6%</span>
                             <span>5 người</span>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="font-semibold text-sky-600">10%</span>
+                            <span className={`font-semibold ${discountPercent >= 10 ? 'text-sky-600' : 'text-slate-400'}`}>10%</span>
                             <span>8 người</span>
                         </div>
                     </div>

@@ -25,7 +25,7 @@ export class EveryCoinStrategy {
         order,
         paymentMethod,
         amount: order.totalAmount,
-        status: PaymentStatus.Completed, // trực tiếp success
+        status: PaymentStatus.Paid, // trực tiếp success
         paidAt: new Date(),
       });
       await manager.save(payment);

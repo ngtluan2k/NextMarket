@@ -61,7 +61,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_price ?? 0);
-  const [selectedType, setSelectedType] = useState<'bulk' | 'subscription' | undefined>(undefined);
+  const [selectedType, setSelectedType] = useState<'bulk' | 'subscription' | 'normal' | undefined>(undefined);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewPage, setReviewPage] = useState(1);

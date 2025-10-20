@@ -82,9 +82,9 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   // Lấy danh sách địa chỉ của người dùng
   useEffect(() => {
     const fetchAddresses = async () => {
-      if (me?.id) {
+      if (me?.user_id) {
         try {
-          const data = await userApi.getAddresses(me.id);
+          const data = await userApi.getAddresses(me.user_id);
           setAddresses(data);
           // Chọn địa chỉ mặc định nếu có
           const defaultAddress =

@@ -24,7 +24,7 @@ export class CartController {
   @Post('add')
   async addToCart(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; quantity?: number; variantId?: number, type?: 'bulk' | 'subscription';isGroup?: boolean; }
+    @Body() body: { productId: number; quantity?: number; variantId?: number, type?: 'bulk' | 'subscription'| 'normal';isGroup?: boolean; }
   ) {
     console.log(
       '{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}userId for add cart : ' +
@@ -49,7 +49,7 @@ export class CartController {
   @Put('update')
   async updateQuantity(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; quantity: number; variantId?: number; type?: 'bulk' | 'subscription';  isGroup?: boolean; }
+    @Body() body: { productId: number; quantity: number; variantId?: number; type?: 'bulk' | 'subscription'|'normal';  isGroup?: boolean; }
   ) {
     return this.cartService.updateQuantity(
       req.user.userId,
@@ -65,7 +65,7 @@ export class CartController {
   async removeFromCart(
     @Request() req: AuthRequest,
     @Param('productId') productId: number,
-    @Body() body?: { variantId?: number; type?: 'bulk' | 'subscription' }
+    @Body() body?: { variantId?: number; type?: 'bulk' | 'subscription'| 'normal' }
   ) {
     await this.cartService.removeFromCart(
       req.user.userId,

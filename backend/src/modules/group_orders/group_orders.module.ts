@@ -13,9 +13,10 @@ import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { GroupOrdersGateway } from './group_orders.gateway';
+import { Inventory } from '../inventory/inventory.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules])],
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory])],
   controllers: [GroupOrdersController, GroupOrderItemsController],
   providers: [GroupOrdersService, GroupOrderItemsService,GroupOrdersGateway],
   exports: [GroupOrdersService,GroupOrdersGateway],

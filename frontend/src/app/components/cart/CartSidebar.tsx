@@ -66,7 +66,7 @@ export const CartSidebar: React.FC<Props> = ({
         const data = await fetchMyWallet();
         setWallet(data);
       } catch (err) {
-        message.error('Không thể tải số dư ví');
+        // Không cần thông báo lỗi
       } finally {
         setWalletLoading(false);
       }
@@ -205,6 +205,7 @@ export const CartSidebar: React.FC<Props> = ({
       setLoading(false);
     }
   };
+  
 
   const handleApplyVoucher = (vouchers: Voucher[], totalDiscount: number) => {
     console.log(

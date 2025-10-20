@@ -25,7 +25,7 @@ export default function GroupJoin() {
         // JOIN TRỰC TIẾP BẰNG UUID
         await axios.post(
           `http://localhost:3000/group-orders/join/${uuid}`,
-          { userId: user.id },
+          { userId: user.user_id },
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
 

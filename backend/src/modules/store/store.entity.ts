@@ -39,7 +39,7 @@ export class Store {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, unique: true })
   name!: string;
 
   @Column({ length: 255, unique: true })
@@ -49,7 +49,7 @@ export class Store {
   description!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true  })
-  logo_url: string;
+  logo_url!: string;
 
   @Column({ length: 100, nullable: true })
   email!: string;

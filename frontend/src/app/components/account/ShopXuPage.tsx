@@ -1,51 +1,64 @@
-import React, { useState } from "react";
-import { Button, Input, Typography, Card } from "antd";
-import { useNavigate } from "react-router-dom";
-import { HelpCircle } from "lucide-react";
-import { XuModal } from "./modal_account/PaymentMethodModal";
-
+import React, { useEffect, useState } from 'react';
+import { Button, Input, Typography, Card, message } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { HelpCircle } from 'lucide-react';
+import { XuModal } from './modal_account/PaymentMethodModal';
+import { fetchMyWallet } from '../../../service/wallet.service';
 
 // Hàm định dạng tiền tệ
 const formatCurrency = (amount: number) => {
-  return amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+  return amount.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
 };
 
 export default function ShopXuPage() {
-  const [selectedAmount, setSelectedAmount] = useState(100000); 
-  const [customAmount, setCustomAmount] = useState(""); 
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); 
-  const amounts = [100000, 200000, 500000, 1000000, 2000000]; 
+  const [selectedAmount, setSelectedAmount] = useState(100000);
+  const [customAmount, setCustomAmount] = useState('');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [wallet, setWallet] = useState<number>(0); // ✅ State lưu số Xu
+  const [walletLoading, setWalletLoading] = useState(false);
+
   const navigate = useNavigate();
+  const amounts = [100000, 200000, 500000, 1000000, 2000000];
+
+  // ✅ Gọi API lấy số dư ví
+  useEffect(() => {
+    const getWallet = async () => {
+      setWalletLoading(true);
+      try {
+        const data = await fetchMyWallet();
+        setWallet(data.balance ?? 0); // giả sử API trả { balance: 100000 }
+      } catch (err) {
+        // Không cần hiển thị lỗi
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+    getWallet();
+  }, []);
 
   // Cập nhật khi người dùng nhấn vào mức giá Xu
   const handleAmountChange = (amount: number) => {
     setSelectedAmount(amount);
-    setCustomAmount(""); // Reset nhập tay khi chọn mức Xu
+    setCustomAmount('');
   };
 
   // Cập nhật khi người dùng nhập số tiền
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCustomAmount(e.target.value);
-    setSelectedAmount(Number(e.target.value)); // Cập nhật giá trị Xu từ nhập tay
+    setSelectedAmount(Number(e.target.value));
   };
 
-  // Mở modal thanh toán
-  const handleOpenPaymentModal = () => {
-    setIsPaymentModalOpen(true);
-  };
-
-  // Đóng modal thanh toán
-  const handleClosePaymentModal = () => {
-    setIsPaymentModalOpen(false);
-  };
+  // Mở & đóng modal
+  const handleOpenPaymentModal = () => setIsPaymentModalOpen(true);
+  const handleClosePaymentModal = () => setIsPaymentModalOpen(false);
 
   // Xử lý thanh toán
   const handleSubmit = () => {
     if (!selectedAmount || selectedAmount <= 0) {
-      alert("Vui lòng chọn hoặc nhập số Xu cần nạp.");
+      alert('Vui lòng chọn hoặc nhập số Xu cần nạp.');
       return;
     }
-    handleOpenPaymentModal(); // Mở modal khi thông tin thanh toán hợp lệ
+    handleOpenPaymentModal();
   };
 
   return (
@@ -55,24 +68,29 @@ export default function ShopXuPage() {
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-2">
             <span className="text-gray-700">Số Xu trong tài khoản</span>
-            <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-bold">0</span>
+            <div className="bg-yellow-400 rounded-full flex items-center justify-center px-3 min-w-6 h-6">
+              <span className="text-white text-sm font-bold">
+                {walletLoading ? '...' : wallet.toLocaleString('vi-VN')}
+              </span>
             </div>
           </div>
+
           <div className="flex items-center gap-2 text-gray-700">
             <span> Xu là gì?</span>
             <HelpCircle className="w-5 h-5" />
           </div>
         </div>
 
+        {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm">😊</span>
               </div>
-              <h1 className="text-xl font-medium text-gray-800">Nạp Xu vào tài khoản</h1>
+              <h1 className="text-xl font-medium text-gray-800">
+                Nạp Xu vào tài khoản
+              </h1>
             </div>
 
             {/* Blue Gradient Card */}
@@ -86,7 +104,9 @@ export default function ShopXuPage() {
                   <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
                     <div className="w-8 h-8 bg-yellow-500 rounded-full"></div>
                   </div>
-                  <span className="text-white text-5xl font-bold">{formatCurrency(selectedAmount)}</span>
+                  <span className="text-white text-5xl font-bold">
+                    {formatCurrency(selectedAmount)}
+                  </span>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -95,8 +115,8 @@ export default function ShopXuPage() {
                       key={amount}
                       className={`px-4 py-2 rounded-lg font-medium ${
                         selectedAmount === amount
-                          ? "bg-white text-blue-600 hover:bg-gray-100"
-                          : "bg-white/10 text-white border-white/30 hover:bg-white/20"
+                          ? 'bg-white text-blue-600 hover:bg-gray-100'
+                          : 'bg-white/10 text-white border-white/30 hover:bg-white/20'
                       }`}
                       onClick={() => handleAmountChange(amount)}
                     >
@@ -105,7 +125,6 @@ export default function ShopXuPage() {
                   ))}
                 </div>
 
-                {/* Dòng nhập số tiền */}
                 <div className="mt-6">
                   <Input
                     value={customAmount}
@@ -130,7 +149,9 @@ export default function ShopXuPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Số tiền cần thanh toán:</span>
-                  <span className="font-bold text-lg">{formatCurrency(selectedAmount)} đ</span>
+                  <span className="font-bold text-lg">
+                    {formatCurrency(selectedAmount)} đ
+                  </span>
                 </div>
 
                 <Button
@@ -149,7 +170,7 @@ export default function ShopXuPage() {
       <XuModal
         isOpen={isPaymentModalOpen}
         onClose={handleClosePaymentModal}
-        selectedAmount={selectedAmount} // Truyền selectedAmount vào modal
+        selectedAmount={selectedAmount}
       />
     </div>
   );

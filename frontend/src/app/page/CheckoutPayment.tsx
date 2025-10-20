@@ -129,7 +129,7 @@ const CheckoutPayment: React.FC = () => {
 
     // FIX: Đảm bảo userId luôn là số hợp lệ
     const storedUserId = localStorage.getItem('userId');
-    const userId = me?.id || (storedUserId ? parseInt(storedUserId, 10) : 0);
+    const userId = me?.user_id || (storedUserId ? parseInt(storedUserId, 10) : 0);
 
     // Kiểm tra userId hợp lệ
     if (!token || !userId || isNaN(userId)) {

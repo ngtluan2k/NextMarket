@@ -22,7 +22,7 @@ export type Inventory = {
 
 export type PricingRule = {
   id: number;
-  type: 'bulk' | 'subscription';
+  type: 'bulk' | 'subscription' | 'normal';
   min_quantity: number;
   price: number;
   cycle?: string;
@@ -81,8 +81,8 @@ export default function Info({
   calculatedPrice: number;
   setCalculatedPrice: (price: number) => void;
   maxQuantity: number;
-  selectedType?: 'bulk' | 'subscription';
-  setSelectedType: (type?: 'bulk' | 'subscription') => void;
+  selectedType?: 'bulk' | 'subscription' | 'normal';
+  setSelectedType: (type?: 'bulk' | 'subscription' | 'normal') => void;
 }) {
   const navigate = useNavigate();
   const pricingRules = product?.pricing_rules ?? [];

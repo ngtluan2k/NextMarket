@@ -151,7 +151,7 @@ export class VouchersService {
       throw new NotFoundException(`Không tìm thấy voucher #${id}`);
     }
 
-    if (role !== 'admin' && role !== 'user') {
+    if (role !== 'Admin' && role !== 'user') {
       await this.checkVoucherOwnership(userId, voucher);
     }
     return voucher;
@@ -364,6 +364,7 @@ export class VouchersService {
   }
 
   async getAvailableVouchers(userId: number): Promise<Voucher[]> {
+    console.log (userId)
     const now = new Date();
     const vouchers = await this.vouchersRepository.find({
       where: {
@@ -373,6 +374,7 @@ export class VouchersService {
       },
       relations: ['usages', 'store'],
     });
+    console.log (`ádasdasdasdasd${vouchers.length}`);
 
     const availableVouchers = [];
     for (const voucher of vouchers) {
@@ -625,7 +627,7 @@ export class VouchersService {
   // Convert to array if it's string
   const roleList = Array.isArray(roles) ? roles : [roles];
 
-  if (roleList.includes('admin')) {
+  if (roleList.includes('Admin')) {
     return adminPermissions.includes(permission);
   } else if (roleList.includes('Seller')) {
     return storeOwnerPermissions.includes(permission);
