@@ -20,6 +20,7 @@ import LoginModal from '../components/LoginModal';
 import { CheckoutLocationState } from '../types/buyBox';
 import { CheckoutItem } from '../types/checkout';
 import { UserAddress } from '../types/user';
+import { Voucher } from '../types/voucher';
 
 const { Title } = Typography;
 
@@ -116,25 +117,101 @@ const filteredMethods = useMemo(
     setUserAddress(addr);
   };
 
+  // Thêm state chung cho voucher
+  const [selectedVouchers, setSelectedVouchers] = useState<Voucher[]>([]);
+  const [discountTotal, setDiscountTotal] = useState(0);
+
   const total = useMemo(
-    () => subtotalNum + (shippingFee || 0),
-    [subtotalNum, shippingFee]
+    () => subtotalNum - discountTotal + (shippingFee || 0),
+    [subtotalNum, discountTotal, shippingFee]
   );
   const selectedCount = useMemo(
     () => items.reduce((s, it) => s + it.quantity, 0),
     [items]
   );
 
+  const handleApplyVoucher = async (
+    vouchers: Voucher[],
+    partialDiscount: number
+  ) => {
+    setSelectedVouchers(vouchers);
+
+    //  TÍNH LẠI TỔNG DISCOUNT (store + platform)
+    if (vouchers.length === 0) {
+      setDiscountTotal(0);
+      return;
+    }
+
+    try {
+      const payload = {
+        voucherCodes: vouchers.map((v) => v.code),
+        userId: me?.id,
+        orderItems: checkoutItems.map((item) => ({
+          productId: Number(item.product?.id),
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        })),
+        storeId: items[0]?.product?.store?.id,
+        orderAmount: subtotalNum,
+      };
+
+      const res = await api.post('/vouchers/calculate-discount', payload);
+      const { discountTotal: calculatedDiscount } = res.data;
+
+      const safeDiscount = Number.isFinite(calculatedDiscount)
+        ? calculatedDiscount
+        : 0;
+      setDiscountTotal(safeDiscount);
+    } catch (error: any) {
+      console.error('Error recalculating total discount:', error);
+      message.error('Không thể tính toán giảm giá');
+      setDiscountTotal(0);
+    }
+  };
+
+  const handleRemoveVoucher = async (voucherId: number) => {
+    const updatedVouchers = selectedVouchers.filter((v) => v.id !== voucherId);
+    setSelectedVouchers(updatedVouchers);
+
+    if (updatedVouchers.length === 0) {
+      setDiscountTotal(0);
+      return;
+    }
+
+    // Recalculate discount cho các voucher còn lại
+    try {
+      const res = await api.post('/vouchers/calculate-discount', {
+        voucherCodes: updatedVouchers.map((v) => v.code),
+        userId: me?.id,
+        orderItems: checkoutItems.map((item) => ({
+          productId: Number(item.product?.id),
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        })),
+        storeId: items[0]?.product?.store?.id,
+        orderAmount: subtotalNum,
+      });
+      const { discountTotal } = res.data;
+      setDiscountTotal(Number.isFinite(discountTotal) ? discountTotal : 0);
+    } catch (error: any) {
+      console.error('Error recalculating discount:', error);
+      message.error('Không thể tính toán lại giảm giá');
+      setDiscountTotal(0);
+    }
+  };
   useEffect(() => {
-    const token = localStorage.getItem('token');
-
-    // FIX: Đảm bảo userId luôn là số hợp lệ
-    const storedUserId = localStorage.getItem('userId');
-    const userId = me?.id || (storedUserId ? parseInt(storedUserId, 10) : 0);
-
-    // Kiểm tra userId hợp lệ
-    if (!token || !userId || isNaN(userId)) {
-      console.log('🔐 No valid token or userId, showing login modal');
+    console.log(
+      '📋 Current selectedVouchers:',
+      selectedVouchers.map((v) => ({
+        id: v.id,
+        code: v.code,
+        store_id: v.store_id,
+        type: v.type,
+      }))
+    );
+  }, [selectedVouchers]);
+  useEffect(() => {
+    if (!me) {
       localStorage.setItem(
         'checkoutData',
         JSON.stringify({ items, subtotal: subtotalNum })
@@ -144,6 +221,8 @@ const filteredMethods = useMemo(
       setLoading(false);
       return;
     }
+
+    const userId = me.id;
 
     const fetchAllPaymentMethods = async () => {
       try {
@@ -176,37 +255,22 @@ const filteredMethods = useMemo(
           );
         }
       } catch (error) {
-        console.error('❌ Lỗi tải phương thức thanh toán:', error);
+        console.error(' Lỗi tải phương thức thanh toán:', error);
         message.error('Không thể tải phương thức thanh toán.');
         setPaymentMethods([]);
       }
     };
 
-   // Kiểm tra có subscription hay không
-const isSubscription = checkoutItems.some((i) => i.type === 'subscription');
-
-// Lọc payment methods cho COD ↔ EveryCoin
-const filteredMethods = paymentMethods.filter((m) => {
-  if (m.type === 'cod') return !isSubscription;      // COD chỉ hiện khi không phải subscription
-  if (m.type === 'everycoin') return isSubscription; // EveryCoin chỉ hiện khi là subscription
-  return true; // các method khác luôn hiển thị
-});
-
-
     const fetchUserAddress = async () => {
       try {
-        console.log('📍 Fetching address for userId:', userId);
         const response = await api.get(`/users/${userId}/addresses`);
         const addresses = response.data || [];
-
         if (addresses.length > 0) {
-          // Tìm địa chỉ mặc định hoặc lấy địa chỉ đầu tiên
           const defaultAddr =
             addresses.find((a: any) => a.isDefault) || addresses[0];
-
           setUserAddress({
             id: defaultAddr.id,
-            userId: userId, // FIX: Đảm bảo userId là số hợp lệ
+            userId,
             recipientName: defaultAddr.recipientName,
             phone: defaultAddr.phone,
             street: defaultAddr.street,
@@ -234,7 +298,7 @@ const filteredMethods = paymentMethods.filter((m) => {
           navigate('/user/address');
         }
       } catch (error) {
-        console.error('❌ Lỗi tải địa chỉ:', error);
+        console.error(' Lỗi tải địa chỉ:', error);
         message.error('Không thể tải địa chỉ giao hàng.');
       }
     };
@@ -242,7 +306,7 @@ const filteredMethods = paymentMethods.filter((m) => {
     Promise.all([fetchAllPaymentMethods(), fetchUserAddress()]).finally(() =>
       setLoading(false)
     );
-  }, [navigate, me, location.pathname, items, subtotalNum]);
+  }, [me, navigate, location.pathname, items, subtotalNum]);
 
   const handleLoginSuccess = () => {
     setShowLoginModal(false);
@@ -293,6 +357,10 @@ const filteredMethods = paymentMethods.filter((m) => {
               storeName={items[0]?.product?.store?.name ?? 'EveryMart'}
               saving={0}
               shippingFee={shippingFee}
+              selectedVouchers={selectedVouchers}
+              onApplyVoucher={handleApplyVoucher}
+              discountTotal={discountTotal}
+              orderAmount={subtotalNum}
             />
             <div style={{ marginTop: 12 }}>
               <PaymentMethods
@@ -306,7 +374,7 @@ const filteredMethods = paymentMethods.filter((m) => {
           <Col flex="320px">
             <CartSidebar
               mode="checkout"
-              selectedTotal={total}
+              selectedTotal={subtotalNum}
               selectedCount={selectedCount}
               submitLabel="Đặt hàng"
               selectedPaymentMethod={method}
@@ -316,6 +384,10 @@ const filteredMethods = paymentMethods.filter((m) => {
               onAddressChange={handleAddressChange}
               items={checkoutItems}
               etaLabel={etaLabel}
+              selectedVouchers={selectedVouchers}
+              discountTotal={discountTotal}
+              onApplyVoucher={handleApplyVoucher}
+              onRemoveVoucher={handleRemoveVoucher}
             />
           </Col>
         </Row>

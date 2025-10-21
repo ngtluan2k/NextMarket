@@ -1,6 +1,9 @@
-// src/api/voucher.api.ts
-import { api } from "./api";
-import type { Voucher, CreateVoucherPayload, UpdateVoucherPayload } from '../types/voucher';
+import { api } from './api';
+import type {
+  Voucher,
+  CreateVoucherPayload,
+  UpdateVoucherPayload,
+} from '../types/voucher';
 
 const ENDPOINTS = {
   adminVouchers: '/admin/vouchers',
@@ -83,10 +86,56 @@ export const storeOwnerVoucherApi = {
 // USER VOUCHER API
 // =============================
 export const userVoucherApi = {
-  // Get available vouchers for user
-  getAvailableVouchers: async (): Promise<Voucher[]> => {
-    const res = await api.get(`${ENDPOINTS.userVouchers}/available`);
+  /**
+   * Get user's collected vouchers (available, used, expired)
+   * @returns Array of user's vouchers
+   */
+  getMyVouchers: async (): Promise<Voucher[]> => {
+    const res = await api.get(`${ENDPOINTS.userVouchers}/my-vouchers`);
     return res.data;
+  },
+
+  /**
+   * Get available vouchers for user
+   * @param storeId - Optional store ID to filter vouchers
+   * @param filterByStoreOnly - If true, exclude admin vouchers (default: false)
+   * @returns Array of available vouchers
+   */
+  getAvailableVouchers: async (
+    storeId?: number,
+    filterByStoreOnly: boolean = false
+  ): Promise<Voucher[]> => {
+    const params = new URLSearchParams();
+    
+    if (storeId !== undefined) {
+      params.append('storeId', storeId.toString());
+    }
+    
+    if (filterByStoreOnly) {
+      params.append('filterByStore', 'true');
+    }
+    
+    const queryString = params.toString();
+    const url = queryString 
+      ? `${ENDPOINTS.userVouchers}/available?${queryString}`
+      : `${ENDPOINTS.userVouchers}/available`;
+    
+    const res = await api.get<Voucher[]>(url);
+    return res.data;
+  },
+
+  /**
+   * Get available vouchers by store (includes admin vouchers by default)
+   * @param storeId - Store ID
+   * @param includeAdminVouchers - Include platform-wide vouchers (default: true)
+   * @returns Array of available vouchers
+   * @deprecated Use getAvailableVouchers instead
+   */
+  getAvailableVouchersByStore: async (
+    storeId: number,
+    includeAdminVouchers: boolean = true
+  ): Promise<Voucher[]> => {
+    return userVoucherApi.getAvailableVouchers(storeId, !includeAdminVouchers);
   },
 
   // Collect a voucher

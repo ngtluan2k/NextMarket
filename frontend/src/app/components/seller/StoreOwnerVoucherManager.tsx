@@ -285,15 +285,21 @@ const StoreOwnerVoucherManager: React.FC = () => {
 
   // Render loại voucher
   const renderTypeTag = (type: VoucherType) => {
-    const typeConfig = {
-      [VoucherType.SHIPPING]: { color: 'blue', text: 'Freeship' },
-      [VoucherType.PRODUCT]: { color: 'purple', text: 'Sản phẩm' },
-      [VoucherType.STORE]: { color: 'cyan', text: 'Cửa hàng' },
-      [VoucherType.CATEGORY]: { color: 'magenta', text: 'Danh mục' },
-      [VoucherType.PLATFORM]: { color: 'geekblue', text: 'Toàn sàn' },
-    };
-    return <Tag color={typeConfig[type]?.color}>{typeConfig[type]?.text}</Tag>;
+  const typeConfig: Partial<Record<VoucherType, { color: string; text: string }>> = {
+    [VoucherType.SHIPPING]: { color: 'blue', text: 'Freeship' },
+    [VoucherType.PRODUCT]: { color: 'purple', text: 'Sản phẩm' },
+    [VoucherType.STORE]: { color: 'cyan', text: 'Cửa hàng' },
+    [VoucherType.CATEGORY]: { color: 'magenta', text: 'Danh mục' },
   };
+
+  const config = typeConfig[type];
+
+  if (!config) {
+    return null;
+  }
+
+  return <Tag color={config.color}>{config.text}</Tag>;
+};
 
   // Render kiểu giảm giá
   const renderDiscountTypeTag = (discountType: VoucherDiscountType) => {
@@ -490,7 +496,6 @@ const StoreOwnerVoucherManager: React.FC = () => {
             <Option value={VoucherType.PRODUCT}>Giảm giá sản phẩm</Option>
             <Option value={VoucherType.STORE}>Voucher cửa hàng</Option>
             <Option value={VoucherType.CATEGORY}>Voucher danh mục</Option>
-            <Option value={VoucherType.PLATFORM}>Voucher toàn sàn</Option>
           </Select>
           <Button
             type="primary"

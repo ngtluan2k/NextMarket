@@ -31,6 +31,7 @@ interface Props {
     content: string
   ) => void;
 }
+
 const LazySimilarProducts = lazy(
   () => import('../components/productDetail/SimilarProducts')
 );
@@ -71,6 +72,22 @@ const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_pri
     }
   );
 
+  useEffect(() => {
+    if (!product?.variants?.length) return;
+
+    const exists = product.variants?.some(
+      (v: VariantInfo) => v.id === selectedVariantId
+    );
+
+    if (!exists) {
+      if (product.variants.length === 1) {
+        setSelectedVariantId(product.variants[0].id);
+      } else {
+        setSelectedVariantId(null);
+      }
+    }
+  }, [product, selectedVariantId]);
+
   const stock = useMemo(() => {
     const v = product?.variants?.find(
       (v: VariantInfo) => v.id === selectedVariantId
@@ -97,7 +114,7 @@ const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_pri
         setLoadingReviews(false);
       }
     },
-    [product?.id] // dependency thật sự cần thiết
+    [product?.id]
   );
 
   useEffect(() => {
@@ -106,7 +123,7 @@ const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_pri
     setReviewPage(1);
     setHasMoreReviews(true);
     loadReviews(1, true);
-  }, [product?.id, loadReviews]); // thêm loadReviews vào đây
+  }, [product?.id, loadReviews]);
 
   useEffect(() => {
     if (quantity > stock) setQuantity(stock || 1);
@@ -118,13 +135,10 @@ const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_pri
     }
   }, [selectedVariantId, slug]);
 
-useEffect(() => {
-  if (!product) return;
-  setQuantity(1); // mỗi lần product load lại
-}, [product]);
-
-
-const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, quantity]);
+  useEffect(() => {
+    if (!product) return;
+    setQuantity(1);
+  }, [product]);
 
 
   const galleryData = useMemo(() => {
@@ -205,7 +219,11 @@ const totalPrice = useMemo(() => calculatedPrice * quantity, [calculatedPrice, q
               setSelectedType={setSelectedType}
             />
             <MemoizedShipping />
-            <MemoizedComboStrip items={combos} />
+            {/* Sửa cách truyền props vào ComboStrip */}
+            <MemoizedComboStrip
+              storeId={product?.store?.id}
+              productId={product?.id}
+            />
             <Suspense fallback={<div>Loading similar products...</div>}>
               <LazySimilarProducts productId={product.id} />
             </Suspense>

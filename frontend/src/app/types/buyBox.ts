@@ -2,6 +2,7 @@ export type LightProduct = {
   id?: number;
   name?: string;
   store?: {
+    id?:number;
     name?: string;
     logo_url?: string;
     slug?: string;

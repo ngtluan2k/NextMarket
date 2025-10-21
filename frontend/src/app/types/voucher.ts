@@ -46,6 +46,7 @@ export interface OrderItem {
   productId: number;
   quantity: number;
   price: number;
+  
 }
 
 // User Conditions
@@ -81,6 +82,7 @@ export interface Voucher {
   total_used_count: number;
   collection_limit?: number;
   collected_count: number;
+  user_used_count?: number;
   status: VoucherStatus;
   collection_type: VoucherCollectionType;
   priority: number;

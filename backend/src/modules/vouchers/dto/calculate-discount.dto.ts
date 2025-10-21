@@ -1,4 +1,4 @@
-import { IsArray, IsNumber, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import  {OrderItemDto}  from './apply-voucher.dto';
 
@@ -7,8 +7,9 @@ export class CalculateDiscountDto {
   @IsString({ each: true })
   voucherCodes!: string[];
 
+  @IsOptional() 
   @IsNumber()
-  userId!: number;
+  userId?: number;
 
   @IsArray()
   @ValidateNested({ each: true })
