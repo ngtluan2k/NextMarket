@@ -57,6 +57,7 @@ import GroupJoin from './components/group_orders/components/GroupJoin';
 import ShopXuPage from './components/account/ShopXuPage';
 import FlashSalePage from './page/FlashSalePage';
 
+import AccountVoucher from './page/account/AccountVoucher';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -122,6 +123,7 @@ const App: React.FC = () => {
             {/* <Route path="addresses/create" element={<AddressCreatePage />} /> */}
             <Route path="xu" element={<ShopXuPage />} />
             <Route path="subscription" element={<MySubscriptionsPage />} />
+            <Route path="vouchers" element={<AccountVoucher/>}/>
           </Route>
 
           {/* Store Routes */}
