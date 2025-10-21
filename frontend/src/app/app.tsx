@@ -45,9 +45,7 @@ import CartPage from './page/CartPage';
 import OtpVerifyPage from './page/OtpVerify';
 import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
 import StoreOwnerVoucherManager from '../app/components/seller/StoreOwnerVoucherManager';
-
 import OrderDetailPage from './page/account/OrderDetailPage';
-
 import GroupOrders from './components/group_orders/GroupOrders';
 import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
 import GroupJoin from './components/group_orders/components/GroupJoin';
@@ -57,6 +55,7 @@ import StoreCampaignDetail from './page/Seller/tab/StoreCampaignDetail';
 import StoreCampaignManager from './page/Seller/tab/StoreCampaignManager';
 import Dashboard from './page/Seller/tab/StoreOwnerDashboard';
 import AdminCampaignStoreProductsWrapper from './components/admin/AdminCampaignStoreProductsWrapper';
+import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -84,6 +83,8 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/catepage" element={<CategoryPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
+              <Route path="/campaign/:id" element={<PublicCampaignPageWrapper />} />
+
           <Route
             path="/products/slug/:slug"
             element={<ProductDetailPage showMessage={showMessage} />}
@@ -101,11 +102,11 @@ const App: React.FC = () => {
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
-          <Route
+          {/* <Route
           path="/admin/campaigns/:campaignId/stores/:storeId/products"
           element={<AdminCampaignStoreProductsWrapper />}
-        />
-
+        /> */}
+          {/* <Route path="/test" element={<PublishCampaignForm />} /> */}
           {/* Seller */}
           <Route path="/seller-registration" element={<SellerRegistration />} />
           {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}

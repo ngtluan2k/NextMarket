@@ -16,12 +16,20 @@ import { Empty } from 'antd';
 import CampaignPage from './CampaignPage';
 import { Campaign } from '../../../service/campaign.service';
 import CampaignDetailPage from './campaigns_components/CampaignDetailPage';
+import AdminCampaignStoreProductsWrapper from './AdminCampaignStoreProductsWrapper';
+import PublishCampaignForm from './campaigns_components/PublishCampaignForm';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
     null
   );
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+
+  const handleSelectStore = (storeId: number) => {
+    setSelectedStoreId(storeId);
+    setActiveKey('8-2-store'); // chuyển sang tab xem sản phẩm store
+  };
 
   const Wip: React.FC<{ title?: string; desc?: string; img?: string }> = ({
     title = 'Chức năng đang phát triển...',
@@ -106,26 +114,46 @@ export const AdminDashboard: React.FC = () => {
         );
       case '8-1':
         return <VoucherManager />;
+
       case '8-2':
         return (
           <CampaignPage
-            onSelectCampaign={(c) => {
+            onSelectCampaign={(c, mode) => {
               setSelectedCampaign(c);
-              setActiveKey('8-2-detail'); // 👈 chuyển sang tab chi tiết
+              if (mode === 'detail') setActiveKey('8-2-detail');
+              else if (mode === 'publish') setActiveKey('8-2-publish');
             }}
           />
         );
-
       case '8-2-detail':
         return (
           <CampaignDetailPage
             campaign={selectedCampaign}
-            onBack={() => {
-              setSelectedCampaign(null);
-              setActiveKey('8-2');
+            onBack={() => setActiveKey('8-2')}
+            onSelectStore={(storeId) => {
+              setSelectedStoreId(storeId); // lưu storeId
+              setActiveKey('8-2-store'); // chuyển sang trang store products
             }}
           />
         );
+
+      case '8-2-store':
+        return selectedCampaign && selectedStoreId ? (
+          <AdminCampaignStoreProductsWrapper
+            campaignId={selectedCampaign.id}
+            storeId={selectedStoreId}
+            onBack={() => setActiveKey('8-2-detail')}
+          />
+        ) : null;
+
+      case '8-2-publish':
+  return selectedCampaign ? (
+    <PublishCampaignForm
+      campaignId={selectedCampaign.id}
+      onClose={() => setActiveKey('8-2')}
+    />
+  ) : null;
+
 
       case '9':
         return (

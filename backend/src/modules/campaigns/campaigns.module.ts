@@ -10,6 +10,7 @@ import { CampaignImage } from './entities/campaign_images.entity';
 import { CampaignVoucher } from './entities/campaign_vouchers.entity';
 import { CampaignStoreProduct } from './entities/campaign_store_products.entity';
 import { Store } from '../store/store.entity';
+import { Voucher } from '../vouchers/vouchers.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -20,7 +21,8 @@ import { Store } from '../store/store.entity';
       CampaignSectionItem,
       CampaignImage,
       CampaignVoucher,
-      Store
+      Store,
+      Voucher
     ]), // 🔹 Thêm repository vào module
   ],
   controllers: [CampaignsController],

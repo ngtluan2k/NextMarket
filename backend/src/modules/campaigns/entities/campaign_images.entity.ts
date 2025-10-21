@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Generated,
 } from 'typeorm';
 import { Campaign } from './campaign.entity';
 
@@ -13,6 +14,7 @@ export class CampaignImage {
   id!: number;
 
   @Column({ unique: true })
+  @Generated('uuid')
   uuid!: string;
 
   @ManyToOne(() => Campaign, (c) => c.images, { onDelete: 'CASCADE' })
@@ -20,10 +22,10 @@ export class CampaignImage {
   campaign!: Campaign;
 
   @Column({ name: 'image_url' })
-  imageUrl!: string;
+  imageUrl!: string;   // camelCase
 
   @Column({ name: 'link_url', nullable: true })
-  linkUrl?: string;
+  linkUrl?: string;    // camelCase
 
   @Column({ default: 0 })
   position!: number;

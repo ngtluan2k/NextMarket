@@ -28,7 +28,7 @@ const { Option } = Select;
 export default function CampaignPage({
   onSelectCampaign,
 }: {
-  onSelectCampaign: (c: Campaign) => void;
+  onSelectCampaign: (c: Campaign, mode: 'detail' | 'publish') => void;
 }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
@@ -110,13 +110,16 @@ export default function CampaignPage({
   const handleAction = (key: string, record: Campaign) => {
     switch (key) {
       case 'detail':
-        onSelectCampaign(record); // ✅ điều hướng sang trang chi tiết
+        onSelectCampaign(record, 'detail'); // ✅ điều hướng sang trang chi tiết
         break;
       case 'approve':
         message.success(`✅ Duyệt chiến dịch ${record.name}`);
         break;
       case 'reject':
         message.warning(`🚫 Từ chối chiến dịch ${record.name}`);
+        break;
+      case 'publish':
+        onSelectCampaign(record, 'publish'); // 👈 giống detail
         break;
     }
   };
@@ -145,7 +148,7 @@ export default function CampaignPage({
       render: (status: string) => renderStatusTag(status),
     },
     {
-      title: '',
+      title: 'Hành đông',
       key: 'actions',
       align: 'center' as const, // ✅ ép kiểu literal
       render: (_: any, record: Campaign) => {
@@ -156,6 +159,11 @@ export default function CampaignPage({
               { key: 'detail', label: 'Xem chi tiết' },
               { key: 'approve', label: 'Duyệt tất cả cửa hàng' },
               { key: 'reject', label: 'Từ chối tất cả cửa hàng', danger: true },
+              {
+                key: 'publish',
+                label: 'Đăng chiến dịch',
+                icon: <PlusOutlined />,
+              },
             ]}
           />
         );

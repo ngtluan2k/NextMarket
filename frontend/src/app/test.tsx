@@ -1,143 +1,209 @@
 // import React, { useEffect, useState } from 'react';
-// import { Table, Button, Form, Input, DatePicker, Upload, message } from 'antd';
+// import {
+//   Card,
+//   Form,
+//   InputNumber,
+//   Upload,
+//   Button,
+//   message,
+//   Checkbox,
+//   Row,
+//   Col,
+//   Typography,
+//   Divider,
+//   Space,
+//   Input,
+// } from 'antd';
 // import { UploadOutlined } from '@ant-design/icons';
-// import dayjs from 'dayjs';
-// import { getAllCampaigns, createCampaign } from '../service/campaign.service';
+// import {
+//   getCampaignStoreDetail,
+//   publishCampaign,
+//   CampaignStoreDetail,
+// } from '../service/campaign.service';
 
-// const { TextArea } = Input;
+// const { Title, Text } = Typography;
 
-// export default function CampaignManager() {
-//   const [campaigns, setCampaigns] = useState<any[]>([]);
+// export default function PublishCampaignForm() {
+//   const [campaignId, setCampaignId] = useState<number>(10);
+//   const [banners, setBanners] = useState<File[]>([]);
+//   const [storeProducts, setStoreProducts] = useState<any[]>([]);
+//   const [selectedProducts, setSelectedProducts] = useState<
+//     { productId: number; variantId?: number }[]
+//   >([]);
+//   const [vouchers, setVouchers] = useState([{ voucher_id: 1, type: 'system' }]);
 //   const [loading, setLoading] = useState(false);
-//   const [banner, setBanner] = useState<File | null>(null);
-//   const [form] = Form.useForm();
+//   const [result, setResult] = useState<string>('');
 
-//   const fetchCampaigns = async () => {
-//     setLoading(true);
+//   useEffect(() => {
+//     const fetchStoreProducts = async () => {
+//       try {
+//         const data = await getCampaignStoreDetail(campaignId, 21);
+//         console.log('📦 Campaign store products:', data);
+//         // Nếu data trả về là mảng như bạn log
+//         setStoreProducts(data.products || []);
+
+//       } catch (err) {
+//         console.error(err);
+//         message.error('Không thể tải sản phẩm từ store');
+//       }
+//     };
+//     fetchStoreProducts();
+//   }, [campaignId]);
+
+//   const handleBannerChange = (info: any) => {
+//     const files = info.fileList
+//       .map((f: any) => f.originFileObj)
+//       .filter(Boolean);
+//     setBanners(files);
+//   };
+
+//   const handleProductToggle = (
+//     productId: number,
+//     variantId?: number,
+//     checked?: boolean
+//   ) => {
+//     if (checked) {
+//       setSelectedProducts((prev) => [...prev, { productId, variantId }]);
+//     } else {
+//       setSelectedProducts((prev) =>
+//         prev.filter(
+//           (p) => !(p.productId === productId && p.variantId === variantId)
+//         )
+//       );
+//     }
+//   };
+
+//   const handleSubmit = async () => {
 //     try {
-//       const data = await getAllCampaigns();
-//       setCampaigns(data);
-//     } catch (err: any) {
+//       setLoading(true);
+//       const payload = {
+//         campaignId,
+//         images: banners.map((file) => ({ file })),
+//         sections: [
+//           { type: 'banner', title: 'Main Banner', position: 0 },
+//           { type: 'products', items: selectedProducts },
+//         ],
+//         vouchers,
+//       };
+//       const res = await publishCampaign(payload);
+//       setResult(JSON.stringify(res, null, 2));
+//       message.success('Publish thành công!');
+//     } catch (err) {
 //       console.error(err);
-//       message.error('Lỗi lấy danh sách campaign');
+//       message.error('Publish thất bại!');
 //     } finally {
 //       setLoading(false);
 //     }
 //   };
 
-//   useEffect(() => {
-//     fetchCampaigns();
-//   }, []);
-
-//   const handleSubmit = async (publish: boolean) => {
-//     try {
-//       const values = await form.validateFields();
-//       const formData = new FormData();
-//       formData.append('name', values.name);
-//       formData.append('description', values.description || '');
-//       formData.append('startsAt', values.startsAt.toISOString());
-//       formData.append('endsAt', values.endsAt.toISOString());
-//       formData.append('publish', publish ? 'true' : 'false');
-//       if (banner) formData.append('banner', banner);
-
-//       await createCampaign(formData);
-//       message.success(publish ? 'Đăng campaign thành công!' : 'Lưu nháp thành công!');
-//       form.resetFields();
-//       setBanner(null);
-//       fetchCampaigns();
-//     } catch (err: any) {
-//       console.error(err);
-//       message.error('Lỗi tạo campaign');
-//     }
-//   };
-
-//   const columns = [
-//     { title: 'Tên', dataIndex: 'name', key: 'name' },
-//     { title: 'Mô tả', dataIndex: 'description', key: 'description' },
-//     {
-//       title: 'Bắt đầu',
-//       dataIndex: 'startsAt',
-//       key: 'startsAt',
-//       render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
-//     },
-//     {
-//       title: 'Kết thúc',
-//       dataIndex: 'endsAt',
-//       key: 'endsAt',
-//       render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
-//     },
-//     {
-//       title: 'Trạng thái',
-//       dataIndex: 'publish',
-//       key: 'publish',
-//       render: (publish: boolean) => (publish ? 'Đang chạy' : 'Nháp'),
-//     },
-//   ];
-
 //   return (
-//     <div style={{ maxWidth: 800, margin: '20px auto' }}>
-//       <h2>Quản lý Campaign</h2>
+//     <Card style={{ margin: 24 }}>
+//       <Title level={3}>Publish Campaign</Title>
 
-//       <Form form={form} layout="vertical" style={{ marginBottom: 30 }}>
-//         <Form.Item
-//           label="Tên Campaign"
-//           name="name"
-//           rules={[{ required: true, message: 'Vui lòng nhập tên campaign' }]}
-//         >
-//           <Input placeholder="Nhập tên campaign" />
+//       <Form layout="vertical" onFinish={handleSubmit}>
+//         <Form.Item label="Campaign ID">
+//           <InputNumber
+//             min={1}
+//             value={campaignId}
+//             onChange={(val) => setCampaignId(val || 1)}
+//           />
 //         </Form.Item>
 
-//         <Form.Item label="Mô tả" name="description">
-//           <TextArea rows={3} placeholder="Mô tả (không bắt buộc)" />
-//         </Form.Item>
+//         <Divider />
 
-//         <Form.Item
-//           label="Bắt đầu"
-//           name="startsAt"
-//           rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}
-//         >
-//           <DatePicker showTime style={{ width: '100%' }} />
-//         </Form.Item>
-
-//         <Form.Item
-//           label="Kết thúc"
-//           name="endsAt"
-//           rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc' }]}
-//         >
-//           <DatePicker showTime style={{ width: '100%' }} />
-//         </Form.Item>
-
-//         <Form.Item label="Banner">
+//         <Form.Item label="Upload Banners">
 //           <Upload
-//             beforeUpload={file => {
-//               setBanner(file);
-//               return false;
-//             }}
-//             onRemove={() => setBanner(null)}
-//             maxCount={1}
-//             listType="picture"
+//             multiple
+//             beforeUpload={() => false}
+//             onChange={handleBannerChange}
+//             accept="image/*"
 //           >
-//             <Button icon={<UploadOutlined />}>Chọn ảnh banner</Button>
+//             <Button icon={<UploadOutlined />}>Chọn ảnh</Button>
 //           </Upload>
 //         </Form.Item>
 
+//         <Divider />
+
+//         <Form.Item label="Chọn Vouchers (JSON)">
+//           <Input.TextArea
+//             rows={4}
+//             value={JSON.stringify(vouchers, null, 2)}
+//             onChange={(e) => {
+//               try {
+//                 setVouchers(JSON.parse(e.target.value));
+//               } catch {
+//                 message.warning('JSON không hợp lệ');
+//               }
+//             }}
+//           />
+//         </Form.Item>
+
+//         <Divider />
+
+//         <Title level={4}>Chọn sản phẩm & biến thể</Title>
+//         {storeProducts.length === 0 ? (
+//           <Text type="secondary">Không có sản phẩm nào trong store.</Text>
+//         ) : (
+//           storeProducts.map((item) => {
+//             const prod = item.product; // ✅ Lấy product từ object
+
+//             return (
+//               <Card key={prod.id} size="small" style={{ marginBottom: 16 }}>
+//                 <Title level={5}>{prod.name}</Title>
+//                 <Space direction="vertical">
+//                   {prod.variants && prod.variants.length > 0 ? (
+//                     <Row gutter={[8, 8]}>
+//                       {prod.variants.map((v: any) => (
+//                         <Col key={v.id} span={8}>
+//                           <Checkbox
+//                             onChange={(e) =>
+//                               handleProductToggle(
+//                                 prod.id,
+//                                 v.id,
+//                                 e.target.checked
+//                               )
+//                             }
+//                           >
+//                             {v.variant_name} — {v.price}₫
+//                           </Checkbox>
+//                         </Col>
+//                       ))}
+//                     </Row>
+//                   ) : (
+//                     <Checkbox
+//                       onChange={(e) =>
+//                         handleProductToggle(
+//                           prod.id,
+//                           undefined,
+//                           e.target.checked
+//                         )
+//                       }
+//                     >
+//                       {prod.name} — {prod.base_price}₫
+//                     </Checkbox>
+//                   )}
+//                 </Space>
+//               </Card>
+//             );
+//           })
+//         )}
+
+//         <Divider />
+
 //         <Form.Item>
-//           <Button type="default" onClick={() => handleSubmit(false)}>
-//             Lưu nháp
-//           </Button>
-//           <Button type="primary" onClick={() => handleSubmit(true)} style={{ marginLeft: 10 }}>
-//             Đăng Campaign
+//           <Button type="primary" htmlType="submit" loading={loading}>
+//             Publish
 //           </Button>
 //         </Form.Item>
 //       </Form>
 
-//       <Table
-//         dataSource={campaigns}
-//         columns={columns}
-//         rowKey="uuid"
-//         loading={loading}
-//         bordered
-//       />
-//     </div>
+//       {result && (
+//         <>
+//           <Divider />
+//           <Title level={5}>Kết quả:</Title>
+//           <pre style={{ background: '#f5f5f5', padding: 12 }}>{result}</pre>
+//         </>
+//       )}
+//     </Card>
 //   );
 // }

@@ -1,5 +1,16 @@
 import React from 'react';
-import { Card, Table, Tag, Button, Space, message, Row, Col } from 'antd';
+import {
+  Card,
+  Table,
+  Tag,
+  Button,
+  Space,
+  message,
+  Row,
+  Col,
+  Menu,
+  Dropdown,
+} from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -9,19 +20,22 @@ import {
   CampaignStore,
 } from '../../../../service/campaign.service';
 import { useNavigate } from 'react-router-dom';
+import { MoreOutlined } from '@ant-design/icons';
 
 export default function CampaignDetailPage({
   campaign,
   onBack,
+  onSelectStore,
 }: {
   campaign: Campaign | null;
   onBack: () => void;
+  onSelectStore: (storeId: number) => void;
 }) {
   const navigate = useNavigate();
-const navigateToStore = (storeId?: number) => {
-  if (!storeId || !campaign) return; // ✅ nếu campaign null thì dừng
-  navigate(`/admin/campaigns/${campaign.id}/stores/${storeId}/products`);
-};
+  const navigateToStore = (storeId?: number) => {
+    if (!storeId || !campaign) return;
+    onSelectStore(storeId); // gọi callback từ parent
+  };
 
   if (!campaign) return <p>Không có dữ liệu</p>;
 
@@ -145,30 +159,53 @@ const navigateToStore = (storeId?: number) => {
             {
               title: 'Hành động',
               key: 'actions',
-              render: (_: any, store: CampaignStore) => (
-                <Space>
-                  {store.status === 'pending' && (
-                    <>
-                      <Button type="link" onClick={() => handleApprove(store)}>
-                        Duyệt
-                      </Button>
-                      <Button
-                        type="link"
-                        danger
-                        onClick={() => handleReject(store)}
-                      >
-                        Từ chối
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    type="link"
-                    onClick={() => navigateToStore(store.store?.id)}
-                  >
-                    Xem cửa hàng
-                  </Button>
-                </Space>
-              ),
+              render: (_: any, store: CampaignStore) => {
+                const menu = (
+                  <Menu>
+                    {store.status === 'pending' && (
+                      <>
+                        <Menu.Item
+                          key="approve"
+                          style={{ color: 'green' }}
+                          onClick={() => handleApprove(store)}
+                        >
+                          Duyệt
+                        </Menu.Item>
+                        <Menu.Item
+                          key="reject"
+                          onClick={() => handleReject(store)}
+                          danger
+                        >
+                          Từ chối
+                        </Menu.Item>
+                      </>
+                    )}
+                    <Menu.Item
+                      key="view"
+                      style={{ color: 'blue' }}
+                      onClick={() => {
+                        if (store.store?.id) onSelectStore(store.store.id);
+                      }}
+                    >
+                      Xem các sản phẩm
+                    </Menu.Item>
+                    <Menu.Item
+                      key="store-products"
+                      onClick={() => {
+                        navigate(`/admin/stores/${store.store?.id}`);
+                      }}
+                    >
+                      Xem cửa hàng
+                    </Menu.Item>
+                  </Menu>
+                );
+
+                return (
+                  <Dropdown overlay={menu} trigger={['click']}>
+                    <Button type="text" icon={<MoreOutlined />} />
+                  </Dropdown>
+                );
+              },
             },
           ]}
         />

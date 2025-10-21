@@ -13,7 +13,13 @@ import { Store } from '../store/store.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CampaignStoreProduct } from './entities/campaign_store_products.entity';
 import { DeepPartial } from 'typeorm/common/DeepPartial';
-
+import { CampaignSection } from './entities/campaign_sections.entity';
+import { CampaignSectionItem } from './entities/campaign_section_items.entity';
+import { CampaignImage } from './entities/campaign_images.entity';
+import { CampaignVoucher } from './entities/campaign_vouchers.entity';
+import { PublishCampaignDto } from './dto/campaign-publish.dto';
+import { Voucher } from '../vouchers/vouchers.entity';
+import { CampaignVoucherDto } from './dto/campaign-publish.dto';
 @Injectable()
 export class CampaignsService {
   constructor(
@@ -24,7 +30,17 @@ export class CampaignsService {
     @InjectRepository(CampaignStoreProduct)
     private readonly campaignStoreProductRepo: Repository<CampaignStoreProduct>,
     @InjectRepository(Store)
-    private readonly storeRepo: Repository<any>
+    private readonly storeRepo: Repository<any>,
+    @InjectRepository(CampaignSection)
+    private readonly campaignSectionsRepo: Repository<CampaignSection>,
+    @InjectRepository(CampaignSectionItem)
+    private readonly campaignSectionItemsRepo: Repository<CampaignSectionItem>,
+    @InjectRepository(CampaignImage)
+    private readonly campaignImagesRepo: Repository<CampaignImage>,
+    @InjectRepository(CampaignVoucher)
+    private readonly campaignVouchersRepo: Repository<CampaignVoucher>,
+    @InjectRepository(Voucher)
+    private readonly voucherRepo: Repository<Voucher>
   ) {}
   async createCampaign(
     dto: CreateCampaignDto,
@@ -53,14 +69,14 @@ export class CampaignsService {
     });
   }
 
-
-   async getCampaignStoreDetail(campaignId: number, storeId: number) {
+  async getCampaignStoreDetail(campaignId: number, storeId: number) {
     const campaign = await this.campaignRepo.findOne({
       where: { id: campaignId },
       relations: [
-        'stores.store',             // store info
-        'stores.products',          // sản phẩm store đăng ký trong campaign
-        'stores.products.product.variants',// variant nếu có
+        'stores.store',
+        'stores.products',
+        'stores.products.product',
+        'stores.products.variant', // 👈 thêm dòng này
       ],
     });
 
@@ -195,31 +211,37 @@ export class CampaignsService {
   }
 
   async getCampaignDetailForStore(campaignId: number, userId: number) {
-  // Lấy store của user
-  const store = await this.storeRepo.findOne({
-    where: { user_id: userId, is_deleted: false },
-  });
-  if (!store) throw new NotFoundException('Store của bạn không tồn tại');
+    // Lấy store của user
+    const store = await this.storeRepo.findOne({
+      where: { user_id: userId, is_deleted: false },
+    });
+    if (!store) throw new NotFoundException('Store của bạn không tồn tại');
 
-  // Lấy campaign
-  const campaign = await this.campaignRepo.findOne({
-    where: { id: campaignId },
-    relations: ['stores', 'stores.store', 'stores.products', 'stores.products.variant', 'stores.products.product'],
-  });
-  if (!campaign) throw new NotFoundException('Campaign không tồn tại');
+    // Lấy campaign
+    const campaign = await this.campaignRepo.findOne({
+      where: { id: campaignId },
+      relations: [
+        'stores',
+        'stores.store',
+        'stores.products',
+        'stores.products.variant',
+        'stores.products.product',
+      ],
+    });
+    if (!campaign) throw new NotFoundException('Campaign không tồn tại');
 
-  // Lấy thông tin store trong campaign
-  const campaignStore = campaign.stores.find((s) => s.store?.id === store.id);
+    // Lấy thông tin store trong campaign
+    const campaignStore = campaign.stores.find((s) => s.store?.id === store.id);
 
-  return {
-    campaign,
-    registeredStore: campaignStore || null,
-  };
-}
-
+    return {
+      campaign,
+      registeredStore: campaignStore || null,
+    };
+  }
 
   async getCurrentlyActiveCampaigns(): Promise<Campaign[]> {
     const now = new Date();
+
     return this.campaignRepo.find({
       where: {
         starts_at: LessThanOrEqual(now),
@@ -228,5 +250,273 @@ export class CampaignsService {
       },
       order: { starts_at: 'ASC' },
     });
+  }
+
+  async publishCampaign(dto: PublishCampaignDto, currentUser: any) {
+    console.log(
+      '>>> publishCampaign called with DTO:',
+      JSON.stringify(dto, null, 2)
+    );
+    console.log('>>> currentUser:', currentUser);
+
+    if (!currentUser.roles.includes('Admin')) {
+      throw new BadRequestException('Chỉ admin mới publish campaign');
+    }
+
+    const campaign = await this.campaignRepo.findOne({
+      where: { id: dto.campaignId },
+    });
+    if (!campaign) throw new BadRequestException('Campaign not found');
+
+    // Log voucher DTO trước khi vòng lặp
+    console.log('>>> DTO.vouchers:', dto.vouchers);
+
+    // 1. Cập nhật status campaign
+    campaign.status = 'active';
+    await this.campaignRepo.save(campaign);
+
+    // 2. Lưu images (log luôn payload image)
+    if (dto.images?.length) {
+      console.log('>>> DTO.images:', dto.images);
+      for (let i = 0; i < dto.images.length; i++) {
+        const imgDto = dto.images[i];
+        const img = new CampaignImage();
+        img.campaign = campaign;
+        img.imageUrl = `/uploads/banners/${imgDto.file.filename}`;
+        img.position = imgDto.position ?? i;
+        img.linkUrl = imgDto.link_url ?? undefined;
+        await this.campaignImagesRepo.save(img);
+      }
+    }
+
+    // 3. Lưu sections + items
+    if (dto.sections?.length) {
+      console.log('>>> DTO.sections:', dto.sections);
+      for (const secDto of dto.sections) {
+        // Kiểm tra section đã tồn tại chưa
+        let section = await this.campaignSectionsRepo.findOne({
+          where: { campaign: { id: campaign.id }, title: secDto.title },
+        });
+
+        if (!section) {
+          section = new CampaignSection();
+          section.campaign = campaign;
+          section.type = secDto.type;
+          section.title = secDto.title;
+          section.position = secDto.position ?? 0;
+          section.configJson = secDto.config_json ?? undefined;
+
+          await this.campaignSectionsRepo.save(section);
+        }
+
+        if (secDto.items?.length) {
+          for (const item of secDto.items) {
+            // Kiểm tra item đã tồn tại chưa
+            const existItem = await this.campaignSectionItemsRepo.findOne({
+              where: {
+                section: { id: section.id },
+                itemId: item.item_id,
+                itemType: item.type,
+              },
+            });
+            if (existItem) continue;
+
+            const sectionItem = new CampaignSectionItem();
+            sectionItem.section = section;
+            sectionItem.itemType = item.type;
+            sectionItem.itemId = item.item_id ?? undefined;
+            sectionItem.extraData = item.extra_data ?? undefined;
+
+            await this.campaignSectionItemsRepo.save(sectionItem);
+          }
+        }
+      }
+    }
+
+    // 4. Lưu vouchers
+    let vouchers: CampaignVoucherDto[] = [];
+    if (dto.vouchers) {
+      if (typeof dto.vouchers === 'string') {
+        try {
+          vouchers = JSON.parse(dto.vouchers);
+        } catch (err) {
+          console.error('Cannot parse vouchers:', dto.vouchers);
+          vouchers = [];
+        }
+      } else {
+        vouchers = dto.vouchers;
+      }
+    }
+
+    for (const v of vouchers) {
+      console.log('>>> Processing voucher DTO:', v);
+      if (!v.voucher_id) continue;
+      const voucherEntity = await this.voucherRepo.findOne({
+        where: { id: v.voucher_id },
+      });
+      console.log('>>> voucherEntity:', voucherEntity);
+      if (!voucherEntity) {
+        console.warn('Voucher not found:', v.voucher_id);
+        continue;
+      }
+
+      const campaignVoucher = new CampaignVoucher();
+      campaignVoucher.campaign = campaign;
+      campaignVoucher.voucher = voucherEntity;
+      campaignVoucher.type = v.type === 'store' ? 'store' : 'system';
+
+      console.log('>>> Saving campaignVoucher:', {
+        campaignId: campaign.id,
+        voucherId: voucherEntity.id,
+        type: campaignVoucher.type,
+      });
+
+      await this.campaignVouchersRepo.save(campaignVoucher);
+    }
+
+    return { success: true, campaignId: dto.campaignId };
+  }
+
+  async getCampaignProducts(campaignId: number) {
+    // Lấy tất cả store đã được duyệt trong campaign
+    const campaignStores = await this.campaignStoreRepo.find({
+      where: {
+        campaign: { id: campaignId },
+        status: 'approved',
+      },
+      relations: ['store', 'products', 'products.product', 'products.variant'],
+    });
+
+    // Dễ đọc hơn nếu bạn chỉ trả ra những gì admin cần xem
+    return campaignStores.map((cs) => ({
+      storeId: cs.store.id,
+      storeName: cs.store.name,
+      products: cs.products.map((p) => ({
+        id: p.id,
+        productName: p.product.name,
+        variantName: p.variant?.variant_name || null,
+        basePrice: p.variant?.price ?? p.product.base_price,
+        promoPrice: p.promo_price,
+        status: p.status,
+      })),
+    }));
+  }
+
+  async getCampaignDetail(campaignId: number) {
+    // Lấy campaign
+    const campaign = await this.campaignRepo.findOne({
+      where: { id: campaignId },
+      relations: [
+        'stores',
+        'stores.store',
+        'stores.products',
+        'stores.products.product',
+        'stores.products.variant',
+      ],
+    });
+
+    if (!campaign) throw new NotFoundException('Campaign không tồn tại');
+
+    // Map dữ liệu ra FE-friendly
+    return {
+      id: campaign.id,
+      uuid: campaign.uuid,
+      name: campaign.name,
+      description: campaign.description,
+      starts_at: campaign.starts_at,
+      ends_at: campaign.ends_at,
+      status: campaign.status,
+      banner_url: campaign.banner_url,
+      created_by: campaign.created_by,
+      stores: campaign.stores.map((cs) => ({
+        id: cs.id,
+        name: cs.store.name,
+        status: cs.status,
+        products: cs.products?.map((p) => ({
+          id: p.product.id,
+          name: p.product.name,
+          base_price: Number(p.product.base_price),
+          storeName: cs.store.name,
+          variants: p.variant
+            ? [
+                {
+                  id: p.variant.id,
+                  variant_name: p.variant.variant_name,
+                  price: p.promo_price ?? p.variant.price,
+                },
+              ]
+            : [],
+        })),
+      })),
+    };
+  }
+
+  async getCampaignForUser(id: number) {
+    const campaign = await this.campaignRepo.findOne({
+      where: { id, status: 'active' },
+    });
+    if (!campaign) return null;
+
+    // 1️⃣ Lấy banner/images
+    const images = await this.campaignImagesRepo.find({
+      where: { campaign: { id } },
+      order: { position: 'ASC' },
+    });
+
+    // 3️⃣ Lấy vouchers
+    const vouchers = await this.campaignVouchersRepo.find({
+      where: { campaign: { id } },
+      relations: ['voucher'],
+    });
+
+    // 4️⃣ Lấy campaign_store + sản phẩm đã đăng ký
+    const campaignStores = await this.campaignStoreRepo.find({
+      where: { campaign: { id } },
+      relations: [
+        'store',
+        'products',
+        'products.product',
+        'products.variant',
+        'products.product.media',
+      ], // thêm media
+    });
+
+    // Map stores + products
+    const stores = campaignStores.map((cs) => ({
+      id: cs.store.id,
+      name: cs.store.name,
+      status: cs.status,
+      products: cs.products.map((p) => ({
+        id: p.product.id,
+        name: p.product.name,
+        base_price: p.product.base_price,
+        variant: p.variant
+          ? {
+              id: p.variant.id,
+              variant_name: p.variant.variant_name,
+              price: p.variant.price,
+            }
+          : undefined,
+        promo_price: p.promo_price,
+        status: p.status,
+        imageUrl: p.product.media?.[0]?.url || undefined, // lấy hình đầu tiên nếu có
+      })),
+    }));
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      description: campaign.description,
+      starts_at: campaign.starts_at,
+      ends_at: campaign.ends_at,
+      images,
+      vouchers: vouchers.map((cv) => ({
+        id: cv.voucher.id,
+        title: cv.voucher.title,
+        discount_value: cv.voucher.discount_value,
+        type: cv.type,
+      })),
+      stores,
+    };
   }
 }

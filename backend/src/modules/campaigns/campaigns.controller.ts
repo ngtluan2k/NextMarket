@@ -19,13 +19,24 @@ import { existsSync, mkdirSync } from 'fs';
 import { RegisterCampaignStoreDto } from './dto/register-campaign.dto';
 import { ForbiddenException } from '@nestjs/common';
 import { ParseIntPipe } from '@nestjs/common';
+import { PublishCampaignDto } from './dto/campaign-publish.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Controller('campaigns')
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 
   /////////////////////////////////////////////ADMIN ROUTES/////////////////////////////////////////
-
+  @Get('public/:id')
+  async getCampaign(@Param('id', ParseIntPipe) id: number) {
+    const campaign = await this.campaignsService.getCampaignForUser(id);
+    if (!campaign) throw new NotFoundException('Campaign not found');
+    return campaign;
+  }
+  @Get('active')
+  async getCurrentlyActiveCampaigns() {
+    return this.campaignsService.getCurrentlyActiveCampaigns();
+  }
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FilesInterceptor('banner', 1, {
@@ -89,12 +100,80 @@ export class CampaignsController {
     return this.campaignsService.rejectStore(id, reason);
   }
 
-   @Get(':campaignId/stores/:storeId')
+  @Get(':campaignId/stores/:storeId')
   async getStoreDetail(
     @Param('campaignId', ParseIntPipe) campaignId: number,
-    @Param('storeId', ParseIntPipe) storeId: number,
+    @Param('storeId', ParseIntPipe) storeId: number
   ) {
     return this.campaignsService.getCampaignStoreDetail(campaignId, storeId);
+  }
+
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FilesInterceptor('banners', 10, {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/banners';
+          if (!existsSync(uploadPath))
+            mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    })
+  )
+  async publishCampaign(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: any,
+    @Req() req: any
+  ) {
+    const campaignId = parseInt(id, 10);
+    const currentUser = req.user;
+
+    if (!currentUser.roles.includes('Admin')) {
+      throw new Error('Chỉ admin mới publish campaign');
+    }
+
+    // Gộp tất cả dữ liệu vào DTO
+    const dto: PublishCampaignDto = {
+      campaignId,
+      images: files.map((file, idx) => ({
+        file,
+        position: body.positions?.[idx],
+        link_url: body.linkUrls?.[idx],
+      })),
+      sections: body.sections,
+      vouchers: body.vouchers,
+    };
+
+    return this.campaignsService.publishCampaign(dto, currentUser);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/products')
+  async getCampaignProducts(
+    @Param('id', ParseIntPipe) campaignId: number,
+    @Req() req: any
+  ) {
+    if (!req.user.roles.includes('Admin')) {
+      throw new ForbiddenException(
+        'Chỉ admin mới xem được danh sách sản phẩm trong campaign'
+      );
+    }
+
+    return this.campaignsService.getCampaignProducts(campaignId);
+  }
+
+  @UseGuards(JwtAuthGuard) // chỉ admin mới truy cập
+  @Get(':id')
+  async getCampaignDetail(@Param('id', ParseIntPipe) id: number) {
+    return this.campaignsService.getCampaignDetail(id);
   }
 
   /////////////////////////////////////////STORE ROUTES/////////////////////////////////////////
@@ -132,8 +211,5 @@ export class CampaignsController {
 
   ////////////////////////////////////////////USER ROUTES/////////////////////////////////////////
 
-  @Get('active')
-  async getCurrentlyActiveCampaigns() {
-    return this.campaignsService.getCurrentlyActiveCampaigns();
-  }
+  
 }

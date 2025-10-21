@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Generated,
 } from 'typeorm';
 import { Campaign } from './campaign.entity';
 import { Voucher } from '../../vouchers/vouchers.entity';
@@ -14,6 +15,7 @@ export class CampaignVoucher {
   id!: number;
 
   @Column({ unique: true })
+  @Generated('uuid')
   uuid!: string;
 
   @ManyToOne(() => Campaign, (c) => c.vouchers, { onDelete: 'CASCADE' })

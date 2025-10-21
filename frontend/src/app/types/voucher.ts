@@ -134,7 +134,7 @@ export interface CreateVoucherPayload {
 }
 
 // Update Voucher Payload (all fields optional except what you want to enforce)
-export interface UpdateVoucherPayload extends Partial<CreateVoucherPayload> {}
+// export interface UpdateVoucherPayload extends Partial<CreateVoucherPayload> {}
 
 // Apply Voucher DTO
 export interface ApplyVoucherDto {

@@ -4,8 +4,8 @@ import {
   Column,
   ManyToOne,
   OneToMany,
-    JoinColumn,
-    Generated,
+  JoinColumn,
+  Generated,
 } from 'typeorm';
 import { Campaign } from './campaign.entity';
 import { CampaignSectionItem } from './campaign_section_items.entity';
@@ -26,10 +26,13 @@ export class CampaignSection {
   type!: string; // banner | voucher | product | image | text
 
   @Column({ type: 'varchar', length: 255 })
-  title!: any; // có thể chứa URL banner, danh sách product_id, voucher_id,...
+  title!: string; // có thể chứa URL banner, danh sách product_id, voucher_id,...
 
   @Column({ type: 'int', default: 0 })
   position!: number; // để sắp thứ tự hiển thị trên FE
+
+  @Column({ type: 'json', nullable: true, name: 'config_json' })
+  configJson?: any;
 
   @OneToMany(() => CampaignSectionItem, (item) => item.section, {
     cascade: true,

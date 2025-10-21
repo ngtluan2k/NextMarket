@@ -70,26 +70,41 @@ const StoreCampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
         setRegistered(!!registeredStore);
 
         // Map registered products...
+        // Gom sản phẩm trùng product.id lại để có thể hiển thị nhiều variant
         const apiProducts =
           registeredStore?.products as unknown as APIRegisteredProduct[];
-        const mappedProducts: RegisteredProduct[] = (apiProducts || []).map(
-          (p) => ({
-            id: p.product.id,
-            name: p.product.name,
-            base_price: p.product.base_price
-              ? Number(p.product.base_price)
-              : undefined,
-            variants: p.variant
-              ? [
-                  {
-                    id: p.variant.id,
-                    variant_name: p.variant.variant_name,
-                    price: Number(p.variant.price),
-                  },
-                ]
-              : undefined,
-          })
-        );
+          console.log("🧩 API registered products:", apiProducts);
+
+
+        const productMap = new Map<number, RegisteredProduct>();
+
+        (apiProducts || []).forEach((p) => {
+          const pid = p.product.id;
+
+          // Nếu sản phẩm chưa có trong map, thêm mới
+          if (!productMap.has(pid)) {
+            productMap.set(pid, {
+              id: pid,
+              name: p.product.name,
+              base_price: p.product.base_price
+                ? Number(p.product.base_price)
+                : undefined,
+              variants: [],
+            });
+          }
+
+          // Nếu có variant thì thêm vào danh sách variants
+          if (p.variant) {
+            const existing = productMap.get(pid)!;
+            existing.variants?.push({
+              id: p.variant.id,
+              variant_name: p.variant.variant_name,
+              price: Number(p.variant.price),
+            });
+          }
+        });
+
+        const mappedProducts = Array.from(productMap.values());
         setRegisteredProducts(mappedProducts);
 
         // Lấy sản phẩm active của store
@@ -175,28 +190,32 @@ const StoreCampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
       <Button onClick={onBack} style={{ marginBottom: 20 }}>
         ← Quay lại
       </Button>
-<Card>
-  {/* Banner */}
-  {campaign.banner_url && (
-    <div style={{ marginBottom: 20, textAlign: 'center' }}>
-      <img
-        src={`http://localhost:3000${campaign.banner_url}`}
-        alt={campaign.name}
-        style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8 }}
-      />
-    </div>
-  )}
+      <Card>
+        {/* Banner */}
+        {campaign.banner_url && (
+          <div style={{ marginBottom: 20, textAlign: 'center' }}>
+            <img
+              src={`http://localhost:3000${campaign.banner_url}`}
+              alt={campaign.name}
+              style={{
+                maxWidth: '100%',
+                maxHeight: 200,
+                objectFit: 'cover',
+                borderRadius: 8,
+              }}
+            />
+          </div>
+        )}
 
-  <Title level={3}>{campaign.name}</Title>
-  {renderStatusTag(campaign.status)}
-  <Paragraph>{campaign.description || 'Không có mô tả'}</Paragraph>
-  <p>
-    <strong>Thời gian:</strong>{' '}
-    {dayjs(campaign.starts_at).format('DD/MM/YYYY')} -{' '}
-    {dayjs(campaign.ends_at).format('DD/MM/YYYY')}
-  </p>
-  <hr />
-        
+        <Title level={3}>{campaign.name}</Title>
+        {renderStatusTag(campaign.status)}
+        <Paragraph>{campaign.description || 'Không có mô tả'}</Paragraph>
+        <p>
+          <strong>Thời gian:</strong>{' '}
+          {dayjs(campaign.starts_at).format('DD/MM/YYYY')} -{' '}
+          {dayjs(campaign.ends_at).format('DD/MM/YYYY')}
+        </p>
+        <hr />
 
         {registered ? (
           <>

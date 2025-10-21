@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Generated,
 } from 'typeorm';
 import { CampaignSection } from './campaign_sections.entity';
 
@@ -13,6 +14,7 @@ export class CampaignSectionItem {
   id!: number;
 
   @Column({ unique: true })
+  @Generated('uuid')
   uuid!: string;
 
   @ManyToOne(() => CampaignSection, (section) => section.items, {
@@ -22,6 +24,7 @@ export class CampaignSectionItem {
   section!: CampaignSection;
 
   @Column({
+    name: 'item_type',
     type: 'enum',
     enum: ['product', 'voucher', 'image', 'html'],
   })
