@@ -39,6 +39,7 @@ export interface PublicCampaignDetail {
   description?: string;
   starts_at: string;
   ends_at: string;
+  backgroundColor: string;
   images: PublicCampaignImage[];
   sections: PublicCampaignSection[];
   vouchers: PublicCampaignVoucher[];
@@ -47,6 +48,7 @@ export interface PublicCampaignDetail {
 export interface CampaignProductVariant {
   id: number;
   name: string;
+  slug: string;
   base_price?: number | string;
   promo_price?: number | string | null;
   status: 'pending' | 'approved' | 'rejected';

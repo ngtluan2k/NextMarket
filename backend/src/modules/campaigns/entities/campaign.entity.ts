@@ -1,9 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  Generated,
+} from 'typeorm';
 import { CampaignStore } from './campaign_stores.ts.entity';
 import { CampaignSection } from './campaign_sections.entity';
 import { CampaignImage } from './campaign_images.entity';
 import { CampaignVoucher } from './campaign_vouchers.entity';
-
 
 @Entity('campaigns')
 export class Campaign {
@@ -32,8 +37,11 @@ export class Campaign {
   @Column({ nullable: true })
   banner_url?: string;
 
-  @Column({ type: 'int'})
+  @Column({ type: 'int' })
   created_by!: number;
+
+  @Column({ name: 'background_color', nullable: true })
+  backgroundColor?: string;
 
   // Quan hệ
   @OneToMany(() => CampaignStore, (cs) => cs.campaign)
@@ -42,7 +50,7 @@ export class Campaign {
   @OneToMany(() => CampaignSection, (cs) => cs.campaign)
   sections!: CampaignSection[];
 
-    @OneToMany(() => CampaignImage, (img) => img.campaign)
+  @OneToMany(() => CampaignImage, (img) => img.campaign)
   images!: CampaignImage[];
 
   @OneToMany(() => CampaignVoucher, (voucher) => voucher.campaign)

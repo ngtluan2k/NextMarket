@@ -6,8 +6,8 @@ import {
   RegisteredProduct,
 } from '../../service/campaign.service';
 import { TagOutlined } from '@ant-design/icons';
-
-const { Title, Paragraph } = Typography;
+import { useNavigate } from 'react-router-dom';
+import Navbar from './Navbar'; // 👈 Thêm dòng này
 
 interface Props {
   campaignId: number;
@@ -16,6 +16,7 @@ interface Props {
 export default function PublicCampaignPage({ campaignId }: Props) {
   const [campaign, setCampaign] = useState<PublicCampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -39,18 +40,90 @@ export default function PublicCampaignPage({ campaignId }: Props) {
   // Tạo block xen kẽ: banner -> voucher -> store
   const renderBlocks = () => {
     const blocks: React.ReactNode[] = [];
-    const maxLength = Math.max(
-      campaign.images.length,
-      campaign.vouchers.length,
-      campaign.stores?.length || 0
-    );
 
-    for (let i = 0; i < maxLength; i++) {
-      // Banner
-      if (campaign.images[i]) {
-        const img = campaign.images[i];
+    // --- 1️⃣ Banner đầu tiên ---
+    if (campaign.images[0]) {
+      const img = campaign.images[0];
+      blocks.push(
+        <div key={`banner-0`} style={{ marginBottom: 24 }}>
+          <Image
+            src={
+              img.imageUrl.startsWith('http')
+                ? img.imageUrl
+                : `http://localhost:3000${img.imageUrl}`
+            }
+            alt="campaign banner"
+            width="100%"
+          />
+        </div>
+      );
+    }
+
+    // --- 2️⃣ Hàng voucher (tất cả voucher) ---
+    if (campaign.vouchers.length > 0) {
+      blocks.push(
+        <div
+          key="vouchers-row"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 16,
+            marginBottom: 24,
+            padding: 20,
+            borderRadius: 8,
+            width: '100%',
+          }}
+        >
+          {campaign.vouchers.map((v) => (
+            <Card
+              key={`voucher-${v.id}`}
+              size="default"
+              hoverable
+              style={{ minWidth: 220, flex: '0 0 auto' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 6,
+                    background: '#ff6b6b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                  }}
+                >
+                  <TagOutlined />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: 16 }}>
+                    {v.title}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#555' }}>
+                    {Number(v.discount_value) % 1 === 0
+                      ? `${Number(v.discount_value).toLocaleString()}₫`
+                      : `${Number(v.discount_value)}%`}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    // --- 3️⃣ Các cặp Banner + Products ---
+    // Bắt đầu từ banner thứ 2 (index 1)
+    const nextBanners = campaign.images.slice(1);
+    const stores = campaign.stores || [];
+
+    for (let i = 0; i < Math.max(nextBanners.length, stores.length); i++) {
+      // Banner kế tiếp
+      if (nextBanners[i]) {
+        const img = nextBanners[i];
         blocks.push(
-          <div key={`banner-${img.id}`} style={{ marginBottom: 24 }}>
+          <div key={`banner-next-${i}`} style={{ marginBottom: 24 }}>
             <Image
               src={
                 img.imageUrl.startsWith('http')
@@ -64,61 +137,14 @@ export default function PublicCampaignPage({ campaignId }: Props) {
         );
       }
 
-      // Trong renderBlocks(), phần Voucher
-      if (campaign.vouchers[i]) {
-        // Hiển thị tất cả voucher trong 1 hàng
+      // Store tương ứng (nếu có)
+      if (stores[i]) {
+        const store = stores[i];
         blocks.push(
-  <div
-    key={`vouchers-row`}
-    style={{
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 16,
-      marginBottom: 24,
-    }}
-  >
-    {campaign.vouchers.map((v) => (
-      <Card
-        key={`voucher-${v.id}`}
-        size="default" // to hơn
-        hoverable
-        style={{ minWidth: 220, flex: '0 0 auto' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 6,
-              background: '#ff6b6b',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-            }}
+            key={`store-${store.id}`}
+            style={{ marginBottom: 24, padding: 20 }}
           >
-            <TagOutlined />
-          </div>
-          <div>
-            <div style={{ fontWeight: 'bold', fontSize: 16 }}>{v.title}</div>
-            <div style={{ fontSize: 14, color: '#555' }}>
-              {Number(v.discount_value) % 1 === 0
-                ? `${Number(v.discount_value).toLocaleString()}₫`
-                : `${Number(v.discount_value)}%`}
-            </div>
-          </div>
-        </div>
-      </Card>
-    ))}
-  </div>
-);
-      }
-
-      // Store + products
-      if (campaign.stores?.[i]) {
-        const store = campaign.stores[i];
-        blocks.push(
-          <div key={`store-${store.id}`} style={{ marginBottom: 24 }}>
             <Row gutter={[12, 12]}>
               {store.products?.map((p) => (
                 <Col key={p.id} xs={24} sm={12} md={8} lg={6}>
@@ -126,6 +152,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
                     size="small"
                     hoverable
                     style={{ fontSize: 12 }}
+                    onClick={() => navigate(`/products/slug/${p.slug}`)}
                     cover={
                       <img
                         alt={p.name}
@@ -191,15 +218,14 @@ export default function PublicCampaignPage({ campaignId }: Props) {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <Title level={2}>{campaign.name}</Title>
-      <Paragraph>{campaign.description}</Paragraph>
-      <Paragraph>
-        <strong>Thời gian:</strong>{' '}
-        {new Date(campaign.starts_at).toLocaleString()} -{' '}
-        {new Date(campaign.ends_at).toLocaleString()}
-      </Paragraph>
-
+    <div
+      style={{
+        backgroundColor: campaign.backgroundColor || '#ffffff', // 👈 dùng màu từ API
+        minHeight: '100vh', // để nền phủ toàn trang
+        transition: 'background-color 0.3s ease', // mượt hơn
+      }}
+    >
+      <Navbar />
       {renderBlocks()}
     </div>
   );

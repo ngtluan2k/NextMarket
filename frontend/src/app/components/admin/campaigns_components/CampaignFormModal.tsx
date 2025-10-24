@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, DatePicker, Upload, Button, message } from 'antd';
+import {
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  Upload,
+  Button,
+  message,
+  ColorPicker,
+} from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { createCampaign } from '../../../../service/campaign.service';
 
@@ -11,10 +20,15 @@ interface CampaignFormModalProps {
   onSuccess: () => void;
 }
 
-export default function CampaignFormModal({ visible, onClose, onSuccess }: CampaignFormModalProps) {
+export default function CampaignFormModal({
+  visible,
+  onClose,
+  onSuccess,
+}: CampaignFormModalProps) {
   const [banner, setBanner] = useState<File | null>(null);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [color, setColor] = useState('#ffffff');
 
   const handleSubmit = async (publish: boolean) => {
     try {
@@ -26,10 +40,13 @@ export default function CampaignFormModal({ visible, onClose, onSuccess }: Campa
       formData.append('startsAt', values.startsAt.toISOString());
       formData.append('endsAt', values.endsAt.toISOString());
       formData.append('publish', publish ? 'true' : 'false');
+      formData.append('backgroundColor', color);
       if (banner) formData.append('banner', banner);
 
       await createCampaign(formData);
-      message.success(publish ? 'Đăng campaign thành công!' : 'Lưu nháp thành công!');
+      message.success(
+        publish ? 'Đăng campaign thành công!' : 'Lưu nháp thành công!'
+      );
       form.resetFields();
       setBanner(null);
       onSuccess();
@@ -43,12 +60,7 @@ export default function CampaignFormModal({ visible, onClose, onSuccess }: Campa
   };
 
   return (
-    <Modal
-      title="Tạo Campaign"
-      open={visible}
-      onCancel={onClose}
-      footer={null}
-    >
+    <Modal title="Tạo Campaign" open={visible} onCancel={onClose} footer={null}>
       <Form form={form} layout="vertical">
         <Form.Item
           label="Tên Campaign"
@@ -78,9 +90,18 @@ export default function CampaignFormModal({ visible, onClose, onSuccess }: Campa
           <DatePicker showTime style={{ width: '100%' }} />
         </Form.Item>
 
+        <Form.Item label="Màu nền chiến dịch">
+          <ColorPicker
+            value={color}
+            onChange={(value) => setColor(value.toHexString())}
+            showText
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+
         <Form.Item label="Banner">
           <Upload
-            beforeUpload={file => {
+            beforeUpload={(file) => {
               setBanner(file);
               return false;
             }}
@@ -96,10 +117,19 @@ export default function CampaignFormModal({ visible, onClose, onSuccess }: Campa
           <Button onClick={onClose} style={{ marginRight: 8 }}>
             Hủy
           </Button>
-          <Button type="default" onClick={() => handleSubmit(false)} loading={loading}>
+          <Button
+            type="default"
+            onClick={() => handleSubmit(false)}
+            loading={loading}
+          >
             Lưu nháp
           </Button>
-          <Button type="primary" onClick={() => handleSubmit(true)} style={{ marginLeft: 8 }} loading={loading}>
+          <Button
+            type="primary"
+            onClick={() => handleSubmit(true)}
+            style={{ marginLeft: 8 }}
+            loading={loading}
+          >
             Đăng Campaign
           </Button>
         </div>

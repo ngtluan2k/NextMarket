@@ -56,6 +56,7 @@ export class CampaignsService {
       ends_at: dto.endsAt,
       banner_url: dto.bannerUrl,
       status: publish ? 'pending' : 'draft',
+      backgroundColor: dto.backgroundColor,
       created_by: adminId,
     });
     return this.campaignRepo.save(campaign);
@@ -489,6 +490,7 @@ export class CampaignsService {
       products: cs.products.map((p) => ({
         id: p.product.id,
         name: p.product.name,
+        slug: p.product.slug,
         base_price: p.product.base_price,
         variant: p.variant
           ? {
@@ -509,6 +511,7 @@ export class CampaignsService {
       description: campaign.description,
       starts_at: campaign.starts_at,
       ends_at: campaign.ends_at,
+      backgroundColor: campaign.backgroundColor,
       images,
       vouchers: vouchers.map((cv) => ({
         id: cv.voucher.id,

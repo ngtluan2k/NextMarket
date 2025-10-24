@@ -5,4 +5,5 @@ export class CreateCampaignDto {
   endsAt!: Date;
   bannerUrl?: string;
   publish?: string;
+  backgroundColor?: string;
 }
