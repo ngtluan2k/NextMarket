@@ -33,6 +33,7 @@ interface Props {
     content: string
   ) => void;
 }
+
 const LazySimilarProducts = lazy(
   () => import('../components/productDetail/SimilarProducts')
 );
@@ -75,6 +76,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
       return stored ? Number(stored) : null;
     }
   );
+
   useEffect(() => {
     if (!product?.variants?.length) return;
 
@@ -117,7 +119,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
         setLoadingReviews(false);
       }
     },
-    [product?.id] // dependency thật sự cần thiết
+    [product?.id]
   );
 
   useEffect(() => {
@@ -126,7 +128,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
     setReviewPage(1);
     setHasMoreReviews(true);
     loadReviews(1, true);
-  }, [product?.id, loadReviews]); // thêm loadReviews vào đây
+  }, [product?.id, loadReviews]);
 
   useEffect(() => {
     if (quantity > stock) setQuantity(stock || 1);
@@ -140,7 +142,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
   useEffect(() => {
     if (!product) return;
-    setQuantity(1); // mỗi lần product load lại
+    setQuantity(1);
   }, [product]);
 
   const totalPrice = useMemo(
@@ -228,7 +230,11 @@ export default function ProductDetailPage({ showMessage }: Props) {
               setSelectedType={setSelectedType} 
             />
             <MemoizedShipping />
-            <MemoizedComboStrip items={combos} />
+            {/* Sửa cách truyền props vào ComboStrip */}
+            <MemoizedComboStrip
+              storeId={product?.store?.id}
+              productId={product?.id}
+            />
             <Suspense fallback={<div>Loading similar products...</div>}>
               <LazySimilarProducts productId={product.id} />
             </Suspense>

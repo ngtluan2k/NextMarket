@@ -28,6 +28,10 @@ type Props = {
   etaLabel?: string;
   onSubmit?: () => void;
   onAddressChange?: (address: UserAddress) => void;
+  selectedVouchers?: Voucher[];
+  discountTotal?: number;
+  onApplyVoucher?: (vouchers: Voucher[], totalDiscount: number) => void;
+  onRemoveVoucher?: (voucherId: number) => void;
 };
 
 export const CartSidebar: React.FC<Props> = ({
@@ -43,6 +47,10 @@ export const CartSidebar: React.FC<Props> = ({
   etaLabel,
   onSubmit,
   onAddressChange,
+  selectedVouchers = [],
+  discountTotal = 0,
+  onApplyVoucher,
+  onRemoveVoucher,
 }) => {
   const { cart } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
@@ -54,8 +62,6 @@ export const CartSidebar: React.FC<Props> = ({
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
     userAddress || null
   );
-  const [selectedVouchers, setSelectedVouchers] = useState<Voucher[]>([]); // State for selected vouchers
-  const [discountTotal, setDiscountTotal] = useState(0); // State for total discount
   const [wallet, setWallet] = useState<Wallet | null>(null); // 2. state
   const [walletLoading, setWalletLoading] = useState(false);
 
@@ -207,60 +213,12 @@ export const CartSidebar: React.FC<Props> = ({
   };
   
 
-  const handleApplyVoucher = (vouchers: Voucher[], totalDiscount: number) => {
-    console.log(
-      'Applying vouchers:',
-      vouchers,
-      'Total discount:',
-      totalDiscount
-    );
-    setSelectedVouchers(vouchers);
-    setDiscountTotal(Number.isFinite(totalDiscount) ? totalDiscount : 0);
+  const handleApplyVoucherProp = (vouchers: Voucher[], totalDiscount: number) => {
+    onApplyVoucher?.(vouchers, totalDiscount);
   };
 
-  const handleRemoveVoucher = async (voucherId: number) => {
-    const updatedVouchers = selectedVouchers.filter((v) => v.id !== voucherId);
-    console.log(
-      'Removing voucher:',
-      voucherId,
-      'Updated vouchers:',
-      updatedVouchers
-    );
-    setSelectedVouchers(updatedVouchers);
-
-    if (updatedVouchers.length === 0) {
-      console.log('No vouchers left, resetting discountTotal to 0');
-      setDiscountTotal(0);
-      return;
-    }
-
-    try {
-      const res = await api.post('/vouchers/calculate-discount', {
-        voucherCodes: updatedVouchers.map((v) => v.code),
-        userId: me?.id,
-        orderItems: items.map((item) => ({
-          productId: Number(item.product?.id),
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-        })),
-        storeId: items[0]?.product?.store?.id || 1,
-        orderAmount: selectedTotal,
-      });
-      const { discountTotal, appliedVouchers, invalidVouchers } = res.data;
-      console.log('Recalculated discount after removing voucher:', res.data);
-      if (invalidVouchers?.length > 0) {
-        invalidVouchers.forEach((v: { code: string; error: string }) => {
-          message.warning(`Voucher ${v.code}: ${v.error}`);
-        });
-      }
-      setDiscountTotal(Number.isFinite(discountTotal) ? discountTotal : 0);
-    } catch (error: any) {
-      console.error('Error calculating discount:', error);
-      message.error(
-        error.response?.data?.message || 'Không thể tính toán giảm giá'
-      );
-      setDiscountTotal(0);
-    }
+  const handleRemoveVoucherProp = (voucherId: number) => {
+    onRemoveVoucher?.(voucherId);
   };
 
   const showConfirmModal = () => {
@@ -371,7 +329,7 @@ export const CartSidebar: React.FC<Props> = ({
                 <Button
                   size="small"
                   type="primary"
-                  onClick={() => handleRemoveVoucher(voucher.id)}
+                  onClick={() => handleRemoveVoucherProp(voucher.id)}
                 >
                   Bỏ chọn
                 </Button>
@@ -393,11 +351,13 @@ export const CartSidebar: React.FC<Props> = ({
           productId: Number(item.product?.id),
           quantity: Number(item.quantity),
           price: Number(item.price),
+          
         }))}
         storeId={items[0]?.product?.store?.id || 1}
         orderAmount={selectedTotal}
-        onApply={handleApplyVoucher}
+        onApply={handleApplyVoucherProp}
         selectedVouchers={selectedVouchers}
+        filterByStore={false}
       />
 
       <Card>

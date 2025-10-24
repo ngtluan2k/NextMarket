@@ -1,4 +1,3 @@
-// VoucherFormModal.tsx
 import React, { useEffect, useState } from 'react';
 import {
   Modal,
@@ -11,9 +10,15 @@ import {
   Col,
   Switch,
 } from 'antd';
-import { Voucher, VoucherType, VoucherDiscountType, VoucherStatus, VoucherCollectionType } from '../types/voucher';
+import {
+  Voucher,
+  VoucherType,
+  VoucherDiscountType,
+  VoucherStatus,
+  VoucherCollectionType,
+} from '../types/voucher';  // Giả định đường dẫn đúng
 import dayjs from 'dayjs';
-import { api, API_ENDPOINTS } from '../api/api';
+import { api, API_ENDPOINTS } from '../api/api';  // Giả định đường dẫn đúng
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -46,65 +51,145 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   isStoreOwner = false,
   currentStoreId,
 }) => {
-  const [categories, setCategories] = useState<{ id: number; name: string; store_id?: number }[]>(initialCategories);
-  const [products, setProducts] = useState<{ id: number; name: string; category_id?: number }[]>(initialProducts);
+  const [categories, setCategories] =
+    useState<{ id: number; name: string; store_id?: number }[]>(
+      initialCategories
+    );
+  const [products, setProducts] =
+    useState<{ id: number; name: string; category_id?: number }[]>(
+      initialProducts
+    );
   const [fetchingCategories, setFetchingCategories] = useState(false);
   const [fetchingProducts, setFetchingProducts] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Theo dõi giá trị của applicable_store_ids và applicable_category_ids
-  const selectedStoreIds = Form.useWatch('applicable_store_ids', form) || (isStoreOwner && currentStoreId ? [currentStoreId] : []);
-  const selectedCategoryIds = Form.useWatch('applicable_category_ids', form) || [];
+  // Theo dõi giá trị của type, applicable_store_ids và applicable_category_ids
+  const voucherType = Form.useWatch('type', form) || VoucherType.PLATFORM;
+  const selectedStoreIds =
+    Form.useWatch('applicable_store_ids', form) ||
+    (isStoreOwner && currentStoreId ? [currentStoreId] : []);
+  const selectedCategoryIds =
+    Form.useWatch('applicable_category_ids', form) || [];
 
-  // Kiểm tra xem có nên hiển thị các trường hay không
-  const shouldShowCategories = selectedStoreIds.length > 0 || (editingVoucher?.applicable_category_ids && editingVoucher.applicable_category_ids.length > 0);
-  const shouldShowProducts = selectedCategoryIds.length > 0 || (editingVoucher?.applicable_product_ids && editingVoucher.applicable_product_ids.length > 0) || (editingVoucher?.excluded_product_ids && editingVoucher.excluded_product_ids.length > 0);
+  // Reset fields khi type thay đổi (ẩn/hiện và xóa giá trị không cần)
+  useEffect(() => {
+    if (!visible) return;
 
-  // Reset khi modal mở/đóng
+    // Dựa trên type, reset fields không áp dụng
+    if (voucherType === VoucherType.PLATFORM || voucherType === VoucherType.SHIPPING) {
+      form.setFieldsValue({
+        applicable_store_ids: [],
+        applicable_category_ids: [],
+        applicable_product_ids: [],
+        excluded_product_ids: [],
+      });
+      setCategories([]);
+      setProducts([]);
+    } else if (voucherType === VoucherType.STORE) {
+      form.setFieldsValue({
+        applicable_category_ids: [],
+        applicable_product_ids: [],
+        excluded_product_ids: [],
+      });
+      setProducts([]);
+      // Giữ applicable_store_ids, fetch categories nếu cần
+    } else if (voucherType === VoucherType.CATEGORY) {
+      form.setFieldsValue({
+        applicable_product_ids: [],
+        excluded_product_ids: [],
+      });
+      setProducts([]);
+      // Giữ store và category
+    }
+    // Với PRODUCT: Giữ tất cả
+  }, [voucherType, visible, form]);
+
+  // Kiểm tra xem có nên hiển thị các trường hay không (dựa trên type và giá trị cũ khi edit)
+  const shouldShowStores = 
+    voucherType === VoucherType.STORE ||
+    voucherType === VoucherType.CATEGORY ||
+    voucherType === VoucherType.PRODUCT ||
+    (editingVoucher?.applicable_store_ids && editingVoucher.applicable_store_ids.length > 0);
+
+  const shouldShowCategories =
+    (voucherType === VoucherType.CATEGORY || voucherType === VoucherType.PRODUCT) &&
+    (selectedStoreIds.length > 0 ||
+      (editingVoucher?.applicable_category_ids &&
+        editingVoucher.applicable_category_ids.length > 0));
+
+  const shouldShowProducts =
+    voucherType === VoucherType.PRODUCT &&
+    (selectedCategoryIds.length > 0 ||
+      (editingVoucher?.applicable_product_ids &&
+        editingVoucher.applicable_product_ids.length > 0) ||
+      (editingVoucher?.excluded_product_ids &&
+        editingVoucher.excluded_product_ids.length > 0));
+
+  // Reset khi modal mở/đóng (giữ nguyên code cũ của bạn)
   useEffect(() => {
     if (visible) {
       setInitialLoadComplete(false);
-      
+
       // Nếu là store owner, set default store_ids
       if (isStoreOwner && currentStoreId) {
         form.setFieldsValue({ applicable_store_ids: [currentStoreId] });
       }
-      
+
       // Nếu đang edit, fetch dữ liệu cần thiết
       const loadInitialData = async () => {
         if (editingVoucher) {
           // Fetch categories nếu có store_ids
-          if (editingVoucher.applicable_store_ids && editingVoucher.applicable_store_ids.length > 0) {
-            await fetchCategoriesByStoreIds(editingVoucher.applicable_store_ids);
+          if (
+            editingVoucher.applicable_store_ids &&
+            editingVoucher.applicable_store_ids.length > 0
+          ) {
+            await fetchCategoriesByStoreIds(
+              editingVoucher.applicable_store_ids
+            );
           }
-          
+
           // Fetch products nếu có category_ids
-          if (editingVoucher.applicable_category_ids && editingVoucher.applicable_category_ids.length > 0) {
-            await fetchProductsByCategoryIds(editingVoucher.applicable_category_ids);
+          if (
+            editingVoucher.applicable_category_ids &&
+            editingVoucher.applicable_category_ids.length > 0
+          ) {
+            await fetchProductsByCategoryIds(
+              editingVoucher.applicable_category_ids
+            );
           }
         }
-        
+
         setInitialLoadComplete(true);
       };
-      
+
       loadInitialData();
     } else {
       setInitialLoadComplete(false);
       setCategories(initialCategories);
       setProducts(initialProducts);
     }
-  }, [visible, editingVoucher, isStoreOwner, currentStoreId, form, initialCategories, initialProducts]);
+  }, [
+    visible,
+    editingVoucher,
+    isStoreOwner,
+    currentStoreId,
+    form,
+    initialCategories,
+    initialProducts,
+  ]);
 
-  // Hàm fetch categories
+  // Hàm fetch categories (giữ nguyên)
   const fetchCategoriesByStoreIds = async (storeIds: number[]) => {
     if (storeIds.length === 0) {
       setCategories([]);
       return;
     }
-    
+
     try {
       setFetchingCategories(true);
-      const response = await api.get(`${API_ENDPOINTS.categories}?store_ids=${storeIds.join(',')}`);
+      const response = await api.get(
+        `${API_ENDPOINTS.categories}?store_ids=${storeIds.join(',')}`
+      );
       const fetchedCategories = response.data?.data || response.data || [];
       setCategories(fetchedCategories);
     } catch (error) {
@@ -115,16 +200,18 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
     }
   };
 
-  // Hàm fetch products
+  // Hàm fetch products (giữ nguyên)
   const fetchProductsByCategoryIds = async (categoryIds: number[]) => {
     if (categoryIds.length === 0) {
       setProducts([]);
       return;
     }
-    
+
     try {
       setFetchingProducts(true);
-      const response = await api.get(`${API_ENDPOINTS.products}?category_ids=${categoryIds.join(',')}`);
+      const response = await api.get(
+        `${API_ENDPOINTS.products}?category_ids=${categoryIds.join(',')}`
+      );
       const fetchedProducts = response.data?.data || response.data || [];
       setProducts(fetchedProducts);
     } catch (error) {
@@ -135,38 +222,36 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
     }
   };
 
-  // Lấy danh sách danh mục dựa trên store_ids
+  // Lấy danh sách danh mục dựa trên store_ids (giữ nguyên)
   useEffect(() => {
     if (!visible || !initialLoadComplete) return;
-    
-    if (selectedStoreIds.length > 0) {
+
+    if (selectedStoreIds.length > 0 && (voucherType === VoucherType.CATEGORY || voucherType === VoucherType.PRODUCT)) {
       fetchCategoriesByStoreIds(selectedStoreIds);
-    } else {
+    } else if (voucherType !== VoucherType.CATEGORY && voucherType !== VoucherType.PRODUCT) {
       setCategories([]);
-      // Xóa category và product khi không có store được chọn
-      form.setFieldsValue({ 
+      form.setFieldsValue({
         applicable_category_ids: [],
         applicable_product_ids: [],
-        excluded_product_ids: []
+        excluded_product_ids: [],
       });
     }
-  }, [selectedStoreIds, visible, initialLoadComplete, form]);
+  }, [selectedStoreIds, visible, initialLoadComplete, form, voucherType]);
 
-  // Lấy danh sách sản phẩm dựa trên category_ids
+  // Lấy danh sách sản phẩm dựa trên category_ids (giữ nguyên)
   useEffect(() => {
     if (!visible || !initialLoadComplete) return;
-    
-    if (selectedCategoryIds.length > 0) {
+
+    if (selectedCategoryIds.length > 0 && voucherType === VoucherType.PRODUCT) {
       fetchProductsByCategoryIds(selectedCategoryIds);
-    } else {
+    } else if (voucherType !== VoucherType.PRODUCT) {
       setProducts([]);
-      // Xóa product khi không có category được chọn
-      form.setFieldsValue({ 
+      form.setFieldsValue({
         applicable_product_ids: [],
-        excluded_product_ids: []
+        excluded_product_ids: [],
       });
     }
-  }, [selectedCategoryIds, visible, initialLoadComplete, form]);
+  }, [selectedCategoryIds, visible, initialLoadComplete, form, voucherType]);
 
   return (
     <Modal
@@ -214,8 +299,12 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               rules={[{ required: true, message: 'Chọn loại voucher' }]}
             >
               <Select>
-                <Option value={VoucherType.SHIPPING}>Freeship (Vận chuyển miễn phí)</Option>
-                <Option value={VoucherType.PRODUCT}>Giảm giá sản phẩm cụ thể</Option>
+                <Option value={VoucherType.SHIPPING}>
+                  Freeship (Vận chuyển miễn phí)
+                </Option>
+                <Option value={VoucherType.PRODUCT}>
+                  Giảm giá sản phẩm cụ thể
+                </Option>
                 <Option value={VoucherType.STORE}>Voucher cửa hàng</Option>
                 <Option value={VoucherType.CATEGORY}>Voucher danh mục</Option>
                 <Option value={VoucherType.PLATFORM}>Voucher toàn sàn</Option>
@@ -230,7 +319,9 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               initialValue={VoucherDiscountType.PERCENTAGE}
             >
               <Select>
-                <Option value={VoucherDiscountType.PERCENTAGE}>Phần trăm (%)</Option>
+                <Option value={VoucherDiscountType.PERCENTAGE}>
+                  Phần trăm (%)
+                </Option>
                 <Option value={VoucherDiscountType.FIXED}>Cố định (VND)</Option>
                 <Option value={VoucherDiscountType.CASH_BACK}>Hoàn tiền</Option>
               </Select>
@@ -255,15 +346,23 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
           <Col span={12}>
             <Form.Item
               noStyle
-              shouldUpdate={(prev, curr) => prev.discount_type !== curr.discount_type}
+              shouldUpdate={(prev, curr) =>
+                prev.discount_type !== curr.discount_type
+              }
             >
               {({ getFieldValue }) =>
-                getFieldValue('discount_type') === VoucherDiscountType.PERCENTAGE ? (
-                  <Form.Item label="Giảm Tối Đa (VND)" name="max_discount_amount">
+                getFieldValue('discount_type') ===
+                VoucherDiscountType.PERCENTAGE ? (
+                  <Form.Item
+                    label="Giảm Tối Đa (VND)"
+                    name="max_discount_amount"
+                  >
                     <InputNumber
                       style={{ width: '100%' }}
                       min={0}
-                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      formatter={(value) =>
+                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      }
                       placeholder="Ví dụ: 100000"
                     />
                   </Form.Item>
@@ -276,11 +375,33 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               label="Đơn Hàng Tối Thiểu (VND)"
               name="min_order_amount"
               initialValue={0}
+              rules={[
+                {
+                  validator: (_, value) => {
+                    const discountType = form.getFieldValue('discount_type');
+                    const discountValue = form.getFieldValue('discount_value');
+
+                    // Nếu là kiểu giảm cố định, phải đảm bảo min_order >= discount
+                    if (discountType === VoucherDiscountType.FIXED) {
+                      if (value < discountValue) {
+                        return Promise.reject(
+                          new Error(
+                            'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
+                          )
+                        );
+                      }
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
               <InputNumber
                 style={{ width: '100%' }}
                 min={0}
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                }
                 placeholder="Ví dụ: 50000"
               />
             </Form.Item>
@@ -358,10 +479,18 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               rules={[{ required: true, message: 'Chọn kiểu nhận' }]}
             >
               <Select>
-                <Option value={VoucherCollectionType.AUTO}>Tự động áp dụng</Option>
-                <Option value={VoucherCollectionType.MANUAL}>Thu thập thủ công</Option>
-                <Option value={VoucherCollectionType.TARGETED}>Định hướng người dùng</Option>
-                <Option value={VoucherCollectionType.EVENT}>Dành cho sự kiện</Option>
+                <Option value={VoucherCollectionType.AUTO}>
+                  Tự động áp dụng
+                </Option>
+                <Option value={VoucherCollectionType.MANUAL}>
+                  Thu thập thủ công
+                </Option>
+                <Option value={VoucherCollectionType.TARGETED}>
+                  Định hướng người dùng
+                </Option>
+                <Option value={VoucherCollectionType.EVENT}>
+                  Dành cho sự kiện
+                </Option>
               </Select>
             </Form.Item>
           </Col>
@@ -408,10 +537,14 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
           </Col>
         </Row>
 
-        {!isStoreOwner && (
+        {/* Conditional rendering dựa trên type */}
+        {!isStoreOwner && shouldShowStores && (
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Cửa Hàng Áp Dụng (ID)" name="applicable_store_ids">
+              <Form.Item
+                label="Cửa Hàng Áp Dụng (ID)"
+                name="applicable_store_ids"
+              >
                 <Select
                   mode="multiple"
                   placeholder="Chọn cửa hàng (để trống nếu áp dụng tất cả)"
@@ -431,37 +564,16 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                 </Select>
               </Form.Item>
             </Col>
-            {shouldShowCategories && (
-              <Col span={12}>
-                <Form.Item label="Danh Mục Áp Dụng (ID)" name="applicable_category_ids">
-                  <Select
-                    mode="multiple"
-                    placeholder="Chọn danh mục (để trống nếu áp dụng tất cả)"
-                    allowClear
-                    showSearch
-                    loading={fetchingCategories}
-                    filterOption={(input, option) =>
-                      (option?.children as unknown as string)
-                        ?.toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
-                  >
-                    {categories.map((category) => (
-                      <Option key={category.id} value={category.id}>
-                        {category.name} (ID: {category.id})
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            )}
           </Row>
         )}
 
-        {isStoreOwner && shouldShowCategories && (
+        {shouldShowCategories && (
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Danh Mục Áp Dụng (ID)" name="applicable_category_ids">
+              <Form.Item
+                label="Danh Mục Áp Dụng (ID)"
+                name="applicable_category_ids"
+              >
                 <Select
                   mode="multiple"
                   placeholder="Chọn danh mục (để trống nếu áp dụng tất cả)"
@@ -488,7 +600,10 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
         {shouldShowProducts && (
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Sản Phẩm Áp Dụng (ID)" name="applicable_product_ids">
+              <Form.Item
+                label="Sản Phẩm Áp Dụng (ID)"
+                name="applicable_product_ids"
+              >
                 <Select
                   mode="multiple"
                   placeholder="Chọn sản phẩm (để trống nếu áp dụng tất cả)"
@@ -510,7 +625,10 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Sản Phẩm Loại Trừ (ID)" name="excluded_product_ids">
+              <Form.Item
+                label="Sản Phẩm Loại Trừ (ID)"
+                name="excluded_product_ids"
+              >
                 <Select
                   mode="multiple"
                   placeholder="Chọn sản phẩm loại trừ (để trống nếu không loại trừ)"
