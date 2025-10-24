@@ -17,7 +17,7 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StoreOwnerVoucherManager from './StoreOwnerVoucherManager';
-import { GiftOutlined } from '@ant-design/icons';
+import { GiftOutlined, FireOutlined } from '@ant-design/icons';
 
 const { Sider } = Layout;
 
@@ -40,6 +40,7 @@ const items: MenuItem[] = [
   getItem('Gói Đăng ký ', 'Invoices', <FileTextOutlined />),
   getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
   getItem('Quản lý marketing', 'VoucherManagement', <GiftOutlined />),
+  getItem('Quản lý sự kiện', 'StoreCampaignManager', <FireOutlined />),
   getItem('Trở về trang chủ', 'HomePage', <HomeOutlined />),
 ];
 
