@@ -194,7 +194,7 @@ export default function ProductFlashSale({
                   onClick={() => handleClick(p.slug)}
                   className="snap-start w-[160px] shrink-0 cursor-pointer rounded-xl bg-white px-3 pt-3 pb-2
                              ring-1 ring-slate-200/70 shadow-sm transition hover:ring-slate-300
-                             flex h-[300px] flex-col"
+                             flex h-[250px] flex-col"
                 >
                   <div className="relative mb-2 h-[120px]">
                     {typeof discount === 'number' && isFinite(discount) && (
@@ -228,7 +228,7 @@ export default function ProductFlashSale({
                     {p.name}
                   </h3>
 
-                  <div className="mt-2 text-center">
+                  <div className="mt-2 ">
                     <div className="text-[13px] font-semibold text-rose-600">
                       {formatVND(p.price)}
                     </div>
@@ -245,16 +245,6 @@ export default function ProductFlashSale({
                       {p.brandName ?? 'brand'}
                     </div>
                   </div>
-
-                  <button
-                    className="mt-auto w-full rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/90"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleClick(p.slug);
-                    }}
-                  >
-                    Mua Ngay
-                  </button>
                 </div>
               );
             })}

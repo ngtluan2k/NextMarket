@@ -255,10 +255,10 @@ export const ProductForm: React.FC = () => {
 
       const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Submit failed');
-      alert(status === 'active' ? 'Product published!' : 'Saved as draft!');
+      if (!res.ok) throw new Error(data?.message || 'Gửi thất bại');
+      alert(status === 'active' ? 'Đã xuất bản sản phẩm!' : 'Đã lưu bản nháp!');
     } catch (e: any) {
-      alert(e?.message || 'Submit failed');
+      alert(e?.message || 'Gửi thất bại');
     } finally {
       setSubmitting(false);
     }
@@ -275,7 +275,7 @@ export const ProductForm: React.FC = () => {
       className="space-y-6"
     >
       <div className="flex items-center justify-between pr-16 md:pr-24">
-        <h2 className="text-2xl font-bold">Create Product</h2>
+        <h2 className="text-2xl font-bold">Tạo sản phẩm</h2>
 
         <nav className="flex items-center gap-3 select-none">
           {[1,2,3,4].map(s => (
@@ -391,7 +391,7 @@ export const ProductForm: React.FC = () => {
                   {previewCats.map((c: any) => (
                     <span key={c.id} className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
                       {c.name}
-                      <button type="button" onClick={() => toggleCategory(c.id)} className="text-slate-400 hover:text-rose-600">
+                      <button type="button" onClick={() => toggleCategory(c.id)} className="text-slate-400 hover:text-rose-600" aria-label="Gỡ danh mục">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </span>
@@ -458,7 +458,7 @@ export const ProductForm: React.FC = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Hình ảnh & Media</h3>
-              <p className="text-sm text-slate-500">Chọn ảnh đại diện (cover) và thêm nhiều ảnh phụ để mô tả sản phẩm.</p>
+              <p className="text-sm text-slate-500">Chọn ảnh đại diện và thêm nhiều ảnh phụ để mô tả sản phẩm.</p>
             </div>
           </header>
 
@@ -469,7 +469,7 @@ export const ProductForm: React.FC = () => {
                 {form.media[0]?.url ? (
                   <>
                     <img src={form.media[0].url} alt="cover" className="h-full w-full object-cover" />
-                    <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Cover</span>
+                    <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Ảnh đại diện</span>
                     <div className="absolute inset-x-2 bottom-2 flex gap-2">
                       <button type="button" onClick={openMultiPickerReplaceCover} className="inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-xs shadow hover:bg-white"><Upload className="h-3.5 w-3.5" /> Thay ảnh</button>
                       <button type="button" onClick={() => removeMediaAt(0)} className="inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-xs text-rose-600 shadow hover:bg-white"><Trash2 className="h-3.5 w-3.5" /> Xóa</button>
@@ -484,7 +484,7 @@ export const ProductForm: React.FC = () => {
               </div>
 
               <div className="flex-1 space-y-3">
-                <p className="text-sm text-slate-600">Ảnh đầu là cover. Nhấp ảnh phụ để đặt làm cover hoặc dùng mũi tên đổi vị trí.</p>
+                <p className="text-sm text-slate-600">Ảnh đầu là ảnh đại diện. Nhấp ảnh phụ để đặt làm ảnh đại diện hoặc dùng mũi tên đổi vị trí.</p>
                 <div className="flex gap-3">
                   <button type="button" onClick={openMultiPickerAppend} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
                     <Plus className="h-4 w-4" /> Thêm ảnh
@@ -513,14 +513,14 @@ export const ProductForm: React.FC = () => {
                             <button type="button" onClick={() => moveMedia(i, -1)} className="rounded-md bg-white/95 p-1 shadow" title="Sang trái">
                               <MoveLeft className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => setAsCover(i)} className="rounded-md bg-white/95 px-2 py-1 text-xs shadow" title="Đặt làm cover">
-                              Cover
+                            <button type="button" onClick={() => setAsCover(i)} className="rounded-md bg-white/95 px-2 py-1 text-xs shadow" title="Đặt làm ảnh đại diện">
+                              Ảnh đại diện
                             </button>
                             <button type="button" onClick={() => moveMedia(i, +1)} className="rounded-md bg-white/95 p-1 shadow" title="Sang phải">
                               <MoveRight className="h-4 w-4" />
                             </button>
                           </div>
-                          <button type="button" onClick={() => removeMediaAt(i)} className="absolute right-1 top-1 bg-white/95 p-1 rounded shadow" title="Xoá ảnh">
+                          <button type="button" onClick={() => removeMediaAt(i)} className="absolute right-1 top-1 bg-white/95 p-1 rounded shadow" title="Xóa ảnh">
                             <Trash2 className="h-4 w-4 text-rose-600" />
                           </button>
                         </>
@@ -609,7 +609,7 @@ export const ProductForm: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium">Barcode</label>
+                      <label className="block text-sm font-medium">Mã vạch (Barcode)</label>
                       <div className="mt-1 flex items-center gap-2">
                         <input
                           value={v.barcode || ''} onChange={(e) => { const next = [...form.variants]; next[i].barcode = e.target.value; setForm({ ...form, variants: next }); }}
@@ -645,7 +645,7 @@ export const ProductForm: React.FC = () => {
                   <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
-                        <label className="block text-sm font-medium">Variant SKU</label>
+                        <label className="block text-sm font-medium">SKU biến thể</label>
                         <input
                           value={inv.variant_sku}
                           onChange={(e) => { const next = [...form.inventory]; next[i].variant_sku = e.target.value; setForm({ ...form, inventory: next }); }}
@@ -705,64 +705,64 @@ export const ProductForm: React.FC = () => {
           </header>
 
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-slate-800">Tổng: {form.pricing_rules.length} rule</h4>
+            <h4 className="font-medium text-slate-800">Tổng: {form.pricing_rules.length} quy tắc</h4>
             <button type="button" onClick={addPricingRule} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
-              <Plus className="h-4 w-4" /> Thêm rule
+              <Plus className="h-4 w-4" /> Thêm quy tắc
             </button>
           </div>
 
           {(form.pricing_rules || []).length === 0 && (
-            <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">Chưa có rule. Nhấn “Thêm rule”.</div>
+            <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">Chưa có quy tắc. Nhấn “Thêm quy tắc”.</div>
           )}
 
           {(form.pricing_rules || []).map((pr, i) => (
             <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Type</label>
+                  <label className="block text-sm font-medium mb-1">Loại</label>
                   <input value={pr.type} onChange={(e) => { const next = [...form.pricing_rules]; next[i].type = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="bulk / tier" />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Min Qty</label>
+                  <label className="block text-sm font-medium mb-1">SL tối thiểu</label>
                   <input type="number" value={pr.min_quantity} onChange={(e) => { const next = [...form.pricing_rules]; next[i].min_quantity = +e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="10" />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Price</label>
+                  <label className="block text-sm font-medium mb-1">Giá</label>
                   <input type="number" value={pr.price} onChange={(e) => { const next = [...form.pricing_rules]; next[i].price = +e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="99000" />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Cycle</label>
-                  <input value={pr.cycle || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].cycle = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="monthly" />
+                  <label className="block text-sm font-medium mb-1">Chu kỳ</label>
+                  <input value={pr.cycle || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].cycle = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="hàng tháng" />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Starts</label>
+                  <label className="block text-sm font-medium mb-1">Bắt đầu</label>
                   <input type="date" value={(pr.starts_at as string) || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].starts_at = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Ends</label>
+                  <label className="block text-sm font-medium mb-1">Kết thúc</label>
                   <input type="date" value={(pr.ends_at as string) || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].ends_at = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" />
                 </div>
 
                 <div className="md:col-span-3">
-                  <label className="block text-sm font-medium mb-1">Variant SKU</label>
-                  <input value={pr.variant_sku || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].variant_sku = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="Link SKU" />
+                  <label className="block text-sm font-medium mb-1">SKU biến thể</label>
+                  <input value={pr.variant_sku || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].variant_sku = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="Liên kết SKU" />
                 </div>
 
                 <div className="md:col-span-4">
-                  <label className="block text-sm font-medium mb-1">Rule Name</label>
+                  <label className="block text-sm font-medium mb-1">Tên quy tắc</label>
                   <input value={pr.name || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].name = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="Tên hiển thị" />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <label className="block text-sm font-medium mb-1">Trạng thái</label>
                   <select value={pr.status || 'active'} onChange={(e) => { const next = [...form.pricing_rules]; next[i].status = e.target.value as 'active' | 'inactive'; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Tạm tắt</option>
                   </select>
                 </div>
 
@@ -771,7 +771,7 @@ export const ProductForm: React.FC = () => {
                     type="button"
                     onClick={() => setForm(prev => ({ ...prev, pricing_rules: prev.pricing_rules.filter((_, idx) => idx !== i) }))}
                     className="h-11 w-11 inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
-                    title="Remove rule"
+                    title="Xóa quy tắc"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
@@ -787,7 +787,7 @@ export const ProductForm: React.FC = () => {
         <div className="flex gap-2">
           {step > 1 && (
             <button type="button" onClick={prevStep} className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50">
-              Previous
+              Trước
             </button>
           )}
         </div>
@@ -795,7 +795,7 @@ export const ProductForm: React.FC = () => {
         <div className="flex gap-2">
           {step < 4 && (
             <button type="button" onClick={nextStep} className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
-              Next
+              Tiếp theo
             </button>
           )}
 
@@ -806,7 +806,7 @@ export const ProductForm: React.FC = () => {
                 disabled={submitting}
                 className="px-6 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
               >
-                {submitting ? 'Publishing…' : 'Publish'}
+                {submitting ? 'Đang đăng…' : 'Đăng bán'}
               </button>
               <button
                 type="button"
@@ -814,7 +814,7 @@ export const ProductForm: React.FC = () => {
                 onClick={() => submitForm('draft')}
                 className="px-6 py-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60"
               >
-                {submitting ? 'Saving…' : 'Save Draft'}
+                {submitting ? 'Đang lưu…' : 'Lưu nháp'}
               </button>
             </>
           )}

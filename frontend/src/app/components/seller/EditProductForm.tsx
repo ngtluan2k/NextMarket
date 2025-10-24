@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Trash2, Tag, FileText, DollarSign, Building2, ListChecks, X, Search,
@@ -28,7 +27,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const getErr = (path: string) => errors[path];
 
-  // ---- form state (giữ schema cũ) ----
+  // ---- trạng thái form (giữ nguyên schema cũ) ----
   interface ProductFormState {
     name: string;
     short_description?: string;
@@ -87,7 +86,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     pricing_rules: [],
   });
 
-  // ---------- helpers cho Media ----------
+  // ---------- tiện ích cho Media ----------
   const multiFileRef = useRef<HTMLInputElement | null>(null);
   const replaceCoverAfterPickRef = useRef(false);
 
@@ -127,7 +126,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               sort_order: 1,
             });
           } else {
-            // thay cover
+            // thay ảnh đại diện
             media[0] = {
               ...media[0],
               media_type: 'image',
@@ -148,7 +147,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           })
         );
       } else {
-        // chỉ append; nếu chưa có cover thì file đầu làm cover
+        // chỉ thêm; nếu chưa có ảnh đại diện thì file đầu làm ảnh đại diện
         files.forEach((file, idx) => {
           const url = URL.createObjectURL(file);
           media.push({
@@ -202,7 +201,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   };
   // --------------------------------------------------------
 
-  // Preload brands & categories + map product vào form
+  // Tải sẵn thương hiệu & danh mục + map product vào form
   useEffect(() => {
     const token = localStorage.getItem('token');
     (async () => {
@@ -220,7 +219,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         setCategories(categoriesRes.data || []);
 
         if (product) {
-          // variants + stock
+          // biến thể + tồn kho
           const variantsWithStock = (product.variants || []).map((v: any) => {
             const totalStock = (v.inventories || []).reduce(
               (sum: number, inv: any) => sum + Number(inv.quantity || 0),
@@ -229,7 +228,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             return { ...v, stock: totalStock };
           });
 
-          // pricing rules chuẩn hóa
+          // quy tắc giá chuẩn hoá
           const pricingRules = (product.pricing_rules || []).map((pr: any) => ({
             ...pr,
             variant_sku: pr.variant_sku || '',
@@ -243,7 +242,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               : '',
           }));
 
-          // inventory flatten
+          // flatten inventory
           const inventoryWithSKU = (product.variants || []).flatMap((v: any) =>
             (v.inventories || []).map((inv: any) => ({
               id: inv.id,
@@ -256,7 +255,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             }))
           );
 
-          // media: sắp xếp để cover lên đầu
+          // media: sắp xếp để ảnh đại diện lên đầu
           let media = (product.media || [])
             .filter((m: any) => m.url && m.url !== '')
             .sort((a: any, b: any) => {
@@ -282,12 +281,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           });
         }
       } catch (err) {
-        console.error('Load brands/categories failed:', err);
+        console.error('Không tải được thương hiệu/danh mục:', err);
       }
     })();
   }, [product]);
 
-  // ---- handlers chung ----
+  // ---- xử lý chung ----
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -353,7 +352,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       ],
     }));
 
-  // tổng stock cho từng variant khi submit
+  // tổng tồn cho từng biến thể khi submit
   const variantsWithStock = form.variants.map((v) => {
     const totalStock = form.inventory
       .filter((inv) => inv.variant_sku === v.sku)
@@ -361,7 +360,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     return { ...v, stock: totalStock };
   });
 
-  // ---------- Step 1 UI states ----------
+  // ---------- trạng thái UI cho Bước 1 ----------
   const [priceText, setPriceText] = useState<string>(
     form.base_price ? new Intl.NumberFormat('vi-VN').format(form.base_price) : ''
   );
@@ -370,7 +369,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   }, [form.base_price]);
   const shortCount = form.short_description?.length ?? 0;
 
-  // Dropdown danh mục dài
+  // dropdown danh mục dài
   const [catOpen, setCatOpen] = useState(false);
   const [catQuery, setCatQuery] = useState('');
   const catWrapRef = useRef<HTMLDivElement | null>(null);
@@ -401,7 +400,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     setForm((prev) => ({ ...prev, base_price: n }));
   }
 
-  // toggle danh mục (chips + dropdown)
+  // bật/tắt danh mục (chips + dropdown)
   function toggleCategory(id: number) {
     setForm((prev) => ({
       ...prev,
@@ -411,7 +410,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     }));
   }
 
-  // ---------- Submit ----------
+  // ---------- Gửi form ----------
   const handleSubmit = async (status: 'draft' | 'active') => {
     try {
       setErrors({});
@@ -451,7 +450,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       fd.append('pricing_rules', JSON.stringify(form.pricing_rules));
       fd.append('status', status);
 
-      // media_meta: cũ + placeholder cho mới (để giữ order/primary)
+      // media_meta: cũ + placeholder cho media mới (giữ thứ tự/đánh dấu ảnh đại diện)
       fd.append(
         'media_meta',
         JSON.stringify([
@@ -498,18 +497,18 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   const nextStep = () => setStep((s) => Math.min(4, s + 1));
   const prevStep = () => setStep((s) => Math.max(1, s - 1));
 
-  // ---------- UI ----------
+  // ---------- Giao diện ----------
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        handleSubmit('active'); // Publish
+        handleSubmit('active'); // Đăng bán
       }}
       noValidate
       className="space-y-6"
     >
       <div className="flex items-center justify-between pr-16 md:pr-24">
-        <h2 className="text-2xl font-bold">Edit Product</h2>
+        <h2 className="text-2xl font-bold">Chỉnh sửa sản phẩm</h2>
 
         <nav className="flex items-center gap-3 select-none">
           {[1, 2, 3, 4].map((s) => (
@@ -533,7 +532,8 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           ))}
         </nav>
       </div>
-      {/* STEP 1: Product Info */}
+
+      {/* BƯỚC 1: Thông tin sản phẩm */}
       {step === 1 && (
         <section className="space-y-6">
           <header className="flex items-center gap-3">
@@ -542,7 +542,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Thông tin sản phẩm</h3>
-              <p className="text-sm text-slate-500">Điền những trường cơ bản để người mua hiểu rõ về sản phẩm của bạn.</p>
+              <p className="text-sm text-slate-500">Điền các trường cơ bản để người mua hiểu rõ về sản phẩm của bạn.</p>
             </div>
           </header>
 
@@ -595,7 +595,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   value={form.description || ''}
                   onChange={handleChange}
                   rows={5}
-                  placeholder="Nội dung mô tả chi tiết, chất liệu, hướng dẫn sử dụng, bảo hành…"
+                  placeholder="Chất liệu, công dụng, hướng dẫn sử dụng, bảo hành…"
                   className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
@@ -619,7 +619,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   />
                 </div>
                 {getErr('base_price') && <p className="mt-1 text-xs text-rose-600">{getErr('base_price')}</p>}
-                <p className="mt-1 text-xs text-slate-400">Giá niêm yết chưa bao gồm quy tắc giá / khuyến mãi.</p>
+                <p className="mt-1 text-xs text-slate-400">Giá niêm yết, chưa tính quy tắc giá/khuyến mãi.</p>
               </div>
 
               {/* Thương hiệu */}
@@ -651,7 +651,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   {previewCats.map((c: any) => (
                     <span key={c.id} className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
                       {c.name}
-                      <button type="button" onClick={() => toggleCategory(c.id)} className="text-slate-400 hover:text-rose-600">
+                      <button type="button" onClick={() => toggleCategory(c.id)} className="text-slate-400 hover:text-rose-600" title="Bỏ chọn">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </span>
@@ -669,8 +669,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     {catOpen ? 'Đóng danh sách' : 'Chọn danh mục'}
                   </button>
                   {selectedCats.length > 0 && (
-                    <button type="button" onClick={() => setForm((p) => ({ ...p, categories: [] }))} className="rounded-full bg-rose-50 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-100 border border-rose-200">
-                      Xóa tất cả
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, categories: [] }))}
+                      className="rounded-full bg-rose-50 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-100 border border-rose-200"
+                    >
+                      Xoá tất cả
                     </button>
                   )}
                 </div>
@@ -710,7 +714,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         </section>
       )}
 
-      {/* STEP 2: Media (đẹp & đồng bộ) */}
+      {/* BƯỚC 2: Hình ảnh & Media */}
       {step === 2 && (
         <section className="space-y-6">
           <header className="flex items-center gap-3">
@@ -719,11 +723,11 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Hình ảnh & Media</h3>
-              <p className="text-sm text-slate-500">Chọn ảnh đại diện (cover) và thêm nhiều ảnh phụ để mô tả sản phẩm.</p>
+              <p className="text-sm text-slate-500">Chọn ảnh đại diện (ảnh bìa) và thêm nhiều ảnh phụ để mô tả sản phẩm.</p>
             </div>
           </header>
 
-          {/* Cover card */}
+          {/* Thẻ ảnh đại diện */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
             <div className="flex items-start gap-4">
               <div className="relative h-56 w-56 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
@@ -731,16 +735,16 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   <>
                     <img
                       src={form.media[0].url}
-                      alt="cover"
+                      alt="Ảnh đại diện"
                       className="h-full w-full object-cover"
                     />
-                    <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Cover</span>
+                    <span className="absolute left-2 top-2 text-xs bg-black/60 text-white px-2 py-1 rounded">Ảnh đại diện</span>
                     <div className="absolute inset-x-2 bottom-2 flex gap-2">
                       <button
                         type="button"
                         onClick={openMultiPickerReplaceCover}
                         className="inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-xs shadow hover:bg-white"
-                        title="Thay cover"
+                        title="Thay ảnh đại diện"
                       >
                         <Upload className="h-3.5 w-3.5" /> Thay ảnh
                       </button>
@@ -748,9 +752,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                         type="button"
                         onClick={() => removeMediaAt(0)}
                         className="inline-flex items-center gap-1 rounded-lg bg-white/95 px-2 py-1 text-xs text-rose-600 shadow hover:bg-white"
-                        title="Xóa cover"
+                        title="Xoá ảnh đại diện"
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> Xóa
+                        <Trash2 className="h-3.5 w-3.5" /> Xoá
                       </button>
                     </div>
                   </>
@@ -759,7 +763,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     type="button"
                     onClick={openMultiPickerReplaceCover}
                     className="h-full w-full flex flex-col items-center justify-center text-slate-500 hover:text-slate-700"
-                    title="Chọn nhiều ảnh; ảnh đầu sẽ làm cover"
+                    title="Chọn nhiều ảnh; ảnh đầu sẽ làm ảnh đại diện"
                   >
                     <Upload className="h-6 w-6" />
                     <div className="mt-1 text-sm">Chọn ảnh đại diện</div>
@@ -769,7 +773,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
 
               <div className="flex-1 space-y-3">
                 <p className="text-sm text-slate-600">
-                  Ảnh đầu tiên là ảnh đại diện (cover). Bạn có thể nhấp vào ảnh phụ để đặt làm cover, hoặc dùng nút mũi tên để đổi vị trí.
+                  Ảnh đầu tiên là ảnh đại diện. Bạn có thể nhấp vào ảnh phụ để đặt làm ảnh đại diện, hoặc dùng mũi tên để đổi vị trí.
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -793,7 +797,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             </div>
           </div>
 
-          {/* Thumbnails */}
+          {/* Ảnh phụ (thumbnails) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
             {form.media.length <= 1 ? (
               <p className="text-sm text-slate-500">Chưa có ảnh phụ. Nhấn “Thêm ảnh”.</p>
@@ -823,9 +827,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                               type="button"
                               onClick={() => setAsCover(i)}
                               className="rounded-md bg-white/95 px-2 py-1 text-xs shadow"
-                              title="Đặt làm cover"
+                              title="Đặt làm ảnh đại diện"
                             >
-                              Cover
+                              Đặt bìa
                             </button>
                             <button
                               type="button"
@@ -851,14 +855,11 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 })}
               </div>
             )}
-            <p className="mt-2 text-xs text-slate-400">
-              * Gợi ý: Tải ảnh tỷ lệ 1:1 hoặc 4:3, kích thước &gt;= 800px để hiển thị đẹp.
-            </p>
           </div>
         </section>
       )}
 
-      {/* STEP 3: Variants & Inventory (đồng bộ UI) */}
+      {/* BƯỚC 3: Biến thể & Tồn kho */}
       {step === 3 && (
         <section className="space-y-6">
           <header className="flex items-center gap-3">
@@ -867,11 +868,11 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Biến thể & Tồn kho</h3>
-              <p className="text-sm text-slate-500">Quản lý SKU, giá biến thể và tổng tồn kho theo từng SKU.</p>
+              <p className="text-sm text-slate-500">Quản lý SKU, giá từng biến thể và tổng tồn theo SKU.</p>
             </div>
           </header>
 
-          {/* Variants List */}
+          {/* Danh sách biến thể */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-slate-800 flex items-center gap-2">
@@ -963,7 +964,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium">Barcode</label>
+                      <label className="block text-sm font-medium">Mã vạch (Barcode)</label>
                       <div className="mt-1 flex items-center gap-2">
                         <input
                           value={v.barcode || ''}
@@ -979,7 +980,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                           type="button"
                           onClick={() => removeVariantAt(i)}
                           className="inline-flex items-center justify-center rounded-md border border-rose-200 p-2 text-rose-600 hover:bg-rose-50"
-                          title="Xóa biến thể"
+                          title="Xoá biến thể"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -991,7 +992,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             })}
           </div>
 
-          {/* Inventory Table */}
+          {/* Bảng tồn kho */}
           <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium text-slate-800 flex items-center gap-2">
@@ -1015,9 +1016,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   {form.inventory.map((inv, i) => (
                     <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {/* Variant SKU */}
+                        {/* SKU biến thể */}
                         <div>
-                          <label className="block text-sm font-medium">Variant SKU</label>
+                          <label className="block text-sm font-medium">SKU biến thể</label>
                           <input
                             value={inv.variant_sku}
                             onChange={(e) => {
@@ -1076,13 +1077,13 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                           )}
                         </div>
 
-                        {/* Remove button */}
+                        {/* Nút xoá */}
                         <div className="flex items-end justify-end">
                           <button
                             type="button"
                             onClick={() => removeInventoryAt(i)}
                             className="inline-flex h-11 items-center justify-center rounded-md border border-rose-200 px-3 text-rose-600 hover:bg-rose-50"
-                            title="Xóa dòng"
+                            title="Xoá dòng"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -1096,7 +1097,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         </section>
       )}
 
-      {/* STEP 4: Pricing Rules (đồng bộ UI) */}
+      {/* BƯỚC 4: Quy tắc giá */}
       {step === 4 && (
         <section className="space-y-6">
           <header className="flex items-center gap-3">
@@ -1105,24 +1106,24 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Quy tắc giá</h3>
-              <p className="text-sm text-slate-500">Thiết lập giảm giá theo số lượng, chu kỳ, hoặc gắn theo SKU.</p>
+              <p className="text-sm text-slate-500">Thiết lập giảm giá theo số lượng, theo chu kỳ, hoặc gắn cho từng SKU.</p>
             </div>
           </header>
 
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-slate-800">Tổng: {form.pricing_rules.length} rule</h4>
+            <h4 className="font-medium text-slate-800">Tổng: {form.pricing_rules.length} quy tắc</h4>
             <button
               type="button"
               onClick={addPricingRule}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
             >
-              <Plus className="h-4 w-4" /> Thêm rule
+              <Plus className="h-4 w-4" /> Thêm quy tắc
             </button>
           </div>
 
           {(form.pricing_rules || []).length === 0 && (
             <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
-              Chưa có rule. Nhấn “Thêm rule”.
+              Chưa có quy tắc. Nhấn “Thêm quy tắc”.
             </div>
           )}
 
@@ -1130,7 +1131,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Type</label>
+                  <label className="block text-sm font-medium mb-1">Loại</label>
                   <input
                     value={pr.type}
                     onChange={(e) => {
@@ -1139,12 +1140,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                       setForm({ ...form, pricing_rules: next });
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="bulk / tier"
+                    placeholder="theo lô / theo bậc"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Min Qty</label>
+                  <label className="block text-sm font-medium mb-1">SL tối thiểu</label>
                   <input
                     type="number"
                     value={pr.min_quantity}
@@ -1159,7 +1160,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Price</label>
+                  <label className="block text-sm font-medium mb-1">Giá</label>
                   <input
                     type="number"
                     value={pr.price}
@@ -1174,7 +1175,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Cycle</label>
+                  <label className="block text-sm font-medium mb-1">Chu kỳ</label>
                   <input
                     value={pr.cycle || ''}
                     onChange={(e) => {
@@ -1183,12 +1184,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                       setForm({ ...form, pricing_rules: next });
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="monthly"
+                    placeholder="hàng tháng"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Starts</label>
+                  <label className="block text-sm font-medium mb-1">Bắt đầu</label>
                   <input
                     type="date"
                     value={(pr.starts_at as string) || ''}
@@ -1202,7 +1203,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Ends</label>
+                  <label className="block text-sm font-medium mb-1">Kết thúc</label>
                   <input
                     type="date"
                     value={(pr.ends_at as string) || ''}
@@ -1216,7 +1217,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 </div>
 
                 <div className="md:col-span-3">
-                  <label className="block text-sm font-medium mb-1">Variant SKU</label>
+                  <label className="block text-sm font-medium mb-1">SKU biến thể</label>
                   <input
                     value={pr.variant_sku || ''}
                     onChange={(e) => {
@@ -1225,12 +1226,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                       setForm({ ...form, pricing_rules: next });
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="Link SKU"
+                    placeholder="Liên kết SKU"
                   />
                 </div>
 
                 <div className="md:col-span-4">
-                  <label className="block text-sm font-medium mb-1">Rule Name</label>
+                  <label className="block text-sm font-medium mb-1">Tên quy tắc</label>
                   <input
                     value={pr.name || ''}
                     onChange={(e) => {
@@ -1244,7 +1245,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <label className="block text-sm font-medium mb-1">Trạng thái</label>
                   <select
                     value={pr.status || 'active'}
                     onChange={(e) => {
@@ -1254,8 +1255,8 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">Đang hoạt động</option>
+                    <option value="inactive">Tạm tắt</option>
                   </select>
                 </div>
 
@@ -1269,7 +1270,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                       }))
                     }
                     className="h-11 w-11 inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
-                    title="Remove rule"
+                    title="Xoá quy tắc"
                   >
                     <Trash2 className="h-5 w-5" />
                   </button>
@@ -1280,14 +1281,14 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         </section>
       )}
 
-      {/* Submit error */}
+      {/* Lỗi gửi form */}
       {submitError && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 py-2.5 px-4 text-sm text-rose-700">
           {submitError}
         </div>
       )}
 
-      {/* Navigation Buttons */}
+      {/* Điều hướng */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
           {step > 1 && (
@@ -1296,7 +1297,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               onClick={prevStep}
               className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50"
             >
-              Previous
+              Trước
             </button>
           )}
         </div>
@@ -1308,7 +1309,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               onClick={nextStep}
               className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700"
             >
-              Next
+              Kế tiếp
             </button>
           )}
 
@@ -1319,7 +1320,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 disabled={submitting}
                 className="px-6 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
               >
-                {submitting ? 'Publishing…' : 'Publish'}
+                {submitting ? 'Đang đăng…' : 'Đăng bán'}
               </button>
               <button
                 type="button"
@@ -1327,7 +1328,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 onClick={() => handleSubmit('draft')}
                 className="px-6 py-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60"
               >
-                {submitting ? 'Saving…' : 'Save Draft'}
+                {submitting ? 'Đang lưu…' : 'Lưu nháp'}
               </button>
             </>
           )}

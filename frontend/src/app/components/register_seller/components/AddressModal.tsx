@@ -5,6 +5,7 @@ import {
   validateAddressForm,
   validateAddressField,
   AddressValidationCtx,
+  AddressField, // ✅ thêm type vào đây
 } from '../utils/validation';
 
 interface AddressFormData {
@@ -31,7 +32,7 @@ interface AddressModalProps {
 }
 
 const baseInput =
-  'w-full rounded-xl border bg-white px-3 py-1.5 outline-none transition focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60';
+  'w-full rounded-xl border bg-white px-3 py-1.5 outline-none transition focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 min-h-[42px]';
 const baseSelect =
   'w-full appearance-none rounded-xl border bg-white px-3 py-1.5 pr-9 outline-none transition focus:ring-4';
 const baseLabel = 'text-[11px] font-medium text-slate-700';
@@ -48,6 +49,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
 }) => {
   const [version, setVersion] = React.useState<'v1' | 'v2'>('v2');
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [isVisible, setIsVisible] = React.useState(false);
 
   const {
     provinces,
@@ -68,7 +70,16 @@ const AddressModal: React.FC<AddressModalProps> = ({
   const onlyDigits = (s: string) => (s || '').replace(/\D/g, '');
   const trim = (s?: string) => (s ?? '').trim();
 
-  useEffect(() => { if (show) setVersion('v2'); }, [show]);
+  // Hiệu ứng fade-in/out
+  useEffect(() => {
+    if (show) {
+      setIsVisible(true);
+      setVersion('v2');
+    } else {
+      const t = setTimeout(() => setIsVisible(false), 200);
+      return () => clearTimeout(t);
+    }
+  }, [show]);
 
   useEffect(() => {
     resetLocation();
@@ -78,7 +89,7 @@ const AddressModal: React.FC<AddressModalProps> = ({
     setErrors({});
   }, [version]);
 
-  if (!show) return null;
+  if (!show && !isVisible) return null;
 
   const ctx: AddressValidationCtx = {
     isV2,
@@ -87,56 +98,85 @@ const AddressModal: React.FC<AddressModalProps> = ({
     wardCode: selectedWard?.code ?? null,
   };
 
-  const withErr = (field: string) =>
+  const withErr = (f: string) =>
     `${
-      field === 'province' || field === 'district' || field === 'ward' ? baseSelect : baseInput
-    } ${errors[field] ? err : ok}`;
+      f === 'province' || f === 'district' || f === 'ward' ? baseSelect : baseInput
+    } ${errors[f] ? err : ok}`;
 
-  const handleBlur = (field: any) => {
+  // ✅ fix type error bằng cách dùng AddressField
+  const handleBlur = (field: AddressField) => {
     const msg = validateAddressField(addressFormData as any, field, ctx);
     setErrors((p) => ({ ...p, [field]: msg }));
   };
 
   const handleSubmit = () => {
-    const nextErrors = validateAddressForm(addressFormData as any, ctx);
-    setErrors(nextErrors as Record<string, string>);
-    if (Object.keys(nextErrors).length === 0) onSave(version);
+    const next = validateAddressForm(addressFormData as any, ctx);
+    setErrors(next as Record<string, string>);
+    if (Object.keys(next).length === 0) onSave(version);
   };
 
-  const clearFieldError = (field: string, value: any) => {
+  const clearFieldError = (field: string, val: any) => {
     if (errors[field]) {
-      setErrors((p) => { const n = { ...p }; delete n[field]; return n; });
+      setErrors((p) => {
+        const n = { ...p };
+        delete n[field];
+        return n;
+      });
     }
-    onInputChange(field, value);
+    onInputChange(field, val);
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-100 bg-white shadow-xl ring-1 ring-slate-100">
+    <div
+      className={`fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 backdrop-blur-md p-4 transition-opacity duration-200 ${
+        show ? 'opacity-100' : 'opacity-0'
+      }`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="addressModalTitle"
+    >
+      <div
+        className={`w-full max-w-2xl my-10 rounded-2xl border border-slate-100 bg-white shadow-xl ring-1 ring-slate-100 transform transition-all duration-300 ease-out ${
+          show ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <h3 id="addressModalTitle" className="text-sm font-semibold text-slate-800">
             {editingAddress ? 'Chỉnh sửa địa chỉ lấy hàng' : 'Thêm địa chỉ lấy hàng'}
           </h3>
-          <button type="button" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+            aria-label="Close"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 pb-28">
           <div className="mb-3 inline-flex rounded-lg bg-slate-100 p-1">
             <button
               type="button"
               onClick={() => setVersion('v2')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md ${version === 'v2' ? 'bg-white text-sky-700 shadow-sm ring-1 ring-sky-200' : 'text-slate-600 hover:text-slate-800'}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                version === 'v2'
+                  ? 'bg-white text-sky-700 shadow-sm ring-1 ring-sky-200'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
             >
               Địa chỉ V2
             </button>
             <button
               type="button"
               onClick={() => setVersion('v1')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md ${version === 'v1' ? 'bg-white text-sky-700 shadow-sm ring-1 ring-sky-200' : 'text-slate-600 hover:text-slate-800'}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md ${
+                version === 'v1'
+                  ? 'bg-white text-sky-700 shadow-sm ring-1 ring-sky-200'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
             >
               Địa chỉ V1
             </button>
@@ -149,18 +189,22 @@ const AddressModal: React.FC<AddressModalProps> = ({
             </div>
           )}
 
+          {/* FORM */}
           <form className="space-y-3">
+            {/* --- Hàng 1 --- */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className={`${baseLabel} mb-1 block`}>Tên người nhận *</label>
                 <input
                   className={withErr('recipient_name')}
                   value={addressFormData.recipient_name}
-                  onBlur={() => { const v = trim(addressFormData.recipient_name); clearFieldError('recipient_name', v); handleBlur('recipient_name'); }}
+                  onBlur={() => handleBlur('recipient_name')}
                   onChange={(e) => clearFieldError('recipient_name', e.target.value)}
                   placeholder="Nguyễn Văn A"
                 />
-                {errors.recipient_name && <p className="mt-1 text-[11px] text-rose-600">{errors.recipient_name}</p>}
+                {errors.recipient_name && (
+                  <p className="mt-1 text-[11px] text-rose-600">{errors.recipient_name}</p>
+                )}
               </div>
               <div>
                 <label className={`${baseLabel} mb-1 block`}>Số điện thoại *</label>
@@ -170,48 +214,62 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   className={withErr('phone')}
                   value={addressFormData.phone}
                   onBlur={() => handleBlur('phone')}
-                  onChange={(e) => clearFieldError('phone', onlyDigits(e.target.value).slice(0, 11))}
+                  onChange={(e) =>
+                    clearFieldError('phone', onlyDigits(e.target.value).slice(0, 11))
+                  }
                   placeholder="0123456789"
                 />
-                {errors.phone && <p className="mt-1 text-[11px] text-rose-600">{errors.phone}</p>}
+                {errors.phone && (
+                  <p className="mt-1 text-[11px] text-rose-600">{errors.phone}</p>
+                )}
               </div>
             </div>
 
+            {/* --- Hàng 2 --- */}
             <div>
               <label className={`${baseLabel} mb-1 block`}>Địa chỉ đường phố *</label>
               <input
                 className={withErr('street')}
                 value={addressFormData.street}
-                onBlur={() => { const v = trim(addressFormData.street); clearFieldError('street', v); handleBlur('street'); }}
+                onBlur={() => handleBlur('street')}
                 onChange={(e) => clearFieldError('street', e.target.value)}
                 placeholder="123 Nguyễn Văn Linh"
               />
-              {errors.street && <p className="mt-1 text-[11px] text-rose-600">{errors.street}</p>}
+              {errors.street && (
+                <p className="mt-1 text-[11px] text-rose-600">{errors.street}</p>
+              )}
             </div>
 
+            {/* --- Hàng 3 --- */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className={`${baseLabel} mb-1 block`}>Tỉnh/Thành phố *</label>
                 <div className="relative">
                   <select
-                    className={`${withErr('province')}`}
+                    className={withErr('province')}
                     value={selectedProvince?.code || ''}
                     onBlur={() => handleBlur('province')}
                     onChange={(e) => {
-                      const provinceCode = parseInt(e.target.value);
-                      const provName = provinces.find((p) => p.code === provinceCode)?.name || '';
-                      clearFieldError('province', provName);
-                      handleProvinceChange(provinceCode);
+                      const code = parseInt(e.target.value);
+                      const name =
+                        provinces.find((p) => p.code === code)?.name || '';
+                      clearFieldError('province', name);
+                      handleProvinceChange(code);
                     }}
                     disabled={loading}
                   >
                     <option value="">Chọn tỉnh/thành phố</option>
-                    {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+                    {provinces.map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
-                {loading && <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang tải...</div>}
-                {errors.province && <p className="mt-1 text-[11px] text-rose-600">{errors.province}</p>}
+                {errors.province && (
+                  <p className="mt-1 text-[11px] text-rose-600">{errors.province}</p>
+                )}
               </div>
 
               {!isV2 && (
@@ -223,19 +281,26 @@ const AddressModal: React.FC<AddressModalProps> = ({
                       value={selectedDistrict?.code || ''}
                       onBlur={() => handleBlur('district')}
                       onChange={(e) => {
-                        const districtCode = parseInt(e.target.value);
-                        const distName = districts.find((d) => d.code === districtCode)?.name || '';
-                        clearFieldError('district', distName);
-                        handleDistrictChange(districtCode);
+                        const code = parseInt(e.target.value);
+                        const name =
+                          districts.find((d) => d.code === code)?.name || '';
+                        clearFieldError('district', name);
+                        handleDistrictChange(code);
                       }}
                       disabled={!selectedProvince || loading}
                     >
                       <option value="">Chọn quận/huyện</option>
-                      {districts.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
+                      {districts.map((d) => (
+                        <option key={d.code} value={d.code}>
+                          {d.name}
+                        </option>
+                      ))}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   </div>
-                  {errors.district && <p className="mt-1 text-[11px] text-rose-600">{errors.district}</p>}
+                  {errors.district && (
+                    <p className="mt-1 text-[11px] text-rose-600">{errors.district}</p>
+                  )}
                 </div>
               )}
 
@@ -247,22 +312,34 @@ const AddressModal: React.FC<AddressModalProps> = ({
                     value={selectedWard?.code || ''}
                     onBlur={() => handleBlur('ward')}
                     onChange={(e) => {
-                      const wardCode = parseInt(e.target.value);
-                      const wardName = wards.find((w) => w.code === wardCode)?.name || '';
-                      clearFieldError('ward', wardName);
-                      handleWardChange(wardCode);
+                      const code = parseInt(e.target.value);
+                      const name =
+                        wards.find((w) => w.code === code)?.name || '';
+                      clearFieldError('ward', name);
+                      handleWardChange(code);
                     }}
-                    disabled={(isV2 && !selectedProvince) || (!isV2 && !selectedDistrict) || loading}
+                    disabled={
+                      (isV2 && !selectedProvince) ||
+                      (!isV2 && !selectedDistrict) ||
+                      loading
+                    }
                   >
                     <option value="">Chọn phường/xã</option>
-                    {wards.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
+                    {wards.map((w) => (
+                      <option key={w.code} value={w.code}>
+                        {w.name}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 </div>
-                {errors.ward && <p className="mt-1 text-[11px] text-rose-600">{errors.ward}</p>}
+                {errors.ward && (
+                  <p className="mt-1 text-[11px] text-rose-600">{errors.ward}</p>
+                )}
               </div>
             </div>
 
+            {/* --- Hàng 4 --- */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
                 <label className={`${baseLabel} mb-1 block`}>Mã bưu điện *</label>
@@ -270,38 +347,60 @@ const AddressModal: React.FC<AddressModalProps> = ({
                   className={withErr('postal_code')}
                   value={addressFormData.postal_code}
                   onBlur={() => handleBlur('postal_code')}
-                  onChange={(e) => clearFieldError('postal_code', onlyDigits(e.target.value).slice(0, 6))}
+                  onChange={(e) =>
+                    clearFieldError('postal_code', onlyDigits(e.target.value).slice(0, 6))
+                  }
                   placeholder="700000"
                 />
-                {errors.postal_code && <p className="mt-1 text-[11px] text-rose-600">{errors.postal_code}</p>}
+                {errors.postal_code && (
+                  <p className="mt-1 text-[11px] text-rose-600">{errors.postal_code}</p>
+                )}
               </div>
               <div>
                 <label className={`${baseLabel} mb-1 block`}>Quốc gia *</label>
                 <input
                   className={withErr('country')}
                   value={addressFormData.country}
-                  onBlur={() => { const v = trim(addressFormData.country); clearFieldError('country', v); handleBlur('country'); }}
+                  onBlur={() => handleBlur('country')}
                   onChange={(e) => clearFieldError('country', e.target.value)}
                   placeholder="Vietnam"
                 />
-                {errors.country && <p className="mt-1 text-[11px] text-rose-600">{errors.country}</p>}
+                {errors.country && (
+                  <p className="mt-1 text-[11px] text-rose-600">{errors.country}</p>
+                )}
               </div>
             </div>
 
+            {/* --- Hàng 5 --- */}
             <div>
               <label className={`${baseLabel} mb-1 block`}>Chi tiết thêm</label>
-              <textarea rows={2} className={`${baseInput} ${ok}`} value={addressFormData.detail} onChange={(e) => onInputChange('detail', e.target.value)} placeholder="Ghi chú thêm về địa chỉ..." />
+              <textarea
+                rows={2}
+                className={`${baseInput} ${ok}`}
+                value={addressFormData.detail}
+                onChange={(e) => onInputChange('detail', e.target.value)}
+                placeholder="Ghi chú thêm về địa chỉ..."
+              />
             </div>
           </form>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button type="button" onClick={onClose} className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
             Hủy
           </button>
-          <button type="button" onClick={handleSubmit} className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 active:bg-sky-800">
-            <MapPin className="mr-2 h-4 w-4" />{editingAddress ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ'}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 active:bg-sky-800"
+          >
+            <MapPin className="mr-2 h-4 w-4" />
+            {editingAddress ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ'}
           </button>
         </div>
       </div>

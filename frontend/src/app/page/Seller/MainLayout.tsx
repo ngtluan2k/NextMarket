@@ -67,7 +67,6 @@ const SellerMainLayout: React.FC = () => {
           {!store?.is_draft && pages[activePage]}
         </Content>
         <Footer style={{ textAlign: 'center' }}>
-          Ant Design ©2025 Created by Ant UED
         </Footer>
       </Layout>
     </Layout>
