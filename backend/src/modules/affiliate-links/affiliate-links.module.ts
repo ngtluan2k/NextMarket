@@ -10,6 +10,7 @@ import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { Product } from '../product/product.entity';
 import { OrderItem } from '../order-items/order-item.entity';
+import { User } from '../user/user.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { OrderItem } from '../order-items/order-item.entity';
       AffiliateProgram,
       Product,
       OrderItem,
+      User,
     ]),
     UserModule,
     AffiliateCommissionsModule,

@@ -13,6 +13,7 @@ import StoreManager from './StoreManager';
 import AffiliateProgramDashboard from './AffiliateProgramDashboard';
 import AffiliateRegistration from './AffiliateRegistrationManager';
 import { Empty } from 'antd';
+import AffiliateRulesManager from './AffiliateRulesManager';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -128,6 +129,8 @@ export const AdminDashboard: React.FC = () => {
         return <AffiliateRegistration />;
       case '11-2':
         return <AffiliateProgramDashboard />;
+      case '11-3':
+        return <AffiliateRulesManager />;
       case 'permissions':
         return <PermissionManager />;
       case 'userRoles':
@@ -158,3 +161,4 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+

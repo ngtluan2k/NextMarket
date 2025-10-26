@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { OrderItem } from '../order-items/order-item.entity';
+import { User } from '../user/user.entity';
 
 @Entity('affiliate_commissions')
 export class AffiliateCommission {
@@ -35,4 +36,24 @@ export class AffiliateCommission {
 
   @Column({ type: 'timestamp', nullable: true })
   paid_at?: Date;
+
+  // Thêm các trường mới cho affiliate tree
+  @ManyToOne(() => User, (user) => user.id)
+  @JoinColumn({ name: 'beneficiary_user_id' })
+  beneficiary_user_id!: User;
+
+  @Column({ type: 'int', nullable: true })
+  level!: number | null;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  base_amount!: number | null;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  rate_percent!: number | null;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  computed_amount!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  program_id!: number | null;
 }
