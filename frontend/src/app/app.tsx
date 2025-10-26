@@ -47,6 +47,7 @@ import OtpVerifyPage from './page/OtpVerify';
 import TestWallet from './test';
 import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
 import StoreOwnerVoucherManager from '../app/components/seller/StoreOwnerVoucherManager';
+import AffiliateRulesManager from './components/admin/AffiliateRulesManager';
 
 import OrderDetailPage from "./page/account/OrderDetailPage";
 
@@ -101,6 +102,7 @@ const App: React.FC = () => {
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/affiliate-rules" element={<AffiliateRulesManager />} />
 
           {/* Seller */}
           <Route path="/seller-registration" element={<SellerRegistration />} />

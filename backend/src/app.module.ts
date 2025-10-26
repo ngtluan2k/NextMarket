@@ -56,6 +56,8 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AffiliateRulesModule } from './modules/affiliate-rules/affiliate-rules.module';
+import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.module';
 
 
 
@@ -144,10 +146,9 @@ import { AdminModule } from './modules/admin/admin.module';
     AffiliateRegistrationPlatformModule,
     InventoryTransactionModule,
     GroupOrdersModule,
-    AdminModule
-   
-    
-
+    AdminModule,
+    AffiliateRulesModule,
+    AffiliateTreeModule
   ],
   providers: [],
 })

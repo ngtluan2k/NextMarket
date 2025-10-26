@@ -5,12 +5,14 @@ import { AffiliateProgram } from './affiliate-program.entity';
 import { UpdateAffiliateProgramDto } from './dto/update-affiliate-program.dto';
 import { CreateAffiliateProgramDto } from './dto/create-affiliate-program.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { AffiliateRulesService } from '../affiliate-rules/affiliate-rules.service';
 
 @Injectable()
 export class AffiliateProgramsService {
   constructor(
     @InjectRepository(AffiliateProgram)
-    private repository: Repository<AffiliateProgram>
+    private repository: Repository<AffiliateProgram>,
+    private readonly rulesService: AffiliateRulesService,
   ) {}
 
   async create(
@@ -58,8 +60,12 @@ export class AffiliateProgramsService {
     if (action === 'delete') {
       program.status = 'inactive';
       await this.repository.save(program);
+      
+      // Soft delete all commission rules for this program
+      await this.rulesService.softDeleteRulesByProgram(program.id);
+      
       return {
-        message: `Affiliate program "${program.name}" has been deleted successfully.`,
+        message: `Affiliate program "${program.name}" has been deleted successfully. All associated commission rules have been deactivated.`,
       };
     }
 
