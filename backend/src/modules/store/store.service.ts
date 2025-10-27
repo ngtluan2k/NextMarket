@@ -95,6 +95,7 @@ export class StoreService {
       where: includeDeleted
         ? { user_id: userId }
         : { user_id: userId, is_deleted: false },
+         relations: ['storeLevels'],
     });
   }
 

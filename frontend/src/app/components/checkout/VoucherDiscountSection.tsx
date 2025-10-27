@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, List, Button, Input, message, Tag, Empty, Spin } from 'antd';
 import {
-  TagOutlined,
-  CheckCircleFilled,
-  CloseCircleOutlined,
-} from '@ant-design/icons';
+  Modal,
+  List,
+  Button,
+  Input,
+  message,
+  Tag,
+  Empty,
+  Spin,
+  Tabs,
+} from 'antd';
+import { TagOutlined, CheckCircleFilled } from '@ant-design/icons';
 import { api } from '../../api/api';
+import { userVoucherApi, publicVoucherApi } from '../../api/voucher.api';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -15,6 +22,7 @@ import {
   VoucherType,
   VoucherStatus,
 } from '../../types/voucher';
+import { debounce } from 'lodash';
 
 interface Props {
   visible: boolean;
@@ -25,11 +33,7 @@ interface Props {
   onApply: (vouchers: Voucher[], totalDiscount: number) => void;
   selectedVouchers?: Voucher[];
   maxSelect?: number;
-}
-
-interface Product {
-  id: number;
-  category_id?: number;
+  filterByStore?: boolean;
 }
 
 const VoucherDiscountSection: React.FC<Props> = ({
@@ -41,17 +45,15 @@ const VoucherDiscountSection: React.FC<Props> = ({
   onApply,
   selectedVouchers = [],
   maxSelect = Infinity,
+  filterByStore = false,
 }) => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [expiredVouchers, setExpiredVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
-  const [selectedIds, setSelectedIds] = useState<number[]>(
-    selectedVouchers.map((v) => v.id)
-  );
-  const [selectedTypes, setSelectedTypes] = useState<number[]>(
-    selectedVouchers.map((v) => v.type)
-  );
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<number[]>([]);
   const [voucherDiscounts, setVoucherDiscounts] = useState<
     Record<number, number>
   >({});
@@ -60,38 +62,119 @@ const VoucherDiscountSection: React.FC<Props> = ({
   >({});
   const { me } = useAuth();
   const navigate = useNavigate();
+  const [searchText, setSearchText] = useState('');
+  const [visibleCount, setVisibleCount] = useState(6);
+  const [invalidVoucherIds, setInvalidVoucherIds] = useState<number[]>([]);
+  const [applicableVouchers, setApplicableVouchers] = useState<Voucher[]>([]);
+  const [allVouchersCache, setAllVouchersCache] = useState<Voucher[]>([]);
+  const [currentTotalDiscount, setCurrentTotalDiscount] = useState(0);
+  const [isDataReady, setIsDataReady] = useState(false);
 
-  // Log input data for debugging
-  useEffect(() => {
-    console.log('Order items:', orderItems);
-    console.log('Store ID:', storeId);
-    console.log('Order amount:', orderAmount);
-    console.log('Selected vouchers:', selectedVouchers);
-    console.log('Selected types:', selectedTypes);
-  }, [orderItems, storeId, orderAmount, selectedVouchers]);
+  const subtotal = orderItems.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
 
-  // Load product categories and available vouchers
   useEffect(() => {
-    if (visible && me?.user_id) {
-      fetchProductCategories();
-      fetchAvailableVouchers();
-    } else if (visible && !me?.id) {
-      message.error('Vui lòng đăng nhập để xem danh sách voucher');
-      onClose();
-      navigate('/login');
+    if (!visible) {
+      setIsDataReady(false);
+      setVouchers([]);
+      setVoucherDiscounts({});
+      setInvalidVoucherIds([]);
+      setApplicableVouchers([]);
+      setCurrentTotalDiscount(0);
+      setSearchText('');
+      setVisibleCount(6);
     }
+  }, [visible]);
+
+  //  Reset selected state khi modal mở
+  useEffect(() => {
+    if (visible) {
+      console.log('🔄 [VoucherModal] Modal opened, resetting selected state');
+      const filteredSelected = selectedVouchers.filter((v) =>
+        filterByStore ? v.store_id === storeId : true
+      );
+
+      setSelectedIds(filteredSelected.map((v) => v.id));
+      setSelectedTypes(filteredSelected.map((v) => v.type));
+    }
+  }, [visible, selectedVouchers, filterByStore, storeId]);
+
+  //  Load data when modal opens
+  useEffect(() => {
+    if (visible && me?.id) {
+      const loadData = async () => {
+        setIsDataReady(false);
+        await fetchProductCategories();
+        await fetchAvailableVouchers();
+        // Data is ready after vouchers are loaded
+      };
+      loadData();
+    } 
   }, [visible, me, onClose, navigate]);
 
-  // Calculate discounts for all vouchers
+  //  Calculate discounts AFTER vouchers are loaded
   useEffect(() => {
-    if (vouchers.length > 0) {
-      console.log('Calculating discounts for vouchers:', vouchers);
-      calculateAllDiscounts();
+    if (vouchers.length > 0 && applicableVouchers.length > 0) {
+      const calculate = async () => {
+        await calculateAllDiscounts();
+        setIsDataReady(true); //  Mark as ready after calculations
+        console.log(' [VoucherModal] Data is ready');
+      };
+      calculate();
     }
-  }, [vouchers, orderAmount]);
+  }, [applicableVouchers.length]); // Only trigger when applicableVouchers changes
+
+  //  Update current total discount when selection changes
+  useEffect(() => {
+    if (!orderItems?.length || !storeId || !isDataReady) {
+      setCurrentTotalDiscount(0);
+      return;
+    }
+
+    const debouncedFetchDiscount = debounce(async () => {
+      if (selectedIds.length === 0) {
+        setCurrentTotalDiscount(0);
+        return;
+      }
+
+      const selectedVouchersForCalc = vouchers.filter((v) =>
+        selectedIds.includes(v.id)
+      );
+
+      const payload = {
+        voucherCodes: selectedVouchersForCalc.map((v) => v.code),
+        orderItems: orderItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        storeId,
+        orderAmount: subtotal,
+        userId: me?.id ?? 0,
+      };
+
+      try {
+        const res = await publicVoucherApi.calculateDiscount(payload);
+        const { discountTotal } = res;
+
+        const safeDiscount = Math.max(
+          0,
+          Math.min(subtotal, discountTotal || 0)
+        );
+        setCurrentTotalDiscount(safeDiscount);
+      } catch (error) {
+        console.error(' Error calculating discount:', error);
+        setCurrentTotalDiscount(0);
+      }
+    }, 300);
+
+    debouncedFetchDiscount();
+    return () => debouncedFetchDiscount.cancel();
+  }, [selectedIds, isDataReady]);
 
   const fetchProductCategories = async () => {
-    setLoading(true);
     try {
       const productIds = [...new Set(orderItems.map((item) => item.productId))];
       const categories: Record<number, number | undefined> = {};
@@ -101,105 +184,48 @@ const VoucherDiscountSection: React.FC<Props> = ({
       }
       setProductCategories(categories);
     } catch (error: any) {
-      message.warning('Không thể tải danh mục sản phẩm, bỏ qua kiểm tra danh mục');
       setProductCategories({});
-    } finally {
-      setLoading(false);
     }
-  };
-console.log('Product categories:', productCategories);
-  const isVoucherValid = (voucher: Voucher) => {
-
-    // Kiểm tra trạng thái
-    if (voucher.status !== VoucherStatus.ACTIVE) {
-      return false;
-    }
-
-    // Kiểm tra thời gian
-    const now = new Date();
-    if (voucher.start_date && new Date(voucher.start_date) > now) {
-      return false;
-    }
-    if (voucher.end_date && new Date(voucher.end_date) < now) {
-      return false;
-    }
-
-    // Kiểm tra store_id
-    if (voucher.applicable_store_ids && voucher.applicable_store_ids.length > 0) {
-      if (!voucher.applicable_store_ids.includes(storeId)) {
-        return false;
-      }
-    }
-
-    // Lấy danh sách product_id từ orderItems
-    const orderProductIds = orderItems.map((item) => item.productId);
-    // Kiểm tra applicable_product_ids
-    if (
-      voucher.applicable_product_ids &&
-      voucher.applicable_product_ids.length > 0
-    ) {
-      const hasApplicableProduct = orderProductIds.some((productId) =>
-        voucher.applicable_product_ids!.includes(productId)
-      );
-      if (!hasApplicableProduct) {
-        return false;
-      }
-    }
-
-    // Kiểm tra excluded_product_ids
-    if (
-      voucher.excluded_product_ids &&
-      voucher.excluded_product_ids.length > 0
-    ) {
-      const hasExcludedProduct = orderProductIds.some((productId) =>
-        voucher.excluded_product_ids!.includes(productId)
-      );
-      if (hasExcludedProduct) {
-        return false;
-      }
-    }
-
-    // Kiểm tra applicable_category_ids (bỏ qua nếu productCategories rỗng)
-    if (
-      voucher.applicable_category_ids &&
-      voucher.applicable_category_ids.length > 0 &&
-      Object.keys(productCategories).length > 0
-    ) {
-      const orderCategoryIds = orderProductIds
-        .map((productId) => productCategories[productId])
-        .filter((id): id is number => id !== undefined);
-      const hasApplicableCategory = orderCategoryIds.some((categoryId) =>
-        voucher.applicable_category_ids!.includes(categoryId)
-      );
-      if (!hasApplicableCategory) {
-        return false;
-      }
-    }
-    return true;
   };
 
   const fetchAvailableVouchers = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/user/vouchers/available');
-      const filtered = res.data.filter((v: Voucher) => {
-        if (v.store && v.store.id !== storeId) {
-          return false;
-        }
-        return isVoucherValid(v);
-      });
-      console.log({res});
-      setVouchers(filtered);
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.status === 401
-          ? 'Vui lòng đăng nhập để xem danh sách voucher'
-          : error.response?.data?.message || 'Không thể tải danh sách voucher';
-      message.error(errorMessage);
-      if (error.response?.status === 401) {
-        navigate('/login');
-        onClose();
+      if (!storeId || storeId === 0) {
+        message.error('Không thể xác định cửa hàng');
+        setLoading(false);
+        return;
       }
+
+      const allVouchers = await userVoucherApi.getAvailableVouchers(storeId, filterByStore);
+
+      console.log('📦 [VoucherModal] Loaded vouchers:', allVouchers.length);
+
+      setApplicableVouchers(allVouchers);
+
+      const mergedList = [
+        ...allVouchers,
+        ...selectedVouchers.filter(
+          (sv: Voucher) => !allVouchers.some((v: Voucher) => v.id === sv.id)
+        ),
+        ...allVouchersCache.filter(
+          (cv: Voucher) =>
+            !allVouchers.some((v: Voucher) => v.id === cv.id) &&
+            !selectedVouchers.some((sv: Voucher) => sv.id === cv.id)
+        ),
+      ];
+
+      setVouchers(mergedList);
+
+      setAllVouchersCache((prev) => {
+        const newVouchers = [...mergedList];
+        const uniqueVouchers = newVouchers.filter(
+          (nv) => !prev.some((pv) => pv.id === nv.id)
+        );
+        return [...prev, ...uniqueVouchers];
+      });
+    } catch (error: any) {
+      message.error('Không thể tải danh sách voucher');    
     } finally {
       setLoading(false);
     }
@@ -207,35 +233,47 @@ console.log('Product categories:', productCategories);
   console.log('Vouchers after filtering:', vouchers);
 
   const calculateAllDiscounts = async () => {
-    const discounts: Record<number, number> = {};
+    console.log(
+      ' [VoucherModal] Calculating discounts for',
+      applicableVouchers.length,
+      'vouchers'
+    );
 
-    for (const voucher of vouchers) {
+    const discounts: Record<number, number> = {};
+    const invalidIds: number[] = [];
+
+    for (const voucher of applicableVouchers) {
       try {
         const payload = {
           voucherCodes: [voucher.code],
-          userId: me?.id,
-          orderItems,
+          orderItems: orderItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+          })),
           storeId,
-          orderAmount,
+          orderAmount: subtotal,
+          userId: me?.id ?? 0,
         };
-        console.log(`Calculate discount payload for ${voucher.code}:`, payload);
-        const res = await api.post('/vouchers/calculate-discount', payload);
-        console.log(`Discount for voucher ${voucher.code}:`, res.data);
-        if (res.data.invalidVouchers?.length > 0) {
-          console.log(`Invalid reason for ${voucher.code}:`, res.data.invalidVouchers[0].error);
+
+        const res = await publicVoucherApi.calculateDiscount(payload);
+
+        if (res.invalidVouchers?.length > 0) {
+          invalidIds.push(voucher.id);
+          discounts[voucher.id] = 0;
+        } else {
+          const discount = res.appliedVouchers[0]?.discount || 0;
+          discounts[voucher.id] = discount;
         }
-        discounts[voucher.id] = res.data.appliedVouchers[0]?.discount || 0;
-      } catch (error) {
-        console.error(
-          `Error calculating discount for voucher ${voucher.code}:`,
-          error
-        );
+      } catch (error: any) {
+        invalidIds.push(voucher.id);
         discounts[voucher.id] = 0;
       }
     }
 
-    console.log('Voucher discounts:', discounts);
+
     setVoucherDiscounts(discounts);
+    setInvalidVoucherIds(invalidIds);
   };
 
   const formatDiscount = (voucher: Voucher) => {
@@ -251,28 +289,125 @@ console.log('Product categories:', productCategories);
     }
   };
 
-  const handleSelectVoucher = (voucher: Voucher) => {
-    if (selectedIds.includes(voucher.id)) {
-      setSelectedIds(selectedIds.filter((id) => id !== voucher.id));
-      setSelectedTypes(selectedTypes.filter((type) => type !== voucher.type));
-    } else {
-      if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
-        message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
-        return;
-      }
-      if (selectedTypes.includes(voucher.type)) {
-        message.warning(
-          `Bạn đã chọn một voucher thuộc loại này (${
-            VoucherType[voucher.type]
-          })`
-        );
-        return;
-      }
-      setSelectedIds([...selectedIds, voucher.id]);
-      setSelectedTypes([...selectedTypes, voucher.type]);
-    }
-  };
+ const isVoucherDisabled = (voucher: Voucher) => {
+  if (!isDataReady) {
+    return true;
+  }
 
+  const isSelected = selectedIds.includes(voucher.id);
+  const discount = voucherDiscounts[voucher.id] || 0;
+  const isInvalid = invalidVoucherIds.includes(voucher.id);
+
+  console.log(`🔍 Checking voucher ${voucher.code} (type: ${voucher.type}, store: ${voucher.store_id}, stackable: ${voucher.stackable})`, {
+    isSelected,
+    discount,
+    isInvalid,
+    selectedIds,
+    selectedTypes
+  });
+
+  if (isSelected) return false;
+
+  if (discount === 0 || isInvalid) {
+    console.log(`❌ Voucher ${voucher.code} disabled: discount=0 or invalid`);
+    return true;
+  }
+
+  //  FIX: LUÔN chặn chọn nhiều voucher STORE cùng cửa hàng
+  if (voucher.type === VoucherType.STORE) {
+    const selectedStoreVouchers = vouchers.filter(
+      v => selectedIds.includes(v.id) && 
+      v.type === VoucherType.STORE && 
+      v.store_id === voucher.store_id
+    );
+
+
+
+    //  QUAN TRỌNG: LUÔN disable nếu đã có voucher STORE cùng cửa hàng được chọn
+    if (selectedStoreVouchers.length > 0) {
+      return true;
+    }
+  } else {
+    // Logic cho các loại voucher khác
+    const hasSameTypeSelected = selectedTypes.includes(voucher.type);
+    if (hasSameTypeSelected && !voucher.stackable) {
+      return true;
+    }
+  }
+
+  const potentialTotal = currentTotalDiscount + discount;
+  if (potentialTotal > subtotal) {
+    return true;
+  }
+
+  return false;
+};
+
+  const handleSelectVoucher = (voucher: Voucher) => {
+  if (selectedIds.includes(voucher.id)) {
+    setSelectedIds(selectedIds.filter((id) => id !== voucher.id));
+    setSelectedTypes(selectedTypes.filter((type) => type !== voucher.type));
+    message.info(`Đã bỏ chọn voucher ${voucher.code}`);
+    return;
+  }
+
+  const discount = voucherDiscounts[voucher.id] || 0;
+
+  if (discount === 0) {
+    message.warning('Voucher này không áp dụng được cho đơn hàng hiện tại');
+    return;
+  }
+
+  if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
+    message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
+    return;
+  }
+
+  //  FIX: LUÔN chặn chọn nhiều voucher STORE cùng cửa hàng
+  if (voucher.type === VoucherType.STORE) {
+    const sameStoreVoucher = vouchers.find(
+      (v) =>
+        selectedIds.includes(v.id) &&
+        v.type === VoucherType.STORE &&
+        v.store_id === voucher.store_id
+    );
+
+    if (sameStoreVoucher) {
+      message.warning(
+        `Chỉ có thể chọn 1 voucher cửa hàng cho mỗi cửa hàng. Đã chọn ${sameStoreVoucher.code}`
+      );
+      return;
+    }
+  } else {
+    // Logic cho các loại voucher khác
+    const sameTypeVoucher = vouchers.find(
+      (v) =>
+        selectedIds.includes(v.id) &&
+        v.type === voucher.type
+    );
+
+    if (sameTypeVoucher && !voucher.stackable) {
+      message.warning(
+        `Voucher ${voucher.code} không thể kết hợp với voucher ${sameTypeVoucher.code} cùng loại`
+      );
+      return;
+    }
+  }
+
+  const potentialTotal = currentTotalDiscount + discount;
+  if (potentialTotal > subtotal) {
+    message.warning(
+      `Tổng giảm giá sẽ vượt quá giá trị đơn hàng (${subtotal.toLocaleString()}đ)`
+    );
+    return;
+  }
+
+  setSelectedIds([...selectedIds, voucher.id]);
+  setSelectedTypes([...selectedTypes, voucher.type]);
+  message.success(
+    `Đã chọn voucher ${voucher.code} (Giảm ${discount.toLocaleString()}đ)`
+  );
+};
   const handleApplyCode = async () => {
     if (!voucherCode.trim()) {
       message.warning('Vui lòng nhập mã voucher');
@@ -282,41 +417,38 @@ console.log('Product categories:', productCategories);
     setApplying(true);
     try {
       const normalizedCode = voucherCode.trim().toUpperCase();
-      const res = await api.post('/user/vouchers/apply', {
+      const payload = {
         code: normalizedCode,
         storeId,
-        orderItems,
-      });
+        orderItems: orderItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      };
+      const res = await userVoucherApi.applyVoucher(payload);
 
-      const { voucher } = res.data;
-
-      if (!isVoucherValid(voucher)) {
-        message.error('Voucher không áp dụng được cho đơn hàng này');
-        setApplying(false);
-        return;
-      }
+      const { voucher } = res;
 
       if (selectedIds.includes(voucher.id)) {
         message.info('Voucher này đã được chọn');
       } else if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
         message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
-      } else if (selectedTypes.includes(voucher.type)) {
-        message.warning(
-          `Bạn đã chọn một voucher thuộc loại này (${
-            VoucherType[voucher.type]
-          })`
-        );
+      } else if (selectedTypes.includes(voucher.type) && !voucher.stackable) {
+        message.warning('Bạn đã chọn một voucher thuộc loại này');
       } else {
         setSelectedIds([...selectedIds, voucher.id]);
         setSelectedTypes([...selectedTypes, voucher.type]);
-        if (!vouchers.find((v) => v.id === voucher.id)) {
+        if (!vouchers.find((v: Voucher) => v.id === voucher.id)) {
           setVouchers([voucher, ...vouchers]);
+        }
+        if (!allVouchersCache.find((v: Voucher) => v.id === voucher.id)) {
+          setAllVouchersCache([...allVouchersCache, voucher]);
         }
         message.success('Áp dụng mã voucher thành công');
         setVoucherCode('');
       }
     } catch (error: any) {
-      console.error('Error applying voucher:', error);
       message.error(
         error.response?.data?.message || 'Không thể áp dụng voucher'
       );
@@ -325,27 +457,42 @@ console.log('Product categories:', productCategories);
     }
   };
 
+  const handleClose = () => {
+    const filteredSelected = selectedVouchers.filter((v) =>
+      filterByStore ? v.store_id === storeId : true
+    );
+    setSelectedIds(filteredSelected.map((v) => v.id));
+    setSelectedTypes(filteredSelected.map((v) => v.type));
+    onClose();
+  };
+
   const handleConfirm = async () => {
-    const selectedVouchers = vouchers.filter((v) => selectedIds.includes(v.id));
-    if (selectedVouchers.length === 0) {
-      console.log('No vouchers selected, applying empty discount');
+    const selectedVouchersToApply = vouchers.filter((v: Voucher) =>
+      selectedIds.includes(v.id)
+    );
+
+    if (selectedVouchersToApply.length === 0) {
       onApply([], 0);
+      message.info('Đã bỏ áp dụng tất cả voucher');
       onClose();
       return;
     }
 
     try {
       const payload = {
-        voucherCodes: selectedVouchers.map((v) => v.code),
-        userId: me?.id,
-        orderItems,
+        voucherCodes: selectedVouchersToApply.map((v: Voucher) => v.code),
+        orderItems: orderItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        })),
         storeId,
-        orderAmount,
+        orderAmount: subtotal,
+        userId: me?.id ?? 0,
       };
-      console.log('Sending calculate-discount payload:', payload);
-      const res = await api.post('/vouchers/calculate-discount', payload);
-      console.log('Calculate discount response:', res.data);
-      const { discountTotal, appliedVouchers, invalidVouchers } = res.data;
+
+      const res = await publicVoucherApi.calculateDiscount(payload);
+      const { discountTotal, appliedVouchers, invalidVouchers } = res;
 
       if (invalidVouchers?.length > 0) {
         invalidVouchers.forEach((v: { code: string; error: string }) => {
@@ -353,27 +500,54 @@ console.log('Product categories:', productCategories);
         });
       }
 
-      onApply(
-        selectedVouchers,
-        Number.isFinite(discountTotal) ? discountTotal : 0
+      const safeDiscountTotal = Math.max(
+        0,
+        Math.min(subtotal, discountTotal || 0)
       );
-      message.success(`Áp dụng ${appliedVouchers.length} voucher thành công`);
+
+      onApply(selectedVouchersToApply, safeDiscountTotal);
+
+      if (appliedVouchers.length > 0) {
+        message.success(`Áp dụng ${appliedVouchers.length} voucher thành công`);
+      } else {
+        message.info('Không có voucher nào được áp dụng');
+      }
+
       onClose();
     } catch (error: any) {
-      console.error('Error calculating discount:', error);
-      message.error(
-        error.response?.data?.message || 'Không thể tính toán giảm giá'
-      );
+      message.error('Không thể tính toán giảm giá');
       onApply([], 0);
     }
   };
 
-  const filteredVouchers = vouchers.filter(
-    (voucher) =>
-      !selectedTypes.includes(voucher.type) || selectedIds.includes(voucher.id)
-  );
+  const getFilteredVouchers = () => {
+    let list = [
+      ...vouchers,
+      ...selectedVouchers.filter(
+        (sv: Voucher) => !vouchers.some((v: Voucher) => v.id === sv.id)
+      ),
+      ...allVouchersCache.filter(
+        (cv: Voucher) =>
+          !vouchers.some((v: Voucher) => v.id === cv.id) &&
+          !selectedVouchers.some((sv: Voucher) => sv.id === cv.id)
+      ),
+    ];
 
-  console.log('Filtered vouchers for rendering:', filteredVouchers);
+    if (searchText) {
+      list = list.filter(
+        (v: Voucher) =>
+          v.code.toLowerCase().includes(searchText.toLowerCase()) ||
+          v.title.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    return list.sort((a: Voucher, b: Voucher) => {
+      const aSelected = selectedIds.includes(a.id) ? 1 : 0;
+      const bSelected = selectedIds.includes(b.id) ? 1 : 0;
+      if (aSelected !== bSelected) return bSelected - aSelected;
+      return (voucherDiscounts[b.id] || 0) - (voucherDiscounts[a.id] || 0);
+    });
+  };
 
   return (
     <Modal
@@ -384,24 +558,45 @@ console.log('Product categories:', productCategories);
         </div>
       }
       open={visible}
-      onCancel={onClose}
+      onCancel={handleClose}
       width={650}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <div>
-            <Tag color="blue">
+            <Tag color={selectedIds.length === 0 ? 'default' : 'blue'}>
               {selectedIds.length} đã chọn
               {maxSelect !== Infinity && ` / ${maxSelect}`}
             </Tag>
+            {currentTotalDiscount > 0 && (
+              <>
+                <Tag color="green" style={{ marginLeft: 8 }}>
+                  Giảm: {currentTotalDiscount.toLocaleString()}đ
+                </Tag>
+                <Tag color="blue" style={{ marginLeft: 8 }}>
+                  Còn lại:{' '}
+                  {Math.max(
+                    0,
+                    subtotal - currentTotalDiscount
+                  ).toLocaleString()}
+                  đ
+                </Tag>
+              </>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button onClick={onClose}>Hủy</Button>
+            <Button onClick={handleClose}>Hủy</Button>
             <Button
               type="primary"
               onClick={handleConfirm}
-              disabled={selectedIds.length === 0}
+              disabled={!isDataReady}
             >
-              Áp dụng
+              {selectedIds.length === 0 ? 'Xác nhận' : 'Áp dụng'}
             </Button>
           </div>
         </div>
@@ -416,129 +611,154 @@ console.log('Product categories:', productCategories);
           onSearch={handleApplyCode}
           loading={applying}
           size="large"
+          disabled={!isDataReady}
         />
       </div>
 
-      <Spin spinning={loading}>
-        {filteredVouchers.length === 0 ? (
+      <Spin
+        spinning={loading || !isDataReady}
+        tip={!isDataReady ? 'Loading...' : undefined}
+      >
+        {getFilteredVouchers().length === 0 ? (
           <Empty description="Không có voucher khả dụng" />
         ) : (
-          <List
-            dataSource={filteredVouchers}
-            renderItem={(voucher) => {
-              const isSelected = selectedIds.includes(voucher.id);
-              const discount = voucherDiscounts[voucher.id] || 0;
+          <>
+            <List
+              dataSource={getFilteredVouchers().slice(0, visibleCount)}
+              renderItem={(voucher) => {
+                const isSelected = selectedIds.includes(voucher.id);
+                const discount = voucherDiscounts[voucher.id] || 0;
+                const isDisabled = isVoucherDisabled(voucher);
+                const isInvalid = invalidVoucherIds.includes(voucher.id);
 
-              return (
-                <List.Item
-                  style={{
-                    border: isSelected
-                      ? '2px solid #1890ff'
-                      : '1px solid #d9d9d9',
-                    borderRadius: 8,
-                    marginBottom: 12,
-                    padding: 16,
-                    cursor: 'pointer',
-                    background: isSelected ? '#e6f7ff' : 'white',
-                  }}
-                  onClick={() => handleSelectVoucher(voucher)}
-                >
-                  <div style={{ display: 'flex', width: '100%', gap: 12 }}>
-                    <div
-                      style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: 8,
-                        background: voucher.theme_color || '#ff6b6b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: 24,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <TagOutlined />
-                    </div>
-
-                    <div style={{ flex: 1 }}>
+                return (
+                  <List.Item
+                    style={{
+                      border: isSelected
+                        ? '2px solid #1890ff'
+                        : '1px solid #e8e8e8',
+                      borderRadius: 8,
+                      marginBottom: 12,
+                      padding: 16,
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      background: isSelected ? '#e6f7ff' : 'white',
+                      opacity: isDisabled ? 0.4 : 1,
+                      pointerEvents: isDisabled ? 'none' : 'auto',
+                      transition: 'all 0.3s ease',
+                    }}
+                    onClick={() => !isDisabled && handleSelectVoucher(voucher)}
+                  >
+                    <div style={{ display: 'flex', width: '100%', gap: 12 }}>
                       <div
                         style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 8,
+                          background: voucher.theme_color || '#ff6b6b',
                           display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: 24,
+                          flexShrink: 0,
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: 'bold', fontSize: 16 }}>
-                            {formatDiscount(voucher)}
-                          </div>
-                          <div style={{ color: '#666', fontSize: 12 }}>
-                            {voucher.title}
-                          </div>
-                          <div
-                            style={{
-                              color: '#999',
-                              fontSize: 12,
-                              marginTop: 4,
-                            }}
-                          >
-                            Mã: <strong>{voucher.code}</strong>
-                          </div>
-                          {voucher.min_order_amount > 0 && (
-                            <div style={{ color: '#999', fontSize: 12 }}>
-                              Đơn tối thiểu:{' '}
-                              {voucher.min_order_amount.toLocaleString()}đ
-                            </div>
-                          )}
-                          {discount > 0 ? (
-                            <Tag color="green" style={{ marginTop: 4 }}>
-                              Giảm {discount.toLocaleString()}đ
-                            </Tag>
-                          ) : (
-                            <Tag color="orange" style={{ marginTop: 4 }}>
-                              Chưa áp dụng được
-                            </Tag>
-                          )}
-                        </div>
-
-                        <div>
-                          {isSelected ? (
-                            <CheckCircleFilled
-                              style={{ fontSize: 24, color: '#1890ff' }}
-                            />
-                          ) : (
-                            <div
-                              style={{
-                                width: 24,
-                                height: 24,
-                                border: '2px solid #d9d9d9',
-                                borderRadius: '50%',
-                              }}
-                            />
-                          )}
-                        </div>
+                        <TagOutlined />
                       </div>
 
-                      {voucher.description && (
+                      <div style={{ flex: 1 }}>
                         <div
                           style={{
-                            fontSize: 12,
-                            color: '#999',
-                            marginTop: 8,
-                            borderTop: '1px dashed #d9d9d9',
-                            paddingTop: 8,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
                           }}
                         >
-                          {voucher.description}
+                          <div>
+                            <div
+                              style={{
+                                fontWeight: 'bold',
+                                fontSize: 16,
+                              }}
+                            >
+                              {formatDiscount(voucher)}
+                            </div>
+                            <div style={{ color: '#666', fontSize: 12 }}>
+                              {voucher.title}
+                            </div>
+                            <div
+                              style={{
+                                color: '#999',
+                                fontSize: 12,
+                                marginTop: 4,
+                              }}
+                            >
+                              Mã: <strong>{voucher.code}</strong>
+                            </div>
+                            {voucher.min_order_amount > 0 && (
+                              <div style={{ color: '#999', fontSize: 12 }}>
+                                Đơn tối thiểu:{' '}
+                                {voucher.min_order_amount.toLocaleString()}đ
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            {isSelected ? (
+                              <CheckCircleFilled
+                                style={{ fontSize: 24, color: '#1890ff' }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  border: '2px solid #d9d9d9',
+                                  borderRadius: '50%',
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
-                      )}
+
+                        {voucher.description && (
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: '#999',
+                              marginTop: 8,
+                              borderTop: '1px dashed #e8e8e8',
+                              paddingTop: 8,
+                            }}
+                          >
+                            {voucher.description}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </List.Item>
-              );
-            }}
-          />
+                  </List.Item>
+                );
+              }}
+            />
+            {getFilteredVouchers().length > visibleCount && (
+              <div style={{ textAlign: 'center', marginTop: 8 }}>
+                <Button
+                  type="link"
+                  onClick={() => setVisibleCount(visibleCount + 8)}
+                >
+                  Xem thêm
+                </Button>
+              </div>
+            )}
+
+            {visibleCount > 8 && (
+              <div style={{ textAlign: 'center', marginTop: 4 }}>
+                <Button type="link" onClick={() => setVisibleCount(8)}>
+                  Thu gọn
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </Spin>
     </Modal>

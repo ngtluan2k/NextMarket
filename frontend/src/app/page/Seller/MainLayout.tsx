@@ -14,45 +14,95 @@ import { storeService } from '../../../service/store.service';
 import StoreDraftBanner from './StoreDraftBanner';
 import StoreInfoTab from './tab/StoreInfoTab';
 import StoreOwnerVoucherManager from '../../components/seller/StoreOwnerVoucherManager';
+import StoreCampaignManager from './tab/StoreCampaignManager';
+import StoreCampaignDetail from './tab/StoreCampaignDetail';
 
 const { Content, Footer } = Layout;
 
-const pages: Record<string, React.ReactNode> = {
-  Dashboard: <StoreOwnerDashboard />,
-  SalesManagement: <Sale />,
-  StoreInventory: <StoreInventory />,
-  Customers: <Customer />,
-  Invoices: <Invoice />,
-  StoreInfo: <StoreInfoTab />,
-  VoucherManagement:<StoreOwnerVoucherManager/>,
-  Home: <Home />,
-};
-
 const SellerMainLayout: React.FC = () => {
-  const [activePage, setActivePage] = useState('Dashboard');
+  const [activePage, setActivePage] = useState<'Dashboard' | 'SalesManagement' | 'StoreInventory' | 'Customers' | 'Invoices' | 'StoreInfo' | 'VoucherManagement' | 'StoreCampaignManager' | 'StoreCampaignDetail' | 'Home'>('Dashboard');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [store, setStore] = useState<any>(null);
   const navigate = useNavigate();
+
   useEffect(() => {
     const checkStore = async () => {
       try {
-        const store = await storeService.getMyStore(); // đã là object
+        const store = await storeService.getMyStore();
         if (!store) {
           navigate('/seller-registration');
           return;
         }
         setStore(store);
       } catch (err) {
-        console.error('Error checking store:', err);
+        console.error(err);
         navigate('/seller-registration');
       }
     };
-
     checkStore();
   }, [navigate]);
 
+  const renderPage = () => {
+    if (!store) return null;
+    if (store.is_draft) return null;
+
+    switch (activePage) {
+      case 'Dashboard':
+        return <StoreOwnerDashboard />;
+      case 'SalesManagement':
+        return <Sale />;
+      case 'StoreInventory':
+        return <StoreInventory />;
+      case 'Customers':
+        return <Customer />;
+      case 'Invoices':
+        return <Invoice />;
+      case 'StoreInfo':
+        return <StoreInfoTab />;
+      case 'VoucherManagement':
+        return <StoreOwnerVoucherManager />;
+      case 'StoreCampaignManager':
+        return (
+          <StoreCampaignManager
+            onSelectCampaign={(id: number) => {
+              setSelectedCampaignId(id);
+              setActivePage('StoreCampaignDetail');
+            }}
+          />
+        );
+    case 'StoreCampaignDetail':
+  if (!selectedCampaignId) return null;
+  return (
+    <StoreCampaignDetail
+      campaignId={selectedCampaignId}
+      onBack={() => setActivePage('StoreCampaignManager')}
+    />
+  );
+      case 'Home':
+        return <Home />;
+      default:
+        return <StoreOwnerDashboard />;
+    }
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sidebar onSelect={(key) => setActivePage(key)} />
+      <Sidebar
+        onSelect={(key) =>
+          setActivePage(key as
+            | 'Dashboard'
+            | 'SalesManagement'
+            | 'StoreInventory'
+            | 'Customers'
+            | 'Invoices'
+            | 'StoreInfo'
+            | 'VoucherManagement'
+            | 'StoreCampaignManager'
+            | 'StoreCampaignDetail'
+            | 'Home'
+          )
+        }
+      />
       <Layout>
         <SellerHeader />
         <Content
@@ -64,7 +114,7 @@ const SellerMainLayout: React.FC = () => {
           }}
         >
           <StoreDraftBanner isDraft={store?.is_draft} />
-          {!store?.is_draft && pages[activePage]}
+          {renderPage()}
         </Content>
         <Footer style={{ textAlign: 'center' }}>
           Ant Design ©2025 Created by Ant UED

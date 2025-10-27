@@ -87,6 +87,18 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     pricing_rules: [],
   });
 
+  useEffect(() => {
+  if (form.media.length > 0 && !form.media.some((m) => m.is_primary)) {
+    setForm((prev) => ({
+      ...prev,
+      media: prev.media.map((m, i) => ({
+        ...m,
+        is_primary: i === 0, // ảnh đầu tiên làm đại diện
+      })),
+    }));
+  }
+}, [form.media]);
+
   // Preload brands & categoriesclassName="grid grid-cols
   useEffect(() => {
     const token = localStorage.getItem('token');

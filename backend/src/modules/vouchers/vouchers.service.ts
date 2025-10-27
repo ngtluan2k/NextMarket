@@ -5,7 +5,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import {
+  Repository,
+  In,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  IsNull,
+  Brackets,
+} from 'typeorm';
 import {
   Voucher,
   VoucherStatus,
@@ -23,6 +30,7 @@ import { VoucherUsageService } from '../voucher-usage/voucher-usage.service';
 import { CreateVoucherUsageDto } from '../voucher-usage/dto/create-voucher-usage.dto';
 import { EntityManager } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+
 @Injectable()
 export class VouchersService {
   constructor(
@@ -39,87 +47,93 @@ export class VouchersService {
     private readonly voucherUsageService: VoucherUsageService
   ) {}
 
- async create(
-  createVoucherDto: CreateVoucherDto,
-  userId: number,
-  role: string | string[]
-): Promise<Voucher> {
-  console.log('=== VOUCHER CREATE START ===');
-  console.log('Role:', role);
-  console.log('User ID:', userId);
-  console.log('DTO received:', createVoucherDto);
+  async create(
+    createVoucherDto: CreateVoucherDto,
+    userId: number,
+    role: string | string[]
+  ): Promise<Voucher> {
+    console.log('=== VOUCHER CREATE START ===');
+    console.log('Role:', role);
+    console.log('User ID:', userId);
+    console.log('DTO received:', createVoucherDto);
 
-  // Convert role to array if it's string
-  const roleArray = Array.isArray(role) ? role : [role];
-  console.log('Role array:', roleArray);
+    const roleArray = Array.isArray(role) ? role : [role];
+    console.log('Role array:', roleArray);
 
-  if (!this.hasPermission(roleArray, 'add_voucher')) {
-    throw new ForbiddenException('Không có quyền tạo voucher');
-  }
-
-  let storeId: number | undefined;
-
-  // Check if user has Seller role (even if they have multiple roles)
-  if (roleArray.includes('Seller')) {
-    console.log('🟡 Processing for Seller role');
-    
-    // Ưu tiên sử dụng store từ payload
-    if (createVoucherDto.store) {
-      storeId = createVoucherDto.store;
-      console.log('🟡 Using store from DTO.store:', storeId);
-    } 
-    // Nếu không có store, thử từ applicable_store_ids
-    else if (
-      createVoucherDto.applicable_store_ids &&
-      createVoucherDto.applicable_store_ids.length === 1
-    ) {
-      storeId = createVoucherDto.applicable_store_ids[0];
-      console.log('🟡 Using store from applicable_store_ids:', storeId);
+    if (!this.hasPermission(roleArray, 'add_voucher')) {
+      throw new ForbiddenException('Không có quyền tạo voucher');
     }
 
-    console.log('🟡 Final storeId for Seller:', storeId);
+    let storeId: number | undefined;
 
-    if (!storeId) {
-      console.log('🔴 No storeId found for Seller');
+    if (roleArray.includes('Seller')) {
+      console.log(' Processing for Seller role');
+
+      if (createVoucherDto.store) {
+        storeId = createVoucherDto.store;
+        console.log(' Using store from DTO.store:', storeId);
+      } else if (
+        createVoucherDto.applicable_store_ids &&
+        createVoucherDto.applicable_store_ids.length === 1
+      ) {
+        storeId = createVoucherDto.applicable_store_ids[0];
+        console.log(' Using store from applicable_store_ids:', storeId);
+      }
+
+      console.log('Final storeId for Seller:', storeId);
+
+      if (!storeId) {
+        console.log(' No storeId found for Seller');
+        throw new BadRequestException(
+          'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
+        );
+      }
+
+      console.log(' Checking store ownership...');
+      await this.checkStoreOwnership(userId, storeId);
+      console.log(' Store ownership check passed');
+    } else {
+      console.log(' User is not Seller, storeId remains undefined');
+    }
+
+    if (
+      createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
+      (createVoucherDto.min_order_amount ?? 0) <
+        (createVoucherDto.discount_value ?? 0)
+    ) {
       throw new BadRequestException(
-        'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
+        'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
       );
     }
+    const { store, ...voucherData } = createVoucherDto;
 
-    console.log('🟡 Checking store ownership...');
-    // Kiểm tra quyền sở hữu store
-    await this.checkStoreOwnership(userId, storeId);
-    console.log('🟢 Store ownership check passed');
-  } else {
-    console.log('🟡 User is not Seller, storeId remains undefined');
+    console.log(' Voucher data after removing store:', voucherData);
+    console.log(
+      'Store relation to set:',
+      storeId ? { id: storeId } : undefined
+    );
+
+    const voucher = this.vouchersRepository.create({
+      ...voucherData,
+      uuid: uuidv4(),
+      start_date: new Date(createVoucherDto.start_date),
+      end_date: new Date(createVoucherDto.end_date),
+      store: storeId ? { id: storeId } : undefined,
+    });
+
+    console.log(' Voucher entity created:', voucher);
+
+    try {
+      const savedVoucher = await this.vouchersRepository.save(voucher);
+      console.log(' Voucher saved successfully:', savedVoucher);
+      console.log(' Saved voucher store relation:', savedVoucher.store);
+      return savedVoucher;
+    } catch (error) {
+      console.error(' Error saving voucher:', error);
+      throw error;
+    }
   }
 
-  // Tạo voucher data, loại bỏ store để tránh lỗi property không tồn tại
-  const { store, ...voucherData } = createVoucherDto;
-  
-  console.log('🟡 Voucher data after removing store:', voucherData);
-  console.log('🟡 Store relation to set:', storeId ? { id: storeId } : undefined);
-
-  const voucher = this.vouchersRepository.create({
-    ...voucherData,
-    uuid: uuidv4(),
-    start_date: new Date(createVoucherDto.start_date),
-    end_date: new Date(createVoucherDto.end_date),
-    store: storeId ? { id: storeId } : undefined,
-  });
-
-  console.log('🟡 Voucher entity created:', voucher);
-  
-  try {
-    const savedVoucher = await this.vouchersRepository.save(voucher);
-    console.log('🟢 Voucher saved successfully:', savedVoucher);
-    console.log('🟢 Saved voucher store relation:', savedVoucher.store);
-    return savedVoucher;
-  } catch (error) {
-    console.error('🔴 Error saving voucher:', error);
-    throw error;
-  }
-}
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
     const roleList = Array.isArray(roles) ? roles : [roles];
 
@@ -140,7 +154,6 @@ export class VouchersService {
   async findOne(
     id: number,
     userId: number,
-    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
     role: string = 'user'
   ): Promise<Voucher> {
     const voucher = await this.vouchersRepository.findOne({
@@ -175,6 +188,17 @@ export class VouchersService {
       );
     }
 
+    if (
+      updateVoucherDto.discount_type === VoucherDiscountType.FIXED &&
+      updateVoucherDto.min_order_amount !== undefined &&
+      updateVoucherDto.discount_value !== undefined &&
+      updateVoucherDto.min_order_amount < updateVoucherDto.discount_value
+    ) {
+      throw new BadRequestException(
+        'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm (min_order_amount >= discount_value)'
+      );
+    }
+    
     Object.assign(voucher, updateVoucherDto);
     return await this.vouchersRepository.save(voucher);
   }
@@ -363,21 +387,69 @@ export class VouchersService {
     });
   }
 
-  async getAvailableVouchers(userId: number): Promise<Voucher[]> {
-    console.log (userId)
+  async getAvailableVouchers(
+    userId?: number,
+    storeId?: number,
+    filterByStoreOnly: boolean = false
+  ): Promise<Voucher[]> {
     const now = new Date();
-    const vouchers = await this.vouchersRepository.find({
-      where: {
-        status: VoucherStatus.ACTIVE,
-        start_date: LessThanOrEqual(now),
-        end_date: MoreThanOrEqual(now),
-      },
-      relations: ['usages', 'store'],
-    });
-    console.log (`ádasdasdasdasd${vouchers.length}`);
+
+    const queryBuilder = this.vouchersRepository
+      .createQueryBuilder('voucher')
+      .leftJoinAndSelect('voucher.store', 'store')
+      .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
+      .andWhere('voucher.start_date <= :now', { now })
+      .andWhere('voucher.end_date >= :now', { now });
+
+    if (storeId && storeId !== 0 && filterByStoreOnly) {
+      queryBuilder
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where('voucher.store_id = :storeId', { storeId });
+
+            if (storeId) {
+              qb.orWhere(
+                'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
+                { storeId: storeId.toString() }
+              );
+            }
+          })
+        )
+        .andWhere('voucher.store_id IS NOT NULL');
+    } else if (storeId && storeId !== 0 && !filterByStoreOnly) {
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          // Admin/Platform vouchers (store_id = NULL)
+          qb.where('voucher.store_id IS NULL');
+
+          // Store-specific vouchers
+          qb.orWhere('voucher.store_id = :storeId', { storeId });
+
+          // Multi-store vouchers
+          if (storeId) {
+            qb.orWhere(
+              'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
+              { storeId: storeId.toString() }
+            );
+          }
+        })
+      );
+    } else {
+      console.log('🌐 No storeId provided, returning ALL vouchers');
+    }
+
+    const vouchers = await queryBuilder
+      .orderBy('voucher.priority', 'DESC')
+      .addOrderBy('voucher.created_at', 'DESC')
+      .getMany();
+
+    console.log(
+      `📦 Found ${vouchers.length} vouchers before user-specific filtering`
+    );
 
     const availableVouchers = [];
     for (const voucher of vouchers) {
+      // Check total usage limit
       if (
         voucher.total_usage_limit &&
         voucher.total_used_count >= voucher.total_usage_limit
@@ -385,25 +457,38 @@ export class VouchersService {
         continue;
       }
 
-      const userUsageCount = await this.voucherUsageRepository.count({
-        where: { voucher: { id: voucher.id }, user: { id: userId } },
-      });
-      if (userUsageCount >= voucher.per_user_limit) {
+      // Check collection limit
+      if (
+        voucher.collection_limit &&
+        voucher.collected_count >= voucher.collection_limit
+      ) {
         continue;
       }
 
-      if (voucher.new_user_only) {
-        const userOrders = await this.ordersRepository.count({
-          where: { user: { id: userId } },
+      if (userId) {
+        // Check per-user usage limit
+        const userUsageCount = await this.voucherUsageRepository.count({
+          where: { voucher: { id: voucher.id }, user: { id: userId } },
         });
-        if (userOrders > 0) {
+        if (userUsageCount >= voucher.per_user_limit) {
           continue;
+        }
+
+        // Check new user only
+        if (voucher.new_user_only) {
+          const userOrders = await this.ordersRepository.count({
+            where: { user: { id: userId } },
+          });
+          if (userOrders > 0) {
+            continue;
+          }
         }
       }
 
       availableVouchers.push(voucher);
     }
 
+    console.log(` Returning ${availableVouchers.length} available vouchers`);
     return availableVouchers;
   }
 
@@ -439,6 +524,14 @@ export class VouchersService {
     appliedVouchers: { code: string; discount: number; type: VoucherType }[];
     invalidVouchers: { code: string; error: string }[];
   }> {
+    console.log(' CalculateDiscount called with:', {
+      voucherCodes,
+      userId,
+      orderItems,
+      storeId,
+      orderAmount,
+    });
+
     if (!voucherCodes || voucherCodes.length === 0) {
       return { discountTotal: 0, appliedVouchers: [], invalidVouchers: [] };
     }
@@ -447,21 +540,29 @@ export class VouchersService {
       code: string;
       discount: number;
       type: VoucherType;
+      store_id?: number;
+      stackable: boolean;
     }[] = [];
+
     const invalidVouchers: { code: string; error: string }[] = [];
     let discountTotal = 0;
 
-    // Load all vouchers at once to optimize database queries
-    const vouchers = await this.vouchersRepository.find({
-      where: {
-        code: In(voucherCodes.map((code) => code.trim().toUpperCase())),
-      },
-      relations: ['store'],
+    const calculatedSubtotal = orderItems.reduce(
+      (sum, item) => sum + item.quantity * item.price,
+      0
+    );
+
+    console.log('💰 Order amounts:', {
+      fromFrontend: orderAmount,
+      calculated: calculatedSubtotal,
+      difference: orderAmount - calculatedSubtotal,
     });
 
-    // Validate all vouchers and group by type
-    const vouchersByType: {
-      [key in VoucherType]?: { voucher: Voucher; discount: number }[];
+    const effectiveOrderAmount = calculatedSubtotal;
+
+    //  SỬA: Nhóm voucher theo type VÀ store_id cho type STORE
+    const vouchersByGroup: {
+      [key: string]: { voucher: Voucher; discount: number }[];
     } = {};
 
     for (const code of voucherCodes) {
@@ -473,7 +574,6 @@ export class VouchersService {
           storeId
         );
 
-        // Convert discount to number to prevent string concatenation
         const numericDiscount = Number(discount);
 
         if (!Number.isFinite(numericDiscount)) {
@@ -482,12 +582,22 @@ export class VouchersService {
           );
         }
 
-        if (!vouchersByType[voucher.type]) {
-          vouchersByType[voucher.type] = [];
+        // TẠO KEY NHÓM: Với STORE type, nhóm theo store_id, với các type khác nhóm theo type
+        let groupKey: string;
+        if (voucher.type === VoucherType.STORE) {
+          groupKey = `store_${voucher.store?.id || 'platform'}`;
+        } else {
+          groupKey = `type_${voucher.type}`;
         }
-        vouchersByType[voucher.type]!.push({
+
+        if (!vouchersByGroup[groupKey]) {
+          vouchersByGroup[groupKey] = [];
+        }
+
+        const cappedDiscount = Math.min(numericDiscount, effectiveOrderAmount);
+        vouchersByGroup[groupKey].push({
           voucher,
-          discount: numericDiscount,
+          discount: cappedDiscount,
         });
       } catch (err) {
         const message =
@@ -504,22 +614,20 @@ export class VouchersService {
       }
     }
 
-    // Process each voucher type
-    for (const type of Object.keys(
-      vouchersByType
-    ) as unknown as VoucherType[]) {
-      const vouchersOfType = vouchersByType[type]!;
+    //  SỬA: Xử lý từng nhóm
+    for (const groupKey of Object.keys(vouchersByGroup)) {
+      const vouchersInGroup = vouchersByGroup[groupKey]!;
 
-      // Check for non-stackable vouchers within the same type
-      const nonStackableVouchers = vouchersOfType.filter(
+      const nonStackableVouchers = vouchersInGroup.filter(
         ({ voucher }) => !voucher.stackable
       );
-      const stackableVouchers = vouchersOfType.filter(
+      const stackableVouchers = vouchersInGroup.filter(
         ({ voucher }) => voucher.stackable
       );
 
+      //  FIX: Xử lý non-stackable trước
       if (nonStackableVouchers.length > 0) {
-        // If there are non-stackable vouchers, pick the one with the highest discount
+        // Chọn voucher non-stackable có discount cao nhất
         const bestNonStackable = nonStackableVouchers.sort(
           (a, b) => Number(b.discount) - Number(a.discount)
         )[0];
@@ -528,30 +636,35 @@ export class VouchersService {
           code: bestNonStackable.voucher.code,
           discount: Number(bestNonStackable.discount),
           type: bestNonStackable.voucher.type,
+          store_id: bestNonStackable.voucher.store?.id,
+          stackable: bestNonStackable.voucher.stackable,
         });
 
-        // Use Number() to ensure numeric addition
         discountTotal += Number(bestNonStackable.discount);
 
-        // Mark other non-stackable vouchers as invalid
+        // Đánh dấu các voucher non-stackable khác trong cùng nhóm là invalid
         nonStackableVouchers
           .filter((v) => v.voucher.code !== bestNonStackable.voucher.code)
           .forEach((v) =>
             invalidVouchers.push({
               code: v.voucher.code,
-              error: `Không thể áp dụng vì đã chọn voucher ${bestNonStackable.voucher.code} cùng loại`,
+              error: `Không thể áp dụng vì đã chọn voucher ${
+                bestNonStackable.voucher.code
+              } cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'}`,
             })
           );
 
-        // Mark stackable vouchers of the same type as invalid
+        //  QUAN TRỌNG: Nếu có non-stackable, KHÔNG cho phép stackable trong cùng nhóm
         stackableVouchers.forEach((v) =>
           invalidVouchers.push({
             code: v.voucher.code,
-            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng loại`,
+            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng ${
+              groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'
+            }`,
           })
         );
       } else {
-        // Apply all stackable vouchers of this type
+        //  Chỉ áp dụng stackable nếu không có non-stackable
         stackableVouchers.forEach(({ voucher, discount }) => {
           const numericDiscount = Number(discount);
 
@@ -559,32 +672,34 @@ export class VouchersService {
             code: voucher.code,
             discount: numericDiscount,
             type: voucher.type,
+            store_id: voucher.store?.id,
+            stackable: voucher.stackable,
           });
 
-          // Use Number() to ensure numeric addition
           discountTotal += numericDiscount;
         });
       }
     }
 
-    // Verify order amount against total discount
-    if (discountTotal > orderAmount) {
-      return {
-        discountTotal: 0,
-        appliedVouchers: [],
-        invalidVouchers: [
-          {
-            code: '',
-            error: 'Tổng chiết khấu không thể vượt quá giá trị đơn hàng',
-          },
-        ],
-      };
+    if (discountTotal > effectiveOrderAmount) {
+      // Tính tỷ lệ giảm cho từng voucher
+      const ratio = effectiveOrderAmount / discountTotal;
+      appliedVouchers.forEach((voucher) => {
+        voucher.discount = Math.floor(voucher.discount * ratio);
+      });
+
+      discountTotal = effectiveOrderAmount;
     }
 
-    // Ensure discountTotal is returned as a number
+    discountTotal = Math.max(0, discountTotal);
+
     return {
       discountTotal: Number(discountTotal),
-      appliedVouchers,
+      appliedVouchers: appliedVouchers.map((v) => ({
+        code: v.code,
+        discount: v.discount,
+        type: v.type,
+      })),
       invalidVouchers,
     };
   }
@@ -611,27 +726,170 @@ export class VouchersService {
   }
 
   private hasPermission(roles: string[] | string, permission: string): boolean {
-  const adminPermissions = [
-    'add_voucher',
-    'view_voucher',
-    'update_voucher',
-    'delete_voucher',
-  ];
-  const storeOwnerPermissions = [
-    'add_voucher',
-    'view_voucher',
-    'update_voucher',
-    'delete_voucher',
-  ];
+    const adminPermissions = [
+      'add_voucher',
+      'view_voucher',
+      'update_voucher',
+      'delete_voucher',
+    ];
+    const storeOwnerPermissions = [
+      'add_voucher',
+      'view_voucher',
+      'update_voucher',
+      'delete_voucher',
+    ];
 
-  // Convert to array if it's string
-  const roleList = Array.isArray(roles) ? roles : [roles];
+    const roleList = Array.isArray(roles) ? roles : [roles];
 
-  if (roleList.includes('Admin')) {
-    return adminPermissions.includes(permission);
-  } else if (roleList.includes('Seller')) {
-    return storeOwnerPermissions.includes(permission);
+    if (roleList.includes('Admin')) {
+      return adminPermissions.includes(permission);
+    } else if (roleList.includes('Seller')) {
+      return storeOwnerPermissions.includes(permission);
+    }
+    return false;
   }
-  return false;
-}
+  private isVoucherActive(voucher: Voucher): boolean {
+    const now = new Date();
+    const startDate = new Date(voucher.start_date);
+    const endDate = new Date(voucher.end_date);
+
+    return (
+      voucher.status === VoucherStatus.ACTIVE &&
+      now >= startDate &&
+      now <= endDate &&
+      (!voucher.total_usage_limit ||
+        voucher.total_used_count < voucher.total_usage_limit)
+    );
+  }
+
+  private isVoucherExpired(voucher: Voucher): boolean {
+    const now = new Date();
+    const endDate = new Date(voucher.end_date);
+    return now > endDate || voucher.status === VoucherStatus.EXPIRED;
+  }
+
+  private isVoucherDepleted(voucher: Voucher): boolean {
+    return (
+      voucher.status === VoucherStatus.DEPLETED ||
+      (!!voucher.total_usage_limit &&
+        voucher.total_used_count >= voucher.total_usage_limit)
+    );
+  }
+  async getUserVouchers(userId: number): Promise<any[]> {
+    console.log(`📦 Fetching platform vouchers for user ${userId}`);
+
+    // CHỈ lấy voucher platform (toàn sàn) - store_id = NULL
+    const platformVouchers = await this.vouchersRepository.find({
+      where: {
+        store: IsNull(), // Chỉ lấy voucher platform
+      },
+      relations: ['store'],
+    });
+
+    console.log(`🏪 Found ${platformVouchers.length} platform vouchers`);
+
+    // Lấy các voucher platform mà user đã sử dụng
+    const userVoucherUsages = await this.voucherUsageRepository.find({
+      where: {
+        user: { id: userId },
+      },
+      relations: ['voucher', 'voucher.store'],
+    });
+
+    // Chỉ lấy usage của voucher platform
+    const usedPlatformVouchers = userVoucherUsages
+      .filter((usage) => !usage.voucher.store?.id)
+      .map((usage) => usage.voucher);
+
+    console.log(
+      `📊 User has used ${usedPlatformVouchers.length} platform vouchers`
+    );
+
+    // Tạo map user usage count
+    const userUsageMap = new Map<number, number>();
+    userVoucherUsages.forEach((usage) => {
+      const vid = usage.voucher.id;
+      userUsageMap.set(vid, (userUsageMap.get(vid) || 0) + 1);
+    });
+
+    // ✅ Lọc voucher platform khả dụng (dùng for...of để hỗ trợ await)
+    const availablePlatformVouchers: Voucher[] = [];
+
+    for (const voucher of platformVouchers) {
+      // Check nếu voucher đã hết hạn hoặc không active
+      if (!this.isVoucherActive(voucher)) {
+        continue;
+      }
+
+      // Check total usage limit
+      if (
+        voucher.total_usage_limit &&
+        voucher.total_used_count >= voucher.total_usage_limit
+      ) {
+        continue;
+      }
+
+      // Check collection limit
+      if (
+        voucher.collection_limit &&
+        voucher.collected_count >= voucher.collection_limit
+      ) {
+        continue;
+      }
+
+      // Check per-user usage limit
+      const userUsageCount = userUsageMap.get(voucher.id) || 0;
+      if (userUsageCount >= voucher.per_user_limit) {
+        continue;
+      }
+
+      // Check new user only
+      if (voucher.new_user_only) {
+        const userOrdersCount = await this.ordersRepository.count({
+          where: { user: { id: userId } },
+        });
+        if (userOrdersCount > 0) {
+          continue;
+        }
+      }
+
+      availablePlatformVouchers.push(voucher);
+    }
+
+    console.log(
+      `✅ ${availablePlatformVouchers.length} platform vouchers available`
+    );
+
+    // Kết hợp: used + available (loại bỏ trùng)
+    const allVouchers = [...usedPlatformVouchers, ...availablePlatformVouchers];
+    const uniqueVouchers = allVouchers.filter(
+      (voucher, index, self) =>
+        index === self.findIndex((v) => v.id === voucher.id)
+    );
+
+    console.log(`🎯 Final: ${uniqueVouchers.length} vouchers for user`);
+
+    // Thêm user_used_count vào mỗi voucher
+    const vouchersWithUsage = uniqueVouchers.map((voucher) => ({
+      ...voucher,
+      user_used_count: userUsageMap.get(voucher.id) || 0,
+    }));
+
+    // Sắp xếp: available trước, rồi đến used, rồi đến expired
+    return vouchersWithUsage.sort((a, b) => {
+      const aActive = this.isVoucherActive(a);
+      const bActive = this.isVoucherActive(b);
+      const aUsed = a.user_used_count > 0;
+      const bUsed = b.user_used_count > 0;
+
+      // Ưu tiên: Active > Used > Expired
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+      if (!aUsed && bUsed) return -1;
+      if (aUsed && !bUsed) return 1;
+
+      // Cùng trạng thái thì sort theo end_date (sắp hết hạn trước)
+      return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+    });
+  }
 }
