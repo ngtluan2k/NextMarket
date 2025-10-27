@@ -373,29 +373,29 @@ export class OrdersService {
   }
 
   async findOne(id: number): Promise<Order> {
-  const order = await this.ordersRepository
-    .createQueryBuilder('order')
-    .leftJoinAndSelect('order.user', 'user')
-    .leftJoinAndSelect('order.store', 'store')
-    .leftJoinAndSelect('order.userAddress', 'userAddress')
-    .leftJoinAndSelect('order.orderItem', 'orderItem')
-    .leftJoinAndSelect('orderItem.product', 'product')
-    .leftJoinAndSelect('product.media', 'media')
-    .leftJoinAndSelect('orderItem.variant', 'variant')
-    .leftJoinAndSelect('variant.pricingRules', 'pricingRules') // ✅ dùng QueryBuilder mới join được
-    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
-    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-    .leftJoinAndSelect('product.reviews', 'reviews')
-    .leftJoinAndSelect('order.payment', 'payment')
-    .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
-    .where('order.id = :id', { id })
-    .getOne();
+    const order = await this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.store', 'store')
+      .leftJoinAndSelect('order.userAddress', 'userAddress')
+      .leftJoinAndSelect('order.orderItem', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('orderItem.variant', 'variant')
+      .leftJoinAndSelect('variant.pricingRules', 'pricingRules') // ✅ dùng QueryBuilder mới join được
+      .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+      .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .leftJoinAndSelect('order.payment', 'payment')
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .where('order.id = :id', { id })
+      .getOne();
 
-  if (!order) {
-    throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
+    if (!order) {
+      throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
+    }
+    return order;
   }
-  return order;
-}
 
   async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
     const order = await this.findOne(id);
@@ -798,5 +798,32 @@ export class OrdersService {
     query = query.skip((page - 1) * limit).take(limit);
 
     return query.orderBy('order.id', 'DESC').getMany();
+  }
+
+  async getOrderStats(storeId: number) {
+    const [totalRevenue, totalOrders, completed, pending] = await Promise.all([
+      this.ordersRepository
+        .createQueryBuilder('o')
+        .leftJoin('o.store', 'store')
+        .select('SUM(CAST(o.totalAmount AS DECIMAL(15,2)))', 'sum')
+        .where('store.id = :storeId', { storeId })
+        .getRawOne(),
+      this.ordersRepository.count({ where: { store: { id: storeId } } }),
+
+      this.ordersRepository.count({
+        where: { store: { id: storeId }, status: OrderStatuses.completed },
+      }),
+
+      this.ordersRepository.count({
+        where: { store: { id: storeId }, status: OrderStatuses.pending },
+      }),
+    ]);
+
+    return {
+      totalRevenue: Number(totalRevenue.sum || 0),
+      totalOrders,
+      completed,
+      pending,
+    };
   }
 }

@@ -22,6 +22,19 @@ export const voucherApi = {
     return res.data;
   },
 
+   getAvailableVoucherOfSystem: async (): Promise<Voucher[]> => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Người dùng chưa đăng nhập');
+
+    const res = await api.get(`${ENDPOINTS.adminVouchers}/voucher-system`,  {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return res.data;
+  },
+
   // Get voucher by ID
   getVoucherById: async (id: number): Promise<Voucher> => {
     const res = await api.get(`${ENDPOINTS.adminVouchers}/${id}`);
@@ -112,7 +125,7 @@ export const userVoucherApi = {
    */
   getAvailableVouchers: async (
     storeId?: number,
-    filterByStoreOnly: boolean = false
+    filterByStoreOnly = false
   ): Promise<Voucher[]> => {
     const params = new URLSearchParams();
     
@@ -142,7 +155,7 @@ export const userVoucherApi = {
    */
   getAvailableVouchersByStore: async (
     storeId: number,
-    includeAdminVouchers: boolean = true
+    includeAdminVouchers = true
   ): Promise<Voucher[]> => {
     return userVoucherApi.getAvailableVouchers(storeId, !includeAdminVouchers);
   },

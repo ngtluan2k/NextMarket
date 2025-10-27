@@ -536,7 +536,6 @@ export class ProductService {
       where: [
         { name: Like(`%${query}%`), status: 'active' },
         { slug: Like(`%${query}%`), status: 'active' },
-        { description: Like(`%${query}%`), status: 'active' },
       ],
       relations: ['store', 'media', 'brand', 'categories'],
       take: 10,
