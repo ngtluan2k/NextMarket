@@ -86,6 +86,20 @@ export interface RegisteredProduct {
   variants?: { id: number; variant_name: string; price: number | string }[];
 }
 
+export interface UpdateCampaignDto {
+  campaignId: number;
+  name?: string;
+  description?: string;
+  startsAt?: string | Date;
+  endsAt?: string | Date;
+  bannerUrl?: string;
+  backgroundColor?: string;
+  status?: string;
+  images?: { file: File; position?: number; link_url?: string }[];
+  sections?: any[];
+  vouchers?: { voucher_id: number; type?: 'system' | 'store' }[];
+}
+
 export interface CampaignStoreDetail {
   storeId: number;
   storeName: string;
@@ -216,6 +230,44 @@ export const publishCampaign = async (dto: PublishCampaignDto) => {
       },
     }
   );
+
+  return res.data;
+};
+
+export const updateCampaign = async (dto: any) => {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('Chưa đăng nhập admin');
+
+  const formData = new FormData();
+
+  // ❌ Không append campaignId nữa vì đã nằm trong URL
+  formData.append('name', dto.name);
+  formData.append('description', dto.description || '');
+  formData.append('startsAt', dto.startsAt);
+  formData.append('endsAt', dto.endsAt);
+  formData.append('backgroundColor', dto.backgroundColor);
+  formData.append('status', dto.status);
+
+  // ✅ Append file ảnh banner
+  dto.images?.forEach((img: any) => {
+    if (img?.file) formData.append('banners', img.file); // đổi 'images' -> 'banners' để khớp FilesInterceptor('banners')
+  });
+
+  // ✅ Append vouchers
+  if (dto.vouchers) {
+    formData.append('vouchers', JSON.stringify(dto.vouchers));
+  }
+  if (dto.removedImages?.length) {
+  formData.append('removedImages', JSON.stringify(dto.removedImages));
+}
+
+  // ✅ Gửi request với campaignId trên URL
+  const res = await axios.patch(`${API_URL}/${dto.campaignId}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+  });
 
   return res.data;
 };

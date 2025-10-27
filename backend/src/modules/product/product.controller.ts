@@ -230,67 +230,83 @@ export class ProductController {
       data: products,
     };
   }
-  @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FilesInterceptor('media', 10, {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = './uploads/products';
-          if (!existsSync(uploadPath))
-            mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, uniqueSuffix + extname(file.originalname));
-        },
-      }),
-    })
-  )
-  async updateDraft(
-    @Param('id') id: number,
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body() dto: any,
-    @Req() req: any
-  ) {
-    // --- Parse JSON từ FormData và chuẩn hóa thành array ---
-    dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
-    dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
-    dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
-    dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
-    dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
-    if (Array.isArray(dto.inventory) && Array.isArray(dto.variants)) {
-      dto.variants = dto.variants.map((v: any) => ({
-        ...v,
-        inventories: dto.inventory.filter(
-          (inv: any) => inv.variant_id === v.id
-        ),
+@Put(':id')
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(
+  FilesInterceptor('media', 10, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = './uploads/products';
+        if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + extname(file.originalname));
+      },
+    }),
+  })
+)
+async updateDraft(
+  @Param('id') id: number,
+  @UploadedFiles() files: Express.Multer.File[],
+  @Body() dto: any,
+  @Req() req: any
+) {
+  // --- Parse JSON ---
+  dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
+  dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
+  dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
+  dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
+  dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
+
+  if (Array.isArray(dto.inventory) && Array.isArray(dto.variants)) {
+    dto.variants = dto.variants.map((v: any) => ({
+      ...v,
+      inventories: dto.inventory.filter((inv: any) => inv.variant_id === v.id),
+    }));
+  }
+
+  // --- 🔧 Xử lý ảnh ---
+  let mergedMedia: any[] = [];
+
+  // 🧩 1️⃣ Ảnh cũ (nếu có)
+  if (Array.isArray(dto.media_meta)) {
+    mergedMedia = dto.media_meta
+      .filter((m: any) => m && m.url)
+      .map((m: any) => ({
+        ...m,
+        url: m.url.replace(/^https?:\/\/[^/]+/, ''), // bỏ host nếu có
       }));
-    }
-    // --- Merge media_meta + files mới ---
-    dto.media = dto.media_meta.map((m: any) => ({
-      ...m,
-      url: m.url ? m.url.replace(/^https?:\/\/[^/]+/, '') : '', // chuyển URL cũ thành relative
+  }
+
+  // 🧩 2️⃣ Thêm ảnh mới upload (nếu có)
+  if (Array.isArray(files) && files.length > 0) {
+    const newFiles = files.map((file, index) => ({
+      file_name: file.filename,
+      media_type: 'image',
+      url: `/uploads/products/${file.filename}`,
+      is_primary: false,
+      sort_order: mergedMedia.length + index + 1,
     }));
 
-    if (files?.length) {
-      files.forEach((file) => {
-        dto.media.push({
-          file_name: file.filename,
-          media_type: 'image',
-          is_primary: false,
-          url: `/uploads/products/${file.filename}`,
-          sort_order: dto.media.length + 1,
-        });
-      });
-    }
-
-    // --- Gọi service update ---
-    const userId = req.user.sub;
-    return this.productService.updateProduct(id, dto, userId);
+    mergedMedia.push(...newFiles);
   }
+
+  // 🧩 3️⃣ Đặt ảnh đầu tiên làm đại diện
+  mergedMedia = mergedMedia.map((m, i) => ({
+    ...m,
+    is_primary: i === 0, // ✅ chỉ ảnh đầu là đại diện
+    sort_order: i + 1,
+  }));
+
+  dto.media = mergedMedia;
+
+  // --- Gọi service ---
+  const userId = req.user.sub;
+  return this.productService.updateProduct(id, dto, userId);
+}
+
 
   // @Put(':id/publish')
   // @UseGuards(JwtAuthGuard)

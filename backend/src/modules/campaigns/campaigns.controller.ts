@@ -176,6 +176,66 @@ export class CampaignsController {
     return this.campaignsService.getCampaignDetail(id);
   }
 
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FilesInterceptor('banners', 10, {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/banners';
+          if (!existsSync(uploadPath))
+            mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    })
+  )
+  async updateCampaign(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: any,
+    @Req() req: any
+  ) {
+    const campaignId = parseInt(id, 10);
+    const currentUser = req.user;
+
+    if (!currentUser.roles.includes('Admin')) {
+      throw new Error('Chỉ admin mới được phép cập nhật campaign');
+    }
+
+    // Gộp dữ liệu thành DTO
+    const dto: UpdateCampaignDto = {
+      campaignId,
+      name: body.name,
+      description: body.description,
+      startsAt: new Date(body.startsAt),
+      endsAt: new Date(body.endsAt),
+      bannerUrl: body.bannerUrl,
+      status: body.status,
+      backgroundColor: body.backgroundColor,
+      images: files?.map((file, idx) => ({
+        file,
+        position: body.positions?.[idx],
+        link_url: body.linkUrls?.[idx],
+      })),
+      sections: body.sections ? JSON.parse(body.sections) : undefined,
+      vouchers: body.vouchers ? JSON.parse(body.vouchers) : undefined,
+      storeProducts: body.storeProducts
+        ? JSON.parse(body.storeProducts)
+        : undefined,
+      removedImages: body.removedImages
+        ? JSON.parse(body.removedImages)
+        : undefined,
+    };
+
+    return this.campaignsService.updateCampaign(dto, currentUser);
+  }
+
   /////////////////////////////////////////STORE ROUTES/////////////////////////////////////////
 
   @UseGuards(JwtAuthGuard)
@@ -210,6 +270,4 @@ export class CampaignsController {
   }
 
   ////////////////////////////////////////////USER ROUTES/////////////////////////////////////////
-
-  
 }

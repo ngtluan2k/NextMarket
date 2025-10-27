@@ -71,7 +71,7 @@ function BootstrapTwoUpCarousel({
   if (hostRef.current) {
     instance = Carousel.getOrCreateInstance(hostRef.current, {
       interval, // ⬅ sẽ dùng 3000ms
-      pause:  false,
+      pause: 'hover',
       touch: true,
       wrap: true,
     });
