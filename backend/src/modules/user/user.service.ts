@@ -58,6 +58,17 @@ export class UserService {
     return this.userRepository.find();
   }
 
+  async findByEmail(email: string) {
+    console.log(`🔍 UserService: Searching for user with email: ${email}`);
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user) {
+      console.log(`✅ UserService: Found user:`, { id: user.id, email: user.email, username: user.username });
+    } else {
+      console.log(`❌ UserService: User not found with email: ${email}`);
+    }
+    return user;
+  }
+
   async register(dto: CreateUserDto) {
     // Kiểm tra email và username đã tồn tại
     const exist = await this.userRepository.findOne({

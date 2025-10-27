@@ -13,9 +13,26 @@ interface CommissionInfo {
 
 interface UserInfo {
   id: number;
-  email: string;
-  username: string;
-  is_affiliate: boolean;
+  uuid: string;
+  user_id: number;
+  full_name: string;
+  dob: string;
+  phone: string;
+  gender: string;
+  avatar_url: string | null;
+  country: string;
+  created_at: string;
+  user: {
+    id: number;
+    uuid: string;
+    username: string;
+    email: string;
+    status: string;
+    code: string;
+    created_at: string;
+    updated_at: string | null;
+    is_affiliate: boolean;
+  };
 }
 
 interface AffiliateTreeNode {
@@ -34,9 +51,10 @@ interface Props {
     ancestors: AffiliateTreeNode[];
     descendants: AffiliateTreeNode[];
   };
+  onUserSelect?: (userId: number, commissionInfo?: CommissionInfo) => void;
 }
 
-const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = false, commissionData }: Props) => {
+const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = false, commissionData, onUserSelect }: Props) => {
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['0-0-0', '0-0-1']);
   const [checkedKeys, setCheckedKeys] = useState<React.Key[]>(['0-0-0']);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
@@ -56,6 +74,57 @@ const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = fa
   const onSelect: TreeProps['onSelect'] = (selectedKeysValue, info) => {
     console.log('onSelect', info);
     setSelectedKeys(selectedKeysValue);
+    
+    // Emit event khi user click vào node
+    if (onUserSelect && info.node) {
+      const nodeKey = info.node.key as string;
+      console.log('🔍 Node clicked with key:', nodeKey);
+      
+      // Tìm userId từ key của node
+      let userId: number | null = null;
+      let commissionInfo: CommissionInfo | undefined = undefined;
+      
+      // Parse userId từ key - cải thiện logic parsing
+      if (nodeKey.startsWith('root-')) {
+        // Root user: "root-123"
+        userId = parseInt(nodeKey.replace('root-', ''));
+        if (commissionData) {
+          commissionInfo = commissionData.rootUser.commission;
+        }
+      } else if (nodeKey.startsWith('ancestors-') || nodeKey.startsWith('descendants-')) {
+        // Parent nodes: "ancestors-123" hoặc "descendants-123"
+        // Không có userId cụ thể, skip
+        console.log('⚠️ Clicked on parent node, no specific user');
+        return;
+      } else if (nodeKey.includes('-')) {
+        // Child nodes: "123-0", "123-1", etc.
+        const parts = nodeKey.split('-');
+        if (parts.length >= 2) {
+          userId = parseInt(parts[0]); // userId là phần đầu
+          
+          // Tìm commission info từ commissionData
+          if (commissionData) {
+            const allUsers = [commissionData.rootUser, ...commissionData.ancestors, ...commissionData.descendants];
+            const user = allUsers.find(u => u.userId === userId);
+            if (user) {
+              commissionInfo = user.commission;
+            }
+          }
+        }
+      } else {
+        // Fallback: thử parse toàn bộ key làm userId
+        const parsed = parseInt(nodeKey);
+        if (!isNaN(parsed)) {
+          userId = parsed;
+        }
+      }
+      
+      console.log('🔍 Parsed userId:', userId, 'commissionInfo:', commissionInfo);
+      
+      if (userId && onUserSelect) {
+        onUserSelect(userId, commissionInfo);
+      }
+    }
   };
 
   // Render commission info cho một node
@@ -64,7 +133,7 @@ const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = fa
     
     return (
       <div className="ml-2 text-xs text-gray-600">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-1">
           <Tag color="blue" size="small">
             Level {commission.currentLevel}
           </Tag>
@@ -75,15 +144,15 @@ const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = fa
         <div className="mt-1 space-y-1">
           <div className="flex items-center gap-1">
             <DollarOutlined className="text-green-500" />
-            <span>Earned: {commission.totalEarned.toLocaleString()}đ</span>
+            <span className="font-medium">Đã kiếm: {commission.totalEarned.toLocaleString()}đ</span>
           </div>
           <div className="flex items-center gap-1">
             <DollarOutlined className="text-yellow-500" />
-            <span>Pending: {commission.totalPending.toLocaleString()}đ</span>
+            <span className="font-medium">Chờ xử lý: {commission.totalPending.toLocaleString()}đ</span>
           </div>
           <div className="flex items-center gap-1">
             <DollarOutlined className="text-blue-500" />
-            <span>Paid: {commission.totalPaid.toLocaleString()}đ</span>
+            <span className="font-medium">Đã thanh toán: {commission.totalPaid.toLocaleString()}đ</span>
           </div>
         </div>
       </div>
@@ -108,37 +177,48 @@ const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = fa
       descendants.reduce((sum, d) => sum + d.commission.totalPaid, 0);
 
     return (
-      <Card title="Commission Summary" size="small" className="mb-4">
-        <Row gutter={16}>
-          <Col span={8}>
-            <Statistic
-              title="Total Earned"
-              value={totalEarned}
-              precision={0}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Total Pending"
-              value={totalPending}
-              precision={0}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#cf1322' }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Total Paid"
-              value={totalPaid}
-              precision={0}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Col>
-        </Row>
-      </Card>
+      <div>
+        <div style={{ marginBottom: 12, padding: 12, backgroundColor: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 6 }}>
+          <p style={{ margin: 0, color: '#1890ff' }}>
+            <strong><span role="img" aria-label="magnifying glass">🔍</span> Mục đích:</strong> Hiển thị hoa hồng thực tế đã được tính toán và phân bổ cho từng cấp affiliate. 
+            Đây là góc nhìn cụ thể cho admin để theo dõi hiệu suất và thu nhập thực tế của hệ thống affiliate.
+          </p>
+        </div>
+        <Card title="Tổng quan Hoa hồng Thực tế" size="small" className="mb-4">
+          <Row gutter={16}>
+            <Col span={8}>
+              <Statistic
+                title="Tổng đã kiếm"
+                value={totalEarned}
+                precision={0}
+                prefix={<DollarOutlined />}
+                valueStyle={{ color: '#3f8600' }}
+                formatter={(value) => `${Number(value).toLocaleString('vi-VN')}đ`}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title="Tổng chờ xử lý"
+                value={totalPending}
+                precision={0}
+                prefix={<DollarOutlined />}
+                valueStyle={{ color: '#cf1322' }}
+                formatter={(value) => `${Number(value).toLocaleString('vi-VN')}đ`}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title="Tổng đã thanh toán"
+                value={totalPaid}
+                precision={0}
+                prefix={<DollarOutlined />}
+                valueStyle={{ color: '#1890ff' }}
+                formatter={(value) => `${Number(value).toLocaleString('vi-VN')}đ`}
+              />
+            </Col>
+          </Row>
+        </Card>
+      </div>
     );
   };
 

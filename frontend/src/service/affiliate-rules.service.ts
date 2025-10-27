@@ -9,6 +9,37 @@ export type CommissionRule = {
   cap_per_user: string | null;
 };
 
+export type CommissionPreview = {
+  level: number;
+  ratePercent: number;
+  baseAmount: number;
+  commissionAmount: number;
+  capPerOrder: number | null;
+  hasCap: boolean;
+  applied: boolean;
+  note?: string;
+};
+
+export type PreviewCommissionRequest = {
+  amount: number;
+  maxLevels: number;
+  programId?: number | null;
+};
+
+export type PreviewCommissionResponse = {
+  inputAmount: number;
+  maxLevels: number;
+  programId: number | null;
+  totalCommission: number;
+  totalPercentage: number;
+  byLevel: CommissionPreview[];
+  summary: {
+    levelsWithCommission: number;
+    averageRate: number;
+    totalCommissionFormatted: string;
+  };
+};
+
 const API_BASE = 'http://localhost:3000';
 
 function authHeaders() {
@@ -51,6 +82,16 @@ export async function deleteRule(id: number) {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete rule (${res.status})`);
+  return await res.json();
+}
+
+export async function previewCommission(request: PreviewCommissionRequest): Promise<PreviewCommissionResponse> {
+  const res = await fetch(`${API_BASE}/affiliate-rules/preview-commission`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error(`Failed to preview commission (${res.status})`);
   return await res.json();
 }
 

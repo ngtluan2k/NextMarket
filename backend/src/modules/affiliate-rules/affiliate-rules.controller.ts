@@ -12,6 +12,7 @@ import {
 import { AffiliateRulesService } from './affiliate-rules.service';
 import { CreateCommissionRuleDto } from './dto/create-commission-rule.dto';
 import { UpdateCommissionRuleDto } from './dto/update-commission-rule.dto';
+import { PreviewCommissionDto } from './dto/preview-commission.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -63,5 +64,11 @@ export class AffiliateRulesController {
   @Roles('Admin')
   validateAndCleanup() {
     return this.service.validateAndCleanupRules();
+  }
+
+  @Post('preview-commission')
+  @Roles('Admin')
+  async previewCommission(@Body() dto: PreviewCommissionDto) {
+    return this.service.previewCommission(dto);
   }
 }

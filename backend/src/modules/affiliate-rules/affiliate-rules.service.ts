@@ -3,6 +3,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateCommissionRuleDto } from './dto/create-commission-rule.dto';
 import { UpdateCommissionRuleDto } from './dto/update-commission-rule.dto';
+import { PreviewCommissionDto } from './dto/preview-commission.dto';
 
 import { AffiliateCommissionRule } from './affiliate-rules.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
@@ -101,6 +102,73 @@ export class AffiliateRulesService {
       .orderBy('r.program_id', 'DESC'); // ưu tiên rule theo program, fallback NULL
 
     return await qb.getOne();
+  }
+
+  // Method để preview commission theo số tiền và số cấp
+  async previewCommission(dto: PreviewCommissionDto) {
+    const { amount, maxLevels, programId } = dto;
+    const now = new Date();
+    const previewData = [];
+
+    for (let level = 0; level <= maxLevels; level++) {
+      const rule = await this.getActiveRule(programId ?? null, level, now);
+      
+      if (rule) {
+        const rate = Number(rule.rate_percent);
+        let computed = Math.max(0, amount * (rate / 100));
+        
+        // Áp dụng cap_per_order nếu có
+        if (rule.cap_per_order != null) {
+          const cap = Number(rule.cap_per_order);
+          if (!Number.isNaN(cap) && cap >= 0) {
+            computed = Math.min(computed, cap);
+          }
+        }
+        
+        computed = Math.round(computed * 100) / 100;
+
+        previewData.push({
+          level,
+          ratePercent: rate,
+          baseAmount: amount,
+          commissionAmount: computed,
+          capPerOrder: rule.cap_per_order ? Number(rule.cap_per_order) : null,
+          hasCap: rule.cap_per_order != null,
+          applied: computed > 0
+        });
+      } else {
+        previewData.push({
+          level,
+          ratePercent: 0,
+          baseAmount: amount,
+          commissionAmount: 0,
+          capPerOrder: null,
+          hasCap: false,
+          applied: false,
+          note: 'No active rule found for this level'
+        });
+      }
+    }
+
+    const totalCommission = previewData.reduce((sum, item) => sum + item.commissionAmount, 0);
+    const totalPercentage = previewData.reduce((sum, item) => sum + item.ratePercent, 0);
+
+    return {
+      inputAmount: amount,
+      maxLevels,
+      programId: programId ?? null,
+      totalCommission,
+      totalPercentage,
+      byLevel: previewData,
+      summary: {
+        levelsWithCommission: previewData.filter(item => item.commissionAmount > 0).length,
+        averageRate: previewData.length > 0 ? totalPercentage / previewData.length : 0,
+        totalCommissionFormatted: totalCommission.toLocaleString('vi-VN', { 
+          style: 'currency', 
+          currency: 'VND' 
+        })
+      }
+    };
   }
 
   // Method để kiểm tra trạng thái các rules
