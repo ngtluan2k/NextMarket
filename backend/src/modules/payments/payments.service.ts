@@ -55,7 +55,12 @@ export class PaymentsService {
   async create(dto: CreatePaymentDto) {
     const order = await this.ordersRepo.findOne({
       where: { uuid: dto.orderUuid },
-      relations: ['orderItem', 'orderItem.variant', 'orderItem.product'],
+      relations: [
+        'orderItem',
+        'orderItem.variant',
+        'orderItem.product',
+        'group_order',
+      ],
     });
     if (!order) throw new NotFoundException('Order not found');
 
@@ -70,23 +75,43 @@ export class PaymentsService {
 
     if (!method) throw new BadRequestException('Invalid payment method');
 
+    const isGroupOrder = !!order.group_order;
+    this.logger.log(
+      `🟢 Payment for ${isGroupOrder ? 'GROUP' : 'INDIVIDUAL'} order`
+    );
     const strategyType = method?.type || 'cod';
     this.logger.log(
-      `🟢 strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`
+      ` strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`
     );
     let result;
     switch (strategyType) {
       case 'cod':
-        result = await this.codStrategy.createPayment(order, method);
+        result = await this.codStrategy.createPayment(
+          order,
+          method,
+          isGroupOrder
+        );
         break;
       case 'vnpay':
-        result = await this.vnpayStrategy.createPayment(order, method);
+        result = await this.vnpayStrategy.createPayment(
+          order,
+          method,
+          isGroupOrder
+        );
         break;
       case 'momo':
-        result = await this.momoStrategy.createPayment(order, method);
+        result = await this.momoStrategy.createPayment(
+          order,
+          method,
+          isGroupOrder
+        );
         break;
       case 'everycoin': // <-- thêm case
-        result = await this.everycoinStrategy.createPayment(order, method);
+        result = await this.everycoinStrategy.createPayment(
+          order,
+          method,
+          isGroupOrder
+        );
         break;
       default:
         throw new BadRequestException('Unsupported payment method type');

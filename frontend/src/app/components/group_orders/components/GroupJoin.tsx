@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import { useAuth } from '../../../hooks/useAuth';
@@ -21,29 +21,18 @@ export default function GroupJoin() {
       }
 
       try {
-        const token = localStorage.getItem('token') || '';
-        // JOIN TRỰC TIẾP BẰNG UUID
-        await axios.post(
-          `http://localhost:3000/group-orders/join/${uuid}`,
-          { userId: user.user_id },
-          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-        );
+        const payload = { userId: user.user_id, addressId: undefined };
 
-        // Lấy group để điều hướng về cửa hàng (nếu cần)
-        const g = await axios.get(
-          `http://localhost:3000/group-orders/uuid/${uuid}`,
-          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-        );
-        const group = g.data;
-        navigate(`/stores/slug/${group.store.slug}?groupId=${group.id}`, {
-          replace: true,
-        });
+        await groupOrdersApi.joinByUuid(uuid, payload);
+        const g = await groupOrdersApi.getByUuid(uuid);
+
+        navigate(`/stores/slug/${g.store.slug}?groupId=${g.id}`, { replace: true });
       } catch (e: any) {
         setMsg(e?.response?.data?.message ?? 'Không thể tham gia nhóm');
       }
     })();
   }, [uuid, user, loading, navigate]);
-
+  
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <EveryMartHeader />
