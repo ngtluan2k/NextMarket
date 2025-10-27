@@ -75,7 +75,8 @@ const OrderSuccess: React.FC = () => {
     (location.state?.status &&
       (String(location.state.status) === 'success' ||
         String(location.state.status) === '1')) ||
-    responseCode === '00';
+    responseCode === '00'||
+    (location.state?.orderCode && !error);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {

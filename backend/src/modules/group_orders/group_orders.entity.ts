@@ -14,8 +14,8 @@ import { GroupOrderMember } from '../group_orders_members/group_orders_member.en
 import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { Order } from '../orders/order.entity';
 
-
 export type GroupOrderStatus = 'open' | 'locked' | 'completed' | 'cancelled';
+export type DeliveryMode = 'host_address' | 'member_address';
 
 @Entity('group_orders')
 export class GroupOrder {
@@ -54,7 +54,9 @@ export class GroupOrder {
     @OneToMany(() => GroupOrderItem, (item) => item.group_order)
     items!: GroupOrderItem[];
 
-    @ManyToOne(() => Store, (store) => store.group_orders, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Store, (store) => store.group_orders, {
+        onDelete: 'CASCADE',
+    })
     @JoinColumn({ name: 'store_id' })
     store!: Store;
 
@@ -64,8 +66,20 @@ export class GroupOrder {
 
     @OneToMany(() => Order, (o) => o.group_order)
     orders!: Order[];
-    
-    @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+
+    @Column({
+        type: 'decimal',
+        precision: 5,
+        scale: 2,
+        nullable: true,
+        default: 0,
+    })
     discount_percent!: number | null;
 
+    @Column({
+        type: 'enum',
+        enum: ['host_address', 'member_address'],
+        default: 'host_address',
+    })
+    delivery_mode!: 'host_address' | 'member_address';
 }

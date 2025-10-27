@@ -27,6 +27,7 @@ export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event:
         socketService.onGroupLocked(() => onRealtimeUpdate?.('group-locked', {}));
         socketService.onGroupDeleted(() => onRealtimeUpdate?.('group-deleted', {}));
         socketService.onDiscountUpdated((data) => onRealtimeUpdate?.('discount-updated', data));
+        socketService.onMemberAddressUpdated((data) => onRealtimeUpdate?.('member-address-updated', data));
         socketRef.current = true;
 
         return () => {

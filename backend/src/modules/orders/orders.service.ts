@@ -763,6 +763,7 @@ export class OrdersService {
         'userAddress',
         'voucherUsages',
         'voucherUsages.voucher',
+        'group_order',
         'orderItem',
         'orderItem.product',
         'orderItem.product.media',
@@ -770,6 +771,8 @@ export class OrdersService {
         'orderItem.product.reviews', // relation đúng từ entity Product
         'orderItem.product.reviews.user', // để biết reviewer là ai
         'orderItem.product.reviews.order',
+        
+       
       ],
       order: { id: 'DESC' },
     });
