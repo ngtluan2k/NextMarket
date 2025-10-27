@@ -26,8 +26,8 @@ const { Title, Text } = Typography;
 
 /** Palette đồng bộ với trang Orders */
 const COLORS = {
-  primaryA: '#0ea5e9',   // sky-500
-  primaryB: '#38bdf8',   // sky-400
+  primaryA: '#0ea5e9', // sky-500
+  primaryB: '#38bdf8', // sky-400
   primaryText: '#0ea5e9',
   pageBgTop: '#f5faff',
   pageBgBottom: '#ffffff',
@@ -143,7 +143,10 @@ const OrderSuccess: React.FC = () => {
 
   if (error || !isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#fff' }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: '#fff' }}
+      >
         <Result
           status="error"
           title="Đặt hàng thất bại!"
@@ -191,7 +194,12 @@ const OrderSuccess: React.FC = () => {
           />
           <Title
             level={2}
-            style={{ color: '#0f172a', marginTop: 12, marginBottom: 6, fontWeight: 700 }}
+            style={{
+              color: '#0f172a',
+              marginTop: 12,
+              marginBottom: 6,
+              fontWeight: 700,
+            }}
           >
             Đặt hàng thành công!
           </Title>
@@ -220,7 +228,14 @@ const OrderSuccess: React.FC = () => {
                   marginBottom: 20,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginBottom: 12,
+                  }}
+                >
                   <FileTextOutlined style={{ fontSize: 22, color: '#fff' }} />
                   <Title level={4} style={{ color: '#fff', margin: 0 }}>
                     Thông tin đơn hàng
@@ -234,9 +249,22 @@ const OrderSuccess: React.FC = () => {
                     border: '1px solid rgba(255,255,255,0.25)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>Tổng thanh toán</Text>
-                    <Title level={3} style={{ color: '#fff', margin: 0, fontWeight: 700 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text
+                      style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14 }}
+                    >
+                      Tổng thanh toán
+                    </Text>
+                    <Title
+                      level={3}
+                      style={{ color: '#fff', margin: 0, fontWeight: 700 }}
+                    >
                       {fmt(total)}
                     </Title>
                   </div>
@@ -257,7 +285,9 @@ const OrderSuccess: React.FC = () => {
                       border: `1px solid ${COLORS.softBorder}`,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                    >
                       <div
                         style={{
                           width: 40,
@@ -269,14 +299,29 @@ const OrderSuccess: React.FC = () => {
                           justifyContent: 'center',
                         }}
                       >
-                        <FileTextOutlined style={{ fontSize: 18, color: '#fff' }} />
+                        <FileTextOutlined
+                          style={{ fontSize: 18, color: '#fff' }}
+                        />
                       </div>
                       <div>
-                        <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 2 }}>Mã đơn hàng</div>
-                        <Text strong style={{ fontSize: 15 }}>{code}</Text>
+                        <div
+                          style={{
+                            color: COLORS.textMuted,
+                            fontSize: 13,
+                            marginBottom: 2,
+                          }}
+                        >
+                          Mã đơn hàng
+                        </div>
+                        <Text strong style={{ fontSize: 15 }}>
+                          {code}
+                        </Text>
                       </div>
                     </div>
-                    <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '4px 12px' }}>
+                    <Tag
+                      color="blue"
+                      style={{ margin: 0, fontSize: 13, padding: '4px 12px' }}
+                    >
                       Đã thanh toán
                     </Tag>
                   </div>
@@ -293,7 +338,9 @@ const OrderSuccess: React.FC = () => {
                       border: `1px solid ${COLORS.softBorder}`,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                    >
                       <div
                         style={{
                           width: 40,
@@ -305,13 +352,23 @@ const OrderSuccess: React.FC = () => {
                           justifyContent: 'center',
                         }}
                       >
-                        <CreditCardOutlined style={{ fontSize: 18, color: '#fff' }} />
+                        <CreditCardOutlined
+                          style={{ fontSize: 18, color: '#fff' }}
+                        />
                       </div>
                       <div>
-                        <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 2 }}>
+                        <div
+                          style={{
+                            color: COLORS.textMuted,
+                            fontSize: 13,
+                            marginBottom: 2,
+                          }}
+                        >
                           Phương thức thanh toán
                         </div>
-                        <Text strong style={{ fontSize: 15 }}>{pm}</Text>
+                        <Text strong style={{ fontSize: 15 }}>
+                          {pm}
+                        </Text>
                       </div>
                     </div>
                   </div>
@@ -329,7 +386,13 @@ const OrderSuccess: React.FC = () => {
                         border: `1px solid ${COLORS.softBorder}`,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                        }}
+                      >
                         <div
                           style={{
                             width: 40,
@@ -341,20 +404,33 @@ const OrderSuccess: React.FC = () => {
                             justifyContent: 'center',
                           }}
                         >
-                          <ClockCircleOutlined style={{ fontSize: 18, color: '#fff' }} />
+                          <ClockCircleOutlined
+                            style={{ fontSize: 18, color: '#fff' }}
+                          />
                         </div>
                         <div>
-                          <div style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 2 }}>
+                          <div
+                            style={{
+                              color: COLORS.textMuted,
+                              fontSize: 13,
+                              marginBottom: 2,
+                            }}
+                          >
                             Thời gian giao dự kiến
                           </div>
-                          <Text strong style={{ fontSize: 15 }}>{eta}</Text>
+                          <Text strong style={{ fontSize: 15 }}>
+                            {eta}
+                          </Text>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 16 }}>
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 12, display: 'block', marginBottom: 16 }}
+                >
                   * Đã bao gồm VAT nếu có
                 </Text>
 
@@ -399,16 +475,34 @@ const OrderSuccess: React.FC = () => {
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <ShoppingOutlined style={{ color: COLORS.primaryText, fontSize: 18 }} />
-                    <Text strong style={{ fontSize: 16 }}>Sản phẩm đã mua</Text>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <ShoppingOutlined
+                      style={{ color: COLORS.primaryText, fontSize: 18 }}
+                    />
+                    <Text strong style={{ fontSize: 16 }}>
+                      Sản phẩm đã mua
+                    </Text>
                   </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Mã: {code}</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Mã: {code}
+                  </Text>
                 </div>
                 <Button
                   type="link"
                   onClick={() => navigate(`/orders/${code}`)}
-                  style={{ padding: '4px 12px', height: 'auto', fontWeight: 500, color: COLORS.primaryText }}
+                  style={{
+                    padding: '4px 12px',
+                    height: 'auto',
+                    fontWeight: 500,
+                    color: COLORS.primaryText,
+                  }}
                 >
                   Chi tiết →
                 </Button>
@@ -439,7 +533,13 @@ const OrderSuccess: React.FC = () => {
                       }}
                     >
                       <Image
-                        src={item.image || '/placeholder.png'}
+                        src={
+                          item.image
+                            ? item.image.startsWith('http')
+                              ? item.image
+                              : `http://localhost:3000${item.image}`
+                            : '/placeholder.png'
+                        }
                         alt={item.name}
                         width={60}
                         height={60}
@@ -454,14 +554,33 @@ const OrderSuccess: React.FC = () => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <Text
                           ellipsis
-                          style={{ display: 'block', fontWeight: 500, marginBottom: 4, fontSize: 14 }}
+                          style={{
+                            display: 'block',
+                            fontWeight: 500,
+                            marginBottom: 4,
+                            fontSize: 14,
+                          }}
                         >
                           {item.name}
                         </Text>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>x{item.quantity}</Tag>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>
+                            x{item.quantity}
+                          </Tag>
                           {item.price && (
-                            <Text strong style={{ color: COLORS.primaryText, fontSize: 13 }}>
+                            <Text
+                              strong
+                              style={{
+                                color: COLORS.primaryText,
+                                fontSize: 13,
+                              }}
+                            >
                               {fmt(item.price)}
                             </Text>
                           )}
@@ -471,8 +590,16 @@ const OrderSuccess: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '36px 16px', color: COLORS.textMuted }}>
-                  <ShoppingOutlined style={{ fontSize: 44, marginBottom: 8, opacity: 0.35 }} />
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '36px 16px',
+                    color: COLORS.textMuted,
+                  }}
+                >
+                  <ShoppingOutlined
+                    style={{ fontSize: 44, marginBottom: 8, opacity: 0.35 }}
+                  />
                   <div>Không có sản phẩm nào trong đơn</div>
                 </div>
               )}
@@ -490,15 +617,36 @@ const OrderSuccess: React.FC = () => {
                 <Title level={5} style={{ color: '#fff', marginBottom: 8 }}>
                   📱 Tải ứng dụng EveryMart
                 </Title>
-                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, display: 'block', marginBottom: 14 }}>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontSize: 13,
+                    display: 'block',
+                    marginBottom: 14,
+                  }}
+                >
                   Trải nghiệm mua sắm tiện lợi hơn với ứng dụng di động
                 </Text>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <div
+                  style={{ display: 'flex', gap: 8, justifyContent: 'center' }}
+                >
                   <a href="#" aria-label="App Store">
-                    <img src="/badges/appstore.svg" width={130} height={40} alt="App Store" style={{ borderRadius: 8 }} />
+                    <img
+                      src="/badges/appstore.svg"
+                      width={130}
+                      height={40}
+                      alt="App Store"
+                      style={{ borderRadius: 8 }}
+                    />
                   </a>
                   <a href="#" aria-label="Google Play">
-                    <img src="/badges/googleplay.svg" width={130} height={40} alt="Google Play" style={{ borderRadius: 8 }} />
+                    <img
+                      src="/badges/googleplay.svg"
+                      width={130}
+                      height={40}
+                      alt="Google Play"
+                      style={{ borderRadius: 8 }}
+                    />
                   </a>
                 </div>
               </div>
