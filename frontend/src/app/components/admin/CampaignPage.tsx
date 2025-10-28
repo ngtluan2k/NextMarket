@@ -14,7 +14,12 @@ import {
   Dropdown,
   Menu,
 } from 'antd';
-import { PlusOutlined, SearchOutlined, MoreOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  SearchOutlined,
+  MoreOutlined,
+  EditOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +33,7 @@ const { Option } = Select;
 export default function CampaignPage({
   onSelectCampaign,
 }: {
-  onSelectCampaign: (c: Campaign, mode: 'detail' | 'publish') => void;
+  onSelectCampaign: (c: Campaign, mode: 'detail' | 'publish' | 'update') => void;
 }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
@@ -121,6 +126,9 @@ export default function CampaignPage({
       case 'publish':
         onSelectCampaign(record, 'publish'); // 👈 giống detail
         break;
+      case 'update':
+        onSelectCampaign(record, 'update'); // 🆕 mở form cập nhật chiến dịch
+        break;
     }
   };
 
@@ -163,6 +171,11 @@ export default function CampaignPage({
                 key: 'publish',
                 label: 'Đăng chiến dịch',
                 icon: <PlusOutlined />,
+              },
+              {
+                key: 'update',
+                label: 'Cập nhật chiến dịch',
+                icon: <EditOutlined />,
               },
             ]}
           />
@@ -260,6 +273,8 @@ export default function CampaignPage({
         onClose={() => setModalVisible(false)}
         onSuccess={fetchCampaigns}
       />
+
+      
     </div>
   );
 }

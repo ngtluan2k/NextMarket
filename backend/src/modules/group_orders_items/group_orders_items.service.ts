@@ -78,7 +78,8 @@ export class GroupOrderItemsService {
 		variantId?: number,
 		quantity = 1,
 		groupId?: number
-	): Promise<number> {
+	): Promise<{ basePrice: number; finalPrice: number; discountPercent: number }> {
+
 		const product = await this.productRepo.findOne({
 			where: { id: productId },
 		});
@@ -172,24 +173,27 @@ export class GroupOrderItemsService {
 		if (appliedRule) {
 			basePrice = Number(appliedRule.price);
 		}
+
+		let finalPrice = basePrice;
+		let discountPercent = 0;
 		// Áp dụng giảm giá theo số thành viên trong group
 		if (groupId) {
 			const group = await this.groupOrderRepo.findOne({
 				where: { id: groupId },
-				relations: ['members']
+				relations: ['members'],
 			});
 
 			if (group) {
 				const memberCount = group.members?.length || 0;
-				const discountPercent = this.calculateDiscountPercent(memberCount);
+				discountPercent = this.calculateDiscountPercent(memberCount);
 
 				if (discountPercent > 0) {
-					basePrice = basePrice * (1 - discountPercent / 100);
+					finalPrice = basePrice * (1 - discountPercent / 100);
 				}
 			}
 		}
 
-		return basePrice;
+		return { basePrice, finalPrice, discountPercent };
 	}
 
 	// Thêm sản phẩm vào group
@@ -200,14 +204,14 @@ export class GroupOrderItemsService {
 		const group = await this.ensureGroupOpen(groupId);
 		const member = await this.ensureMember(groupId, dto.userId);
 
+
 		// 💰 Tính đơn giá theo logic order
-		let unitPrice = await this.calculateItemPrice(
+		const { basePrice, finalPrice, discountPercent } = await this.calculateItemPrice(
 			dto.productId,
 			dto.variantId,
 			dto.quantity,
 			groupId
 		);
-
 
 		const item = this.itemRepo.create({
 			group_order: { id: groupId } as GroupOrder,
@@ -215,9 +219,10 @@ export class GroupOrderItemsService {
 			product: { id: dto.productId } as Product,
 			variant: dto.variantId ? ({ id: dto.variantId } as Variant) : null,
 			quantity: dto.quantity,
-			price: unitPrice * dto.quantity,
+			price: finalPrice * dto.quantity, // ✅ finalPrice là number
 			note: dto.note ?? null,
 		});
+
 
 		const saved = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
@@ -233,7 +238,7 @@ export class GroupOrderItemsService {
 	async updateGroupDiscount(groupId: number) {
 		const group = await this.groupOrderRepo.findOne({
 			where: { id: groupId },
-			relations: ['members']
+			relations: ['members'],
 		});
 
 		if (!group) return;
@@ -242,13 +247,13 @@ export class GroupOrderItemsService {
 		const discountPercent = this.calculateDiscountPercent(memberCount);
 
 		await this.groupOrderRepo.update(groupId, {
-			discount_percent: discountPercent
+			discount_percent: discountPercent,
 		});
 
 		// Broadcast cập nhật discount
 		await this.gateway.broadcastGroupUpdate(groupId, 'discount-updated', {
 			discountPercent,
-			memberCount
+			memberCount,
 		});
 
 		return discountPercent;
@@ -258,7 +263,14 @@ export class GroupOrderItemsService {
 	async listGroupItems(groupId: number) {
 		return this.itemRepo.find({
 			where: { group_order: { id: groupId } },
-			relations: ['member', 'member.user', 'product', 'variant','member.user.profile'],
+			relations: [
+				'member',
+				'member.user',
+				'product',
+				'variant',
+				'member.user.profile',
+				'member.address_id',
+			],
 			order: { id: 'DESC' },
 		});
 	}
@@ -295,13 +307,14 @@ export class GroupOrderItemsService {
 				throw new BadRequestException('Số lượng tối thiểu là 1');
 			item.quantity = dto.quantity;
 			// Tính lại giá nếu thay đổi số lượng
-			const unitPrice = await this.calculateItemPrice(
+			const { finalPrice } = await this.calculateItemPrice(
 				item.product.id,
 				item.variant?.id,
 				dto.quantity,
 				groupId
 			);
-			item.price = unitPrice * dto.quantity;
+			item.price = finalPrice * dto.quantity;
+
 		}
 
 		if (dto.note !== undefined) {
@@ -339,6 +352,4 @@ export class GroupOrderItemsService {
 		});
 		return { success: true };
 	}
-
-
 }

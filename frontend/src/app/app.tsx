@@ -51,12 +51,14 @@ import GroupOrderDetail from './components/group_orders/components/GroupOrderDet
 import GroupJoin from './components/group_orders/components/GroupJoin';
 import ShopXuPage from './components/account/ShopXuPage';
 import FlashSalePage from './page/FlashSalePage';
+
+import AccountVoucher from './page/account/AccountVoucher';
 import StoreCampaignDetail from './page/Seller/tab/StoreCampaignDetail';
 import StoreCampaignManager from './page/Seller/tab/StoreCampaignManager';
 import Dashboard from './page/Seller/tab/StoreOwnerDashboard';
 import AdminCampaignStoreProductsWrapper from './components/admin/AdminCampaignStoreProductsWrapper';
 import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
-import AccountVoucher from './page/account/AccountVoucher';
+import CampaignAdPopup from './components/CampaignAdPopup';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -84,7 +86,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/catepage" element={<CategoryPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
-              <Route path="/campaign/:id" element={<PublicCampaignPageWrapper />} />
+          <Route path="/campaign/:id" element={<PublicCampaignPageWrapper />} />
 
           <Route
             path="/products/slug/:slug"
@@ -128,7 +130,7 @@ const App: React.FC = () => {
             {/* <Route path="addresses/create" element={<AddressCreatePage />} /> */}
             <Route path="xu" element={<ShopXuPage />} />
             <Route path="subscription" element={<MySubscriptionsPage />} />
-            <Route path="vouchers" element={<AccountVoucher/>}/>
+            <Route path="vouchers" element={<AccountVoucher />} />
           </Route>
 
           {/* Store Routes */}
@@ -199,6 +201,7 @@ const App: React.FC = () => {
           />
           <Route path="/group/:uuid" element={<GroupJoin />} />
         </Routes>
+        <CampaignAdPopup />
       </CartProvider>
     </AuthProvider>
   );

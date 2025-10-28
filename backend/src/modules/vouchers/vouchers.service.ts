@@ -48,91 +48,94 @@ export class VouchersService {
   ) {}
 
   async create(
-    createVoucherDto: CreateVoucherDto,
-    userId: number,
-    role: string | string[]
-  ): Promise<Voucher> {
-    console.log('=== VOUCHER CREATE START ===');
-    console.log('Role:', role);
-    console.log('User ID:', userId);
-    console.log('DTO received:', createVoucherDto);
+  createVoucherDto: CreateVoucherDto,
+  userId: number,
+  role: string | string[]
+): Promise<Voucher> {
+  console.log('=== VOUCHER CREATE START ===');
+  console.log('Role:', role);
+  console.log('User ID:', userId);
+  console.log('DTO received:', createVoucherDto);
 
-    const roleArray = Array.isArray(role) ? role : [role];
-    console.log('Role array:', roleArray);
+  const roleArray = Array.isArray(role) ? role : [role];
+  console.log('Role array:', roleArray);
 
-    if (!this.hasPermission(roleArray, 'add_voucher')) {
-      throw new ForbiddenException('Không có quyền tạo voucher');
-    }
+  // Kiểm tra quyền
+  if (!this.hasPermission(roleArray, 'add_voucher')) {
+    throw new ForbiddenException('Không có quyền tạo voucher');
+  }
 
-    let storeId: number | undefined;
+  let storeId: number | undefined;
 
-    if (roleArray.includes('Seller')) {
-      console.log(' Processing for Seller role');
+  // Xác định xem có phải Seller thuần túy không (không phải Admin)
+  const isSellerOnly = roleArray.includes('Seller') && !roleArray.includes('Admin');
 
-      if (createVoucherDto.store) {
-        storeId = createVoucherDto.store;
-        console.log(' Using store from DTO.store:', storeId);
-      } else if (
-        createVoucherDto.applicable_store_ids &&
-        createVoucherDto.applicable_store_ids.length === 1
-      ) {
-        storeId = createVoucherDto.applicable_store_ids[0];
-        console.log(' Using store from applicable_store_ids:', storeId);
-      }
+  if (isSellerOnly) {
+    console.log('Processing for Seller only role');
 
-      console.log('Final storeId for Seller:', storeId);
-
-      if (!storeId) {
-        console.log(' No storeId found for Seller');
-        throw new BadRequestException(
-          'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
-        );
-      }
-
-      console.log(' Checking store ownership...');
-      await this.checkStoreOwnership(userId, storeId);
-      console.log(' Store ownership check passed');
-    } else {
-      console.log(' User is not Seller, storeId remains undefined');
-    }
-
-    if (
-      createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
-      (createVoucherDto.min_order_amount ?? 0) <
-        (createVoucherDto.discount_value ?? 0)
+    if (createVoucherDto.store) {
+      storeId = createVoucherDto.store;
+      console.log('Using store from DTO.store:', storeId);
+    } else if (
+      createVoucherDto.applicable_store_ids &&
+      createVoucherDto.applicable_store_ids.length === 1
     ) {
+      storeId = createVoucherDto.applicable_store_ids[0];
+      console.log('Using store from applicable_store_ids:', storeId);
+    }
+
+    if (!storeId) {
       throw new BadRequestException(
-        'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
+        'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
       );
     }
-    const { store, ...voucherData } = createVoucherDto;
 
-    console.log(' Voucher data after removing store:', voucherData);
-    console.log(
-      'Store relation to set:',
-      storeId ? { id: storeId } : undefined
-    );
-
-    const voucher = this.vouchersRepository.create({
-      ...voucherData,
-      uuid: uuidv4(),
-      start_date: new Date(createVoucherDto.start_date),
-      end_date: new Date(createVoucherDto.end_date),
-      store: storeId ? { id: storeId } : undefined,
-    });
-
-    console.log(' Voucher entity created:', voucher);
-
-    try {
-      const savedVoucher = await this.vouchersRepository.save(voucher);
-      console.log(' Voucher saved successfully:', savedVoucher);
-      console.log(' Saved voucher store relation:', savedVoucher.store);
-      return savedVoucher;
-    } catch (error) {
-      console.error(' Error saving voucher:', error);
-      throw error;
-    }
+    console.log('Checking store ownership...');
+    await this.checkStoreOwnership(userId, storeId);
+    console.log('Store ownership check passed');
+  } else {
+    // Admin hoặc Admin + Seller
+    storeId = undefined;
+    console.log('User is Admin or Admin+Seller, storeId can be null');
   }
+
+  // Kiểm tra discount logic
+  if (
+    createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
+    (createVoucherDto.min_order_amount ?? 0) < (createVoucherDto.discount_value ?? 0)
+  ) {
+    throw new BadRequestException(
+      'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
+    );
+  }
+
+  // Tách store ra khỏi DTO
+  const { store, ...voucherData } = createVoucherDto;
+  console.log('Voucher data after removing store:', voucherData);
+  console.log('Store relation to set:', storeId ? { id: storeId } : undefined);
+
+  // Tạo entity voucher
+  const voucher = this.vouchersRepository.create({
+    ...voucherData,
+    uuid: uuidv4(),
+    start_date: new Date(createVoucherDto.start_date),
+    end_date: new Date(createVoucherDto.end_date),
+    store: storeId ? { id: storeId } : undefined,
+  });
+
+  console.log('Voucher entity created:', voucher);
+
+  try {
+    const savedVoucher = await this.vouchersRepository.save(voucher);
+    console.log('Voucher saved successfully:', savedVoucher);
+    console.log('Saved voucher store relation:', savedVoucher.store);
+    return savedVoucher;
+  } catch (error) {
+    console.error('Error saving voucher:', error);
+    throw error;
+  }
+}
+
 
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
     const roleList = Array.isArray(roles) ? roles : [roles];
@@ -151,11 +154,7 @@ export class VouchersService {
     throw new ForbiddenException('Không có quyền xem danh sách voucher');
   }
 
-  async findOne(
-    id: number,
-    userId: number,
-    role: string = 'user'
-  ): Promise<Voucher> {
+  async findOne(id: number, userId: number, role = 'user'): Promise<Voucher> {
     const voucher = await this.vouchersRepository.findOne({
       where: { id },
       relations: ['usages', 'store', 'store.user'],
@@ -198,7 +197,7 @@ export class VouchersService {
         'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm (min_order_amount >= discount_value)'
       );
     }
-    
+
     Object.assign(voucher, updateVoucherDto);
     return await this.vouchersRepository.save(voucher);
   }
@@ -390,7 +389,7 @@ export class VouchersService {
   async getAvailableVouchers(
     userId?: number,
     storeId?: number,
-    filterByStoreOnly: boolean = false
+    filterByStoreOnly = false
   ): Promise<Voucher[]> {
     const now = new Date();
 
@@ -489,6 +488,76 @@ export class VouchersService {
     }
 
     console.log(` Returning ${availableVouchers.length} available vouchers`);
+    return availableVouchers;
+  }
+
+  async getAvailableVouchersForAnyStore(userId?: number): Promise<Voucher[]> {
+    const now = new Date();
+
+    const queryBuilder = this.vouchersRepository
+      .createQueryBuilder('voucher')
+      .leftJoinAndSelect('voucher.store', 'store')
+      .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
+      .andWhere('voucher.start_date <= :now', { now })
+      .andWhere('voucher.end_date >= :now', { now })
+      .andWhere(
+    '(voucher.store_id IS NULL OR JSON_LENGTH(voucher.store_id) = 0)'
+  ); 
+
+    const vouchers = await queryBuilder
+      .orderBy('voucher.priority', 'DESC')
+      .addOrderBy('voucher.created_at', 'DESC')
+      .getMany();
+
+    console.log(
+      `📦 Found ${vouchers.length} vouchers before user-specific filtering`
+    );
+
+    const availableVouchers = [];
+
+    for (const voucher of vouchers) {
+      // Check total usage limit
+      if (
+        voucher.total_usage_limit &&
+        voucher.total_used_count >= voucher.total_usage_limit
+      ) {
+        continue;
+      }
+
+      // Check collection limit
+      if (
+        voucher.collection_limit &&
+        voucher.collected_count >= voucher.collection_limit
+      ) {
+        continue;
+      }
+
+      if (userId) {
+        // Check per-user usage limit
+        const userUsageCount = await this.voucherUsageRepository.count({
+          where: { voucher: { id: voucher.id }, user: { id: userId } },
+        });
+        if (userUsageCount >= voucher.per_user_limit) {
+          continue;
+        }
+
+        // Check new user only
+        if (voucher.new_user_only) {
+          const userOrders = await this.ordersRepository.count({
+            where: { user: { id: userId } },
+          });
+          if (userOrders > 0) {
+            continue;
+          }
+        }
+      }
+
+      availableVouchers.push(voucher);
+    }
+
+    console.log(
+      `✅ Returning ${availableVouchers.length} available vouchers for any store`
+    );
     return availableVouchers;
   }
 

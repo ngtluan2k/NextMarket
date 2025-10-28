@@ -18,6 +18,7 @@ import { Campaign } from '../../../service/campaign.service';
 import CampaignDetailPage from './campaigns_components/CampaignDetailPage';
 import AdminCampaignStoreProductsWrapper from './AdminCampaignStoreProductsWrapper';
 import PublishCampaignForm from './campaigns_components/PublishCampaignForm';
+import UpdateCampaignForm from './campaigns_components/UpdateCampaignForm';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -122,6 +123,7 @@ export const AdminDashboard: React.FC = () => {
               setSelectedCampaign(c);
               if (mode === 'detail') setActiveKey('8-2-detail');
               else if (mode === 'publish') setActiveKey('8-2-publish');
+              else if (mode === 'update') setActiveKey('8-2-update');
             }}
           />
         );
@@ -147,13 +149,20 @@ export const AdminDashboard: React.FC = () => {
         ) : null;
 
       case '8-2-publish':
-  return selectedCampaign ? (
-    <PublishCampaignForm
-      campaignId={selectedCampaign.id}
-      onClose={() => setActiveKey('8-2')}
-    />
-  ) : null;
+        return selectedCampaign ? (
+          <PublishCampaignForm
+            campaignId={selectedCampaign.id}
+            onClose={() => setActiveKey('8-2')}
+          />
+        ) : null;
 
+      case '8-2-update':
+        return selectedCampaign ? (
+          <UpdateCampaignForm
+            campaignId={selectedCampaign.id}
+            onClose={() => setActiveKey('8-2')}
+          />
+        ) : null;
 
       case '9':
         return (

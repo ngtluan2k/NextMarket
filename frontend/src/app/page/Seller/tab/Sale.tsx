@@ -19,6 +19,7 @@ import {
   Row,
   Col,
   message,
+  Spin,
 } from 'antd';
 import {
   PlusOutlined,
@@ -42,10 +43,18 @@ import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
 import { storeService } from '../../../../service/store.service';
 import 'dayjs/locale/vi';
 import type { Sale, ProductItem, Payment } from '../../../types/order';
+import { orderService } from '../../../../service/order.service';
 
 dayjs.locale('vi');
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+
+interface OrderStats {
+  totalRevenue: number;
+  totalOrders: number;
+  completed: number;
+  pending: number;
+}
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -134,7 +143,8 @@ export default function Sale() {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [storeId, setStoreId] = useState<number | null>(null);
   const [form] = Form.useForm();
-
+  const [stats, setStats] = useState<OrderStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const {
     sales,
     loading,
@@ -151,6 +161,26 @@ export default function Sale() {
     startDate: dateRange ? dateRange[0].format('YYYY-MM-DD') : undefined,
     endDate: dateRange ? dateRange[1].format('YYYY-MM-DD') : undefined,
   });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (storeId == null) return; // tránh gọi khi storeId chưa có
+      console.log('📊 Fetching stats for storeId:', storeId);
+      setStatsLoading(true); // bắt đầu load
+      try {
+        const data = await orderService.getOrderStats(storeId);
+        setStats(data);
+      } catch (error: any) {
+        console.error(
+          'Error fetching order stats:',
+          error.response?.data || error.message
+        );
+      } finally {
+        setStatsLoading(false); // load xong dù thành công hay lỗi
+      }
+    };
+    fetchStats();
+  }, [storeId]);
 
   // Lấy storeId khi component mount
   useEffect(() => {
@@ -488,47 +518,53 @@ export default function Sale() {
           </Space>
         </div>
 
-        <Row gutter={[16, 16]} className="mb-6">
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border-l-4 border-l-cyan-500">
-              <Statistic
-                title="Tổng Doanh Thu"
-                value={totalSales}
-                precision={0}
-                prefix={<DollarOutlined className="text-cyan-500" />}
-                suffix="₫"
-                valueStyle={{ color: '#1890ff' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border-l-4 border-l-green-500">
-              <Statistic
-                title="Tổng Đơn Hàng"
-                value={totalOrders}
-                prefix={<ShoppingCartOutlined className="text-green-500" />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border-l-4 border-l-blue-500">
-              <Statistic
-                title="Hoàn Thành"
-                value={completedSales}
-                prefix={<RiseOutlined className="text-blue-500" />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border-l-4 border-l-orange-500">
-              <Statistic
-                title="Đang Chờ Xác Nhận"
-                value={pendingSales}
-                prefix={<CalendarOutlined className="text-orange-500" />}
-              />
-            </Card>
-          </Col>
-        </Row>
+        {statsLoading ? (
+          <Spin />
+        ) : (
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Tổng Doanh Thu"
+                  value={stats?.totalRevenue || 0}
+                  suffix="₫"
+                  valueStyle={{ color: '#3f8600' }} // màu số
+                  prefix={<DollarOutlined style={{ color: '#3f8600' }} />} // màu icon
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Tổng Đơn Hàng"
+                  value={stats?.totalOrders || 0}
+                  valueStyle={{ color: '#1890ff' }}
+                  prefix={<ShoppingCartOutlined style={{ color: '#1890ff' }} />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Hoàn Thành"
+                  value={stats?.completed || 0}
+                  valueStyle={{ color: '#cf1322' }}
+                  prefix={<RiseOutlined style={{ color: '#cf1322' }} />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Đang Chờ Xác Nhận"
+                  value={stats?.pending || 0}
+                  valueStyle={{ color: '#faad14' }}
+                  prefix={<CalendarOutlined style={{ color: '#faad14' }} />}
+                />
+              </Card>
+            </Col>
+          </Row>
+        )}
 
         <Card className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">

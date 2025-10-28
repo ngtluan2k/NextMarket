@@ -52,8 +52,9 @@ export default function PublishCampaignForm({ campaignId, onClose }: Props) {
       try {
         const data = await getCampaignDetail(campaignId);
         setCampaignDetail(data);
-        const vData = await voucherApi.getAllVouchers();
+        const vData = await voucherApi.getAvailableVoucherOfSystem();
         setVouchers(vData);
+        console.log(vData)
       } catch (err) {
         console.error(err);
         message.error('Không tải được thông tin chiến dịch hoặc voucher');

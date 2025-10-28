@@ -143,6 +143,10 @@ export class SocketService {
     onDiscountUpdated(callback: (data: any) => void) {
         this.socket?.on('discount-updated', callback);
     }
+
+    onMemberAddressUpdated(callback: (data: any) => void) {
+    this.socket?.on('member-address-updated', callback);
+}
 }
 
 export const socketService = new SocketService();

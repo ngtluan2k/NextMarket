@@ -20,6 +20,8 @@ import { CampaignVoucher } from './entities/campaign_vouchers.entity';
 import { PublishCampaignDto } from './dto/campaign-publish.dto';
 import { Voucher } from '../vouchers/vouchers.entity';
 import { CampaignVoucherDto } from './dto/campaign-publish.dto';
+import { In } from 'typeorm';
+
 @Injectable()
 export class CampaignsService {
   constructor(
@@ -404,51 +406,75 @@ export class CampaignsService {
   }
 
   async getCampaignDetail(campaignId: number) {
-    // Lấy campaign
     const campaign = await this.campaignRepo.findOne({
       where: { id: campaignId },
+    });
+    if (!campaign) throw new NotFoundException('Campaign không tồn tại');
+
+    // 1️⃣ Lấy banner/images
+    const images = await this.campaignImagesRepo.find({
+      where: { campaign: { id: campaignId } },
+      order: { position: 'ASC' },
+    });
+
+    // 2️⃣ Lấy vouchers
+    const vouchers = await this.campaignVouchersRepo.find({
+      where: { campaign: { id: campaignId } },
+      relations: ['voucher'],
+    });
+
+    // 3️⃣ Lấy stores và products trong chiến dịch
+    const campaignStores = await this.campaignStoreRepo.find({
+      where: { campaign: { id: campaignId } },
       relations: [
-        'stores',
-        'stores.store',
-        'stores.products',
-        'stores.products.product',
-        'stores.products.variant',
+        'store',
+        'products',
+        'products.product',
+        'products.variant',
+        'products.product.media',
       ],
     });
 
-    if (!campaign) throw new NotFoundException('Campaign không tồn tại');
+    const stores = campaignStores.map((cs) => ({
+      id: cs.store.id,
+      name: cs.store.name,
+      status: cs.status,
+      products: cs.products.map((p) => ({
+        id: p.product.id,
+        name: p.product.name,
+        slug: p.product.slug,
+        base_price: p.product.base_price,
+        variant: p.variant
+          ? {
+              id: p.variant.id,
+              variant_name: p.variant.variant_name,
+              price: p.variant.price,
+            }
+          : undefined,
+        promo_price: p.promo_price,
+        status: p.status,
+        imageUrl: p.product.media?.[0]?.url || undefined,
+      })),
+    }));
 
-    // Map dữ liệu ra FE-friendly
+    // 4️⃣ Trả về dữ liệu tổng hợp
     return {
       id: campaign.id,
-      uuid: campaign.uuid,
       name: campaign.name,
       description: campaign.description,
       starts_at: campaign.starts_at,
       ends_at: campaign.ends_at,
-      status: campaign.status,
+      backgroundColor: campaign.backgroundColor,
       banner_url: campaign.banner_url,
-      created_by: campaign.created_by,
-      stores: campaign.stores.map((cs) => ({
-        id: cs.id,
-        name: cs.store.name,
-        status: cs.status,
-        products: cs.products?.map((p) => ({
-          id: p.product.id,
-          name: p.product.name,
-          base_price: Number(p.product.base_price),
-          storeName: cs.store.name,
-          variants: p.variant
-            ? [
-                {
-                  id: p.variant.id,
-                  variant_name: p.variant.variant_name,
-                  price: p.promo_price ?? p.variant.price,
-                },
-              ]
-            : [],
-        })),
+      status: campaign.status,
+      images,
+      vouchers: vouchers.map((cv) => ({
+        id: cv.voucher.id,
+        title: cv.voucher.title,
+        discount_value: cv.voucher.discount_value,
+        type: cv.type,
       })),
+      stores,
     };
   }
 
@@ -521,5 +547,128 @@ export class CampaignsService {
       })),
       stores,
     };
+  }
+
+  async updateCampaign(dto: UpdateCampaignDto, currentUser: any) {
+    console.log(
+      '>>> updateCampaign called with DTO:',
+      JSON.stringify(dto, null, 2)
+    );
+    console.log('>>> currentUser:', currentUser);
+
+    if (!currentUser.roles.includes('Admin')) {
+      throw new BadRequestException(
+        'Chỉ admin mới được phép cập nhật campaign'
+      );
+    }
+
+    const campaign = await this.campaignRepo.findOne({
+      where: { id: dto.campaignId },
+    });
+    if (!campaign) throw new BadRequestException('Không tìm thấy campaign');
+
+    // 1️⃣ Cập nhật thông tin cơ bản
+    campaign.name = dto.name ?? campaign.name;
+    campaign.description = dto.description ?? campaign.description;
+    campaign.starts_at = dto.startsAt ?? campaign.starts_at;
+    campaign.ends_at = dto.endsAt ?? campaign.ends_at;
+    campaign.banner_url = dto.bannerUrl ?? campaign.banner_url;
+    campaign.backgroundColor = dto.backgroundColor ?? campaign.backgroundColor;
+    campaign.status = dto.status ?? campaign.status; // 👈 thêm trường status mới
+
+    await this.campaignRepo.save(campaign);
+
+    // 2️⃣ Cập nhật images nếu có
+    // 2️⃣ Cập nhật images nếu có
+    if (dto.removedImages?.length) {
+      console.log('>>> Xoá ảnh cũ:', dto.removedImages);
+      await this.campaignImagesRepo.delete({
+        id: In(dto.removedImages),
+        campaign: { id: campaign.id },
+      });
+    }
+
+    if (dto.images?.length) {
+      console.log('>>> Thêm ảnh mới:', dto.images);
+      for (let i = 0; i < dto.images.length; i++) {
+        const imgDto = dto.images[i];
+        const img = new CampaignImage();
+        img.campaign = campaign;
+        img.imageUrl = `/uploads/banners/${imgDto.file.filename}`;
+        img.position = imgDto.position ?? i;
+        img.linkUrl = imgDto.link_url ?? undefined;
+        await this.campaignImagesRepo.save(img);
+      }
+    }
+
+    // 3️⃣ Cập nhật sections (ghi đè toàn bộ hoặc merge tùy nhu cầu)
+    if (dto.sections?.length) {
+      console.log('>>> DTO.sections:', dto.sections);
+
+      // Xóa toàn bộ section cũ trước khi thêm mới (nếu cần)
+      await this.campaignSectionsRepo.delete({ campaign: { id: campaign.id } });
+
+      for (const secDto of dto.sections) {
+        const section = new CampaignSection();
+        section.campaign = campaign;
+        section.type = secDto.type;
+        section.title = secDto.title;
+        section.position = secDto.position ?? 0;
+        section.configJson = secDto.config_json ?? undefined;
+        await this.campaignSectionsRepo.save(section);
+
+        if (secDto.items?.length) {
+          for (const item of secDto.items) {
+            const sectionItem = new CampaignSectionItem();
+            sectionItem.section = section;
+            sectionItem.itemType = item.type;
+            sectionItem.itemId = item.item_id ?? undefined;
+            sectionItem.extraData = item.extra_data ?? undefined;
+            await this.campaignSectionItemsRepo.save(sectionItem);
+          }
+        }
+      }
+    }
+
+    // 4️⃣ Cập nhật vouchers
+    let vouchers: CampaignVoucherDto[] = [];
+    if (dto.vouchers) {
+      if (typeof dto.vouchers === 'string') {
+        try {
+          vouchers = JSON.parse(dto.vouchers);
+        } catch (err) {
+          console.error('Cannot parse vouchers:', dto.vouchers);
+          vouchers = [];
+        }
+      } else {
+        vouchers = dto.vouchers;
+      }
+    }
+
+    if (vouchers.length) {
+      console.log('>>> DTO.vouchers:', vouchers);
+      // Xóa voucher cũ trước khi thêm mới
+      await this.campaignVouchersRepo.delete({ campaign: { id: campaign.id } });
+
+      for (const v of vouchers) {
+        if (!v.voucher_id) continue;
+        const voucherEntity = await this.voucherRepo.findOne({
+          where: { id: v.voucher_id },
+        });
+        if (!voucherEntity) {
+          console.warn('Voucher not found:', v.voucher_id);
+          continue;
+        }
+
+        const campaignVoucher = new CampaignVoucher();
+        campaignVoucher.campaign = campaign;
+        campaignVoucher.voucher = voucherEntity;
+        campaignVoucher.type = v.type === 'store' ? 'store' : 'system';
+        await this.campaignVouchersRepo.save(campaignVoucher);
+      }
+    }
+
+    console.log('>>> Campaign updated successfully:', campaign.id);
+    return { success: true, campaignId: dto.campaignId };
   }
 }
