@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Trash2, Tag, FileText, DollarSign, Building2, ListChecks, X, Search,
-  Image as ImageIcon, Upload, MoveLeft, MoveRight, Package, Boxes, Barcode, MapPin, Plus, Minus
+  Image as ImageIcon, Upload, MoveLeft, MoveRight, Package, Boxes, MapPin, Plus
 } from 'lucide-react';
 import { validateProduct, mapErrors } from '../../../validation/productValidator';
 import { productService } from '../../../service/product.service';
 import type { Product } from '../../page/Seller/tab/StoreInventory';
 
+
+import ResultModal from '../seller/ResultModal'
 interface EditProductFormProps {
   product: any;
   onClose: () => void;
@@ -26,6 +28,21 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const getErr = (path: string) => errors[path];
+  type ResultType = 'success' | 'error' | 'warning';
+
+  // ⬇️ NEW: Result modal states
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultType, setResultType] = useState<ResultType>('success');
+  const [resultTitle, setResultTitle] = useState('Thành công');
+  const [resultMessage, setResultMessage] = useState<string | undefined>(undefined);
+
+  // ⬇️ NEW: helper hiển thị modal
+  const showResult = (type: ResultType, title: string, subTitle?: string) => {
+    setResultType(type);
+    setResultTitle(title);
+    setResultMessage(subTitle);
+    setResultOpen(true);
+  };
 
   // ---- trạng thái form (giữ nguyên schema cũ) ----
   interface ProductFormState {
@@ -126,7 +143,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               sort_order: 1,
             });
           } else {
-            // thay ảnh đại diện
             media[0] = {
               ...media[0],
               media_type: 'image',
@@ -147,7 +163,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           })
         );
       } else {
-        // chỉ thêm; nếu chưa có ảnh đại diện thì file đầu làm ảnh đại diện
         files.forEach((file, idx) => {
           const url = URL.createObjectURL(file);
           media.push({
@@ -199,7 +214,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       return { ...prev, media: normalizePrimary(reindexSort(media)) };
     });
   };
-  // --------------------------------------------------------
 
   // Tải sẵn thương hiệu & danh mục + map product vào form
   useEffect(() => {
@@ -219,7 +233,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         setCategories(categoriesRes.data || []);
 
         if (product) {
-          // biến thể + tồn kho
           const variantsWithStock = (product.variants || []).map((v: any) => {
             const totalStock = (v.inventories || []).reduce(
               (sum: number, inv: any) => sum + Number(inv.quantity || 0),
@@ -228,7 +241,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             return { ...v, stock: totalStock };
           });
 
-          // quy tắc giá chuẩn hoá
           const pricingRules = (product.pricing_rules || []).map((pr: any) => ({
             ...pr,
             variant_sku: pr.variant_sku || '',
@@ -242,7 +254,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
               : '',
           }));
 
-          // flatten inventory
           const inventoryWithSKU = (product.variants || []).flatMap((v: any) =>
             (v.inventories || []).map((inv: any) => ({
               id: inv.id,
@@ -255,7 +266,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             }))
           );
 
-          // media: sắp xếp để ảnh đại diện lên đầu
           let media = (product.media || [])
             .filter((m: any) => m.url && m.url !== '')
             .sort((a: any, b: any) => {
@@ -272,8 +282,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             short_description: product.short_description || '',
             description: product.description || '',
             base_price: Number(product.base_price || 0),
-            brandId: Number(product.brandId || 0),
-            categories: (product.categories || []).map((c: any) => c.id),
+            brandId: Number(product.brand?.id || 0),
+            categories: (product.categories || []).map((pc: any) =>
+              pc.category?.id ?? pc.category_id
+            ),
             media,
             variants: variantsWithStock,
             inventory: inventoryWithSKU,
@@ -295,15 +307,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     if (type === 'number') next = Number(value);
     if (name === 'brandId') next = Number(value);
     setForm((prev) => ({ ...prev, [name]: next }));
-  };
-
-  const handleCategoryChange = (id: number) => {
-    setForm((prev) => ({
-      ...prev,
-      categories: prev.categories.includes(id)
-        ? prev.categories.filter((c) => c !== id)
-        : [...prev.categories, id],
-    }));
   };
 
   const addVariant = () =>
@@ -450,7 +453,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       fd.append('pricing_rules', JSON.stringify(form.pricing_rules));
       fd.append('status', status);
 
-      // media_meta: cũ + placeholder cho media mới (giữ thứ tự/đánh dấu ảnh đại diện)
       fd.append(
         'media_meta',
         JSON.stringify([
@@ -476,23 +478,79 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         fd.append('deleted_media_ids', JSON.stringify(deletedMediaIds));
       }
 
-      await productService.updateProduct(product.apiId, fd);
+      // ⬇️ sửa an toàn: dùng apiId hoặc id
+      const productId = Number(product?.apiId ?? product?.id);
+      await productService.updateProduct(productId, fd);
 
-      const updatedProduct: Product = {
-        ...product,
-        ...form,
-        base_price: Number(form.base_price),
-        statusApi: status,
-      };
+      // ✅ Success -> show modal
+      showResult('success', status === 'active' ? 'Đăng bán thành công' : 'Lưu nháp thành công');
 
-      onProductUpdated?.(updatedProduct);
-      onClose();
+      // đóng modal + callback sau 1s
+      setTimeout(() => {
+        setResultOpen(false);
+        onProductUpdated?.({
+          ...product,
+          ...form,
+          base_price: Number(form.base_price),
+          statusApi: status,
+        } as Product);
+        onClose();
+      }, 1000);
     } catch (err: any) {
-      setSubmitError(err?.message || 'Cập nhật thất bại.');
+      const msg = String(err?.message || '');
+      const friendly =
+        msg.startsWith('401') ? 'Phiên đăng nhập đã hết hạn hoặc thiếu quyền. Vui lòng đăng nhập lại.'
+        : msg.startsWith('403') ? 'Bạn không có quyền thực hiện thao tác này.'
+        : msg.startsWith('500') ? 'Máy chủ lỗi (500). Kiểm tra dữ liệu hoặc liên hệ backend.'
+        : (err?.message || 'Cập nhật thất bại.');
+
+      setSubmitError(friendly);
+      // ❌ Error -> show modal
+      showResult('error', 'Thao tác không thành công', friendly);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const formatVND = (n: number) => (n ? new Intl.NumberFormat('vi-VN').format(n) : '');
+
+    // Map text hiển thị: v-<index> cho biến thể, r-<index> cho pricing rule
+    const [priceTextMap, setPriceTextMap] = useState<Record<string, string>>({});
+
+    // Đồng bộ khi thêm/bớt dòng
+    useEffect(() => {
+      const next: Record<string, string> = {};
+      form.variants.forEach((v, i) => next[`v-${i}`] = formatVND(Number(v.price || 0)));
+      form.pricing_rules.forEach((r, i) => next[`r-${i}`] = formatVND(Number(r.price || 0)));
+      setPriceTextMap(prev => ({ ...prev, ...next }));
+    }, [form.variants.length, form.pricing_rules.length]);
+
+    // ---- ONE HANDLER CHO CẢ HAI ----
+    const handleMoneyInput = (
+      e: React.ChangeEvent<HTMLInputElement>,
+      target: 'variant' | 'rule',
+      index: number
+    ) => {
+      const digits = e.target.value.replace(/[^0-9]/g, '');
+      const n = digits ? Number(digits) : 0;
+      const key = (target === 'variant' ? 'v-' : 'r-') + index;
+
+      // 1) cập nhật text hiển thị
+      setPriceTextMap(prev => ({ ...prev, [key]: digits ? new Intl.NumberFormat('vi-VN').format(n) : '' }));
+
+      // 2) cập nhật số vào form
+      setForm(prev => {
+        if (target === 'variant') {
+          const variants = [...prev.variants];
+          variants[index] = { ...variants[index], price: n };
+          return { ...prev, variants };
+        } else {
+          const pricing_rules = [...prev.pricing_rules];
+          pricing_rules[index] = { ...pricing_rules[index], price: n };
+          return { ...prev, pricing_rules };
+        }
+      });
+    };
 
   const nextStep = () => setStep((s) => Math.min(4, s + 1));
   const prevStep = () => setStep((s) => Math.max(1, s - 1));
@@ -533,8 +591,8 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
         </nav>
       </div>
 
-      {/* BƯỚC 1: Thông tin sản phẩm */}
-      {step === 1 && (
+     {/* BƯỚC 1: Thông tin sản phẩm */}
+    {step === 1 && (
         <section className="space-y-6">
           <header className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-2xl bg-blue-100 flex items-center justify-center">
@@ -681,7 +739,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
 
                 {catOpen && (
                   <div className="relative">
-                    <div className="absolute z-30 mt-2 w-[min(28rem,90vw)] rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="absolute z-30 bottom-full mb-2 left-0
+                        w-[min(28rem,90vw)] rounded-xl border border-slate-200
+                        bg-white shadow-xl">
                       <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
                         <Search className="h-4 w-4 text-slate-400" />
                         <input value={catQuery} onChange={(e) => setCatQuery(e.target.value)} placeholder="Tìm danh mục…" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" />
@@ -938,13 +998,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     <div>
                       <label className="block text-sm font-medium">Giá biến thể</label>
                       <input
-                        type="number"
-                        value={v.price}
-                        onChange={(e) => {
-                          const next = [...form.variants];
-                          next[i].price = +e.target.value;
-                          setForm({ ...form, variants: next });
-                        }}
+                        type="text"
+                        inputMode="numeric"
+                        value={priceTextMap[`v-${i}`] ?? formatVND(Number(v.price || 0))}
+                        onChange={(e) => handleMoneyInput(e, 'variant', i)}
                         className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.price`) ? 'border-rose-400' : 'border-slate-300'}`}
                         placeholder="0"
                       />
@@ -1162,13 +1219,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Giá</label>
                   <input
-                    type="number"
-                    value={pr.price}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].price = +e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
+                   type="text"
+                   inputMode="numeric"
+                   value={priceTextMap[`r-${i}`] ?? formatVND(Number(pr.price || 0))}
+                   onChange={(e) => handleMoneyInput(e, 'rule', i)}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
                     placeholder="99000"
                   />
@@ -1280,7 +1334,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           ))}
         </section>
       )}
-
       {/* Lỗi gửi form */}
       {submitError && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 py-2.5 px-4 text-sm text-rose-700">
@@ -1334,6 +1387,15 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           )}
         </div>
       </div>
+
+      <ResultModal
+        open={resultOpen}
+        type={resultType}         
+        title={resultTitle}
+        message={resultMessage}    
+        onClose={() => setResultOpen(false)}
+        autoCloseMs={1000}
+      />
     </form>
   );
 };

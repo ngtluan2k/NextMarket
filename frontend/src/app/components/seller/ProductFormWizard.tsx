@@ -4,6 +4,7 @@ import {
   Image as ImageIcon, Upload, MoveLeft, MoveRight, Package, Boxes, MapPin, Plus
 } from 'lucide-react';
 import { validateProduct, mapErrors, firstErrorStep } from "../../../validation/productValidator";
+import ResultModal from '../seller/ResultModal';
 
 export const ProductForm: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -12,6 +13,28 @@ export const ProductForm: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const getErr = (path: string) => errors[path];
+
+  type ResultType = 'success' | 'error' | 'warning';
+  const [resultOpen, setResultOpen] = useState(false);
+  const [resultType, setResultType] = useState<ResultType>('success');
+  const [resultTitle, setResultTitle] = useState('Thành công');
+  const [resultMessage, setResultMessage] = useState<string | undefined>(undefined);
+
+  const showResult = (type: ResultType, title: string, message?: string) => {
+    setResultType(type);
+    setResultTitle(title);
+    setResultMessage(message);
+    setResultOpen(true);
+  
+    
+    if (type === 'success') {
+      setTimeout(() => {
+        setResultOpen(false);  
+        setStep(1); 
+      }, 1000);
+    }
+  };
+
 
   // --------- State giống Edit ----------
   interface ProductFormState {
@@ -213,17 +236,17 @@ export const ProductForm: React.FC = () => {
     try {
       setSubmitting(true);
       setErrors({});
-
+  
       const variantsWithStock = form.variants.map(v => {
         const totalStock = form.inventory.filter(inv => inv.variant_sku === v.sku)
           .reduce((s, inv) => s + Number(inv.quantity || 0), 0);
         return { ...v, stock: totalStock };
       });
-
+  
       if (status === 'active') {
-        const res = validateProduct({ ...form, variants: variantsWithStock }, 'publish');
-        if (!res.success) {
-          const mapped = mapErrors(res.error.errors);
+        const vres = validateProduct({ ...form, variants: variantsWithStock }, 'publish');
+        if (!vres.success) {
+          const mapped = mapErrors(vres.error.errors);
           setErrors(mapped);
           const keys = Object.keys(mapped);
           const goto =
@@ -236,11 +259,12 @@ export const ProductForm: React.FC = () => {
           return;
         }
       }
-
-      // gọi API tạo mới (giữ nguyên logic submit của bạn)
+  
       const token = localStorage.getItem('token');
-      const url = status === 'active' ? 'http://localhost:3000/products/publish' : 'http://localhost:3000/products';
-
+      const url = status === 'active'
+        ? 'http://localhost:3000/products/publish'
+        : 'http://localhost:3000/products';
+  
       const fd = new FormData();
       fd.append('name', form.name);
       fd.append('short_description', form.short_description || '');
@@ -252,16 +276,40 @@ export const ProductForm: React.FC = () => {
       fd.append('inventory', JSON.stringify(form.inventory));
       fd.append('pricing_rules', JSON.stringify(form.pricing_rules));
       form.media.forEach(m => m.file && fd.append('media', m.file));
-
-      const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Gửi thất bại');
-      alert(status === 'active' ? 'Đã xuất bản sản phẩm!' : 'Đã lưu bản nháp!');
+  
+      const resp = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.message || 'Gửi thất bại');
+  
+      // Đóng form hoặc reset step
+      showResult('success', status === 'active' ? 'Đăng bán thành công' : 'Lưu nháp thành công');
+      setStep(1); // Hoặc bạn có thể sử dụng cách reset form tùy ý
     } catch (e: any) {
-      alert(e?.message || 'Gửi thất bại');
+      showResult('error', 'Thao tác không thành công', e?.message || 'Gửi thất bại');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const findDuplicateSkus = (variants: ProductFormState['variants']) => {
+    const skuCount: Record<string, number> = {};
+    const duplicates: { sku: string; idxs: number[] }[] = [];
+  
+    variants.forEach((v, idx) => {
+      if (!skuCount[v.sku]) {
+        skuCount[v.sku] = 0;
+      }
+      skuCount[v.sku]++;
+      if (skuCount[v.sku] === 2) {
+        duplicates.push({ sku: v.sku, idxs: [] });  // Tạo entry cho SKU trùng
+      }
+      const duplicate = duplicates.find(d => d.sku === v.sku);
+      if (duplicate) {
+        duplicate.idxs.push(idx);  // Ghi lại chỉ mục
+      }
+    });
+  
+    return duplicates;
   };
 
   const nextStep = () => setStep(s => Math.min(4, s + 1));
@@ -416,17 +464,27 @@ export const ProductForm: React.FC = () => {
 
                 {catOpen && (
                   <div className="relative">
-                    <div className="absolute z-30 mt-2 w-[min(28rem,90vw)] rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="absolute left-0 bottom-full mb-2 z-30 w-[min(28rem,90vw)] rounded-xl border border-slate-200 bg-white shadow-xl">
                       <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
                         <Search className="h-4 w-4 text-slate-400" />
-                        <input value={catQuery} onChange={(e) => setCatQuery(e.target.value)} placeholder="Tìm danh mục…" className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" />
+                        <input
+                          value={catQuery}
+                          onChange={(e) => setCatQuery(e.target.value)}
+                          placeholder="Tìm danh mục…"
+                          className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                        />
                       </div>
                       <ul className="max-h-72 overflow-auto p-2">
                         {filteredCategories.map((c: any) => {
                           const checked = form.categories.includes(c.id);
                           return (
                             <li key={c.id} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-slate-50">
-                              <input type="checkbox" checked={checked} onChange={() => toggleCategory(c.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCategory(c.id)}
+                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
                               <span className="truncate text-slate-700">{c.name}</span>
                             </li>
                           );
@@ -437,7 +495,13 @@ export const ProductForm: React.FC = () => {
                       </ul>
                       <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5 text-xs text-slate-500">
                         <span>Đã chọn: {form.categories.length}</span>
-                        <button type="button" onClick={() => setCatOpen(false)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700">Xong</button>
+                        <button
+                          type="button"
+                          onClick={() => setCatOpen(false)}
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
+                        >
+                          Xong
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -548,8 +612,9 @@ export const ProductForm: React.FC = () => {
             </div>
           </header>
 
-          {/* Variants */}
+          {/* Variants Section */}
           <div className="space-y-4">
+            
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-slate-800 flex items-center gap-2">
                 <Package className="h-4 w-4 text-slate-500" /> Biến thể ({form.variants.length})
@@ -563,57 +628,92 @@ export const ProductForm: React.FC = () => {
               <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">Chưa có biến thể. Nhấn “Thêm biến thể”.</div>
             )}
 
+            
             {form.variants.map((v, i) => {
               const totalStock = form.inventory.filter(inv => inv.variant_sku === v.sku)
                 .reduce((sum, inv) => sum + Number(inv.quantity || 0), 0);
+                
+                const handleVariantPriceChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+                  const value = e.target.value.replace(/[^0-9]/g, ''); // Lọc chỉ số
+                  const formattedPrice = value ? new Intl.NumberFormat('vi-VN').format(Number(value)) : ''; // Định dạng với dấu phẩy
+                  const updatedVariants = [...form.variants];
+                  updatedVariants[index].price = Number(value); // Cập nhật giá
+                  setForm({ ...form, variants: updatedVariants });
+                 };
 
+              // Check for SKU duplication
+              const skuDupError = findDuplicateSkus(form.variants).some(d => d.idxs.includes(i)) ? `SKU trùng: "${v.sku}"` : '';
+              
               return (
                 <div key={i} className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5">
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {/* SKU Input */}
                     <div>
                       <label className="block text-sm font-medium">SKU</label>
                       <input
                         value={v.sku}
-                        onChange={(e) => { const next = [...form.variants]; next[i].sku = e.target.value; setForm({ ...form, variants: next }); }}
-                        className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.sku`) ? 'border-rose-400' : 'border-slate-300'}`}
+                        onChange={(e) => { 
+                          const next = [...form.variants]; 
+                          next[i].sku = e.target.value; 
+                          setForm({ ...form, variants: next }); 
+                        }}
+                        className={`mt-1 px-3 py-2 border rounded-md w-full ${skuDupError ? 'border-rose-400' : 'border-slate-300'}`}
                         placeholder="SKU"
                       />
-                      {getErr(`variants.${i}.sku`) && <p className="text-xs text-rose-600 mt-1">{getErr(`variants.${i}.sku`)}</p>}
+                      {skuDupError && <p className="text-xs text-rose-600 mt-1">{skuDupError}</p>}
                     </div>
 
+                    {/* Variant Name Input */}
                     <div>
                       <label className="block text-sm font-medium">Tên biến thể</label>
                       <input
                         value={v.variant_name}
-                        onChange={(e) => { const next = [...form.variants]; next[i].variant_name = e.target.value; setForm({ ...form, variants: next }); }}
+                        onChange={(e) => { 
+                          const next = [...form.variants]; 
+                          next[i].variant_name = e.target.value; 
+                          setForm({ ...form, variants: next }); 
+                        }}
                         className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.variant_name`) ? 'border-rose-400' : 'border-slate-300'}`}
                         placeholder="Ví dụ: Đỏ / XL"
                       />
                       {getErr(`variants.${i}.variant_name`) && <p className="text-xs text-rose-600 mt-1">{getErr(`variants.${i}.variant_name`)}</p>}
                     </div>
 
+                    {/* Price Input */}
                     <div>
-                      <label className="block text-sm font-medium">Giá biến thể</label>
-                      <input
-                        type="number" value={v.price}
-                        onChange={(e) => { const next = [...form.variants]; next[i].price = +e.target.value; setForm({ ...form, variants: next }); }}
-                        className={`mt-1 px-3 py-2 border rounded-md w-full ${getErr(`variants.${i}.price`) ? 'border-rose-400' : 'border-slate-300'}`}
-                        placeholder="0"
-                      />
+                    <label className="block text-sm font-medium">Giá biến thể</label>
+                      <div className="mt-1 flex items-center rounded-xl border border-slate-300 bg-white px-3">
+                        <span className="text-slate-400">₫</span>
+                        <input
+                          type="text"
+                          value={new Intl.NumberFormat('vi-VN').format(v.price)}
+                          onChange={(e) => handleVariantPriceChange(e, i)}
+                          className="w-full bg-transparent px-2 py-2.5 text-sm outline-none"
+                          placeholder="0"
+                        />
+                      </div>
                       {getErr(`variants.${i}.price`) && <p className="text-xs text-rose-600 mt-1">{getErr(`variants.${i}.price`)}</p>}
                     </div>
 
+                    {/* Total Stock */}
                     <div>
                       <label className="block text-sm font-medium">Tổng tồn (tự tính)</label>
                       <input type="number" value={totalStock} readOnly className="mt-1 px-3 py-2 border rounded-md bg-slate-100 w-full" />
                     </div>
 
+                    {/* Barcode Input */}
                     <div>
                       <label className="block text-sm font-medium">Mã vạch (Barcode)</label>
                       <div className="mt-1 flex items-center gap-2">
                         <input
-                          value={v.barcode || ''} onChange={(e) => { const next = [...form.variants]; next[i].barcode = e.target.value; setForm({ ...form, variants: next }); }}
-                          className="px-3 py-2 border rounded-md w-full border-slate-300" placeholder="Tuỳ chọn"
+                          value={v.barcode || ''} 
+                          onChange={(e) => { 
+                            const next = [...form.variants]; 
+                            next[i].barcode = e.target.value; 
+                            setForm({ ...form, variants: next }); 
+                          }}
+                          className="px-3 py-2 border rounded-md w-full border-slate-300" 
+                          placeholder="Tuỳ chọn"
                         />
                         <button type="button" onClick={() => removeVariantAt(i)} className="inline-flex items-center justify-center rounded-md border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Xóa biến thể">
                           <Trash2 className="h-4 w-4" />
@@ -626,7 +726,7 @@ export const ProductForm: React.FC = () => {
             })}
           </div>
 
-          {/* Inventory như card */}
+          {/* Inventory Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-slate-800 flex items-center gap-2">
@@ -648,7 +748,11 @@ export const ProductForm: React.FC = () => {
                         <label className="block text-sm font-medium">SKU biến thể</label>
                         <input
                           value={inv.variant_sku}
-                          onChange={(e) => { const next = [...form.inventory]; next[i].variant_sku = e.target.value; setForm({ ...form, inventory: next }); }}
+                          onChange={(e) => { 
+                            const next = [...form.inventory]; 
+                            next[i].variant_sku = e.target.value; 
+                            setForm({ ...form, inventory: next }); 
+                          }}
                           className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${getErr(`inventory.${i}.variant_sku`) ? 'border-rose-400' : 'border-slate-300'}`}
                           placeholder="SKU liên kết"
                         />
@@ -659,7 +763,11 @@ export const ProductForm: React.FC = () => {
                         <label className="block text-sm font-medium">Vị trí</label>
                         <input
                           value={inv.location}
-                          onChange={(e) => { const next = [...form.inventory]; next[i].location = e.target.value; setForm({ ...form, inventory: next }); }}
+                          onChange={(e) => { 
+                            const next = [...form.inventory]; 
+                            next[i].location = e.target.value; 
+                            setForm({ ...form, inventory: next }); 
+                          }}
                           className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${getErr(`inventory.${i}.location`) ? 'border-rose-400' : 'border-slate-300'}`}
                           placeholder="Kho / Kệ"
                         />
@@ -670,7 +778,11 @@ export const ProductForm: React.FC = () => {
                         <label className="block text-sm font-medium">Số lượng</label>
                         <input
                           type="number" value={inv.quantity}
-                          onChange={(e) => { const next = [...form.inventory]; next[i].quantity = +e.target.value; setForm({ ...form, inventory: next }); }}
+                          onChange={(e) => { 
+                            const next = [...form.inventory]; 
+                            next[i].quantity = +e.target.value; 
+                            setForm({ ...form, inventory: next }); 
+                          }}
                           className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${getErr(`inventory.${i}.quantity`) ? 'border-rose-400' : 'border-slate-300'}`}
                           placeholder="0"
                         />
@@ -730,9 +842,14 @@ export const ProductForm: React.FC = () => {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Giá</label>
-                  <input type="number" value={pr.price} onChange={(e) => { const next = [...form.pricing_rules]; next[i].price = +e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="99000" />
+                  <input type="text" 
+                   value={new Intl.NumberFormat('vi-VN').format(pr.price)} onChange={(e) => {
+                  const updatedPricingRules = [...form.pricing_rules];
+                  updatedPricingRules[i].price = Number(e.target.value.replace(/[^0-9]/g, ''));
+                  setForm({ ...form, pricing_rules: updatedPricingRules });
+                }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="99000" />
                 </div>
-
+   
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Chu kỳ</label>
                   <input value={pr.cycle || ''} onChange={(e) => { const next = [...form.pricing_rules]; next[i].cycle = e.target.value; setForm({ ...form, pricing_rules: next }); }} className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500" placeholder="hàng tháng" />
@@ -820,6 +937,14 @@ export const ProductForm: React.FC = () => {
           )}
         </div>
       </div>
+      <ResultModal
+        open={resultOpen}
+        type={resultType}          
+        title={resultTitle}
+        message={resultMessage}
+        onClose={() => setResultOpen(false)} 
+        autoCloseMs={1000}          
+      />
     </form>
   );
 };

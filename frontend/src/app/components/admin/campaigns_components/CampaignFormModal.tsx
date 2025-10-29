@@ -11,6 +11,7 @@ import {
 } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { createCampaign } from '../../../../service/campaign.service';
+import dayjs from 'dayjs';
 
 const { TextArea } = Input;
 
@@ -75,20 +76,26 @@ export default function CampaignFormModal({
         </Form.Item>
 
         <Form.Item
-          label="Bắt đầu"
-          name="startsAt"
-          rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}
-        >
-          <DatePicker showTime style={{ width: '100%' }} />
-        </Form.Item>
+            label="Bắt đầu"
+            name="startsAt"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}>
+            <DatePicker
+              showTime
+              style={{ width: '100%' }}
+              disabledDate={(current) => current && current < dayjs().endOf('day')} 
+            />
+          </Form.Item>
 
-        <Form.Item
-          label="Kết thúc"
-          name="endsAt"
-          rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc' }]}
-        >
-          <DatePicker showTime style={{ width: '100%' }} />
-        </Form.Item>
+          <Form.Item
+            label="Kết thúc"
+            name="endsAt"
+            rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc' }]}>
+            <DatePicker
+              showTime
+              style={{ width: '100%' }}
+              disabledDate={(current) => current && current < dayjs().endOf('day')} 
+            />
+          </Form.Item>
 
         <Form.Item label="Màu nền chiến dịch">
           <ColorPicker

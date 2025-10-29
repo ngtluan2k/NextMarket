@@ -204,182 +204,185 @@ export class ProductService {
 
   // product.service.ts
 
-  async updateProduct(id: number, dto: any, userId: number) {
-    const pricingRules =
-      typeof dto.pricing_rules === 'string'
-        ? JSON.parse(dto.pricing_rules)
-        : dto.pricing_rules;
+  // product.service.ts
+async updateProduct(id: number, dto: any, userId: number) {
+  // Parse pricing rules nếu FE gửi string
+  const pricingRules =
+    typeof dto.pricing_rules === 'string'
+      ? JSON.parse(dto.pricing_rules)
+      : dto.pricing_rules;
 
-    console.log('pricingRules:', pricingRules); // kiểm tra
-    // --- Lấy product với tất cả quan hệ ---
-    const product = await this.productRepo.findOne({
-      where: { id },
-      relations: [
-        'store',
-        'brand',
-        'categories',
-        'media',
-        'variants',
-        'variants.inventories',
-        'pricing_rules',
-      ],
-    });
-    if (!product) throw new NotFoundException('Product not found');
+  // Lấy product + quyền
+  const product = await this.productRepo.findOne({
+    where: { id },
+    relations: [
+      'store',
+      'categories',        // để có currentCatIds
+      'media',
+      'variants',
+      'variants.inventories',
+      'pricing_rules',
+    ],
+  });
+  if (!product) throw new NotFoundException('Product not found');
+  if (product.store.user_id !== userId)
+    throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
 
-    if (product.store.user_id !== userId) {
-      throw new ForbiddenException('Bạn không có quyền sửa sản phẩm này');
-    }
+  // ===== 1) UPDATE SCALAR-ONLY (KHÔNG spread dto có quan hệ) =====
+  await this.productRepo.update(id, {
+    name: dto.name ?? product.name,
+    short_description: dto.short_description ?? product.short_description,
+    description: dto.description ?? product.description,
+    base_price: dto.base_price ?? product.base_price,
+    brand_id: dto.brandId ?? product.brand_id, // map brandId -> brand_id
+    status: dto.status ?? product.status,
+  });
 
-    // --- Cập nhật product chính ---
-    const updatedProduct = await this.productRepo.save({
-      ...product,
-      ...dto,
-      status: dto.status ?? product.status,
-    });
+  // ===== 2) SYNC CATEGORIES (thêm/xoá theo category_id) =====
+  if (Array.isArray(dto.categories)) {
+    // FE phải gửi **id của Category** (không phải id product_category)
+    const currentCatIds = (product.categories || []).map((pc) => pc.category_id);
+    const nextCatIds = dto.categories
+      .map((x: any) => Number(x))
+      .filter((x: number) => Number.isFinite(x) && x > 0);
 
-    // --- Update categories ---
-    if (Array.isArray(dto.categories)) {
-      for (const catId of dto.categories) {
-        const exists = product.categories.find((c) => c.id === catId);
-        if (!exists) {
-          await this.productCategoryRepo.save({
-            product: { id },
-            category: { id: catId },
-          });
-        }
+    const toAdd = nextCatIds.filter((id: number) => !currentCatIds.includes(id));
+    const toRemove = currentCatIds.filter((id: number) => !nextCatIds.includes(id));
+
+    if (toAdd.length) {
+      for (const catId of toAdd) {
+        await this.productCategoryRepo.save({
+          product: { id },
+          category: { id: catId },
+        });
       }
     }
+    if (toRemove.length) {
+      await this.productCategoryRepo.delete({
+        product: { id },
+        category: In(toRemove),
+      });
+    }
+  }
 
-    // --- Update media ---
-    if (Array.isArray(dto.media)) {
-      for (const mediaDto of dto.media) {
-        if (mediaDto.id) {
-          await this.mediaRepo.update(mediaDto.id, { ...mediaDto });
-        } else {
-          await this.mediaRepo.save({ ...mediaDto, product: { id } });
-        }
+  // ===== 3) MEDIA =====
+  if (Array.isArray(dto.media)) {
+    for (const mediaDto of dto.media) {
+      if (mediaDto.id) {
+        await this.mediaRepo.update(mediaDto.id, { ...mediaDto, product: { id } });
+      } else {
+        await this.mediaRepo.save({ ...mediaDto, product: { id } });
       }
     }
+  }
 
-    // --- Update variants + inventories ---
-    const variantMap: Record<string, Variant> = {}; // Tạo variantMap từ DTO
-    if (Array.isArray(dto.variants)) {
-      for (const variantDto of dto.variants) {
-        let variant: Variant;
-        const { inventories, ...variantData } = variantDto;
+  // ===== 4) VARIANTS + INVENTORIES =====
+  const variantMap: Record<string, Variant> = {};
+  if (Array.isArray(dto.variants)) {
+    for (const variantDto of dto.variants) {
+      const { inventories, ...variantData } = variantDto;
+      let variant: Variant;
 
-        if (variantDto.id) {
-          // Update variant đã có
-          await this.variantRepo.update(variantDto.id, { ...variantData });
-          const found = await this.variantRepo.findOne({
-            where: { id: variantDto.id },
-          });
-          if (!found) throw new NotFoundException('Variant not found');
-          variant = found;
-        } else {
-          // Thêm variant mới
-          variant = await this.variantRepo.save({
-            ...variantData,
-            product: { id },
-          });
-        }
+      if (variantDto.id) {
+        await this.variantRepo.update(variantDto.id, {
+          ...variantData,
+          product: { id },
+        });
+        const found = await this.variantRepo.findOne({ where: { id: variantDto.id } });
+        if (!found) throw new NotFoundException('Variant not found');
+        variant = found;
+      } else {
+        variant = await this.variantRepo.save({
+          ...variantData,
+          product: { id },
+        });
+      }
 
-        // Map variant để dùng cho pricing rules
-        if (variant.sku) variantMap[variant.sku] = variant;
+      if (variant.sku) variantMap[variant.sku] = variant;
 
-        // --- Update inventories ---
-        if (Array.isArray(inventories)) {
-          for (const invDto of inventories) {
-            if (invDto.id) {
-              await this.inventoryRepo.update(invDto.id, {
-                location: invDto.location,
-                quantity: invDto.quantity,
-                used_quantity: invDto.used_quantity,
-                variant: { id: variant.id },
-                product: { id },
-              });
-            } else {
-              await this.inventoryRepo.save({
-                location: invDto.location,
-                quantity: invDto.quantity,
-                used_quantity: invDto.used_quantity,
-                variant: { id: variant.id },
-                product: { id },
-              });
-            }
+      if (Array.isArray(inventories)) {
+        for (const invDto of inventories) {
+          if (invDto.id) {
+            await this.inventoryRepo.update(invDto.id, {
+              location: invDto.location,
+              quantity: invDto.quantity,
+              used_quantity: invDto.used_quantity,
+              variant: { id: variant.id },
+              product: { id },
+            });
+          } else {
+            await this.inventoryRepo.save({
+              location: invDto.location,
+              quantity: invDto.quantity,
+              used_quantity: invDto.used_quantity,
+              variant: { id: variant.id },
+              product: { id },
+            });
           }
         }
       }
     }
+  }
 
-    if (Array.isArray(dto.pricing_rules)) {
-      for (const ruleDto of dto.pricing_rules) {
-        // --- map variant, nếu không có thì undefined ---
-        const variant = ruleDto.variant_sku
+  // ===== 5) PRICING RULES =====
+  if (Array.isArray(pricingRules)) {
+    for (const ruleDto of pricingRules) {
+      const variant =
+        ruleDto.variant_sku && variantMap[ruleDto.variant_sku]
           ? variantMap[ruleDto.variant_sku]
           : undefined;
 
-        if (ruleDto.id) {
-          // --- Update existing rule ---
-          const existingRule = await this.pricingRuleRepo.findOne({
-            where: { id: ruleDto.id },
-          });
-          if (!existingRule) continue;
+      if (ruleDto.id) {
+        const existingRule = await this.pricingRuleRepo.findOne({ where: { id: ruleDto.id } });
+        if (!existingRule) continue;
 
-          // --- LOG trước save ---
-          console.log('Updating PricingRule id:', ruleDto.id);
-          console.log('ruleDto:', ruleDto);
-          console.log('Mapped variant:', variant);
+        existingRule.type = ruleDto.type;
+        existingRule.min_quantity = ruleDto.min_quantity;
+        existingRule.price = ruleDto.price;
+        existingRule.cycle = ruleDto.cycle;
+        existingRule.starts_at = ruleDto.starts_at ? new Date(ruleDto.starts_at) : undefined;
+        existingRule.ends_at = ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined;
+        existingRule.variant = variant;
+        existingRule.name = ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
+        existingRule.status = ruleDto.status ?? 'active';
+        existingRule.product = { id } as any;
 
-          existingRule.type = ruleDto.type;
-          existingRule.min_quantity = ruleDto.min_quantity;
-          existingRule.price = ruleDto.price;
-          existingRule.cycle = ruleDto.cycle;
-          existingRule.starts_at = ruleDto.starts_at
-            ? new Date(ruleDto.starts_at)
-            : undefined;
-          existingRule.ends_at = ruleDto.ends_at
-            ? new Date(ruleDto.ends_at)
-            : undefined;
-          existingRule.variant = variant; // Variant | undefined
-          existingRule.name =
-            ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
-          existingRule.status = ruleDto.status ?? 'active';
-          existingRule.product = { id } as any;
-
-          const savedRule = await this.pricingRuleRepo.save(existingRule);
-
-          // --- LOG sau save ---
-          console.log('Saved PricingRule:', savedRule);
-        } else {
-          // --- Create new rule ---
-          const newRule: DeepPartial<PricingRules> = {
-            type: ruleDto.type,
-            min_quantity: ruleDto.min_quantity,
-            price: ruleDto.price,
-            cycle: ruleDto.cycle,
-            starts_at: ruleDto.starts_at
-              ? new Date(ruleDto.starts_at)
-              : undefined,
-            ends_at: ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined,
-            variant: variant, // Variant | undefined
-            name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
-            status: ruleDto.status ?? 'active',
-            product: { id } as any,
-            uuid: ruleDto.uuid ?? require('uuid').v4(),
-          };
-
-          console.log('Creating new PricingRule:', newRule);
-
-          const savedNewRule = await this.pricingRuleRepo.save(newRule);
-
-          console.log('Saved new PricingRule:', savedNewRule);
-        }
+        await this.pricingRuleRepo.save(existingRule);
+      } else {
+        await this.pricingRuleRepo.save({
+          type: ruleDto.type,
+          min_quantity: ruleDto.min_quantity,
+          price: ruleDto.price,
+          cycle: ruleDto.cycle,
+          starts_at: ruleDto.starts_at ? new Date(ruleDto.starts_at) : undefined,
+          ends_at: ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined,
+          variant,
+          name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
+          status: ruleDto.status ?? 'active',
+          product: { id } as any,
+          uuid: ruleDto.uuid ?? require('uuid').v4(),
+        });
       }
     }
-
-    return updatedProduct;
   }
+
+  // Trả về bản đầy đủ sau update
+  return this.productRepo.findOne({
+    where: { id },
+    relations: [
+      'store',
+      'brand',
+      'categories',
+      'categories.category',
+      'media',
+      'variants',
+      'variants.inventories',
+      'pricing_rules',
+      'pricing_rules.variant',
+    ],
+  });
+}
+
 
   async updateAndPublishProduct(id: number, dto: any, userId: number) {
     const product = await this.productRepo.findOne({

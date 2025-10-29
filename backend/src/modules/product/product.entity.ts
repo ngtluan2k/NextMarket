@@ -76,7 +76,10 @@ export class Product {
   review_count!: number;
 
   // === Relations ===
-  @OneToMany(() => ProductCategory, (pc) => pc.product, { cascade: true })
+  @OneToMany(() => ProductCategory, (pc) => pc.product, {
+    cascade: true,
+
+  })
   categories!: ProductCategory[];
 
   @OneToMany(() => ProductMedia, (media) => media.product)
