@@ -491,75 +491,24 @@ export class VouchersService {
     return availableVouchers;
   }
 
-  async getAvailableVouchersForAnyStore(userId?: number): Promise<Voucher[]> {
-    const now = new Date();
+  async getAvailableVouchersForAnyStore(): Promise<Voucher[]> {
+  const now = new Date();
 
-    const queryBuilder = this.vouchersRepository
-      .createQueryBuilder('voucher')
-      .leftJoinAndSelect('voucher.store', 'store')
-      .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
-      .andWhere('voucher.start_date <= :now', { now })
-      .andWhere('voucher.end_date >= :now', { now })
-      .andWhere(
-    '(voucher.store_id IS NULL OR JSON_LENGTH(voucher.store_id) = 0)'
-  ); 
+  const vouchers = await this.vouchersRepository
+    .createQueryBuilder('voucher')
+    .leftJoinAndSelect('voucher.store', 'store')
+    .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
+    .andWhere('voucher.start_date <= :now', { now })
+    .andWhere('voucher.end_date >= :now', { now })
+    .orderBy('voucher.priority', 'DESC')
+    .addOrderBy('voucher.created_at', 'DESC')
+    .getMany();
 
-    const vouchers = await queryBuilder
-      .orderBy('voucher.priority', 'DESC')
-      .addOrderBy('voucher.created_at', 'DESC')
-      .getMany();
+  console.log(`✅ Found ${vouchers.length} vouchers (filtered only by status/date)`);
 
-    console.log(
-      `📦 Found ${vouchers.length} vouchers before user-specific filtering`
-    );
+  return vouchers;
+}
 
-    const availableVouchers = [];
-
-    for (const voucher of vouchers) {
-      // Check total usage limit
-      if (
-        voucher.total_usage_limit &&
-        voucher.total_used_count >= voucher.total_usage_limit
-      ) {
-        continue;
-      }
-
-      // Check collection limit
-      if (
-        voucher.collection_limit &&
-        voucher.collected_count >= voucher.collection_limit
-      ) {
-        continue;
-      }
-
-      if (userId) {
-        // Check per-user usage limit
-        const userUsageCount = await this.voucherUsageRepository.count({
-          where: { voucher: { id: voucher.id }, user: { id: userId } },
-        });
-        if (userUsageCount >= voucher.per_user_limit) {
-          continue;
-        }
-
-        // Check new user only
-        if (voucher.new_user_only) {
-          const userOrders = await this.ordersRepository.count({
-            where: { user: { id: userId } },
-          });
-          if (userOrders > 0) {
-            continue;
-          }
-        }
-      }
-
-      availableVouchers.push(voucher);
-    }
-
-    console.log(
-      `✅ Returning ${availableVouchers.length} available vouchers for any store`
-    );
-    return availableVouchers;
-  }
 
   async collectVoucher(voucherId: number, userId: number): Promise<void> {
     const voucher = await this.findOne(voucherId, userId, 'user');

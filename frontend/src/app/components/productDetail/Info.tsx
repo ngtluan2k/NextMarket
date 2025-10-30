@@ -273,7 +273,7 @@ export default function Info({
       )}
 
       {/* Quantity */}
-      <div className="mt-2 flex items-center gap-2">
+      {/* <div className="mt-2 flex items-center gap-2">
         <span>Số lượng:</span>
         <input
           type="number"
@@ -288,7 +288,7 @@ export default function Info({
             Đã đạt tối đa
           </span>
         )}
-      </div>
+      </div> */}
 
       {/* Pricing Rules */}
       {pricingRules.length > 0 && (

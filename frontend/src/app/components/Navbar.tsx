@@ -373,7 +373,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               className="truncate max-w-[320px] font-medium underline"
             >
               {selectedAddress
-                ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.province}`
+                ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district} ${selectedAddress.province}`
                 : L.address}
             </button>
           </div>

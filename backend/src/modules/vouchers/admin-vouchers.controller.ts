@@ -47,7 +47,7 @@ export class AdminVouchersController {
       throw new BadRequestException('userId không hợp lệ');
     }
 
-    return this.vouchersService.getAvailableVouchersForAnyStore(userId);
+    return this.vouchersService.getAvailableVouchersForAnyStore();
   }
 
   @Post()
