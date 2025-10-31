@@ -22,8 +22,8 @@ class OrderItemDto {
   @IsNumber()
   price!: number;
 
-  @IsEnum(['bulk', 'subscription', 'normal'])
-  type!: 'bulk' | 'subscription' | 'normal'; // ✅ thêm field này
+  @IsEnum(['bulk', 'subscription', 'normal', 'flash_sale'])
+  type!: 'bulk' | 'subscription' | 'normal' | 'flash_sale'; // ✅ thêm field này
 }
 
 export class CreateOrderDto {

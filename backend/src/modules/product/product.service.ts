@@ -28,6 +28,7 @@ import { Like } from 'typeorm';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
 import { Not } from 'typeorm';
+import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 @Injectable()
 export class ProductService {
   constructor(
@@ -320,13 +321,11 @@ export class ProductService {
           : undefined;
 
         if (ruleDto.id) {
-          // --- Update existing rule ---
           const existingRule = await this.pricingRuleRepo.findOne({
             where: { id: ruleDto.id },
           });
           if (!existingRule) continue;
 
-          // --- LOG trước save ---
           console.log('Updating PricingRule id:', ruleDto.id);
           console.log('ruleDto:', ruleDto);
           console.log('Mapped variant:', variant);
@@ -341,10 +340,11 @@ export class ProductService {
           existingRule.ends_at = ruleDto.ends_at
             ? new Date(ruleDto.ends_at)
             : undefined;
-          existingRule.variant = variant; // Variant | undefined
+          existingRule.variant = variant;
           existingRule.name =
             ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
           existingRule.status = ruleDto.status ?? 'active';
+          existingRule.limit_quantity = ruleDto.limit_quantity ?? null; // 👈 thêm dòng này
           existingRule.product = { id } as any;
 
           const savedRule = await this.pricingRuleRepo.save(existingRule);
@@ -365,6 +365,7 @@ export class ProductService {
             variant: variant, // Variant | undefined
             name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
             status: ruleDto.status ?? 'active',
+            limit_quantity: ruleDto.limit_quantity,
             product: { id } as any,
             uuid: ruleDto.uuid ?? require('uuid').v4(),
           };
@@ -623,5 +624,32 @@ export class ProductService {
       throw new NotFoundException('Product not found');
     }
     return row.slug;
+  }
+
+  async findFlashSaleProducts() {
+    const now = new Date();
+
+    // Lấy các sản phẩm đang active và có ít nhất 1 pricing_rule là flash_sale hợp lệ
+    return this.productRepo.find({
+      where: {
+        status: 'active',
+        pricing_rules: {
+          type: 'flash_sale',
+          starts_at: LessThanOrEqual(now),
+          ends_at: MoreThanOrEqual(now),
+        },
+      },
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+      ],
+      order: {
+        updated_at: 'DESC',
+      },
+    });
   }
 }

@@ -22,7 +22,7 @@ export type Inventory = {
 
 export type PricingRule = {
   id: number;
-  type: 'bulk' | 'subscription' | 'normal';
+  type: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   min_quantity: number;
   price: number;
   cycle?: string;
@@ -81,8 +81,10 @@ export default function Info({
   calculatedPrice: number;
   setCalculatedPrice: (price: number) => void;
   maxQuantity: number;
-  selectedType?: 'bulk' | 'subscription' | 'normal';
-  setSelectedType: (type?: 'bulk' | 'subscription' | 'normal') => void;
+  selectedType?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+  setSelectedType: (
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
+  ) => void;
 }) {
   const navigate = useNavigate();
   const pricingRules = product?.pricing_rules ?? [];
@@ -158,9 +160,28 @@ export default function Info({
   }, [product?.pricing_rules, selectedVariant, quantity]);
 
   /** --------------------- Auto-select rule --------------------- */
-  useEffect(() => {
+useEffect(() => {
+  const now = new Date();
+
+  const flashSale = product?.pricing_rules?.find(
+    (r) =>
+      r.type === 'flash_sale' &&
+      (!r.variant_sku || r.variant_sku === selectedVariant?.sku) &&
+      new Date(r.starts_at ?? 0) <= now &&
+      new Date(r.ends_at ?? 8640000000000000) >= now
+  );
+
+  if (flashSale) {
+    // chỉ tự chọn nếu người dùng chưa chọn hoặc rule hiện tại không hợp lệ
+    const currentRule = product?.pricing_rules?.find((r) => r.id === selectedRuleId);
+    if (!currentRule || !applicablePricingRules.some((r) => r.id === currentRule.id)) {
+      setSelectedRuleId(flashSale.id);
+    }
+  } else if (!selectedRuleId) {
     setSelectedRuleId(applicablePricingRules[0]?.id ?? null);
-  }, [applicablePricingRules]);
+  }
+}, [applicablePricingRules, product?.pricing_rules, selectedVariant, quantity]);
+
 
   /** --------------------- Final Price -> set state cha --------------------- */
   useEffect(() => {
@@ -310,7 +331,9 @@ export default function Info({
                   ((r.type === 'bulk' && quantity >= r.min_quantity) ||
                     (r.type === 'subscription' &&
                       quantity >= r.min_quantity &&
-                      quantity % r.min_quantity === 0));
+                      quantity % r.min_quantity === 0) ||
+                    r.type === 'flash_sale' ||
+                    r.type === 'normal');
 
                 return (
                   <button
@@ -325,6 +348,7 @@ export default function Info({
                     disabled={!isValid}
                     onClick={() => setSelectedRuleId(r.id)}
                   >
+                    {r.type === 'flash_sale' && <span>🔥 </span>}
                     {r.name} — {r.min_quantity}+ : {vnd(r.price)}
                   </button>
                 );

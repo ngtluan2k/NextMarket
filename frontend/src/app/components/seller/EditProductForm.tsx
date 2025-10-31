@@ -21,10 +21,19 @@ import {
   validateProduct,
   mapErrors,
 } from '../../../validation/productValidator';
+import { DatePicker } from 'antd';
 import { productService } from '../../../service/product.service';
 import type { Product } from '../../page/Seller/tab/StoreInventory';
 
 import ResultModal from '../seller/ResultModal';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.tz.setDefault('Asia/Ho_Chi_Minh');
+
 interface EditProductFormProps {
   product: any;
   onClose: () => void;
@@ -105,6 +114,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       variant_sku?: string;
       name?: string;
       status?: 'active' | 'inactive';
+      limit_quantity?: number;
     }[];
   }
 
@@ -1471,17 +1481,40 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">
-                    Bắt đầu
+                    Giới hạn
                   </label>
                   <input
-                    type="date"
-                    value={(pr.starts_at as string) || ''}
+                    type="number"
+                    value={pr.limit_quantity ?? ''}
                     onChange={(e) => {
                       const next = [...form.pricing_rules];
-                      next[i].starts_at = e.target.value;
+                      next[i].limit_quantity = e.target.value
+                        ? parseInt(e.target.value)
+                        : undefined;
                       setForm({ ...form, pricing_rules: next });
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                    placeholder="VD: 10 (để trống nếu không giới hạn)"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">
+                    Bắt đầu
+                  </label>
+                  <DatePicker
+                    showTime
+                    value={pr.starts_at ? dayjs(pr.starts_at) : null}
+                    onChange={(value) => {
+                      const next = [...form.pricing_rules];
+                      next[i].starts_at = value
+                        ? dayjs(value).tz('Asia/Ho_Chi_Minh').format() // 👉 lưu theo giờ VN
+                        : undefined;
+                      setForm({ ...form, pricing_rules: next });
+                    }}
+                    className="w-full h-11"
+                    placeholder="Chọn ngày bắt đầu"
+                    format="YYYY-MM-DD HH:mm"
                   />
                 </div>
 
@@ -1489,15 +1522,19 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                   <label className="block text-sm font-medium mb-1">
                     Kết thúc
                   </label>
-                  <input
-                    type="date"
-                    value={(pr.ends_at as string) || ''}
-                    onChange={(e) => {
+                  <DatePicker
+                    showTime
+                    value={pr.ends_at ? dayjs(pr.ends_at) : null}
+                    onChange={(value) => {
                       const next = [...form.pricing_rules];
-                      next[i].ends_at = e.target.value;
+                      next[i].ends_at = value
+                        ? dayjs(value).tz('Asia/Ho_Chi_Minh').format() // 👉 lưu theo giờ VN
+                        : undefined;
                       setForm({ ...form, pricing_rules: next });
                     }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-11"
+                    placeholder="Chọn ngày kết thúc"
+                    format="YYYY-MM-DD HH:mm"
                   />
                 </div>
 

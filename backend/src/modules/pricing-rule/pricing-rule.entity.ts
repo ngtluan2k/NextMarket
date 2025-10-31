@@ -51,6 +51,9 @@ export class PricingRules {
   @Column()
   status!: string;
 
+  @Column({ type: 'int', nullable: true })
+  limit_quantity?: number; 
+
   @OneToMany(() => Subscription, (sub) => sub.pricingRule)
   subscriptions!: Subscription[];
 }

@@ -202,8 +202,33 @@ export class OrdersService {
         for (const rule of pricingRule) {
           if (rule.type !== itemDto.type) continue;
 
-          // áp dụng rule theo type
-          if (itemDto.type === 'subscription') {
+          // Áp dụng rule theo type
+          if (itemDto.type === 'flash_sale') {
+            // Nếu rule có giới hạn số lượng
+            if (rule.limit_quantity != null && rule.limit_quantity > 0) {
+              // Đếm số lượng đã bán (hoặc đã order) cho flash_sale này
+              const soldCount = await manager
+                .createQueryBuilder('order_items', 'oi')
+                .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+                .select('COALESCE(SUM(oi.quantity), 0)', 'total')
+                .getRawOne();
+
+              const totalSold = Number(soldCount?.total ?? 0);
+
+              if (totalSold + itemDto.quantity > rule.limit_quantity) {
+                throw new Error(
+                  `Flash sale này chỉ còn ${Math.max(
+                    0,
+                    rule.limit_quantity - totalSold
+                  )} sản phẩm, vui lòng giảm số lượng`
+                );
+              }
+            }
+
+            // Nếu còn hàng → áp dụng rule
+            appliedRule = rule;
+            break;
+          } else if (itemDto.type === 'subscription') {
             const minQty = rule.min_quantity ?? 0; // nếu undefined thì lấy 0
             if (minQty > 0 && itemDto.quantity === minQty) {
               appliedRule = rule;
@@ -771,8 +796,6 @@ export class OrdersService {
         'orderItem.product.reviews', // relation đúng từ entity Product
         'orderItem.product.reviews.user', // để biết reviewer là ai
         'orderItem.product.reviews.order',
-        
-       
       ],
       order: { id: 'DESC' },
     });

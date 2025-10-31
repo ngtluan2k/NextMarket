@@ -27,7 +27,7 @@ export type CheckoutLocationState = {
       price?: number;
       stock?: number;
     };
-    type?: 'bulk' | 'subscription' | 'normal';
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   }>;
   subtotal?: number | string;
 };
