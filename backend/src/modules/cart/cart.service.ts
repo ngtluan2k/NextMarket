@@ -55,7 +55,7 @@ export class CartService {
     productId: number,
     quantity = 1,
     variantId?: number,
-    type?: 'bulk' | 'subscription'| 'normal',
+    type?: 'bulk' | 'subscription'| 'normal' | 'flash_sale',
     isGroup = false
   ): Promise<CartItem> {
     const product = await this.productRepository.findOne({
@@ -202,7 +202,7 @@ export class CartService {
     userId: number,
     productId: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'| 'normal'
+    type?: 'bulk' | 'subscription'| 'normal' | 'flash_sale'
   ): Promise<void> {
     const cart = await this.getOrCreateCart(userId);
     const result = await this.cartItemRepository.delete({
@@ -221,7 +221,7 @@ export class CartService {
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription'| 'normal',
+    type?: 'bulk' | 'subscription'| 'normal' | 'flash_sale',
     isGroup?: boolean
   ): Promise<CartItem> {
     console.log('updateQuantity body:', {
@@ -309,7 +309,7 @@ export class CartService {
     product: Product,
     variant: Variant | null,
     quantity: number,
-    type: 'bulk' | 'subscription'| 'normal' = 'normal'
+    type: 'bulk' | 'subscription'| 'normal' | 'flash_sale' = 'normal'
   ): number {
     // Giá mặc định: variant.price nếu có, không thì base_price
     let currentPrice = variant

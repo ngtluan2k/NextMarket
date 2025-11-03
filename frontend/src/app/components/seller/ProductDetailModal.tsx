@@ -50,6 +50,7 @@ export interface ProductDetail {
     cycle?: string;
     starts_at?: string | Date;
     ends_at?: string | Date;
+    limit_quantity?: number;
   }[];
   apiId?: number;
 }

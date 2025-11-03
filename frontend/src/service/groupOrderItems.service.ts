@@ -22,8 +22,10 @@ export type CreateGroupOrderPayload = {
 
 export type UpdateGroupOrderPayload = {
   name?: string;
-  expiresAt?: string | null;
-  delivery_mode?: 'host_address' | 'member_address';
+  status?: 'open' | 'locked' | 'completed' | 'cancelled';
+  expiresAt?: string | null;                 // camelCase
+  inviteLink?: string;
+  deliveryMode?: 'host_address' | 'member_address'; // camelCase
 };
 
 export type JoinGroupPayload = {
@@ -60,9 +62,17 @@ export const groupOrdersApi = {
 
   // Update nhóm (name, expiresAt, delivery_mode, etc.)
   update: async (groupId: number, payload: UpdateGroupOrderPayload) => {
-    const token = localStorage.getItem('token');
-    const res = await api.patch(`/group-orders/${groupId}`, payload, {
-      headers: { Authorization: `Bearer ${token}` },
+    const token = localStorage.getItem('token') || '';
+    const body: any = {};
+  
+    if ('name' in payload) body.name = payload.name;
+    if ('status' in payload) body.status = payload.status;
+    if ('expiresAt' in payload) body.expiresAt = payload.expiresAt;          
+    if ('inviteLink' in payload) body.inviteLink = payload.inviteLink;
+    if ('deliveryMode' in payload) body.deliveryMode = payload.deliveryMode;  
+  
+    const res = await api.patch(`/group-orders/${groupId}`, body, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     return res.data;
   },

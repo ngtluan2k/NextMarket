@@ -58,7 +58,7 @@ export default function BuyBox({
     type: 'success' | 'error' | 'warning',
     content: string
   ) => void;
-  selectedType?: 'bulk' | 'subscription' | 'normal';
+  selectedType?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   groupId?: number | null;
 }) {
   const navigate = useNavigate();
@@ -173,7 +173,7 @@ export default function BuyBox({
   const handleAddToCart = async (
     product: Product,
     quantity: number,
-    type: 'bulk' | 'subscription' | 'normal'
+    type: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
     console.log('🛒 Add to Cart clicked:', {
       productId: product.id,

@@ -24,9 +24,9 @@ import React, {
   const DEFAULT_CONFIG: Required<Pick<FlashSaleConfig, "endpoints" | "pageSize" | "flashOnly">> = {
     endpoints: {
       // KHÔNG để /api ở đây vì backend của bạn không có global prefix
-      meta: "/flashsale-meta",
+      meta: "/products/flash-sale",
       categories: "/categories",
-      products: "/products",
+      products: "/products/flash-sale",
       search: "/products/search",
     },
     pageSize: 24,
@@ -57,6 +57,12 @@ import React, {
   /** Helper axios -> luôn unwrap { data } nếu backend trả kiểu { data: ... } */
   async function getJSON<T = any>(url: string, params?: Record<string, any>): Promise<T> {
     const res = await api.get(url, { params });
+    console.log("📥 API Response:", {
+    url,
+    params,
+    status: res.status,
+    data: res.data,
+  });
     // chuẩn hoá: { data: ... } hoặc trả mảng trực tiếp
     const payload: any = res.data;
     return (payload?.data ?? payload) as T;
@@ -112,6 +118,7 @@ import React, {
     }, [config.endpoints.categories]);
   
     const fetchProducts = useCallback(
+      
       async (opts?: { categoryId?: string; page?: number; query?: string }) => {
         const categoryId = opts?.categoryId ?? state.activeCategoryId;
         const page = opts?.page ?? 1;
@@ -126,6 +133,8 @@ import React, {
           setState((s) => ({ ...s, products: items, page, total: items.length }));
           return;
         }
+        console.log("📦 Fetching products from:", config.endpoints.products);
+
   
         // Params cho products
         const params: Record<string, any> = {
@@ -186,8 +195,7 @@ import React, {
     }, [fetchCategories, fetchMeta, fetchProducts]);
   
     useEffect(() => {
-      refetchAll();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      refetchAll();      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
   
     useEffect(() => {

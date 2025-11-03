@@ -27,6 +27,13 @@ export default function ForgotPasswordModal({
 
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
+  useEffect(() => {
+    const code = otp.join("");
+    if (step === 2 && code.length === 6 && !loading) {
+      verifyOtp(code);
+    }
+  }, [otp]);
+
   /* ---------- Reset modal khi mở ---------- */
   useEffect(() => {
     if (open) {
@@ -102,12 +109,7 @@ export default function ForgotPasswordModal({
   };
 
   /* ---------- 🔁 Tự động xác thực khi đủ 6 số ---------- */
-  useEffect(() => {
-    const code = otp.join("");
-    if (step === 2 && code.length === 6 && !loading) {
-      verifyOtp(code);
-    }
-  }, [otp]);
+  
 
   /* ---------- 3️⃣ Đổi mật khẩu ---------- */
   const onChangePassword = async (e: React.FormEvent) => {
@@ -135,6 +137,8 @@ export default function ForgotPasswordModal({
       setLoading(false);
     }
   };
+
+  
 
   const resendOtp = () => {
     if (cooldown > 0 || loading) return;

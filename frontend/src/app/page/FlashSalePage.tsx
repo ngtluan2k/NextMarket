@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
-import { FlashSaleHero } from "../../app/components/flash-sale/FlashSaleHero";
-import { CountdownTimer } from "../../app/components/flash-sale/CountdownTimer";
-import { CategoryTabs } from "../../app/components/flash-sale/CategoryTabs";
-import { ProductGrid } from "../../app/components/flash-sale/ProductGrid";
-import EveryMartHeader from "../components/Navbar";
-import { FlashSaleProvider, useFlashSale } from "../context/FlashSaleContext";
+import React, { useMemo } from 'react';
+import { FlashSaleHero } from '../../app/components/flash-sale/FlashSaleHero';
+import { CountdownTimer } from '../../app/components/flash-sale/CountdownTimer';
+import { CategoryTabs } from '../../app/components/flash-sale/CategoryTabs';
+import { ProductGrid } from '../../app/components/flash-sale/ProductGrid';
+import EveryMartHeader from '../components/Navbar';
+import { FlashSaleProvider, useFlashSale } from '../context/FlashSaleContext';
+import type { Product as FlashProduct } from '../components/flash-sale/types';
+import type { Product as ServiceProduct } from '../../service/product.service';
 
 function FlashSalePageInner() {
   const {
@@ -22,6 +24,23 @@ function FlashSalePageInner() {
     [meta]
   );
 
+  function mapFlashProduct(p: FlashProduct): ServiceProduct {
+    const saleRule = p.pricing_rules?.find((r) => r.type === 'flash_sale');
+    return {
+      id: p.id,
+      uuid: p.uuid,
+      name: p.name,
+      slug: p.slug,
+      avg_rating: parseFloat(String(p.avg_rating ?? 0)),
+      review_count: p.review_count ?? 0,
+      base_price: p.base_price,
+      media: p.media?.map((m) => ({ ...m })) ?? [],
+      status: p.status,
+      created_at: p.created_at,
+      updated_at: p.updated_at,
+    };
+  }
+
   return (
     <>
       <EveryMartHeader />
@@ -38,7 +57,10 @@ function FlashSalePageInner() {
               <div className="mb-8 h-10 w-40 animate-pulse rounded-lg bg-gray-100" />
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-64 animate-pulse rounded-xl border bg-gray-50" />
+                  <div
+                    key={i}
+                    className="h-64 animate-pulse rounded-xl border bg-gray-50"
+                  />
                 ))}
               </div>
             </>
@@ -50,9 +72,7 @@ function FlashSalePageInner() {
                 onChange={setActiveCategory}
               />
               <ProductGrid
-                products={products}
                 activeCategoryId={activeCategoryId}
-                onAddToCart={(p) => console.log("add to cart", p)}
               />
             </>
           )}
@@ -70,9 +90,9 @@ export default function FlashSalePage() {
         endpoints: {
           // Nếu CHƯA có endpoint meta phía BE, hãy bỏ dòng `meta` để dùng fallback 2h.
           // meta: "/flashsale-meta",
-          categories: "/categories",
-          products: "/products",
-          search: "/products/search",
+          categories: '/categories',
+          products: '/products/flash-sale',
+          search: '/products/search',
         },
         flashOnly: true,
         pageSize: 24,
