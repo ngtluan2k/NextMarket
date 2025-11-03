@@ -28,6 +28,8 @@ import { Like } from 'typeorm';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
 import { Not } from 'typeorm';
+import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { OrderItem } from '../order-items/order-item.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -49,7 +51,9 @@ export class ProductService {
     @InjectRepository(Tag)
     private readonly tagRepo: Repository<Tag>,
     @InjectRepository(ProductCategory)
-    private readonly productCategoryRepo: Repository<ProductCategory>
+    private readonly productCategoryRepo: Repository<ProductCategory>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepo: Repository<OrderItem>
   ) {}
 
   async saveProduct(
@@ -320,13 +324,11 @@ export class ProductService {
           : undefined;
 
         if (ruleDto.id) {
-          // --- Update existing rule ---
           const existingRule = await this.pricingRuleRepo.findOne({
             where: { id: ruleDto.id },
           });
           if (!existingRule) continue;
 
-          // --- LOG trước save ---
           console.log('Updating PricingRule id:', ruleDto.id);
           console.log('ruleDto:', ruleDto);
           console.log('Mapped variant:', variant);
@@ -341,10 +343,11 @@ export class ProductService {
           existingRule.ends_at = ruleDto.ends_at
             ? new Date(ruleDto.ends_at)
             : undefined;
-          existingRule.variant = variant; // Variant | undefined
+          existingRule.variant = variant;
           existingRule.name =
             ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
           existingRule.status = ruleDto.status ?? 'active';
+          existingRule.limit_quantity = ruleDto.limit_quantity ?? null; // 👈 thêm dòng này
           existingRule.product = { id } as any;
 
           const savedRule = await this.pricingRuleRepo.save(existingRule);
@@ -365,6 +368,7 @@ export class ProductService {
             variant: variant, // Variant | undefined
             name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
             status: ruleDto.status ?? 'active',
+            limit_quantity: ruleDto.limit_quantity,
             product: { id } as any,
             uuid: ruleDto.uuid ?? require('uuid').v4(),
           };
@@ -536,7 +540,6 @@ export class ProductService {
       where: [
         { name: Like(`%${query}%`), status: 'active' },
         { slug: Like(`%${query}%`), status: 'active' },
-        { description: Like(`%${query}%`), status: 'active' },
       ],
       relations: ['store', 'media', 'brand', 'categories'],
       take: 10,
@@ -625,4 +628,56 @@ export class ProductService {
     }
     return row.slug;
   }
+
+async findFlashSaleProducts() {
+  const now = new Date();
+
+  const products = await this.productRepo.find({
+    where: {
+      status: 'active',
+      pricing_rules: {
+        type: 'flash_sale',
+        schedule: {
+          starts_at: LessThanOrEqual(now),
+          ends_at: MoreThanOrEqual(now),
+        },
+      },
+    },
+    relations: [
+      'store',
+      'brand',
+      'categories',
+      'media',
+      'variants',
+      'pricing_rules',
+      'pricing_rules.schedule', // ⚡ thêm relation schedule để join flash_sale
+    ],
+    order: {
+      updated_at: 'DESC',
+    },
+  });
+
+  // ✅ Tính remaining_quantity cho mỗi rule
+  for (const product of products) {
+    for (const rule of product.pricing_rules) {
+      if (rule.type !== 'flash_sale') continue;
+
+      const soldQty = await this.orderItemRepo
+        .createQueryBuilder('oi')
+        .select('SUM(oi.quantity)', 'total')
+        .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+        .getRawOne();
+
+      const totalSold = Number(soldQty?.total ?? 0);
+
+      (rule as any).remaining_quantity = Math.max(
+        0,
+        (rule.limit_quantity ?? 0) - totalSold
+      );
+    }
+  }
+
+  return products;
+}
+
 }

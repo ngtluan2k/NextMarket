@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Trash2, CheckCircle2 } from 'lucide-react';
 
 interface StepNavigationProps {
   currentStep: number;
@@ -18,42 +18,63 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   onNextStep,
   onClearData,
 }) => {
-  return (
-    <div className="mt-6 flex items-center justify-between">
-      <button
-        className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-        onClick={onPrevStep}
-        disabled={currentStep === 1}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Quay lại
-      </button>
+  const isFirst = currentStep === 1;
+  const isLast = currentStep === totalSteps;
 
-      <div className="flex items-center gap-2">
+  return (
+    <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      {/* Bên trái: hiển thị trạng thái bước */}
+      <div className="text-sm text-slate-600">
+        Bước {currentStep} / {totalSteps}
+      </div>
+
+      {/* Bên phải: các nút điều hướng */}
+      <div className="flex gap-2">
+        {/* Clear */}
         <button
-          className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            if (window.confirm('Bạn có chắc muốn xóa tất cả dữ liệu đã nhập?')) {
-              onClearData();
-            }
-          }}
+          type="button"
+          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50"
+          onClick={onClearData}
           title="Xóa tất cả dữ liệu đã nhập"
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Clear
+          Xóa dữ liệu
         </button>
-      </div>
 
-      {currentStep < totalSteps && (
+        {/* Quay lại */}
         <button
-          className="inline-flex items-center rounded-xl bg-sky-600 px-4 py-2 font-medium text-white hover:bg-sky-700 disabled:opacity-60"
-          onClick={onNextStep}
-          disabled={currentStep === totalSteps || loading}
+          type="button"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          onClick={onPrevStep}
+          disabled={isFirst}
         >
-          {loading ? 'Đang xử lý...' : 'Tiếp theo'}
-          <ArrowRight className="ml-2 h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
         </button>
-      )}
+
+        {/* Tiếp theo / Hoàn tất */}
+        {!isLast ? (
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-5 py-2 font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+            onClick={onNextStep}
+            disabled={loading}
+          >
+            {loading ? 'Đang xử lý...' : 'Tiếp tục'}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            onClick={onNextStep /* ở bước 4, onNextStep của bạn sẽ gọi onFinalSubmit */}
+            disabled={loading}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {loading ? 'Đang xử lý...' : 'Hoàn tất đăng ký'}
+          </button>
+        )}
+      </div>
     </div>
   );
 };

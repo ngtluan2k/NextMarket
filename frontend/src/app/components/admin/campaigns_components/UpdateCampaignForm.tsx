@@ -125,7 +125,7 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
         }
 
         // 🧩 Lấy toàn bộ voucher trong hệ thống
-        const vData = await voucherApi.getAllVouchers();
+        const vData = await voucherApi.getAvailableVoucherOfSystem();
 
         // Nếu API trả về mảng có `uuid`, `title`, `discount_value` như bạn gửi ở trên
         // thì ta chỉ cần map lại cho gọn

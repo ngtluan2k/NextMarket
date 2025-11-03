@@ -69,5 +69,6 @@ export class CreateProductDto {
     variant_sku?: string; // dùng sku để liên kết với variant
     name?: string; // tên rule
     status?: 'active' | 'inactive'; // trạng thái
+    limit_quantity?: number;
   }[];
 }

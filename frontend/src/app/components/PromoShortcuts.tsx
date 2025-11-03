@@ -99,10 +99,7 @@ export default function CategoryGrid({
                     src={c.iconUrl}
                     alt={c.name}
                     className="h-9 w-9 object-contain"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src =
-                        'https://via.placeholder.com/36';
-                    }}
+                    
                   />
                 </div>
                 <span className="mt-2 max-w-[9rem] text-center text-base text-slate-800 truncate font-medium group-hover:text-sky-700">

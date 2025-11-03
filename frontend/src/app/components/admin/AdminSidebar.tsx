@@ -105,6 +105,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       children: [
         { key: '8-1', icon: dotIcon, label: 'Mã giảm giá' },
         { key: '8-2', icon: dotIcon, label: 'Chiến dịch quảng cáo' },
+        { key: '8-3', icon: dotIcon, label: 'Flash Sale' },
       ],
     },
     {

@@ -21,6 +21,7 @@ import { Tag } from '../tag/tag.entity';
 import { Brand } from '../brands/brand.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
 import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
       ProductTag,
       Tag,
       ProductReview,
+      OrderItem,
     ]),
     forwardRef(() => ProductMediaModule),
     forwardRef(() => VariantModule),

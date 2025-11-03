@@ -113,6 +113,26 @@ export default function StoreProductsGrid({
     [data?.total, pageSize]
   );
 
+  // ==== NEW: helpers cho pagination kiểu «« « 10 11 12 13 14 » »» ====
+  const windowPages = useMemo(() => {
+    const size = 5; // số trang hiển thị trong “cửa sổ”
+    let start = Math.max(1, page - Math.floor(size / 2));
+    let end = start + size - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - size + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [page, totalPages]);
+
+  const goTo = (n: number) => {
+    const next = Math.min(totalPages, Math.max(1, n || 1));
+    if (next !== page) pushParams({ page: next });
+  };
+
+  const [jump, setJump] = useState<string>('');
+  // ===================================================================
+
   return (
     <section
       className={[
@@ -123,7 +143,7 @@ export default function StoreProductsGrid({
       {/* header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
         <div className="text-sm text-slate-600">
-          Tất cả sản phẩm:{' '}
+          Tất cả sản phẩm{' '}
           <span className="font-medium text-slate-900">
             {data.total.toLocaleString('vi-VN')}
           </span>{' '}
@@ -240,28 +260,105 @@ export default function StoreProductsGrid({
           </div>
         )}
 
-        {/* pagination */}
-        {data.items.length > 0 && (
-          <div className="mt-5 flex items-center justify-center gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => pushParams({ page: page - 1 })}
-              className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
-            >
-              ← Trang trước
-            </button>
-            <div className="text-sm text-slate-600">
-              Trang <span className="font-medium text-slate-900">{page}</span> /{' '}
-              {totalPages}
+        {/* pagination (NEW) */}
+        {data.items.length > 0 && totalPages > 1 && (
+          <nav
+            aria-label="Pagination"
+            className="mt-6 flex items-center justify-center gap-3"
+          >
+            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
+              {/* «« */}
+              <button
+                onClick={() => goTo(1)}
+                disabled={page <= 1}
+                className="h-9 min-w-9 px-2 text-base rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Trang đầu"
+              >
+                ««
+              </button>
+
+              {/* « */}
+              <button
+                onClick={() => goTo(page - 1)}
+                disabled={page <= 1}
+                className="h-9 min-w-9 px-2 text-base rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Trang trước"
+              >
+                «
+              </button>
+
+              {/* 10 11 12 13 14 */}
+              {windowPages.map((pno) => (
+                <button
+                  key={pno}
+                  onClick={() => goTo(pno)}
+                  aria-current={pno === page ? 'page' : undefined}
+                  className={[
+                    'h-9 min-w-9 rounded-full px-3 text-sm transition',
+                    pno === page
+                      ? 'bg-blue-600 text-white font-medium shadow-sm'
+                      : 'text-slate-700 hover:bg-slate-50',
+                  ].join(' ')}
+                >
+                  {pno}
+                </button>
+              ))}
+
+              {/* » */}
+              <button
+                onClick={() => goTo(page + 1)}
+                disabled={page >= totalPages}
+                className="h-9 min-w-9 px-2 text-base rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Trang sau"
+              >
+                »
+              </button>
+
+              {/* »» */}
+              <button
+                onClick={() => goTo(totalPages)}
+                disabled={page >= totalPages}
+                className="h-9 min-w-9 px-2 text-base rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Trang cuối"
+              >
+                »»
+              </button>
+
+              {/* ô nhập nhanh */}
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={totalPages}
+                value={jump}
+                onChange={(e) => setJump(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    goTo(Number(jump));
+                    setJump('');
+                  }
+                }}
+                onBlur={() => {
+                  if (jump) {
+                    goTo(Number(jump));
+                    setJump('');
+                  }
+                }}
+                placeholder=""
+                className="ml-1 h-9 w-14 rounded-lg border border-slate-300 px-2 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                aria-label="Jump to page"
+              />
             </div>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => pushParams({ page: page + 1 })}
-              className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
-            >
-              Trang sau →
-            </button>
-          </div>
+
+            {/* “of X products” */}
+            <div className="text-sm text-slate-500">
+              of{' '}
+              <span className="font-medium text-slate-700">
+                {data.total.toLocaleString('en-US')}
+              </span>{' '}
+              products
+            </div>
+          </nav>
         )}
       </div>
     </section>

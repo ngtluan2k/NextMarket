@@ -9,9 +9,9 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { useSaveDraft } from './hooks/useSaveDraft';
 
 // Components
-import Step1BasicInfo from './components/Step1BasicInfo';
-import Step2BusinessInfo from './components/Step2BusinessInfo';
-import Step3Identification from './components/Step3Identification';
+import Step1BasicInfo, { Step1BasicInfoHandle } from './components/Step1BasicInfo';
+import Step2BusinessInfo, { Step2BusinessInfoHandle } from './components/Step2BusinessInfo';
+import Step3Identification, { Step3IdentificationHandle } from './components/Step3Identification';
 import Step4Confirmation from './components/Step4Confirmation';
 import AddressModal from './components/AddressModal';
 import EmailModal from './components/EmailModal';
@@ -26,9 +26,15 @@ import {
   validateStep2,
   validateStep3,
 } from './utils/validation';
+import ClearConfirmModal from './components/ClearConfirmModal';
+import { ArrowLeft } from 'lucide-react';
 
 export const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
+
+  const step1Ref = React.useRef<Step1BasicInfoHandle>(null);
+  const step2Ref = React.useRef<Step2BusinessInfoHandle>(null);
+  const step3Ref = React.useRef<Step3IdentificationHandle>(null);
 
   // Core form state
   const {
@@ -170,6 +176,19 @@ export const SellerRegistration: React.FC = () => {
     loadSavedData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const [showClearModal, setShowClearModal] = useState(false);
+
+  const performClearAll = () => {
+    clearSavedData();
+    setFormData(defaultSellerFormData);
+    setAddresses([]);
+    setEmails([]);
+    setCurrentStep(1);
+    clearAllFiles();
+    setMessage('Đã xóa dữ liệu form');
+    setMessageType('success');
+    setShowClearModal(false);
+  };
 
   // Load full draft from server
   const loadFullDraftData = async (
@@ -298,7 +317,7 @@ export const SellerRegistration: React.FC = () => {
     }
   };
 
-  // Final submit (Option 2 flow)
+  // Final submit
   const handleFinalSubmit = async () => {
     setLoading(true);
     setMessage('');
@@ -434,104 +453,76 @@ export const SellerRegistration: React.FC = () => {
     }
   };
 
-  // Step navigation with validation and save
+  // Next/Prev
   const handleNextStep = async () => {
     setMessage('');
     setLoading(true);
-
     try {
-      let validationErrors: string[] = [];
-
-      switch (currentStep) {
-        case 1:
-          validationErrors = validateStep1(formData, addresses);
-          break;
-        case 2:
-          validationErrors = validateStep2(formData, emails);
-          break;
-        case 3:
-          validationErrors = validateStep3(formData);
-          break;
+      if (currentStep === 1) {
+        const ok1 = step1Ref.current?.validateAll?.() ?? false;
+        const list1 = validateStep1(formData, addresses);
+        if (!ok1 || list1.length) { setLoading(false); return; }
       }
 
-      if (validationErrors.length > 0) {
-        setMessage(`❌ ${validationErrors.join(', ')}`);
-        setMessageType('error');
-        setLoading(false);
-        return;
+      if (currentStep === 2) {
+        const ok2 = step2Ref.current?.validateAll?.() ?? false;
+        const list2 = validateStep2(formData, emails, selectedDocFile);
+        if (!ok2 || list2.length) { setLoading(false); return; }
+        if (selectedDocFile) {
+          await uploadBusinessLicense((fileUrl) => {
+            setFormData((prev) => ({
+              ...prev,
+              documents: [
+                ...(prev.documents || []).filter((d) => d.doc_type !== 'BUSINESS_LICENSE'),
+                { doc_type: 'BUSINESS_LICENSE', file_url: fileUrl },
+              ],
+            }));
+          });
+        }
       }
 
-      if (currentStep === 2 && selectedDocFile) {
-        await uploadBusinessLicense((fileUrl) => {
-          setFormData((prev) => ({
-            ...prev,
-            documents: [
-              ...(prev.documents || []).filter((d) => d.doc_type !== 'BUSINESS_LICENSE'),
-              { doc_type: 'BUSINESS_LICENSE', file_url: fileUrl },
-            ],
-          }));
-        });
-      }
+      if (currentStep === 3) {
+        const ok3 = step3Ref.current?.validateAll?.() ?? false;
+        const list3 = validateStep3(formData, { front: cccdFrontFile, back: cccdBackFile });
+        if (!ok3 || list3.length) { setLoading(false); return; }
 
-      if (currentStep === 3 && (cccdFrontFile || cccdBackFile)) {
-        await uploadCCCD(storeId, (frontUrl, backUrl) => {
-          setFormData((prev) => ({
-            ...prev,
-            store_identification: {
-              ...prev.store_identification,
-              img_front: frontUrl || prev.store_identification.img_front,
-              img_back: backUrl || prev.store_identification.img_back,
-            },
-          }));
-        });
+        if (cccdFrontFile || cccdBackFile) {
+          await uploadCCCD(storeId, (frontUrl, backUrl) => {
+            setFormData((prev) => ({
+              ...prev,
+              store_identification: {
+                ...prev.store_identification,
+                img_front: frontUrl || prev.store_identification.img_front,
+                img_back:  backUrl  || prev.store_identification.img_back,
+              },
+            }));
+          });
+        }
       }
 
       const newStoreId = await saveDraft(
-        currentStep,
-        formData,
-        addresses,
-        emails,
-        storeId,
-        (message) => {
-          setMessage(message);
-          setMessageType('success');
-          markAsSaved();
-        },
-        (message) => {
-          setMessage(message);
-          setMessageType('error');
-        }
+        currentStep, formData, addresses, emails, storeId,
+        (m) => { setMessage(m); setMessageType('success'); markAsSaved(); },
+        (m) => { setMessage(m); setMessageType('error'); }
       );
+      if (newStoreId) setStoreId(newStoreId);
 
-      if (newStoreId) {
-        setStoreId(newStoreId);
+      // Ở bước 4: submit luôn
+      if (currentStep === 4) {
+        await handleFinalSubmit();
+        return;
       }
 
       nextStep();
-    } catch (error: any) {
-      setMessage(`❌ Lỗi: ${error.message || 'Có lỗi xảy ra'}`);
+    } catch (e: any) {
+      setMessage(` Lỗi: ${e.message || 'Có lỗi xảy ra'}`);
       setMessageType('error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Enhanced beforeunload with save-before-exit modal
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = 'Bạn có muốn lưu bản nháp trước khi thoát không?';
-        setShowSaveModal(true);
-        setPendingExit(true);
-      }
-    };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  // Save-before-exit actions
   const handleSaveBeforeExit = async () => {
     try {
       setLoading(true);
@@ -541,15 +532,8 @@ export const SellerRegistration: React.FC = () => {
         addresses,
         emails,
         storeId,
-        (message) => {
-          setMessage(message);
-          setMessageType('success');
-          markAsSaved();
-        },
-        (message) => {
-          setMessage(message);
-          setMessageType('error');
-        }
+        (message) => { setMessage(message); setMessageType('success'); markAsSaved(); },
+        (message) => { setMessage(message); setMessageType('error'); }
       );
       setShowSaveModal(false);
       setPendingExit(false);
@@ -558,7 +542,7 @@ export const SellerRegistration: React.FC = () => {
         navigate('/');
       }
     } catch (error: any) {
-      setMessage(`❌ Lỗi lưu nháp: ${error.message}`);
+      setMessage(` Lỗi lưu nháp: ${error.message}`);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -574,9 +558,7 @@ export const SellerRegistration: React.FC = () => {
     setEmails([]);
     setCurrentStep(1);
     clearAllFiles();
-    if (pendingExit) {
-      navigate('/');
-    }
+    if (pendingExit) navigate('/');
   };
 
   const handleCancelExit = () => {
@@ -584,7 +566,6 @@ export const SellerRegistration: React.FC = () => {
     setPendingExit(false);
   };
 
-  // Adapters for child components
   const handleStoreInformationChange = (field: string, value: any) => {
     handleInputChange('store_information', field, value);
   };
@@ -600,6 +581,7 @@ export const SellerRegistration: React.FC = () => {
       case 1:
         return (
           <Step1BasicInfo
+            ref={step1Ref}
             formData={formData}
             addresses={addresses}
             onBasicChange={handleBasicChange}
@@ -614,6 +596,7 @@ export const SellerRegistration: React.FC = () => {
       case 2:
         return (
           <Step2BusinessInfo
+            ref={step2Ref}
             formData={formData}
             emails={emails}
             selectedDocFile={selectedDocFile}
@@ -622,13 +605,12 @@ export const SellerRegistration: React.FC = () => {
             }
             onInputChange={handleStoreInformationChange}
             onShowEmailModal={() => setShowEmailModal(true)}
-            onShowSelectEmailModal={() => {}}
             onEditEmail={handleEditEmail}
             onSetDefaultEmail={(id) =>
-              handleSetDefaultEmail(id, (field, value) => handleBasicChange(field as any, value))
+              handleSetDefaultEmail(id, (f, v) => handleBasicChange(f as any, v))
             }
             onDeleteEmail={(id) =>
-              handleDeleteEmail(id, (field, value) => handleBasicChange(field as any, value))
+              handleDeleteEmail(id, (f, v) => handleBasicChange(f as any, v))
             }
             onDocFileChange={setSelectedDocFile}
           />
@@ -636,6 +618,7 @@ export const SellerRegistration: React.FC = () => {
       case 3:
         return (
           <Step3Identification
+            ref={step3Ref}
             formData={formData}
             onInputChange={handleStoreIdentificationChange}
             onBankAccountChange={handleBankAccountChange}
@@ -660,76 +643,80 @@ export const SellerRegistration: React.FC = () => {
     }
   };
 
-  const messageColors =
-    messageType === 'success'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-      : messageType === 'error'
-      ? 'border-rose-200 bg-rose-50 text-rose-800'
-      : messageType === 'warning'
-      ? 'border-amber-200 bg-amber-50 text-amber-800'
-      : 'border-sky-200 bg-sky-50 text-sky-800';
 
   return (
-    <div className="container mx-auto mt-6 max-w-5xl px-3">
-      <UnsavedChangesBanner
-        hasUnsavedChanges={hasUnsavedChanges}
-        loading={loading || saveLoading}
-        onSaveDraft={async () => {
-          await saveDraft(
-            currentStep,
-            formData,
-            addresses,
-            emails,
-            storeId,
-            (message) => {
-              setMessage(message);
-              setMessageType('success');
-              markAsSaved();
-            },
-            (message) => {
-              setMessage(message);
-              setMessageType('error');
-            }
-          );
-        }}
-        onDiscardChanges={() => {
-          setFormData(defaultSellerFormData);
-          setAddresses([]);
-          setEmails([]);
-          setCurrentStep(1);
-          clearAllFiles();
-          setMessage('✅ Đã hủy thay đổi');
-          setMessageType('success');
-        }}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <header className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-50">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+            <button
+                type="button"
+                aria-label="Quay lại"
+                onClick={() => navigate(-1)}
+                className="
+                  inline-flex h-10 w-10 items-center justify-center
+                  rounded-xl border border-slate-200 bg-white
+                  text-sky-600 shadow-sm
+                  hover:bg-slate-50 hover:text-sky-700
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/25
+                  active:shadow transition
+                "
+                title="Quay lại"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <h1 className="text-xl font-bold text-slate-900">Đăng ký bán hàng</h1>
+            </div>
+            <div className="text-sm text-slate-600">
+              Bước {currentStep} / {steps.length}
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <StepProgress steps={steps} currentStep={currentStep} />
 
-      <div className="mx-auto max-w-4xl">
-        {renderCurrentStep()}
-
-        <StepNavigation
-          currentStep={currentStep}
-          totalSteps={steps.length}
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <UnsavedChangesBanner
+          hasUnsavedChanges={hasUnsavedChanges}
           loading={loading || saveLoading}
-          onPrevStep={prevStep}
-          onNextStep={handleNextStep}
-          onClearData={() => {
-            clearSavedData();
+          onSaveDraft={async () => {
+            await saveDraft(
+              currentStep,
+              formData,
+              addresses,
+              emails,
+              storeId,
+              (message) => { setMessage(message); setMessageType('success'); markAsSaved(); },
+              (message) => { setMessage(message); setMessageType('error'); }
+            );
+          }}
+          onDiscardChanges={() => {
             setFormData(defaultSellerFormData);
             setAddresses([]);
             setEmails([]);
             setCurrentStep(1);
             clearAllFiles();
-            setMessage('Đã xóa dữ liệu form');
+            setMessage(' Đã hủy thay đổi');
             setMessageType('success');
           }}
         />
 
-        {message && (
-          <div className={`mt-4 rounded-2xl border px-4 py-3 ${messageColors}`}>{message}</div>
-        )}
-      </div>
+        <StepProgress steps={steps} currentStep={currentStep} />
+
+        <div className="mt-8 mx-auto max-w-6xl">
+          {renderCurrentStep()}
+
+          <StepNavigation
+            currentStep={currentStep}
+            totalSteps={steps.length}
+            loading={loading || saveLoading}
+            onPrevStep={prevStep}
+            onNextStep={handleNextStep}
+            onClearData={() => setShowClearModal(true)}
+          />
+        </div>
+      </main>
 
       <AddressModal
         show={showAddressModal}
@@ -779,6 +766,12 @@ export const SellerRegistration: React.FC = () => {
         onDontSave={handleDontSave}
         onCancel={handleCancelExit}
         loading={loading}
+      />
+
+      <ClearConfirmModal
+        show={showClearModal}
+        onCancel={() => setShowClearModal(false)}
+        onConfirm={performClearAll}
       />
     </div>
   );

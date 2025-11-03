@@ -57,6 +57,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
 
 @Module({
   imports: [
@@ -144,6 +145,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
     GroupOrdersModule,
     AdminModule,
     CampaignsModule,
+    FlashSaleSchedulesModule,
   ],
   providers: [],
 })

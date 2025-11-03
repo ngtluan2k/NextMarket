@@ -9,6 +9,7 @@ import {
   UseGuards,
   Query,
   ForbiddenException,
+  BadRequestException
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { OrdersService } from '../orders/orders.service';
@@ -22,6 +23,18 @@ export class StoreOrdersController {
    * GET /stores/:storeId/orders
    * → Lấy danh sách đơn hàng của store, hỗ trợ filter server-side.
    */
+
+  @Get('ping')
+ping(@Param('storeId') storeId: string) {
+  console.log('ping storeId:', storeId);
+  return { storeId };
+}
+@Get('stats')
+@UseGuards(JwtAuthGuard)
+getOrderStats(@Param('storeId') storeId: number) {
+  console.log('storeId param:', storeId);
+  return this.ordersService.getOrderStats(storeId);
+}
   @Get()
   @UseGuards(JwtAuthGuard)
   async findByStore(
@@ -134,4 +147,6 @@ export class StoreOrdersController {
 
     return this.ordersService.getStoreStats(storeId);
   }
+
 }
+

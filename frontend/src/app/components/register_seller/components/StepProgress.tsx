@@ -1,5 +1,4 @@
 import React from 'react';
-import { Check } from 'lucide-react';
 
 interface Step {
   id: number;
@@ -15,36 +14,42 @@ interface StepProgressProps {
 const StepProgress: React.FC<StepProgressProps> = ({ steps, currentStep }) => {
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-center gap-6">
-        {steps.map((step, index) => {
-          const reached = currentStep >= step.id;
-          const passed = currentStep > step.id;
+      {/* auto-rows-[64px] giúp các ô có cùng chiều cao; items-stretch + h-full trên <li> để kéo giãn */}
+      <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 items-stretch auto-rows-[64px]">
+        {steps.map((step) => {
+          const active = currentStep >= step.id;
           return (
-            <React.Fragment key={step.id}>
-              <div className="text-center">
+            <li
+              key={step.id}
+              aria-current={currentStep === step.id ? 'step' : undefined}
+              className={`h-full rounded-xl border px-4 py-0 shadow-sm
+                ${active ? 'border-sky-200 bg-sky-50 text-sky-900' : 'border-slate-200 bg-white text-slate-600'}
+              `}
+            >
+              {/* flex + h-full + items-center để căn giữa theo chiều dọc, nhìn thẳng hàng */}
+              <div className="flex h-full items-center gap-3">
                 <div
-                  className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full ${
-                    reached ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500'
-                  }`}
+                  className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold
+                    ${active ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-600'}
+                  `}
+                  title={`Bước ${step.id}`}
                 >
-                  {passed ? <Check className="h-5 w-5" /> : step.id}
+                  {step.id}
                 </div>
-                <div className="mt-2">
-                  <div className="text-sm font-semibold text-slate-800">{step.title}</div>
-                  <div className="text-xs text-slate-500">{step.description}</div>
+
+                {/* truncate để không làm tăng chiều cao khác nhau */}
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{step.title}</div>
+                  {/* ẩn mô tả ở màn hình nhỏ để giữ chiều cao đồng đều; hiện lại từ md */}
+                  <div className="hidden md:block truncate text-xs text-slate-500">
+                    {step.description}
+                  </div>
                 </div>
               </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={`h-0.5 w-24 ${
-                    currentStep > step.id ? 'bg-sky-600' : 'bg-slate-200'
-                  }`}
-                />
-              )}
-            </React.Fragment>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </div>
   );
 };

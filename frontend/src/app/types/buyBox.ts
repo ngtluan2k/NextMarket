@@ -12,6 +12,7 @@ export type LightProduct = {
   listPrice?: number;
   price?: number;
   media?: { url: string; is_primary?: boolean }[];
+  selectedPricingRule?: { id: number; type: 'bulk' | 'subscription' | 'normal' | 'flash_sale' } | null;
 };
 
 export type CheckoutLocationState = {
@@ -27,7 +28,9 @@ export type CheckoutLocationState = {
       price?: number;
       stock?: number;
     };
-    type?: 'bulk' | 'subscription' | 'normal';
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+    pricingRuleId?: number | null;
   }>;
   subtotal?: number | string;
+  
 };

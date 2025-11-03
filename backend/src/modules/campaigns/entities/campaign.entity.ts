@@ -25,10 +25,10 @@ export class Campaign {
   @Column({ nullable: true, type: 'text' })
   description?: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime' })
   starts_at!: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'datetime' })
   ends_at!: Date;
 
   @Column({ default: 'draft' })

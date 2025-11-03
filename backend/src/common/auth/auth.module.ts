@@ -23,7 +23,7 @@ import { GoogleStrategy } from './google.strategy';
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || '123',
-      signOptions: { expiresIn: '1h' },
+      signOptions: { expiresIn: '24h' },
     }),
   ],
   providers: [AuthService, GoogleStrategy],

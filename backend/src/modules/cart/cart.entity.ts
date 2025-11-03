@@ -17,9 +17,9 @@ export class ShoppingCart {
   @PrimaryGeneratedColumn()
   id!: number;
 
-@Column({ type: 'char', unique: true })
-@Generated('uuid')
-uuid!: string;
+  @Column({ type: 'varchar', length: 36, unique: true })
+  @Generated('uuid')
+  uuid!: string;
 
   @OneToOne(() => User, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })
@@ -28,11 +28,11 @@ uuid!: string;
   @Column()
   user_id!: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
   @Column({
-    type: 'timestamp',
+    type: 'datetime',
     default: () => 'CURRENT_TIMESTAMP',
     onUpdate: 'CURRENT_TIMESTAMP',
   })
@@ -81,7 +81,7 @@ export class CartItem {
   added_at!: Date;
 
   @Column({ type: 'varchar' })
-  type!: 'bulk' | 'subscription'| 'normal';
+  type!: 'bulk' | 'subscription'| 'normal' | 'flash_sale';
   
   @Column({ type: 'boolean', default: false })
   is_group!: boolean

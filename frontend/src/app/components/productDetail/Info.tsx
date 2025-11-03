@@ -22,7 +22,7 @@ export type Inventory = {
 
 export type PricingRule = {
   id: number;
-  type: 'bulk' | 'subscription' | 'normal';
+  type: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   min_quantity: number;
   price: number;
   cycle?: string;
@@ -31,6 +31,12 @@ export type PricingRule = {
   name: string;
   status?: string;
   variant_sku?: string | null;
+  schedule?: {
+    id: number;
+    name: string;
+    starts_at: string;
+    ends_at: string;
+  };
 };
 
 export type Brand = {
@@ -81,8 +87,10 @@ export default function Info({
   calculatedPrice: number;
   setCalculatedPrice: (price: number) => void;
   maxQuantity: number;
-  selectedType?: 'bulk' | 'subscription' | 'normal';
-  setSelectedType: (type?: 'bulk' | 'subscription' | 'normal') => void;
+  selectedType?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+  setSelectedType: (
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
+  ) => void;
 }) {
   const navigate = useNavigate();
   const pricingRules = product?.pricing_rules ?? [];
@@ -159,8 +167,34 @@ export default function Info({
 
   /** --------------------- Auto-select rule --------------------- */
   useEffect(() => {
-    setSelectedRuleId(applicablePricingRules[0]?.id ?? null);
-  }, [applicablePricingRules]);
+    const now = new Date();
+
+    // Nếu user đã tự chọn, không override
+    if (
+      selectedRuleId &&
+      !applicablePricingRules.every((r) => r.id !== selectedRuleId)
+    )
+      return;
+
+    const flashSale = product?.pricing_rules?.find(
+      (r) =>
+        r.type === 'flash_sale' &&
+        (!r.variant_sku || r.variant_sku === selectedVariant?.sku) &&
+        new Date(r.starts_at ?? 0) <= now &&
+        new Date(r.ends_at ?? 8640000000000000) >= now
+    );
+
+    if (flashSale) {
+      setSelectedRuleId(flashSale.id);
+    } else {
+      setSelectedRuleId(applicablePricingRules[0]?.id ?? null);
+    }
+  }, [
+    applicablePricingRules,
+    product?.pricing_rules,
+    selectedVariant,
+    selectedRuleId,
+  ]);
 
   /** --------------------- Final Price -> set state cha --------------------- */
   useEffect(() => {
@@ -241,7 +275,7 @@ export default function Info({
           className="text-[28px] font-bold leading-none"
           style={{ color: TIKI_RED }}
         >
-          {vnd(calculatedPrice)}
+          {new Intl.NumberFormat('vi-VN').format(calculatedPrice)}
         </div>
         {listPrice && listPrice !== calculatedPrice && (
           <div className="text-slate-400 line-through">{vnd(listPrice)}</div>
@@ -273,7 +307,7 @@ export default function Info({
       )}
 
       {/* Quantity */}
-      <div className="mt-2 flex items-center gap-2">
+      {/* <div className="mt-2 flex items-center gap-2">
         <span>Số lượng:</span>
         <input
           type="number"
@@ -288,7 +322,7 @@ export default function Info({
             Đã đạt tối đa
           </span>
         )}
-      </div>
+      </div> */}
 
       {/* Pricing Rules */}
       {pricingRules.length > 0 && (
@@ -301,31 +335,53 @@ export default function Info({
               )
               .sort((a, b) => a.min_quantity - b.min_quantity)
               .map((r) => {
-                const start = new Date(r.starts_at ?? 0);
-                const end = new Date(r.ends_at ?? 8640000000000000);
                 const now = new Date();
-                const isValid =
-                  now >= start &&
-                  now <= end &&
-                  ((r.type === 'bulk' && quantity >= r.min_quantity) ||
-                    (r.type === 'subscription' &&
-                      quantity >= r.min_quantity &&
-                      quantity % r.min_quantity === 0));
+
+                // ✅ Kiểm tra hợp lệ cho từng loại pricing rule
+                const isValid = (() => {
+                  if (r.type === 'flash_sale') {
+                    if (!r.schedule) return false;
+                    const start = new Date(r.schedule.starts_at);
+                    const end = new Date(r.schedule.ends_at);
+                    return now >= start && now <= end;
+                  }
+
+                  const start = new Date(r.starts_at ?? 0);
+                  const end = new Date(r.ends_at ?? 8640000000000000);
+                  return (
+                    now >= start &&
+                    now <= end &&
+                    ((r.type === 'bulk' && quantity >= r.min_quantity) ||
+                      (r.type === 'subscription' &&
+                        quantity >= r.min_quantity &&
+                        quantity % r.min_quantity === 0) ||
+                      r.type === 'normal')
+                  );
+                })();
+
+                const isActive = selectedRuleId === r.id;
 
                 return (
                   <button
                     key={r.id}
-                    className={`px-2 py-1 rounded border ${
-                      selectedRuleId === r.id
-                        ? 'border-blue-500 bg-blue-50 text-blue-600 font-semibold'
-                        : isValid
-                        ? 'border-rose-500 bg-rose-50 text-rose-600'
-                        : 'border-gray-300'
-                    }`}
+                    className={`px-2 py-1 rounded border transition-colors
+                      ${
+                        isActive
+                          ? 'border-blue-500 bg-blue-50 text-blue-600 font-semibold'
+                          : isValid
+                          ? r.type === 'flash_sale'
+                            ? 'border-amber-500 bg-amber-50 text-amber-600'
+                            : 'border-rose-500 bg-rose-50 text-rose-600'
+                          : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                      }`}
                     disabled={!isValid}
                     onClick={() => setSelectedRuleId(r.id)}
                   >
+                    {r.type === 'flash_sale' && <span>🔥 </span>}
                     {r.name} — {r.min_quantity}+ : {vnd(r.price)}
+                    {r.type === 'flash_sale' && isValid && (
+                      <span className="ml-1 text-red-500">(Đang diễn ra)</span>
+                    )}
                   </button>
                 );
               })}

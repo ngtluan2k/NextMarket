@@ -1,15 +1,7 @@
-// src/seller-registration/utils/validation.ts
 import { SellerFormData } from '../../types';
+type Step3Files = { front?: File | null; back?: File | null };
 
-/** =========================
- *  PHONE (Vietnam) UTIL
- *  =========================
- *  Hợp lệ nếu:
- *   - 0xxxxxxxxx
- *   - +84xxxxxxxxx / 84xxxxxxxxx (không có số 0 ngay sau mã quốc gia)
- *   - hoặc chỉ 9–10 chữ số (không bắt đầu bằng 0) -> hiểu là "ngầm +84" (UI có prefix)
- *  Bỏ qua khoảng trắng, '-', '()', '.'
- */
+
 export const isValidVNPhone = (raw?: string) => {
   if (!raw) return false;
   const s = raw.trim().replace(/[\s\-().]/g, '');
@@ -22,6 +14,8 @@ export const isValidVNPhone = (raw?: string) => {
   if (s.startsWith('0'))   return /^0[1-9]\d{8,9}$/.test(s);
   return false;
 };
+
+export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** =========================
  *  ADDRESS MODAL VALIDATION
@@ -112,7 +106,7 @@ export const validateAddressForm = (
 };
 
 /** =========================
- *  STEPS VALIDATION (wizard)
+ *  STEP 1 VALIDATION
  *  ========================= */
 export const validateStep1 = (formData: SellerFormData, addresses: any[]) => {
   const errors: string[] = [];
@@ -121,13 +115,10 @@ export const validateStep1 = (formData: SellerFormData, addresses: any[]) => {
   if (!formData.email?.trim()) errors.push('Email không được để trống');
   if (!formData.phone?.trim()) errors.push('Số điện thoại không được để trống');
 
-  // Email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (formData.email && !emailRegex.test(formData.email)) {
     errors.push('Email không đúng định dạng');
   }
 
-  // Phone (+84/84/0, hoặc 9–10 số ngầm +84)
   if (formData.phone && !isValidVNPhone(formData.phone)) {
     errors.push('Số điện thoại không đúng định dạng');
   }
@@ -144,7 +135,6 @@ export const validateStep1 = (formData: SellerFormData, addresses: any[]) => {
     if (missingFields.length > 0) {
       errors.push('Vui lòng điền đầy đủ thông tin địa chỉ');
     } else {
-      // Phone trong địa chỉ cũng cho phép "ngầm +84"
       const addrPhone = (defaultAddress as any).phone as string | undefined;
       if (addrPhone && !isValidVNPhone(addrPhone)) {
         errors.push('Số điện thoại ở địa chỉ không đúng định dạng');
@@ -155,60 +145,125 @@ export const validateStep1 = (formData: SellerFormData, addresses: any[]) => {
   return errors;
 };
 
-export const validateStep2 = (formData: SellerFormData, emails: any[]) => {
+/** =========================
+ *  STEP 2 – field validators
+ *  ========================= */
+export const validateBusinessName = (name?: string) => {
+  const v = (name || '').trim();
+  return v ? '' : 'Vui lòng nhập tên công ty/doanh nghiệp';
+};
+
+export const validateBusinessAddresses = (addresses?: string) => {
+  const v = (addresses || '').trim();
+  return v ? '' : 'Vui lòng nhập địa chỉ đăng ký kinh doanh';
+};
+
+export const validateDefaultInvoiceEmail = (
+  emails: Array<{ email: string; is_default: boolean }>
+) => {
+  const def = emails.find((e) => e.is_default);
+  if (!def?.email?.trim()) return 'Vui lòng thêm email hóa đơn mặc định';
+  if (!emailRegex.test(def.email)) return 'Email hóa đơn không đúng định dạng';
+  return '';
+};
+
+/** MST:
+ *  - Bắt buộc nếu type === 'company'
+ *  - Hợp lệ: 10 số | 13 số | 10-3 (chi nhánh)
+ *  - Nếu type !== 'company': không bắt buộc; nếu có nhập thì phải đúng định dạng
+ */
+export const validateTaxCode = (type?: string, taxCode?: string) => {
+  const v = (taxCode || '').trim();
+  const RE = /^(\d{10}|\d{13}|\d{10}-\d{3})$/;
+
+  if (type === 'company') {
+    if (!v) return 'Vui lòng nhập mã số thuế';
+    if (!RE.test(v)) return 'Mã số thuế không đúng định dạng (10 số / 13 số / 10-3)';
+  } else {
+    if (v && !RE.test(v)) return 'Mã số thuế không đúng định dạng';
+  }
+  return '';
+};
+
+/** File giấy phép:
+ *  - requiredWhenCompany = true → bắt buộc khi type = company
+ *  - Chấp nhận: pdf, jpg, jpeg, png; size <= 10MB
+ */
+export const validateBusinessLicenseFile = (
+  file: File | null,
+  requiredWhenCompany: boolean
+) => {
+  if (requiredWhenCompany && !file) return 'Vui lòng tải lên Giấy phép đăng ký kinh doanh';
+
+  if (file) {
+    const okType = ['application/pdf', 'image/png', 'image/jpeg'].includes(file.type);
+    if (!okType) return 'Định dạng file không hợp lệ (chỉ PDF/JPG/PNG)';
+    const MAX = 10 * 1024 * 1024;
+    if (file.size > MAX) return 'Kích thước file tối đa 10MB';
+  }
+  return '';
+};
+
+/** Tổng hợp Step 2 cho nút "Tiếp theo" */
+export const validateStep2 = (
+  formData: SellerFormData,
+  emails: any[],
+  selectedDocFile: File | null
+) => {
   const errors: string[] = [];
 
-  if (!formData.store_information?.name?.trim()) {
-    errors.push('Tên doanh nghiệp không được để trống');
-  }
+  const m1 = validateBusinessName(formData.store_information?.name);
+  if (m1) errors.push(m1);
 
-  if (!formData.store_information?.addresses?.trim()) {
-    errors.push('Địa chỉ doanh nghiệp không được để trống');
-  }
+  const m2 = validateBusinessAddresses(formData.store_information?.addresses);
+  if (m2) errors.push(m2);
 
-  // Email hóa đơn
-  const defaultEmail = emails.find((e) => e.is_default);
-  if (!defaultEmail || !defaultEmail.email?.trim()) {
-    errors.push('Vui lòng thêm email hóa đơn');
-  } else {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(defaultEmail.email)) {
-      errors.push('Email hóa đơn không đúng định dạng');
-    }
-  }
+  const m3 = validateDefaultInvoiceEmail(emails);
+  if (m3) errors.push(m3);
+
+  const m4 = validateTaxCode(formData.store_information?.type, formData.store_information?.tax_code);
+  if (m4) errors.push(m4);
+
+  const m5 = validateBusinessLicenseFile(
+    selectedDocFile,
+    formData.store_information?.type === 'company'
+  );
+  if (m5) errors.push(m5);
 
   return errors;
 };
 
-export const validateStep3 = (formData: SellerFormData) => {
+export const validateStep3 = (formData: SellerFormData, files?: Step3Files) => {
   const errors: string[] = [];
 
-  // Tài khoản ngân hàng (nếu có nhập thì phải đủ)
-  if (
-    formData.bank_account?.bank_name ||
-    formData.bank_account?.account_number ||
-    formData.bank_account?.account_holder
-  ) {
-    if (!formData.bank_account.bank_name?.trim()) {
-      errors.push('Tên ngân hàng không được để trống');
-    }
-    if (!formData.bank_account.account_number?.trim()) {
-      errors.push('Số tài khoản không được để trống');
-    }
-    if (!formData.bank_account.account_holder?.trim()) {
-      errors.push('Tên chủ tài khoản không được để trống');
-    }
+  const fullName = (formData.store_identification.full_name || '').trim();
+
+  // coi như đã có ảnh nếu có URL trong formData HOẶC có file vừa chọn
+  const hasFront = !!formData.store_identification.img_front || !!files?.front;
+  const hasBack  = !!formData.store_identification.img_back  || !!files?.back;
+
+  // rule ảnh: yêu cầu cả 2 mặt
+  if (!hasFront) errors.push('Vui lòng tải lên ảnh CCCD mặt trước');
+  if (!hasBack)  errors.push('Vui lòng tải lên ảnh CCCD mặt sau');
+
+  // nếu có bất kỳ thông tin định danh (ảnh/họ tên) thì họ tên bắt buộc
+  const hasAnyID = hasFront || hasBack || !!fullName;
+  if (hasAnyID && !fullName) {
+    errors.push('Họ tên trong thông tin định danh không được để trống');
   }
 
-  // Định danh (tùy chọn, nếu nhập thì phải có họ tên)
-  if (
-    formData.store_identification?.full_name ||
-    formData.store_identification?.img_front ||
-    formData.store_identification?.img_back
-  ) {
-    if (!formData.store_identification.full_name?.trim()) {
-      errors.push('Họ tên trong thông tin định danh không được để trống');
-    }
+  // ngân hàng: nếu điền 1 trong 3 thì phải đủ cả 3
+  const bank = formData.bank_account || ({} as any);
+  const hasAnyBank = !!(bank.bank_name || bank.account_number || bank.account_holder);
+
+  if (hasAnyBank) {
+    if (!String(bank.bank_name || '').trim()) errors.push('Tên ngân hàng không được để trống');
+    if (!String(bank.account_number || '').trim())
+      errors.push('Số tài khoản không được để trống');
+    else if (!/^\d{6,20}$/.test(String(bank.account_number).trim()))
+      errors.push('Số tài khoản chỉ gồm số (6–20 ký tự)');
+    if (!String(bank.account_holder || '').trim())
+      errors.push('Tên chủ tài khoản không được để trống');
   }
 
   return errors;

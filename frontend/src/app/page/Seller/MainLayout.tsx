@@ -16,14 +16,32 @@ import StoreInfoTab from './tab/StoreInfoTab';
 import StoreOwnerVoucherManager from '../../components/seller/StoreOwnerVoucherManager';
 import StoreCampaignManager from './tab/StoreCampaignManager';
 import StoreCampaignDetail from './tab/StoreCampaignDetail';
+import FlashSaleManager from './tab/FlashSaleManager';
+import FlashSaleRegister from './tab/FlashSaleRegister';
 
 const { Content, Footer } = Layout;
 
 const SellerMainLayout: React.FC = () => {
-  const [activePage, setActivePage] = useState<'Dashboard' | 'SalesManagement' | 'StoreInventory' | 'Customers' | 'Invoices' | 'StoreInfo' | 'VoucherManagement' | 'StoreCampaignManager' | 'StoreCampaignDetail' | 'Home'>('Dashboard');
-  const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
+  const [activePage, setActivePage] = useState<
+    | 'Dashboard'
+    | 'SalesManagement'
+    | 'StoreInventory'
+    | 'Customers'
+    | 'Invoices'
+    | 'StoreInfo'
+    | 'VoucherManagement'
+    | 'StoreCampaignManager'
+    | 'StoreCampaignDetail'
+    | 'FlashSaleManager'
+    | 'FlashSaleRegister'
+    | 'Home'
+  >('Dashboard');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>();
   const [store, setStore] = useState<any>(null);
   const navigate = useNavigate();
+  const [selectedFlashSaleId, setSelectedFlashSaleId] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     const checkStore = async () => {
@@ -70,14 +88,34 @@ const SellerMainLayout: React.FC = () => {
             }}
           />
         );
-    case 'StoreCampaignDetail':
-  if (!selectedCampaignId) return null;
-  return (
-    <StoreCampaignDetail
-      campaignId={selectedCampaignId}
-      onBack={() => setActivePage('StoreCampaignManager')}
-    />
-  );
+      case 'StoreCampaignDetail':
+        if (!selectedCampaignId) return null;
+        return (
+          <StoreCampaignDetail
+            campaignId={selectedCampaignId}
+            onBack={() => setActivePage('StoreCampaignManager')}
+          />
+        );
+      case 'FlashSaleManager':
+        return (
+          <FlashSaleManager
+            onSelectFlashSale={(id: number) => {
+              setSelectedFlashSaleId(id);
+              setActivePage('FlashSaleRegister');
+            }}
+          />
+        );
+
+      case 'FlashSaleRegister':
+        if (!selectedFlashSaleId) return null;
+        return (
+          <FlashSaleRegister
+            scheduleId={selectedFlashSaleId}
+            storeId={store.id}
+            onBack={() => setActivePage('FlashSaleManager')}
+          />
+        );
+
       case 'Home':
         return <Home />;
       default:
@@ -89,17 +127,20 @@ const SellerMainLayout: React.FC = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Sidebar
         onSelect={(key) =>
-          setActivePage(key as
-            | 'Dashboard'
-            | 'SalesManagement'
-            | 'StoreInventory'
-            | 'Customers'
-            | 'Invoices'
-            | 'StoreInfo'
-            | 'VoucherManagement'
-            | 'StoreCampaignManager'
-            | 'StoreCampaignDetail'
-            | 'Home'
+          setActivePage(
+            key as
+              | 'Dashboard'
+              | 'SalesManagement'
+              | 'StoreInventory'
+              | 'Customers'
+              | 'Invoices'
+              | 'StoreInfo'
+              | 'VoucherManagement'
+              | 'StoreCampaignManager'
+              | 'StoreCampaignDetail'
+              | 'FlashSaleManager'
+              | 'FlashSaleRegister'
+              | 'Home'
           )
         }
       />
@@ -116,9 +157,7 @@ const SellerMainLayout: React.FC = () => {
           <StoreDraftBanner isDraft={store?.is_draft} />
           {renderPage()}
         </Content>
-        <Footer style={{ textAlign: 'center' }}>
-          Ant Design ©2025 Created by Ant UED
-        </Footer>
+        <Footer style={{ textAlign: 'center' }}></Footer>
       </Layout>
     </Layout>
   );

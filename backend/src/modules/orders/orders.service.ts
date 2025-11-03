@@ -202,8 +202,33 @@ export class OrdersService {
         for (const rule of pricingRule) {
           if (rule.type !== itemDto.type) continue;
 
-          // áp dụng rule theo type
-          if (itemDto.type === 'subscription') {
+          // Áp dụng rule theo type
+          if (itemDto.type === 'flash_sale') {
+            // Nếu rule có giới hạn số lượng
+            if (rule.limit_quantity != null && rule.limit_quantity > 0) {
+              // Đếm số lượng đã bán (hoặc đã order) cho flash_sale này
+              const soldCount = await manager
+                .createQueryBuilder('order_items', 'oi')
+                .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+                .select('COALESCE(SUM(oi.quantity), 0)', 'total')
+                .getRawOne();
+
+              const totalSold = Number(soldCount?.total ?? 0);
+
+              if (totalSold + itemDto.quantity > rule.limit_quantity) {
+                throw new Error(
+                  `Flash sale này chỉ còn ${Math.max(
+                    0,
+                    rule.limit_quantity - totalSold
+                  )} sản phẩm, vui lòng giảm số lượng`
+                );
+              }
+            }
+
+            // Nếu còn hàng → áp dụng rule
+            appliedRule = rule;
+            break;
+          } else if (itemDto.type === 'subscription') {
             const minQty = rule.min_quantity ?? 0; // nếu undefined thì lấy 0
             if (minQty > 0 && itemDto.quantity === minQty) {
               appliedRule = rule;
@@ -333,6 +358,8 @@ export class OrdersService {
           subtotal:
             itemDto.quantity * itemPrice -
             (discountTotal / createOrderDto.items.length || 0),
+           pricing_rule: appliedRule ?? undefined,
+ 
         });
 
         console.log('OrderItem created:', orderItem);
@@ -910,5 +937,32 @@ export class OrdersService {
     query = query.skip((page - 1) * limit).take(limit);
 
     return query.orderBy('order.id', 'DESC').getMany();
+  }
+
+  async getOrderStats(storeId: number) {
+    const [totalRevenue, totalOrders, completed, pending] = await Promise.all([
+      this.ordersRepository
+        .createQueryBuilder('o')
+        .leftJoin('o.store', 'store')
+        .select('SUM(CAST(o.totalAmount AS DECIMAL(15,2)))', 'sum')
+        .where('store.id = :storeId', { storeId })
+        .getRawOne(),
+      this.ordersRepository.count({ where: { store: { id: storeId } } }),
+
+      this.ordersRepository.count({
+        where: { store: { id: storeId }, status: OrderStatuses.completed },
+      }),
+
+      this.ordersRepository.count({
+        where: { store: { id: storeId }, status: OrderStatuses.pending },
+      }),
+    ]);
+
+    return {
+      totalRevenue: Number(totalRevenue.sum || 0),
+      totalOrders,
+      completed,
+      pending,
+    };
   }
 }

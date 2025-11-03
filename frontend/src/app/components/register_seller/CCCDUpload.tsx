@@ -8,6 +8,8 @@ interface Props {
   frontFile?: File | null;
   backFile?: File | null;
   className?: string;
+  /** 'compact' = chiều cao thumbnail thấp + padding nhỏ */
+  variant?: 'normal' | 'compact';
 }
 
 export const CCCDUpload: React.FC<Props> = ({
@@ -15,9 +17,12 @@ export const CCCDUpload: React.FC<Props> = ({
   frontFile: propFrontFile,
   backFile: propBackFile,
   className,
+  variant = 'normal',
 }) => {
   const [frontFile, setFrontFile] = useState<File | null>(propFrontFile || null);
   const [backFile, setBackFile] = useState<File | null>(propBackFile || null);
+  const [frontUrl, setFrontUrl] = useState<string | null>(null);
+  const [backUrl, setBackUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setFrontFile(propFrontFile || null);
@@ -27,10 +32,36 @@ export const CCCDUpload: React.FC<Props> = ({
     setBackFile(propBackFile || null);
   }, [propBackFile]);
 
-  const box =
-    'rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-3 hover:border-sky-300';
+  // preview URLs + cleanup
+  useEffect(() => {
+    if (!frontFile) {
+      setFrontUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(frontFile);
+    setFrontUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [frontFile]);
+
+  useEffect(() => {
+    if (!backFile) {
+      setBackUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(backFile);
+    setBackUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [backFile]);
+
+  const boxBase =
+    'rounded-xl border-2 border-dashed border-slate-200 bg-slate-50';
+  const box = `${boxBase} ${variant === 'compact' ? 'p-2' : 'p-3'}`;
   const uploadBtn =
-    'mt-1.5 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50';
+    `mt-1.5 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 ` +
+    `${variant === 'compact' ? 'py-1 text-[12px]' : 'py-1.5 text-xs'} text-slate-700 hover:bg-slate-50`;
+  const imgClass =
+    `mt-2 w-full rounded-lg border border-slate-100 object-contain ` +
+    `${variant === 'compact' ? 'max-h-28' : 'max-h-44'}`;
 
   return (
     <div className={className}>
@@ -62,11 +93,11 @@ export const CCCDUpload: React.FC<Props> = ({
             />
           </label>
 
-          {frontFile && (
+          {frontUrl && (
             <img
-              src={URL.createObjectURL(frontFile)}
+              src={frontUrl}
               alt="CCCD front preview"
-              className="mt-2 max-h-44 w-full rounded-lg border border-slate-100 object-contain"
+              className={imgClass}
             />
           )}
         </div>
@@ -93,11 +124,11 @@ export const CCCDUpload: React.FC<Props> = ({
             />
           </label>
 
-          {backFile && (
+          {backUrl && (
             <img
-              src={URL.createObjectURL(backFile)}
+              src={backUrl}
               alt="CCCD back preview"
-              className="mt-2 max-h-44 w-full rounded-lg border border-slate-100 object-contain"
+              className={imgClass}
             />
           )}
         </div>
