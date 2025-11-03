@@ -107,6 +107,7 @@ export interface Product {
     name?: string;
     status?: 'active' | 'inactive';
     limit_quantity?: number;
+    schedule?: { id: number } | null;
   }[];
   apiId?: number; // To link with backend
 }
@@ -288,6 +289,7 @@ export default function StoreInventory() {
                 name: rule.name || '',
                 status: rule.status === 'active' ? 'active' : 'inactive',
                 limit_quantity: rule.limit_quantity,
+                schedule: rule.schedule?.id ? { id: rule.schedule.id } : null, // ✅ đổi từ schedule_id
               })) || [],
           };
         }

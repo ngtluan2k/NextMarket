@@ -1301,25 +1301,6 @@ export const ProductForm: React.FC = () => {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">
-                    Giới hạn số lượng
-                  </label>
-                  <input
-                    type="number"
-                    value={pr.limit_quantity ?? ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].limit_quantity = e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="VD: 10 (để trống nếu không giới hạn)"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
                     Bắt đầu
                   </label>
                   <DatePicker

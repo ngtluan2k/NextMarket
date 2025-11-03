@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Progress } from 'antd';
-
+import { Flame } from 'lucide-react';
 const DEBUG = true;
 
 type ProductRaw = {
@@ -188,7 +188,18 @@ export default function ProductFlashSale({
       className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}
     >
       <div className="flex items-center justify-between px-4 py-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          {title}
+
+          {/* Nếu có sản phẩm flash sale => hiển thị chữ “Đang diễn ra” */}
+          {data.length > 0 && (
+            <span className="flex items-center gap-1 text-rose-600 text-xs font-medium animate-pulse">
+              <Flame className="w-4 h-4 text-rose-500 animate-bounce" />
+              Đang diễn ra
+            </span>
+          )}
+        </h2>
+
         <Link to={seeAllHref} className="text-sm text-sky-600 hover:underline">
           Xem tất cả
         </Link>

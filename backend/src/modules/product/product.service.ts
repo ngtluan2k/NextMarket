@@ -30,6 +30,7 @@ import { Tag } from '../tag/tag.entity';
 import { Not } from 'typeorm';
 import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { OrderItem } from '../order-items/order-item.entity';
+import { FlashSaleSchedule } from '../flash_sale_schedules/entities/flash_sale_schedule.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -53,7 +54,9 @@ export class ProductService {
     @InjectRepository(ProductCategory)
     private readonly productCategoryRepo: Repository<ProductCategory>,
     @InjectRepository(OrderItem)
-    private readonly orderItemRepo: Repository<OrderItem>
+    private readonly orderItemRepo: Repository<OrderItem>,
+    @InjectRepository(FlashSaleSchedule)
+    private readonly scheduleRepo: Repository<FlashSaleSchedule>
   ) {}
 
   async saveProduct(
@@ -316,71 +319,84 @@ export class ProductService {
       }
     }
 
-    if (Array.isArray(dto.pricing_rules)) {
-      for (const ruleDto of dto.pricing_rules) {
-        // --- map variant, nếu không có thì undefined ---
-        const variant = ruleDto.variant_sku
-          ? variantMap[ruleDto.variant_sku]
-          : undefined;
+  if (Array.isArray(dto.pricing_rules)) {
+  // Lấy entity Product thật sự
+  const productEntity = await this.productRepo.findOne({ where: { id } });
+  if (!productEntity) throw new Error(`Product ${id} not found`);
 
-        if (ruleDto.id) {
-          const existingRule = await this.pricingRuleRepo.findOne({
-            where: { id: ruleDto.id },
-          });
-          if (!existingRule) continue;
+  for (const ruleDto of dto.pricing_rules) {
+    const variant = ruleDto.variant_sku ? variantMap[ruleDto.variant_sku] : undefined;
 
-          console.log('Updating PricingRule id:', ruleDto.id);
-          console.log('ruleDto:', ruleDto);
-          console.log('Mapped variant:', variant);
+    if (ruleDto.id) {
+      // Update rule đã có
+      const existingRule = await this.pricingRuleRepo.findOne({
+        where: { id: ruleDto.id },
+        relations: ['schedule', 'product'],
+      });
+      if (!existingRule) continue;
 
-          existingRule.type = ruleDto.type;
-          existingRule.min_quantity = ruleDto.min_quantity;
-          existingRule.price = ruleDto.price;
-          existingRule.cycle = ruleDto.cycle;
-          existingRule.starts_at = ruleDto.starts_at
-            ? new Date(ruleDto.starts_at)
-            : undefined;
-          existingRule.ends_at = ruleDto.ends_at
-            ? new Date(ruleDto.ends_at)
-            : undefined;
-          existingRule.variant = variant;
-          existingRule.name =
-            ruleDto.name ?? `${product.name} - ${ruleDto.type}`;
-          existingRule.status = ruleDto.status ?? 'active';
-          existingRule.limit_quantity = ruleDto.limit_quantity ?? null; // 👈 thêm dòng này
-          existingRule.product = { id } as any;
+      // Merge dữ liệu từ FE mà không làm mất product và schedule
+      existingRule.type = ruleDto.type;
+      existingRule.min_quantity = ruleDto.min_quantity;
+      existingRule.price = ruleDto.price;
+      existingRule.cycle = ruleDto.cycle;
+      existingRule.starts_at = ruleDto.starts_at ? new Date(ruleDto.starts_at) : undefined;
+      existingRule.ends_at = ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined;
+      existingRule.variant = variant;
+      existingRule.name = ruleDto.name ?? `${productEntity.name} - ${ruleDto.type}`;
+      existingRule.status = ruleDto.status ?? 'active';
+      existingRule.limit_quantity = ruleDto.limit_quantity ?? null;
+      existingRule.product = productEntity;
 
-          const savedRule = await this.pricingRuleRepo.save(existingRule);
-
-          // --- LOG sau save ---
-          console.log('Saved PricingRule:', savedRule);
-        } else {
-          // --- Create new rule ---
-          const newRule: DeepPartial<PricingRules> = {
-            type: ruleDto.type,
-            min_quantity: ruleDto.min_quantity,
-            price: ruleDto.price,
-            cycle: ruleDto.cycle,
-            starts_at: ruleDto.starts_at
-              ? new Date(ruleDto.starts_at)
-              : undefined,
-            ends_at: ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined,
-            variant: variant, // Variant | undefined
-            name: ruleDto.name ?? `${product.name} - ${ruleDto.type}`,
-            status: ruleDto.status ?? 'active',
-            limit_quantity: ruleDto.limit_quantity,
-            product: { id } as any,
-            uuid: ruleDto.uuid ?? require('uuid').v4(),
-          };
-
-          console.log('Creating new PricingRule:', newRule);
-
-          const savedNewRule = await this.pricingRuleRepo.save(newRule);
-
-          console.log('Saved new PricingRule:', savedNewRule);
-        }
+      // Xử lý schedule
+      if (ruleDto.schedule?.id) {
+        const scheduleEntity = await this.scheduleRepo.findOne({ where: { id: ruleDto.schedule.id } });
+        if (scheduleEntity) existingRule.schedule = scheduleEntity;
       }
+      // Nếu FE gửi null thì xóa schedule
+      if (ruleDto.schedule === null) existingRule.schedule = undefined;
+
+      await this.pricingRuleRepo.save(existingRule);
+      console.log('✅ Updated PricingRule:', existingRule);
+    } else {
+      // Check duplicate trước khi tạo mới
+      const whereClause: any = { product: { id }, type: ruleDto.type, price: ruleDto.price };
+      if (variant) whereClause.variant = { id: variant.id };
+
+      const duplicate = await this.pricingRuleRepo.findOne({ where: whereClause });
+      if (duplicate) {
+        console.log('⚠️ Duplicate found, skip saving:', duplicate.id);
+        continue;
+      }
+
+      // Tạo mới rule
+      const newRule: DeepPartial<PricingRules> = {
+        type: ruleDto.type,
+        min_quantity: ruleDto.min_quantity,
+        price: ruleDto.price,
+        cycle: ruleDto.cycle,
+        starts_at: ruleDto.starts_at ? new Date(ruleDto.starts_at) : undefined,
+        ends_at: ruleDto.ends_at ? new Date(ruleDto.ends_at) : undefined,
+        variant,
+        name: ruleDto.name ?? `${productEntity.name} - ${ruleDto.type}`,
+        status: ruleDto.status ?? 'active',
+        limit_quantity: ruleDto.limit_quantity,
+        product: productEntity,
+        uuid: ruleDto.uuid ?? require('uuid').v4(),
+      };
+
+      // Nếu FE gửi schedule.id
+      if (ruleDto.schedule?.id) {
+        const scheduleEntity = await this.scheduleRepo.findOne({ where: { id: ruleDto.schedule.id } });
+        if (scheduleEntity) newRule.schedule = scheduleEntity;
+      }
+
+      const savedNewRule = await this.pricingRuleRepo.save(newRule);
+      console.log('✅ Saved new PricingRule:', savedNewRule);
     }
+  }
+}
+
 
     return updatedProduct;
   }
@@ -530,6 +546,7 @@ export class ProductService {
         'variants.inventories',
         'pricing_rules',
         'pricing_rules.variant',
+        'pricing_rules.schedule',
       ],
     });
   }
@@ -629,55 +646,54 @@ export class ProductService {
     return row.slug;
   }
 
-async findFlashSaleProducts() {
-  const now = new Date();
+  async findFlashSaleProducts() {
+    const now = new Date();
 
-  const products = await this.productRepo.find({
-    where: {
-      status: 'active',
-      pricing_rules: {
-        type: 'flash_sale',
-        schedule: {
-          starts_at: LessThanOrEqual(now),
-          ends_at: MoreThanOrEqual(now),
+    const products = await this.productRepo.find({
+      where: {
+        status: 'active',
+        pricing_rules: {
+          type: 'flash_sale',
+          schedule: {
+            starts_at: LessThanOrEqual(now),
+            ends_at: MoreThanOrEqual(now),
+          },
         },
       },
-    },
-    relations: [
-      'store',
-      'brand',
-      'categories',
-      'media',
-      'variants',
-      'pricing_rules',
-      'pricing_rules.schedule', // ⚡ thêm relation schedule để join flash_sale
-    ],
-    order: {
-      updated_at: 'DESC',
-    },
-  });
+      relations: [
+        'store',
+        'brand',
+        'categories',
+        'media',
+        'variants',
+        'pricing_rules',
+        'pricing_rules.schedule', // ⚡ thêm relation schedule để join flash_sale
+      ],
+      order: {
+        updated_at: 'DESC',
+      },
+    });
 
-  // ✅ Tính remaining_quantity cho mỗi rule
-  for (const product of products) {
-    for (const rule of product.pricing_rules) {
-      if (rule.type !== 'flash_sale') continue;
+    // ✅ Tính remaining_quantity cho mỗi rule
+    for (const product of products) {
+      for (const rule of product.pricing_rules) {
+        if (rule.type !== 'flash_sale') continue;
 
-      const soldQty = await this.orderItemRepo
-        .createQueryBuilder('oi')
-        .select('SUM(oi.quantity)', 'total')
-        .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
-        .getRawOne();
+        const soldQty = await this.orderItemRepo
+          .createQueryBuilder('oi')
+          .select('SUM(oi.quantity)', 'total')
+          .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+          .getRawOne();
 
-      const totalSold = Number(soldQty?.total ?? 0);
+        const totalSold = Number(soldQty?.total ?? 0);
 
-      (rule as any).remaining_quantity = Math.max(
-        0,
-        (rule.limit_quantity ?? 0) - totalSold
-      );
+        (rule as any).remaining_quantity = Math.max(
+          0,
+          (rule.limit_quantity ?? 0) - totalSold
+        );
+      }
     }
+
+    return products;
   }
-
-  return products;
-}
-
 }
