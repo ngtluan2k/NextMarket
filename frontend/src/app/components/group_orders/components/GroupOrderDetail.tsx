@@ -35,7 +35,7 @@ export default function GroupOrderDetail() {
             case 'member-joined':
                 if (data?.member) {
                     setMembers((prev) => {
-                        const exists = prev.some(m => m?.user?.id === data.member?.user?.id);
+                        const exists = prev.some(m => m?.user?.user_id === data.member?.user?.user_id);
                         return exists ? prev : [data.member, ...prev];
                     });
                 }
@@ -43,7 +43,7 @@ export default function GroupOrderDetail() {
                 break;
             case 'member-left':
                 if (data?.userId) {
-                    setMembers((prev) => prev.filter((m) => m?.user?.id !== data.userId));
+                    setMembers((prev) => prev.filter((m) => m?.user?.user_id !== data.userId));
                 }
                 break;
             case 'item-added':
@@ -80,8 +80,8 @@ export default function GroupOrderDetail() {
                 refresh();
 
                 // Hiển thị notification
-                if (data?.userId && data.userId !== user?.id) {
-                    const updatedMember = members.find(m => m?.user?.id === data.userId);
+                if (data?.userId && data.userId !== user?.user_id) {
+                    const updatedMember = members.find(m => m?.user?.user_id === data.userId);
                     const memberName = updatedMember?.user?.profile?.full_name ||
                         updatedMember?.user?.username ||
                         `User #${data.userId}`;
@@ -236,18 +236,18 @@ export default function GroupOrderDetail() {
     };
 
     const canEditItem = (item: any) => {
-        if (!user?.id) return false;
-        if (item?.member?.user?.id === user.id) return true;
+        if (!user?.user_id) return false;
+        if (item?.member?.user?.user_id === user.id) return true;
         if (item?.user_id === user.id) return true;
         if (item?.member?.user_id === user.id) return true;
         return false;
     };
 
     const isHost = React.useMemo(() => {
-        if (!user?.id) return false;
-        if (group?.user?.id === user.id) return true;
-        return Array.isArray(members) && members.some((m: any) => m?.user?.id === user.id && m?.is_host);
-    }, [user?.id, group?.user?.id, members]);
+        if (!user?.user_id) return false;
+        if (group?.user?.user_id === user.id) return true;
+        return Array.isArray(members) && members.some((m: any) => m?.user?.user_id === user.id && m?.is_host);
+    }, [user?.user_id, group?.user?.user_id, members]);
 
     // Tính tổng với logic mới
     const totals = React.useMemo(() => {
@@ -261,7 +261,7 @@ export default function GroupOrderDetail() {
     const getDisplayName = (item: any) => {
         // Thử lấy từ members array trước
         const memberFromList = members.find(m =>
-            m?.user?.id === item?.member?.user?.id
+            m?.user?.user_id === item?.member?.user?.user_id
         );
 
         if (memberFromList?.user?.profile?.full_name) {
@@ -291,8 +291,8 @@ export default function GroupOrderDetail() {
     }, [group?.delivery_mode, members]);
 
     const myMember = React.useMemo(() => {
-        return members.find((m: any) => m?.user?.id === user?.id);
-    }, [members, user?.id]);
+        return members.find((m: any) => m?.user?.user_id === user?.user_id);
+    }, [members, user?.user_id]);
 
     console.log('🧾 Render GroupOrderDetail', {
         group,
@@ -300,7 +300,7 @@ export default function GroupOrderDetail() {
         groupItems: groupItems.map(it => ({
             id: it.id,
             product: it?.product?.name,
-            memberUserId: it?.member?.user?.id,
+            memberUserId: it?.member?.user?.user_id,
             fullName: it?.member?.user?.profile?.full_name,
             username: it?.member?.user?.username,
             email: it?.member?.user?.email,
@@ -444,7 +444,7 @@ export default function GroupOrderDetail() {
                                 </div>
 
                                 {/* ĐỊA CHỈ MEMBER (nếu là member_address mode) */}
-                                {group?.delivery_mode === 'member_address' && user?.id && (
+                                {group?.delivery_mode === 'member_address' && user?.user_id && (
                                     <div className="pt-3 border-t space-y-2">
                                         <div className="flex items-center gap-2 text-sm font-medium">
                                             <EnvironmentOutlined className="text-blue-600" />
@@ -499,7 +499,7 @@ export default function GroupOrderDetail() {
                                     <ul className="text-xs text-yellow-700 space-y-0.5">
                                         {membersWithoutAddress.map(m => (
                                             <li key={m.id}>
-                                                • {m?.user?.profile?.full_name || m?.user?.username || `User #${m?.user?.id}`}
+                                                • {m?.user?.profile?.full_name || m?.user?.username || `User #${m?.user?.user_id}`}
                                             </li>
                                         ))}
                                     </ul>
@@ -508,7 +508,7 @@ export default function GroupOrderDetail() {
 
                             <ul className="space-y-2">
                                 {Array.from(
-                                    new Map(members.map(m => [m?.user?.id, m])).values()
+                                    new Map(members.map(m => [m?.user?.user_id, m])).values()
                                 ).map((m: any) => (
                                     <li
                                         key={m.user.id}

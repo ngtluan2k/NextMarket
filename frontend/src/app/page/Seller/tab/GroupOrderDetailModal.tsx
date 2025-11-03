@@ -235,7 +235,7 @@ export default function GroupOrderDetailModal({
         },
         {
             title: 'Thành viên',
-            key: 'member',
+            key: 'members',
             width: 200,
             render: (_: any, record: any) => (
 

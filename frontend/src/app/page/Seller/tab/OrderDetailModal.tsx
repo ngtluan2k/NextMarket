@@ -137,6 +137,7 @@ export default function OrderDetailModal({
         selectedSale.id
       );
       setOrderDetail(detail);
+      console.log(detail)
     } catch (err: any) {
       console.error('❌ Lỗi khi lấy chi tiết đơn hàng:', err);
       message.error('Không thể tải chi tiết đơn hàng');
