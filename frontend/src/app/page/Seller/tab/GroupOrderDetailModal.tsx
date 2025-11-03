@@ -105,7 +105,9 @@ export default function GroupOrderDetailModal({
             (order.orderItem || []).reduce((s, item) => s + (item.quantity || 0), 0),
         0
     );
-    const memberCount = orders.length;
+        const members = groupInfo.members || [];
+
+    const memberCount = members.length;
 
     // Lấy thông tin group từ order đầu tiên
     const firstOrder = orders[0];
@@ -163,7 +165,7 @@ export default function GroupOrderDetailModal({
         },
         {
             title: 'Thành viên',
-            key: 'member',
+            key: 'members',
             width: 200,
             render: (_: any, record: Sale) => (
 
