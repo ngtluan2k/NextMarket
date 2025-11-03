@@ -12,6 +12,7 @@ import { Store } from '../store/store.entity';
 import { User } from '../user/user.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
+import { OrderStatuses } from '../orders/types/orders';
 import { Order } from '../orders/order.entity';
 
 export type GroupOrderStatus = 'open' | 'locked' | 'completed' | 'cancelled';
@@ -82,4 +83,11 @@ export class GroupOrder {
         default: 'host_address',
     })
     delivery_mode!: 'host_address' | 'member_address';
+
+    @Column({
+        type: 'integer',
+        default: OrderStatuses.pending,
+        comment: 'Trạng thái đơn hàng của nhóm: 0=pending, 1=confirmed, 2=processing, 3=shipped, 4=delivered, 5=completed, 6=cancelled, 7=returned',
+    })
+    order_status!: OrderStatuses;
 }

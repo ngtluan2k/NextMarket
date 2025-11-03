@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
+import { TeamOutlined } from '@ant-design/icons';
 import {
   Layout,
   Card,
@@ -42,6 +43,9 @@ import { useMyStoreOrders } from '../../../hooks/useStoreOrders';
 import { storeService } from '../../../../service/store.service';
 import 'dayjs/locale/vi';
 import type { Sale, ProductItem, Payment } from '../../../types/order';
+import { Tooltip } from 'antd';
+import GroupOrderDetailModal from './GroupOrderDetailModal';
+import { getGroupOrderWithOrders } from '../../../../service/groupOrderItems.service';
 
 dayjs.locale('vi');
 dayjs.extend(isSameOrAfter);
@@ -135,6 +139,13 @@ export default function Sale() {
   const [storeId, setStoreId] = useState<number | null>(null);
   const [form] = Form.useForm();
 
+  const [isGroupDetailModalVisible, setIsGroupDetailModalVisible] = useState(false);
+  const [groupOrderData, setGroupOrderData] = useState<{
+    group_order_id: number;
+    groupInfo: any;
+    orders: Sale[];
+  } | null>(null);
+
   const {
     sales,
     loading,
@@ -171,9 +182,30 @@ export default function Sale() {
     fetchStore();
   }, []);
 
-  const handleViewDetail = (sale: Sale) => {
-    setSelectedSale(sale);
-    setIsDetailModalVisible(true);
+  const handleViewDetail = async (sale: Sale) => {
+    console.log(' Viewing sale:', sale);
+
+    // Kiểm tra xem có phải đơn nhóm không
+    if (sale.group_order && sale.group_order_id) {
+      try {
+        console.log('📦 Fetching group order:', sale.group_order_id);
+
+        const groupData = await getGroupOrderWithOrders(sale.group_order_id);
+
+        console.log('✅ Group data received:', groupData);
+
+        setGroupOrderData(groupData);
+        setIsGroupDetailModalVisible(true);
+      } catch (error: any) {
+        console.error(' Lỗi khi tải group order:', error);
+        console.error(' Error response:', error.response?.data);
+        message.error('Không thể tải thông tin đơn hàng nhóm');
+      }
+    } else {
+      // Đơn hàng thông thường
+      setSelectedSale(sale);
+      setIsDetailModalVisible(true);
+    }
   };
 
   const handleAddSale = () => {
@@ -312,7 +344,13 @@ export default function Sale() {
       key: 'orderNumber',
       render: (text: string, record: Sale) => (
         <div>
-          <div className="font-medium text-gray-900">{text}</div>
+          <div className="font-medium text-gray-900">{text}
+            {record.group_order && (
+              <Tag color="purple" icon={<TeamOutlined />} className="text-xs">
+                Nhóm
+              </Tag>
+            )}
+          </div>
           <div className="text-sm text-gray-500">{record.id}</div>
         </div>
       ),
@@ -325,12 +363,47 @@ export default function Sale() {
       render: (user) => (
         <div>
           <div className="font-medium text-gray-900">
-            {user.userAddress?.recipientName || user.username}
+            {user?.profile?.full_name || 'NA'}
           </div>
           <div className="text-sm text-gray-500">{user.email}</div>
         </div>
       ),
       sorter: (a, b) => a.user.username.localeCompare(b.user.username),
+    },
+    {
+      title: 'Thông tin nhóm',
+      key: 'groupInfo',
+      render: (_, record: Sale) => {
+        if (!record.group_order) {
+          return <Tag color="default">Đơn lẻ</Tag>;
+        }
+
+        const { group_order } = record;
+        return (
+          <div className="space-y-1">
+            <Tooltip title={`Tên nhóm: ${group_order.name}`}>
+              <Tag color="purple" icon={<TeamOutlined />} className="cursor-pointer">
+                {group_order.name.length > 15
+                  ? `${group_order.name.substring(0, 15)}...`
+                  : group_order.name}
+              </Tag>
+            </Tooltip>
+            {group_order.delivery_mode === 'member_address' && (
+              <div className="text-xs text-gray-500">
+                Giao hàng riêng
+              </div>
+            )}
+          </div>
+        );
+      },
+      filters: [
+        { text: 'Đơn lẻ', value: 'single' },
+        { text: 'Đơn nhóm', value: 'group' },
+      ],
+      onFilter: (value, record) => {
+        if (value === 'group') return !!record.group_order;
+        return !record.group_order;
+      },
     },
     {
       title: 'Sản Phẩm',
@@ -356,30 +429,70 @@ export default function Sale() {
       title: 'Số Lượng',
       dataIndex: 'orderItem',
       key: 'quantity',
-      sorter: (a, b) =>
-        (Array.isArray(a.orderItem) ? a.orderItem : []).reduce(
-          (sum, item) => sum + item.quantity,
+      align: 'center' as const,
+      render: (orderItem: ProductItem[], record: Sale) => {
+        // ✅ Nếu là đơn nhóm và có group_total_quantity
+        if (record.group_order_id && (record as any).group_total_quantity) {
+          return (
+            <div className="text-center">
+              <div className="font-semibold text-lg">
+                {(record as any).group_total_quantity}
+              </div>
+              <div className="text-xs text-purple-600">
+                (Cả nhóm)
+              </div>
+            </div>
+          );
+        }
+
+        // ✅ Đơn lẻ hoặc không có group_total_quantity
+        const quantity = (Array.isArray(orderItem) ? orderItem : []).reduce(
+          (sum, item) => sum + (item.quantity || 0),
           0
-        ) -
-        (Array.isArray(b.orderItem) ? b.orderItem : []).reduce(
-          (sum, item) => sum + item.quantity,
-          0
-        ),
-      render: (orderItem: ProductItem[]) =>
-        (Array.isArray(orderItem) ? orderItem : []).reduce(
-          (sum, item) => sum + item.quantity,
-          0
-        ),
+        );
+
+        return (
+          <div className="font-medium text-center">
+            {quantity}
+          </div>
+        );
+      },
+      sorter: (a, b) => {
+        // Sort theo group_total_quantity nếu có, không thì theo quantity thường
+        const qtyA = (a as any).group_total_quantity ||
+          (Array.isArray(a.orderItem) ? a.orderItem : []).reduce(
+            (sum, item) => sum + item.quantity, 0
+          );
+        const qtyB = (b as any).group_total_quantity ||
+          (Array.isArray(b.orderItem) ? b.orderItem : []).reduce(
+            (sum, item) => sum + item.quantity, 0
+          );
+        return qtyA - qtyB;
+      },
     },
     {
       title: 'Tổng Tiền',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
-      render: (amount: string) => (
-        <span className="font-medium text-gray-900">
-          ₫{parseFloat(amount).toLocaleString('vi-VN')}
-        </span>
-      ),
+      render: (amount: string, record: Sale) => {
+        // ✅ Nếu là đơn nhóm, hiển thị tổng của cả nhóm
+        const displayAmount = record.group_order_id && (record as any).group_total_amount
+          ? (record as any).group_total_amount
+          : amount;
+
+        return (
+          <div>
+            <span className="font-medium text-gray-900">
+              ₫{parseFloat(displayAmount).toLocaleString('vi-VN')}
+            </span>
+            {record.group_order_id && (
+              <div className="text-xs text-purple-600">
+                (Cả nhóm)
+              </div>
+            )}
+          </div>
+        );
+      },
       sorter: (a, b) => parseFloat(a.totalAmount) - parseFloat(b.totalAmount),
     },
     {
@@ -537,7 +650,7 @@ export default function Sale() {
                 placeholder="Trạng Thái"
                 style={{ width: 120 }}
                 value={statusFilter}
-                onChange={(value) => {
+                onChange={(value: any) => {
                   setStatusFilter(value);
                 }}
               >
@@ -548,6 +661,24 @@ export default function Sale() {
                   </Select.Option>
                 ))}
               </Select>
+
+              <Select
+                placeholder="Loại đơn"
+                style={{ width: 130 }}
+                defaultValue="all"
+              >
+                <Select.Option value="all">Tất cả đơn</Select.Option>
+                <Select.Option value="single">Đơn lẻ</Select.Option>
+                <Select.Option value="group">Đơn nhóm</Select.Option>
+              </Select>
+
+              <Select
+                placeholder="Phương Thức Thanh Toán"
+                style={{ width: 140 }}
+                value={paymentFilter}
+                onChange={setPaymentFilter}
+              ></Select>
+
               <Select
                 placeholder="Phương Thức Thanh Toán"
                 style={{ width: 140 }}
@@ -759,6 +890,29 @@ export default function Sale() {
             </Form.Item>
           </Form>
         </Modal>
+
+        <GroupOrderDetailModal
+          visible={isGroupDetailModalVisible}
+          onClose={() => {
+            setIsGroupDetailModalVisible(false);
+            setGroupOrderData(null);
+          }}
+          groupData={groupOrderData}
+          token={token}
+          onStatusChange={(orderId, newStatus, note) => {
+            if (storeId) {
+              changeOrderStatus(
+                storeId,
+                orderId,
+                String(newStatus),
+                note
+              );
+              fetchSales(); // Refresh lại danh sách
+            }
+          }}
+        />
+
+
         <OrderDetailModal
           selectedSale={selectedSale}
           isDetailModalVisible={isDetailModalVisible}

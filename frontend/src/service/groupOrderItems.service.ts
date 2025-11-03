@@ -98,7 +98,18 @@ export const groupOrdersApi = {
     );
     return res.data;
   },
+
+  updateOrderStatusBulk: async (groupId: number, status: number) => {
+    const token = localStorage.getItem('token');
+    const res = await api.patch(
+      `/group-orders/${groupId}/order-status/${status}/bulk`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  },
 };
+
 
 // ==================== GROUP ORDER ITEMS API ====================
 export const groupOrderItemsApi = {
@@ -154,4 +165,9 @@ export const paymentApi = {
     const res = await api.get('/payment-methods');
     return res.data;
   },
+};
+
+export const getGroupOrderWithOrders = async (groupOrderId: number) => {
+  const res = await api.get(`/group-orders/${groupOrderId}/with-orders`);
+  return res.data.data;
 };

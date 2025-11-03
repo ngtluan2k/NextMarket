@@ -47,7 +47,7 @@ export class OrdersService {
     private readonly vouchersService: VouchersService,
     @InjectRepository(OrderStatusHistory)
     private orderStatusHistoryRepository: Repository<OrderStatusHistory>
-  ) {}
+  ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     return this.ordersRepository.manager.transaction(async (manager) => {
@@ -249,9 +249,8 @@ export class OrdersService {
               wallet_id: wallet.id,
               type: 'subscription_purchase',
               amount: -itemPrice,
-              reference: `subscription:${itemDto.productId}:${
-                itemDto.variantId ?? '0'
-              }`,
+              reference: `subscription:${itemDto.productId}:${itemDto.variantId ?? '0'
+                }`,
               created_at: new Date(),
             });
             await manager.save(tx);
@@ -373,29 +372,29 @@ export class OrdersService {
   }
 
   async findOne(id: number): Promise<Order> {
-  const order = await this.ordersRepository
-    .createQueryBuilder('order')
-    .leftJoinAndSelect('order.user', 'user')
-    .leftJoinAndSelect('order.store', 'store')
-    .leftJoinAndSelect('order.userAddress', 'userAddress')
-    .leftJoinAndSelect('order.orderItem', 'orderItem')
-    .leftJoinAndSelect('orderItem.product', 'product')
-    .leftJoinAndSelect('product.media', 'media')
-    .leftJoinAndSelect('orderItem.variant', 'variant')
-    .leftJoinAndSelect('variant.pricingRules', 'pricingRules') // ✅ dùng QueryBuilder mới join được
-    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
-    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-    .leftJoinAndSelect('product.reviews', 'reviews')
-    .leftJoinAndSelect('order.payment', 'payment')
-    .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
-    .where('order.id = :id', { id })
-    .getOne();
+    const order = await this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.store', 'store')
+      .leftJoinAndSelect('order.userAddress', 'userAddress')
+      .leftJoinAndSelect('order.orderItem', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('orderItem.variant', 'variant')
+      .leftJoinAndSelect('variant.pricingRules', 'pricingRules')
+      .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+      .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .leftJoinAndSelect('order.payment', 'payment')
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .where('order.id = :id', { id })
+      .getOne();
 
-  if (!order) {
-    throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
+    if (!order) {
+      throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
+    }
+    return order;
   }
-  return order;
-}
 
   async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
     const order = await this.findOne(id);
@@ -589,16 +588,28 @@ export class OrdersService {
     storeId: number,
     filters: OrderFilters = {}
   ): Promise<Order[]> {
+    // ========== BƯỚC 1: BUILD QUERY ==========
     let query = this.ordersRepository
       .createQueryBuilder('order')
+      // User & Profile
       .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('user.profile', 'userProfile')
+      // Address
       .leftJoinAndSelect('order.userAddress', 'userAddress')
+      // Order Items
       .leftJoinAndSelect('order.orderItem', 'orderItem')
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('orderItem.variant', 'variant')
+      // Vouchers
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+      // Payment
       .leftJoinAndSelect('order.payment', 'payment')
+      // Group Order
+      .leftJoinAndSelect('order.group_order', 'group_order')
+      .leftJoinAndSelect('group_order.user', 'group_host')
+      .leftJoinAndSelect('group_host.profile', 'group_host_profile')
+      // Product Reviews
       .leftJoinAndSelect(
         'product.reviews',
         'reviews',
@@ -606,15 +617,17 @@ export class OrdersService {
       )
       .where('order.store_id = :storeId', { storeId });
 
+    // ========== BƯỚC 2: APPLY FILTERS ==========
+
     // Filter by status
-    if (filters.status) {
+    if (filters.status !== undefined && filters.status !== null) {
       query = query.andWhere('order.status = :status', {
         status: Number(filters.status),
       });
     }
 
     // Filter by payment status
-    if (filters.paymentStatus) {
+    if (filters.paymentStatus !== undefined && filters.paymentStatus !== null) {
       query = query.andWhere('payment.status = :paymentStatus', {
         paymentStatus: Number(filters.paymentStatus),
       });
@@ -636,21 +649,104 @@ export class OrdersService {
     if (filters.search) {
       query = query.andWhere(
         `(
-          userAddress.recipientName ILIKE :search OR
-          user.username ILIKE :search OR
-          user.email ILIKE :search OR
-          order.id::text ILIKE :search
-        )`,
+        userAddress.recipientName ILIKE :search OR
+        user.username ILIKE :search OR
+        user.email ILIKE :search OR
+        order.id::text ILIKE :search
+      )`,
         { search: `%${filters.search}%` }
       );
     }
 
-    // Pagination
+    // ========== BƯỚC 3: EXECUTE QUERY (KHÔNG PAGINATION Ở ĐÂY) ==========
+    // Lấy tất cả orders trước, sau đó mới group và paginate
+    const allOrders = await query.orderBy('order.id', 'DESC').getMany();
+
+    console.log(`📦 Total orders fetched: ${allOrders.length}`);
+
+    // ========== BƯỚC 4: GROUP ORDERS THEO GROUP_ORDER_ID ==========
+    const groupedOrdersMap = new Map<string, Order>();
+    const groupOrderIds = new Set<number>();
+    const groupStats = new Map<number, {
+      totalAmount: number;
+      totalQuantity: number;
+      memberCount: number;
+      allOrders: Order[];
+    }>();
+
+    // Phân loại orders
+    allOrders.forEach(order => {
+      if (order.group_order_id) {
+        //  Đơn nhóm
+        const groupId = order.group_order_id;
+
+        // Lưu thống kê group
+        if (!groupStats.has(groupId)) {
+          groupStats.set(groupId, {
+            totalAmount: 0,
+            totalQuantity: 0,
+            memberCount: 0,
+            allOrders: [],
+          });
+        }
+
+        const stats = groupStats.get(groupId)!;
+        stats.totalAmount += Number(order.totalAmount || 0);
+        stats.memberCount += 1;
+        stats.allOrders.push(order);
+        //tong so luong san pham
+        const orderQuantity = (order.orderItem || []).reduce(
+          (sum, item) => sum + (item.quantity || 0),
+          0
+        );
+        stats.totalQuantity += orderQuantity;
+
+        // Chỉ lưu order đầu tiên làm đại diện
+        const groupKey = `group_${groupId}`;
+        if (!groupedOrdersMap.has(groupKey)) {
+          groupedOrdersMap.set(groupKey, order);
+          groupOrderIds.add(groupId);
+        }
+      } else {
+        //  Đơn lẻ
+        groupedOrdersMap.set(`single_${order.id}`, order);
+      }
+    });
+
+    console.log(` After grouping: ${groupedOrdersMap.size} items (${groupOrderIds.size} groups, ${groupedOrdersMap.size - groupOrderIds.size} singles)`);
+
+    // ========== BƯỚC 5: CONVERT MAP → ARRAY VÀ ADD METADATA ==========
+    let resultOrders = Array.from(groupedOrdersMap.values()).map(order => {
+      const enrichedOrder: any = { ...order };
+
+      if (order.group_order_id) {
+        const stats = groupStats.get(order.group_order_id);
+        if (stats) {
+          enrichedOrder.group_total_amount = stats.totalAmount;
+          enrichedOrder.group_total_quantity = stats.totalQuantity;
+          enrichedOrder.group_member_count = stats.memberCount;
+          enrichedOrder.group_all_orders = stats.allOrders; // Để frontend dùng khi cần
+        }
+      } else {
+        enrichedOrder.group_total_amount = null;
+        enrichedOrder.group_total_quantity = null;
+        enrichedOrder.group_member_count = null;
+      }
+
+      return enrichedOrder;
+    });
+
+    // ========== BƯỚC 6: APPLY PAGINATION ==========
     const page = filters.page || 1;
     const limit = filters.limit || 10;
-    query = query.skip((page - 1) * limit).take(limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
 
-    return query.orderBy('order.id', 'DESC').getMany();
+    resultOrders = resultOrders.slice(startIndex, endIndex);
+
+    console.log(`📄 Page ${page}: Returning ${resultOrders.length} items`);
+
+    return resultOrders as Order[];
   }
 
   // Đếm số lượng orders của store (cho pagination)
@@ -658,6 +754,7 @@ export class OrdersService {
     storeId: number,
     filters: OrderFilters = {}
   ): Promise<number> {
+    // Build query tương tự findByStore
     let query = this.ordersRepository
       .createQueryBuilder('order')
       .leftJoin('order.user', 'user')
@@ -665,14 +762,15 @@ export class OrdersService {
       .leftJoin('order.payment', 'payment')
       .where('order.store_id = :storeId', { storeId });
 
-    if (filters.status) {
+    // Apply filters
+    if (filters.status !== undefined && filters.status !== null) {
       query = query.andWhere('order.status = :status', {
-        status: filters.status,
+        status: Number(filters.status),
       });
     }
-    if (filters.paymentStatus) {
+    if (filters.paymentStatus !== undefined && filters.paymentStatus !== null) {
       query = query.andWhere('payment.status = :paymentStatus', {
-        paymentStatus: filters.paymentStatus,
+        paymentStatus: Number(filters.paymentStatus),
       });
     }
     if (filters.fromDate) {
@@ -686,20 +784,31 @@ export class OrdersService {
       });
     }
     if (filters.search) {
-      const searchOperator =
-        process.env.DB_TYPE === 'postgres' ? 'ILIKE' : 'LIKE';
       query = query.andWhere(
         `(
-        userAddress.recipientName ${searchOperator} :search OR
-        user.username ${searchOperator} :search OR
-        user.email ${searchOperator} :search OR
-        CAST(order.id AS CHAR) ${searchOperator} :search
+        userAddress.recipientName ILIKE :search OR
+        user.username ILIKE :search OR
+        user.email ILIKE :search OR
+        order.id::text ILIKE :search
       )`,
         { search: `%${filters.search}%` }
       );
     }
 
-    return query.getCount();
+    // ✅ Lấy tất cả orders để count sau khi group
+    const allOrders = await query.getMany();
+
+    // Group để đếm đúng
+    const uniqueGroups = new Set<string>();
+    allOrders.forEach(order => {
+      if (order.group_order_id) {
+        uniqueGroups.add(`group_${order.group_order_id}`);
+      } else {
+        uniqueGroups.add(`single_${order.id}`);
+      }
+    });
+
+    return uniqueGroups.size;
   }
 
   // Thống kê cho store (cho cards trong Sale.tsx)
@@ -771,8 +880,8 @@ export class OrdersService {
         'orderItem.product.reviews', // relation đúng từ entity Product
         'orderItem.product.reviews.user', // để biết reviewer là ai
         'orderItem.product.reviews.order',
-        
-       
+
+
       ],
       order: { id: 'DESC' },
     });

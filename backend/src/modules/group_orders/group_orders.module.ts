@@ -17,9 +17,11 @@ import { Inventory } from '../inventory/inventory.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { UserAddress } from '../user_address/user_address.entity';
+import { User } from '../user/user.entity';
+import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress]),PaymentsModule],
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,]),PaymentsModule],
   controllers: [GroupOrdersController, GroupOrderItemsController],
   providers: [GroupOrdersService, GroupOrderItemsService,GroupOrdersGateway],
   exports: [GroupOrdersService,GroupOrdersGateway],

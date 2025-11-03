@@ -6,7 +6,7 @@ import {
     forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, In } from 'typeorm';
 import { GroupOrder } from './group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { Order } from '../orders/order.entity';
@@ -21,6 +21,12 @@ import { PaymentsService } from '../payments/payments.service';
 import { OrderItem } from '../order-items/order-item.entity';
 import { LessThan } from 'typeorm';
 import { UserAddress } from '../user_address/user_address.entity';
+import { OrderStatuses } from '../orders/types/orders';
+import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
+import { ForbiddenException } from '@nestjs/common/exceptions';
+import { historyStatus } from '../order-status-history/order-status-history.entity';
+
+
 
 @Injectable()
 export class GroupOrdersService {
@@ -42,7 +48,11 @@ export class GroupOrdersService {
         @InjectRepository(OrderItem)
         private readonly orderItemsRepo: Repository<OrderItem>,
         @InjectRepository(UserAddress)
-        private readonly userAddressRepo: Repository<UserAddress>
+        private readonly userAddressRepo: Repository<UserAddress>,
+        @InjectRepository(OrderStatusHistory)
+        private orderStatusHistoryRepo: Repository<OrderStatusHistory>,
+
+
     ) { }
 
     // @Cron(CronExpression.EVERY_MINUTE)
@@ -67,6 +77,25 @@ export class GroupOrdersService {
                 groupId: g.id,
             });
         }
+    }
+
+    async findOne(
+        id: number,
+        options?: { relations?: string[] }
+    ): Promise<GroupOrder> {
+        const query: any = { where: { id } };
+
+        if (options?.relations) {
+            query.relations = options.relations;
+        }
+
+        const group = await this.groupOrderRepo.findOne(query);
+
+        if (!group) {
+            throw new NotFoundException(`Group order #${id} not found`);
+        }
+
+        return group;
     }
 
     async createGroupOrder(dto: CreateGroupOrderDto) {
@@ -569,7 +598,7 @@ export class GroupOrdersService {
                 shippingFee: 0,
                 discountTotal: 0,
                 totalAmount: subtotal,
-                status: 1,
+                status: 0,
             });
             const savedOrder = await this.orderRepo.save(order);
             createdOrders.push(savedOrder);
@@ -611,4 +640,173 @@ export class GroupOrdersService {
             redirectUrl,
         };
     }
+
+
+    async getGroupOrderWithAllOrders(groupId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId } as FindOptionsWhere<GroupOrder>,
+            relations: [
+                'user',
+                'user.profile',
+                'store',
+                'members',
+                'members.user',
+                'members.user.profile',
+                'members.address_id',
+                'orders',
+                'orders.user',
+                'orders.user.profile',
+                'orders.userAddress',
+                'orders.orderItem',
+                'orders.orderItem.product',
+                'orders.orderItem.variant',
+                'orders.payment',
+            ],
+        });
+
+        if (!group) {
+            throw new NotFoundException(`Group order #${groupId} not found`);
+        }
+
+        return {
+            group_order_id: group.id,
+            groupInfo: {
+                id: group.id,
+                uuid: group.uuid,
+                name: group.name,
+                status: group.status,
+                join_code: group.join_code,
+                invite_link: group.invite_link,
+                expires_at: group.expires_at,
+                created_at: group.created_at,
+                discount_percent: group.discount_percent,
+                delivery_mode: group.delivery_mode,
+                user: group.user,
+                store: group.store,
+                members: group.members,
+            },
+            orders: group.orders || [],
+        };
+    }
+
+    private getOrderStatusText(status: OrderStatuses): string {
+        const statusMap = {
+            [OrderStatuses.pending]: 'Đang Chờ Xác Nhận',
+            [OrderStatuses.confirmed]: 'Đã Xác Nhận',
+            [OrderStatuses.processing]: 'Đang Xử Lý',
+            [OrderStatuses.shipped]: 'Đã Giao Hàng',
+            [OrderStatuses.delivered]: 'Shipper Đã Giao',
+            [OrderStatuses.completed]: 'Hoàn Thành',
+            [OrderStatuses.cancelled]: 'Đã Hủy',
+            [OrderStatuses.returned]: 'Trả Hàng',
+        };
+        return statusMap[status] || 'Không xác định';
+    }
+
+    async updateOrderStatus(
+        groupOrderId: number,
+        orderStatus: OrderStatuses,
+        userId?: number,
+    ) {
+        const groupOrder = await this.groupOrderRepo.findOne({
+            where: { id: groupOrderId },
+            relations: ['store', 'store.user'],
+        });
+
+        if (!groupOrder) {
+            throw new NotFoundException(`Group Order #${groupOrderId} not found`);
+        }
+        if (userId && groupOrder.store?.user?.id !== userId) {
+            throw new ForbiddenException(
+                'Only the store owner can update order status'
+            );
+        }
+
+        const oldStatus = groupOrder.order_status;
+        groupOrder.order_status = orderStatus;
+        await this.groupOrderRepo.save(groupOrder);
+
+        return {
+            success: true,
+            message: `Order status updated: ${this.getOrderStatusText(oldStatus)} → ${this.getOrderStatusText(orderStatus)}`,
+            data: {
+                groupOrderId,
+                old_status: oldStatus,
+                new_status: orderStatus,
+                status_text: this.getOrderStatusText(orderStatus),
+            },
+        };
+    }
+
+    async updateOrderStatusWithOrders(
+        groupOrderId: number,
+        orderStatus: OrderStatuses,
+        userId?: number,
+        note?: string,
+    ) {
+        const groupOrder = await this.groupOrderRepo.findOne({
+            where: { id: groupOrderId },
+            relations: ['orders', 'store', 'store.user'],
+        });
+
+        if (!groupOrder) {
+            throw new NotFoundException(`Group Order #${groupOrderId} not found`);
+        }
+        if (userId && groupOrder.store?.user?.id !== userId) {
+            throw new ForbiddenException(
+                'Only the store owner can update order status'
+            );
+        }
+
+        const orderIds: number[] = groupOrder.orders.map((o) => o.id);
+
+        // 1. Lấy old_status TRƯỚC KHI update
+        const oldStatusMap = new Map(
+            groupOrder.orders.map(o => [o.id, o.status])
+        );
+
+        // 2. Update group order_status
+        groupOrder.order_status = orderStatus;
+        await this.groupOrderRepo.save(groupOrder);
+
+        // 3. Update tất cả orders trong nhóm
+        if (orderIds.length > 0) {
+            await this.orderRepo
+                .createQueryBuilder()
+                .update(Order)
+                .set({ status: orderStatus })
+                .whereInIds(orderIds)
+                .execute();
+
+            // 4. Tạo OrderStatusHistory với old_status và new_status
+            // 4. Tạo OrderStatusHistory bằng create()
+            const historyNote = note || `Cập nhật hàng loạt từ group order #${groupOrderId}`;
+
+            const historiesData = orderIds.map((orderId) => ({
+                order: { id: orderId } as any,
+                oldStatus: oldStatusMap.get(orderId) || 0,
+                newStatus: orderStatus as unknown as historyStatus,
+                note: historyNote,
+                changedAt: new Date(),
+            }));
+
+            const histories = this.orderStatusHistoryRepo.create(historiesData);
+            await this.orderStatusHistoryRepo.save(histories);
+
+        }
+
+        return {
+            success: true,
+            message: `Updated order status for group and ${orderIds.length} orders`,
+            data: {
+                groupOrderId,
+                order_status: orderStatus,
+                status_text: this.getOrderStatusText(orderStatus),
+                updated_orders_count: orderIds.length,
+            },
+        };
+    }
 }
+
+
+

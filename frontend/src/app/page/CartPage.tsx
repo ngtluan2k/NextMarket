@@ -55,12 +55,12 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
 
   // Load active groups
   const loadActiveGroups = async () => {
-    if (!user?.id) return;
+    if (!user?.user_id) return;
     
     setGroupsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/group-orders/user/${user.id}/active`, {
+      const response = await fetch(`http://localhost:3000/group-orders/user/${user.user_id}/active`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
