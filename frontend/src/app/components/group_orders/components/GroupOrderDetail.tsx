@@ -285,7 +285,7 @@ export default function GroupOrderDetail() {
   const canEditItem = (item: any) => {
     if (!user?.user_id) return false;
     return (
-      item?.member?.user?.user_id === user.user_id ||
+      item?.member?.user?.id === user.user_id ||
       item?.user_id === user.user_id
     );
   };

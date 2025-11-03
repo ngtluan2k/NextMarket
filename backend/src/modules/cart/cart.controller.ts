@@ -24,7 +24,14 @@ export class CartController {
   @Post('add')
   async addToCart(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; quantity?: number; variantId?: number, type?: 'bulk' | 'subscription'| 'normal' |'flash_sale';isGroup?: boolean; }
+    @Body()
+    body: {
+      productId: number;
+      quantity?: number;
+      variantId?: number;
+      type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+      isGroup?: boolean;
+    }
   ) {
     console.log(
       '{+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}userId for add cart : ' +
@@ -36,7 +43,7 @@ export class CartController {
       body.productId,
       body.quantity,
       body.variantId,
-      body.type ,
+      body.type,
       body.isGroup
     );
   }
@@ -49,7 +56,14 @@ export class CartController {
   @Put('update')
   async updateQuantity(
     @Request() req: AuthRequest,
-    @Body() body: { productId: number; quantity: number; variantId?: number; type?: 'bulk' | 'subscription'|'normal' | 'flash_sale';  isGroup?: boolean; }
+    @Body()
+    body: {
+      productId: number;
+      quantity: number;
+      variantId?: number;
+      type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+      isGroup?: boolean;
+    }
   ) {
     return this.cartService.updateQuantity(
       req.user.userId,
@@ -57,7 +71,6 @@ export class CartController {
       body.quantity,
       body.variantId,
       body.type,
-      body.isGroup
     );
   }
 
@@ -65,7 +78,11 @@ export class CartController {
   async removeFromCart(
     @Request() req: AuthRequest,
     @Param('productId') productId: number,
-    @Body() body?: { variantId?: number; type?: 'bulk' | 'subscription'| 'normal' | 'flash_sale' }
+    @Body()
+    body?: {
+      variantId?: number;
+      type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+    }
   ) {
     await this.cartService.removeFromCart(
       req.user.userId,

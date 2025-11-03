@@ -188,96 +188,97 @@ export const CartHeader: React.FC<Props> = ({
             </div>
 
             {/* Danh sách sản phẩm trong shop */}
-           {items.map((item) => {
-  // ✅ Nếu đang chọn subscription → disable các type khác
-  const isDisabled =
-    selectedType === 'subscription' && item.type !== 'subscription';
+            {items.map((item) => {
+              // ✅ Nếu đang chọn subscription → disable các type khác
+              const isDisabled =
+                selectedType === 'subscription' && item.type !== 'subscription';
 
-  // ✅ Nếu đang chọn type khác → chỉ disable checkbox của subscription
-  const disableSubscription =
-    selectedType !== null &&
-    selectedType !== 'subscription' &&
-    item.type === 'subscription';
+              // ✅ Nếu đang chọn type khác → chỉ disable checkbox của subscription
+              const disableSubscription =
+                selectedType !== null &&
+                selectedType !== 'subscription' &&
+                item.type === 'subscription';
 
-  const checked = selectedIds.includes(item.id);
-  const mediaArray = Array.isArray(item.product?.media)
-    ? item.product.media
-    : item.product?.media
-    ? [item.product.media]
-    : [];
-  const imageUrl = toImageUrl(
-    mediaArray.find((m: any) => m?.is_primary)?.url ||
-      mediaArray[0]?.url ||
-      item.product?.url
-  );
+              const checked = selectedIds.includes(item.id);
+              const mediaArray = Array.isArray(item.product?.media)
+                ? item.product.media
+                : item.product?.media
+                ? [item.product.media]
+                : [];
+              const imageUrl = toImageUrl(
+                mediaArray.find((m: any) => m?.is_primary)?.url ||
+                  mediaArray[0]?.url ||
+                  item.product?.url
+              );
 
-  const oldPrice: number | undefined = (item as any)?.old_price;
-  const deliveryDate: string | undefined = (item as any)?.delivery_date;
-  const color: string | undefined = (item as any)?.product?.color;
+              const oldPrice: number | undefined = (item as any)?.old_price;
+              const deliveryDate: string | undefined = (item as any)
+                ?.delivery_date;
+              const color: string | undefined = (item as any)?.product?.color;
 
-  const checkboxDisabled = isDisabled || disableSubscription;
+              const checkboxDisabled = isDisabled || disableSubscription;
 
-  return (
-    <div
-      key={item.id}
-      className={`items-center border-b py-4 w-full ${
-        item.is_group ? 'bg-blue-50 border-blue-200' : ''
-      }`}
-      style={{ display: 'grid', gridTemplateColumns: GRID }}
-    >
-      {/* ✅ Chỉ disable checkbox, không ẩn sản phẩm */}
-      <Checkbox
-        checked={checked}
-        disabled={checkboxDisabled}
-        onChange={() => onToggleOne(item.id)}
-      />
+              return (
+                <div
+                  key={item.id}
+                  className={`items-center border-b py-4 w-full ${
+                    item.is_group ? 'bg-blue-50 border-blue-200' : ''
+                  }`}
+                  style={{ display: 'grid', gridTemplateColumns: GRID }}
+                >
+                  {/* ✅ Chỉ disable checkbox, không ẩn sản phẩm */}
+                  <Checkbox
+                    checked={checked}
+                    disabled={checkboxDisabled}
+                    onChange={() => onToggleOne(item.id)}
+                  />
 
-      {/* Thông tin sản phẩm */}
-      <div
-        className={`flex gap-3 items-start ${
-          checkboxDisabled ? 'opacity-60' : ''
-        }`}
-      >
-        <Image
-          src={imageUrl}
-          alt={item.product?.name}
-          width={80}
-          height={80}
-          className="rounded-md object-cover"
-          preview={false}
-        />
-        <div>
-          <div className="flex items-center gap-2">
-            <Text className="block font-medium">
-              {item.product?.name}
-            </Text>
-            {item.is_group && (
-              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                🛒 Mua chung
-              </span>
-            )}
-          </div>
+                  {/* Thông tin sản phẩm */}
+                  <div
+                    className={`flex gap-3 items-start ${
+                      checkboxDisabled ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <Image
+                      src={imageUrl}
+                      alt={item.product?.name}
+                      width={80}
+                      height={80}
+                      className="rounded-md object-cover"
+                      preview={false}
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Text className="block font-medium">
+                          {item.product?.name}
+                        </Text>
+                        {item.is_group && (
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            🛒 Mua chung
+                          </span>
+                        )}
+                      </div>
 
-          {item.variant && (
-            <Text type="secondary" className="block text-xs">
-              Variant: {item.variant.variant_name}
-            </Text>
-          )}
-          <Text type="secondary" className="block text-xs">
-            Type: {item.type}
-          </Text>
-          {color && (
-            <Text type="secondary" className="block text-xs">
-              {color}
-            </Text>
-          )}
-          {deliveryDate && (
-            <Text type="secondary" className="block text-xs">
-              🚚 {deliveryDate}
-            </Text>
-          )}
-        </div>
-      </div>
+                      {item.variant && (
+                        <Text type="secondary" className="block text-xs">
+                          Variant: {item.variant.variant_name}
+                        </Text>
+                      )}
+                      <Text type="secondary" className="block text-xs">
+                        Type: {item.type}
+                      </Text>
+                      {color && (
+                        <Text type="secondary" className="block text-xs">
+                          {color}
+                        </Text>
+                      )}
+                      {deliveryDate && (
+                        <Text type="secondary" className="block text-xs">
+                          🚚 {deliveryDate}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
                   {/* Đơn giá */}
                   <div className="text-right">
                     {typeof oldPrice === 'number' && (
@@ -290,7 +291,7 @@ export const CartHeader: React.FC<Props> = ({
                     </Text>
                   </div>
 
-                  {/* Số lượng */}
+                 {/* Số lượng */}
                   <div className="flex justify-center">
                     <div className="flex border rounded">
                       <button
@@ -327,7 +328,6 @@ export const CartHeader: React.FC<Props> = ({
                       </button>
                     </div>
                   </div>
-
                   {/* Thành tiền */}
                   <Text className="text-right text-red-500 font-semibold">
                     {(item.price * item.quantity).toLocaleString()}đ
