@@ -85,4 +85,7 @@ export class CartItem {
   
   @Column({ type: 'boolean', default: false })
   is_group!: boolean
+
+  @Column({ type: 'int', nullable: true })
+  pricing_rule_id?: number; // <-- thêm cột này
 }

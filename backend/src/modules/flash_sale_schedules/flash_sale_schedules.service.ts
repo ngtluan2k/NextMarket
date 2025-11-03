@@ -213,14 +213,15 @@ async updateStoreFlashSaleRegistration(
     relations: ['product', 'variant'],
   });
 
-  // Map product + variant ID -> rule
+  // Map product + variant ID -> rule, bỏ qua các rule thiếu product
   const ruleMap = new Map<string, any>();
   for (const r of existingRules) {
+    if (!r.product) continue; // an toàn với null
     const key = `${r.product.id}-${r.variant?.id ?? 0}`;
     ruleMap.set(key, r);
   }
 
-  // ✅ Bước 2: cập nhật hoặc tạo mới
+  // Cập nhật hoặc tạo mới pricing rules dựa trên dto
   for (const item of dto.product_variant_ids) {
     if (item.price === undefined || item.limit_quantity === undefined) continue;
 
@@ -228,18 +229,18 @@ async updateStoreFlashSaleRegistration(
     const rule = ruleMap.get(key);
 
     if (rule) {
-      // Cập nhật giá & số lượng
+      // Cập nhật giá & số lượng, an toàn
       rule.price = item.price;
       rule.limit_quantity = item.limit_quantity;
       rule.status = item.price > 0 ? 'active' : 'inactive';
       await this.pricingRulesRepo.save(rule);
     } else {
-      // Tạo mới
+      // Tạo mới, kiểm tra product tồn tại
       const product = await this.productRepo.findOne({
         where: { id: item.product_id, store: { id: storeId } },
         relations: ['variants'],
       });
-      if (!product) continue;
+      if (!product) continue; // bỏ qua nếu product null
 
       const variant = item.variant_id
         ? product.variants.find((v) => v.id === item.variant_id)
