@@ -653,6 +653,12 @@ export class GroupOrdersService {
                 'members.user',
                 'members.user.profile',
                 'members.address_id',
+                'items',
+                'items.member',
+                'items.member.user',
+                'items.member.user.profile',
+                'items.product',
+                'items.variant',
                 'orders',
                 'orders.user',
                 'orders.user.profile',
@@ -660,6 +666,7 @@ export class GroupOrdersService {
                 'orders.orderItem',
                 'orders.orderItem.product',
                 'orders.orderItem.variant',
+                'orders.orderItem.groupOrderItem',
                 'orders.payment',
             ],
         });
@@ -684,6 +691,7 @@ export class GroupOrdersService {
                 user: group.user,
                 store: group.store,
                 members: group.members,
+                items: group.items,
             },
             orders: group.orders || [],
         };

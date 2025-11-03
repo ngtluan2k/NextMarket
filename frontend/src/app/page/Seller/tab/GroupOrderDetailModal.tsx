@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import {
+import React, { useState, useMemo } from 'react'; import {
     Modal,
     Card,
     Row,
@@ -14,7 +13,7 @@ import {
     Tooltip,
     Empty,
     Badge,
-    Select,     
+    Select,
     message,
 } from 'antd';
 import {
@@ -37,6 +36,8 @@ import dayjs from 'dayjs';
 import type { Sale, ProductItem } from '../../../types/order';
 import OrderDetailModal from './OrderDetailModal';
 import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
+
+
 
 const orderStatusMap: Record<number, string> = {
     0: 'Đang Chờ Xác Nhận',
@@ -93,22 +94,93 @@ export default function GroupOrderDetailModal({
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
 
+    // ✅ CÁCH SỬA: DI CHUYỂN TẤT CẢ LOGIC VÀO useMemo
+    const tableDataSource = useMemo(() => {
+        if (!groupData) return [];
+
+        const { groupInfo, orders = [] } = groupData;
+        const groupOrderItems = groupInfo?.items || [];
+
+        // Group items theo member_id
+        const memberItemsMap = new Map<number, any>();
+
+        groupOrderItems.forEach((item: any) => {
+            const memberId = item.member?.id;
+            if (!memberId) return;
+
+            if (!memberItemsMap.has(memberId)) {
+                memberItemsMap.set(memberId, {
+                    memberId,
+                    member: item.member,
+                    user: item.member?.user,
+                    items: [],
+                    totalAmount: 0,
+                    totalQuantity: 0,
+                });
+            }
+
+            const memberData = memberItemsMap.get(memberId);
+            memberData.items.push(item);
+            memberData.totalAmount += Number(item.price || 0) * Number(item.quantity || 0);
+            memberData.totalQuantity += Number(item.quantity || 0);
+        });
+
+        // Convert Map to Array
+        const memberList = Array.from(memberItemsMap.values());
+
+        // Map với orders để lấy địa chỉ và status
+        if (groupInfo?.delivery_mode === 'host_address') {
+            // Host address mode: Dùng địa chỉ chung
+            const hostOrder = orders[0];
+            return memberList.map((memberData) => ({
+                id: `member-${memberData.memberId}`,
+                user: memberData.user,
+                userAddress: hostOrder?.userAddress,
+                orderItem: memberData.items,
+                totalAmount: memberData.totalAmount,
+                totalQuantity: memberData.totalQuantity,
+                status: hostOrder?.status || 0,
+                isHostAddressMode: true,
+            }));
+        } else {
+            // Member address mode: Mỗi member có địa chỉ riêng
+            return memberList.map((memberData) => {
+                const memberOrder = orders.find(
+                    (o) => o.user?.id === memberData.user?.id
+                );
+
+                return {
+                    id: `member-${memberData.memberId}`,
+                    user: memberData.user,
+                    userAddress: memberOrder?.userAddress,
+                    orderItem: memberData.items,
+                    totalAmount: memberData.totalAmount,
+                    totalQuantity: memberData.totalQuantity,
+                    status: memberOrder?.status || 0,
+                    orderId: memberOrder?.id,
+                    isHostAddressMode: false,
+                };
+            });
+        }
+    }, [groupData]);  // ← CHỈ CẦN dependency là groupData
+
     if (!groupData) return null;
 
     const { groupInfo, orders = [], group_order_id } = groupData;
+    const groupOrderItems = groupInfo?.items || [];
+    const uniqueMemberIds = new Set(
+        groupOrderItems.map((item: any) => item.member?.id).filter(Boolean)
+    );
+    const memberCount = uniqueMemberIds.size;
 
     // Tính toán statistics
     const totalAmount = orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
-    const totalItems = orders.reduce(
-        (sum, order) =>
-            sum +
-            (order.orderItem || []).reduce((s, item) => s + (item.quantity || 0), 0),
+    const totalItems = groupOrderItems.reduce(
+        (sum: number, item: any) => sum + (item.quantity || 0),
         0
     );
-    const memberCount = orders.length;
 
-    // Lấy thông tin group từ order đầu tiên
-    const firstOrder = orders[0];
+    // Lấy thông tin group
     const group = groupInfo;
     const host = groupInfo?.user;
 
@@ -165,7 +237,7 @@ export default function GroupOrderDetailModal({
             title: 'Thành viên',
             key: 'member',
             width: 200,
-            render: (_: any, record: Sale) => (
+            render: (_: any, record: any) => (
 
                 <div className="flex items-start space-x-2">
                     <Avatar icon={<UserOutlined />} />
@@ -184,11 +256,17 @@ export default function GroupOrderDetailModal({
         {
             title: 'Địa chỉ giao hàng',
             key: 'address',
-            render: (_: any, record: Sale) => {
+            render: (_: any, record: any) => {  // ← Đổi Sale thành any
                 if (!record.userAddress) return <Tag>Chưa có địa chỉ</Tag>;
 
                 return (
                     <div className="text-sm">
+                        {/* ✅ THÊM 4 DÒNG NÀY: */}
+                        {record.isHostAddressMode && (
+                            <Tag color="green" icon={<HomeOutlined />} className="mb-2">
+                                Giao chung tại địa chỉ host
+                            </Tag>
+                        )}
                         <div className="flex items-center mb-1">
                             <PhoneOutlined className="mr-2 text-gray-400" />
                             <span className="font-medium">{record.userAddress.phone}</span>
@@ -207,11 +285,12 @@ export default function GroupOrderDetailModal({
                 );
             },
         },
+
         {
             title: 'Sản phẩm',
             key: 'products',
             width: 250,
-            render: (_: any, record: Sale) => {
+            render: (_: any, record: any) => {
                 const items = record.orderItem || [];
 
                 return (
@@ -238,30 +317,19 @@ export default function GroupOrderDetailModal({
             key: 'quantity',
             width: 80,
             align: 'center' as const,
-            render: (_: any, record: Sale) => {
-                const total = (record.orderItem || []).reduce(
-                    (sum, item) => sum + (item.quantity || 0),
-                    0
-                );
-                return (
-                    <span>{total}</span>
-                );
-            },
+            render: (_: any, record: any) => (  // ← Đổi Sale thành any
+                <span className="font-semibold">{record.totalQuantity}</span>  // ← SỬA DÒNG NÀY
+            ),
         },
         {
             title: 'Tổng tiền',
             key: 'amount',
             width: 130,
-            render: (_: any, record: Sale) => (
+            render: (_: any, record: any) => (  // ← Đổi Sale thành any
                 <div className="text-right">
                     <div className="font-semibold text-lg text-blue-600">
                         ₫{parseFloat(record.totalAmount || '0').toLocaleString('vi-VN')}
                     </div>
-                    {record.discountTotal && parseFloat(record.discountTotal) > 0 && (
-                        <div className="text-xs text-red-500">
-                            -₫{parseFloat(record.discountTotal).toLocaleString('vi-VN')}
-                        </div>
-                    )}
                 </div>
             ),
         },
@@ -269,7 +337,7 @@ export default function GroupOrderDetailModal({
             title: 'Trạng thái',
             key: 'status',
             width: 150,
-            render: (_: any, record: Sale) => (
+            render: (_: any, record: any) => (
                 <Tag color={getStatusColor(record.status)}>
                     {getStatusText(record.status)}
                 </Tag>
@@ -278,17 +346,42 @@ export default function GroupOrderDetailModal({
         {
             title: 'Thao tác',
             key: 'action',
-            width: 100,
+            width: 120,  // ← Tăng width
             align: 'center' as const,
-            render: (_: any, record: Sale) => (
-                <Button
-                    size="small"
-                    icon={<EyeOutlined />}
-                    onClick={() => handleViewOrderDetail(record)}
-                >
-                    Chi tiết
-                </Button>
-            ),
+            render: (_: any, record: any) => {  // ← Đổi thành any và dùng function body
+                if (record.isHostAddressMode) {
+                    return (
+                        <Tooltip title="Xem đơn hàng chung của nhóm">
+                            <Button
+                                size="small"
+                                icon={<EyeOutlined />}
+                                onClick={() => {
+                                    if (orders[0]) {
+                                        handleViewOrderDetail(orders[0]);
+                                    }
+                                }}
+                            >
+                                Order chung
+                            </Button>
+                        </Tooltip>
+                    );
+                }
+
+                const memberOrder = orders.find((o) => o.id === record.orderId);
+                if (!memberOrder) {
+                    return <Tag color="red">Chưa có order</Tag>;
+                }
+
+                return (
+                    <Button
+                        size="small"
+                        icon={<EyeOutlined />}
+                        onClick={() => handleViewOrderDetail(memberOrder)}
+                    >
+                        Chi tiết
+                    </Button>
+                );
+            },
         },
     ];
 
@@ -557,7 +650,7 @@ export default function GroupOrderDetailModal({
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                     <UserOutlined />
-                                    <span>Danh sách đơn hàng của thành viên</span>
+                                    <span>Danh sách thành viên và sản phẩm</span>
                                     <Badge
                                         count={memberCount}
                                         showZero
@@ -568,18 +661,20 @@ export default function GroupOrderDetailModal({
                         }
                         className="shadow-sm"
                     >
-                        {orders.length > 0 ? (
+                        {tableDataSource.length > 0 ? (  // ← Đổi orders thành tableDataSource
                             <Table
-                                dataSource={orders}
+                                dataSource={tableDataSource}  // ← Đổi orders thành tableDataSource
                                 columns={memberColumns}
                                 rowKey="id"
                                 pagination={false}
                                 scroll={{ x: 1000 }}
                                 size="middle"
-                                rowClassName="hover:bg-purple-50"
+                                rowClassName={(record) =>  // ← Thêm function để phân biệt màu
+                                    record.isHostAddressMode ? 'hover:bg-green-50' : 'hover:bg-purple-50'
+                                }
                             />
                         ) : (
-                            <Empty description="Chưa có đơn hàng nào trong nhóm" />
+                            <Empty description="Chưa có thành viên nào thêm sản phẩm" />  // ← Đổi message
                         )}
                     </Card>
 
