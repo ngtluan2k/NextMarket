@@ -359,14 +359,6 @@ export default function Sale() {
     return matchesSearch && matchesPayment;
   });
 
-  // Calculate statistics
-  const totalSales = sales.reduce(
-    (sum, sale) => sum + Number(sale.totalAmount || 0),
-    0
-  );
-  const completedSales = sales.filter((sale) => sale.status === '5').length;
-  const pendingSales = sales.filter((sale) => sale.status === '0').length;
-  const totalOrders = sales.length;
 
   const columns: ColumnsType<Sale> = [
     {
