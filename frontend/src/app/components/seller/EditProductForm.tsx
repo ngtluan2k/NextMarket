@@ -33,6 +33,19 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.tz.setDefault('Asia/Ho_Chi_Minh');
+interface PricingRule {
+  type: string;
+  min_quantity: number | null;
+  price: number;
+  cycle?: string;
+  starts_at?: string | Date;
+  ends_at?: string | Date;
+  variant_sku?: string;
+  name?: string;
+  status?: 'active' | 'inactive';
+  limit_quantity?: number;
+  schedule?: { id: number } | null; // chỉ dùng schedule
+}
 
 interface EditProductFormProps {
   product: any;
@@ -115,6 +128,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       name?: string;
       status?: 'active' | 'inactive';
       limit_quantity?: number;
+      schedule?: { id: number } | null;
     }[];
   }
 
@@ -277,11 +291,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             name: pr.name || '',
             status: pr.status || 'active',
             starts_at: pr.starts_at
-              ? new Date(pr.starts_at).toISOString().slice(0, 10)
+              ? dayjs(pr.starts_at).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD')
               : '',
             ends_at: pr.ends_at
-              ? new Date(pr.ends_at).toISOString().slice(0, 10)
+              ? dayjs(pr.ends_at).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD')
               : '',
+            schedule: pr.schedule ? { id: pr.schedule.id } : undefined,
           }));
 
           // flatten inventory
@@ -496,6 +511,17 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       const existingMedia = form.media.filter((m) => m.url && !m.file);
       const newMedia = form.media.filter((m) => m.file);
 
+      const mergedPricingRules: PricingRule[] = form.pricing_rules.map((r) => ({
+        ...r,
+        // Nếu FE gửi schedule object, giữ nguyên, nếu không có thì null
+        schedule: r.schedule ?? null,
+        // loại bỏ hoàn toàn schedule_id
+      }));
+
+      console.log(
+        '🟢 pricing_rules gửi lên backend:',
+        JSON.stringify(mergedPricingRules, null, 2)
+      );
       const fd = new FormData();
       fd.append('name', form.name);
       fd.append('short_description', form.short_description || '');
@@ -505,7 +531,8 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       fd.append('categories', JSON.stringify(form.categories));
       fd.append('variants', JSON.stringify(variantsWithStock));
       fd.append('inventory', JSON.stringify(form.inventory));
-      fd.append('pricing_rules', JSON.stringify(form.pricing_rules));
+      console.log('🟡 mergedPricingRules gửi lên:', mergedPricingRules);
+      fd.append('pricing_rules', JSON.stringify(mergedPricingRules));
       fd.append('status', status);
 
       fd.append(
@@ -1395,7 +1422,12 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
 
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-slate-800">
-              Tổng: {form.pricing_rules.length} quy tắc
+              Tổng:{' '}
+              {
+                form.pricing_rules.filter((pr) => pr.type !== 'flash_sale')
+                  .length
+              }{' '}
+              quy tắc
             </h4>
             <button
               type="button"
@@ -1412,7 +1444,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             </div>
           )}
 
-          {(form.pricing_rules || []).map((pr, i) => (
+          {(form.pricing_rules || [])
+          .filter((pr) => pr.type !== 'flash_sale') 
+          .map((pr, i) => (
             <div
               key={i}
               className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5"
@@ -1476,25 +1510,6 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
                     placeholder="hàng tháng"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    Giới hạn
-                  </label>
-                  <input
-                    type="number"
-                    value={pr.limit_quantity ?? ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].limit_quantity = e.target.value
-                        ? parseInt(e.target.value)
-                        : undefined;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="VD: 10 (để trống nếu không giới hạn)"
                   />
                 </div>
 

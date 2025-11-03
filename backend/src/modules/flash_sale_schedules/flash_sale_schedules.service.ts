@@ -88,22 +88,25 @@ async getRegisteredProductsForAdmin(scheduleId: number) {
     relations: ['product', 'variant', 'product.store'],
   });
 
-  return rules.map(rule => ({
-    id: rule.id,
-    product_id: rule.product.id,
-    product_name: rule.product.name,
-    variant_id: rule.variant?.id,
-    variant_name: rule.variant?.variant_name,
-    original_price: rule.variant?.price,
-    price: rule.price,
-    limit_quantity: rule.limit_quantity,
-    store: {
-      id: rule.product.store.id,
-      name: rule.product.store.name,
-    },
-    status: rule.status,
-  }));
+  return rules
+    .filter((r) => r.product && r.product.store) // 👈 bỏ rule không có product hoặc store
+    .map((rule) => ({
+      id: rule.id,
+      product_id: rule.product.id,
+      product_name: rule.product.name,
+      variant_id: rule.variant?.id,
+      variant_name: rule.variant?.variant_name,
+      original_price: rule.variant?.price,
+      price: rule.price,
+      limit_quantity: rule.limit_quantity,
+      store: {
+        id: rule.product.store.id,
+        name: rule.product.store.name,
+      },
+      status: rule.status,
+    }));
 }
+
 
 ///////////////////////////////STORE/////////////////////////////////
 
@@ -164,8 +167,7 @@ async getRegisteredProductsForAdmin(scheduleId: number) {
     };
   }
 
-  async getRegisteredProductsForStore(scheduleId: number, storeId: number) {
-  // Lấy tất cả pricing rules mà store này đã đăng ký trong flash sale
+async getRegisteredProductsForStore(scheduleId: number, storeId: number) {
   const rules = await this.pricingRulesRepo.find({
     where: {
       schedule: { id: scheduleId },
@@ -175,20 +177,23 @@ async getRegisteredProductsForAdmin(scheduleId: number) {
     relations: ['product', 'variant'],
   });
 
-  return rules.map(rule => ({
-    id: rule.id,
-    product_id: rule.product.id,
-    product_name: rule.product.name,
-    variant_id: rule.variant?.id,
-    variant_name: rule.variant?.variant_name,
-    price: rule.price,
-    limit_quantity: rule.limit_quantity,
-    starts_at: rule.starts_at,
-    ends_at: rule.ends_at,
-    status: rule.status,
-    is_registered: true,
-  }));
+  return rules
+    .filter((r) => r.product) // 👈 bỏ rule bị null product
+    .map((rule) => ({
+      id: rule.id,
+      product_id: rule.product.id,
+      product_name: rule.product.name,
+      variant_id: rule.variant?.id,
+      variant_name: rule.variant?.variant_name,
+      price: rule.price,
+      limit_quantity: rule.limit_quantity,
+      starts_at: rule.starts_at,
+      ends_at: rule.ends_at,
+      status: rule.status,
+      is_registered: true,
+    }));
 }
+
 
 
 async updateStoreFlashSaleRegistration(
