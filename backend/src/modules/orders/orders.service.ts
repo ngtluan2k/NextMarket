@@ -359,6 +359,8 @@ export class OrdersService {
           subtotal:
             itemDto.quantity * itemPrice -
             (discountTotal / createOrderDto.items.length || 0),
+           pricing_rule: appliedRule ?? undefined,
+ 
         });
 
         console.log('OrderItem created:', orderItem);

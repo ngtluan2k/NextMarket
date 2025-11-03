@@ -10,6 +10,7 @@ import { Product } from '../product/product.entity';
 import { OneToMany } from 'typeorm';
 import { Subscription } from '../subscription/subscription.entity';
 import { Variant } from '../variant/variant.entity';
+import { FlashSaleSchedule } from '../flash_sale_schedules/entities/flash_sale_schedule.entity';
 @Entity('pricing_rules')
 export class PricingRules {
   @PrimaryGeneratedColumn()
@@ -52,8 +53,14 @@ export class PricingRules {
   status!: string;
 
   @Column({ type: 'int', nullable: true })
-  limit_quantity?: number; 
+  limit_quantity?: number;
 
   @OneToMany(() => Subscription, (sub) => sub.pricingRule)
   subscriptions!: Subscription[];
+
+  @ManyToOne(() => FlashSaleSchedule, (schedule) => schedule.pricing_rules, {
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'schedule_id' })
+  schedule?: FlashSaleSchedule;
 }

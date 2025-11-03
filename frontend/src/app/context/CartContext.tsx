@@ -7,7 +7,8 @@ interface CartContextType {
     quantity?: number,
     variantId?: number,
     type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
-    isGroup?: boolean
+    isGroup?: boolean,
+    pricingRuleId?: number | null,
   ) => Promise<void>;
   removeFromCart: (
     productId: number,

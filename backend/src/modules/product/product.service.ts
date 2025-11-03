@@ -29,6 +29,7 @@ import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
 import { Not } from 'typeorm';
 import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { OrderItem } from '../order-items/order-item.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -50,7 +51,9 @@ export class ProductService {
     @InjectRepository(Tag)
     private readonly tagRepo: Repository<Tag>,
     @InjectRepository(ProductCategory)
-    private readonly productCategoryRepo: Repository<ProductCategory>
+    private readonly productCategoryRepo: Repository<ProductCategory>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepo: Repository<OrderItem>
   ) {}
 
   async saveProduct(
@@ -626,30 +629,55 @@ export class ProductService {
     return row.slug;
   }
 
-  async findFlashSaleProducts() {
-    const now = new Date();
+async findFlashSaleProducts() {
+  const now = new Date();
 
-    // Lấy các sản phẩm đang active và có ít nhất 1 pricing_rule là flash_sale hợp lệ
-    return this.productRepo.find({
-      where: {
-        status: 'active',
-        pricing_rules: {
-          type: 'flash_sale',
+  const products = await this.productRepo.find({
+    where: {
+      status: 'active',
+      pricing_rules: {
+        type: 'flash_sale',
+        schedule: {
           starts_at: LessThanOrEqual(now),
           ends_at: MoreThanOrEqual(now),
         },
       },
-      relations: [
-        'store',
-        'brand',
-        'categories',
-        'media',
-        'variants',
-        'pricing_rules',
-      ],
-      order: {
-        updated_at: 'DESC',
-      },
-    });
+    },
+    relations: [
+      'store',
+      'brand',
+      'categories',
+      'media',
+      'variants',
+      'pricing_rules',
+      'pricing_rules.schedule', // ⚡ thêm relation schedule để join flash_sale
+    ],
+    order: {
+      updated_at: 'DESC',
+    },
+  });
+
+  // ✅ Tính remaining_quantity cho mỗi rule
+  for (const product of products) {
+    for (const rule of product.pricing_rules) {
+      if (rule.type !== 'flash_sale') continue;
+
+      const soldQty = await this.orderItemRepo
+        .createQueryBuilder('oi')
+        .select('SUM(oi.quantity)', 'total')
+        .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+        .getRawOne();
+
+      const totalSold = Number(soldQty?.total ?? 0);
+
+      (rule as any).remaining_quantity = Math.max(
+        0,
+        (rule.limit_quantity ?? 0) - totalSold
+      );
+    }
   }
+
+  return products;
+}
+
 }
