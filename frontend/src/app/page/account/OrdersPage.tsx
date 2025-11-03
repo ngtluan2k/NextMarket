@@ -54,6 +54,7 @@ export type OrderSummary = {
   status: OrderTab;
   createdAt?: string | number | Date;
   totalPrice?: number;
+  groupOrderId?: number | null;
   items: Array<{
     productId?: number;
     id: string;
@@ -143,6 +144,7 @@ export default function OrdersPage() {
           status: mapStatus(Number(o.status)),
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
+          groupOrderId: o.group_order_id ?? null,
           items: (o.orderItem ?? []).map((it: any) => {
             const product = it.product;
             const image =
@@ -297,11 +299,10 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${
-                    active
-                      ? 'text-sky-700 border-b-2 border-sky-600'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${active
+                    ? 'text-sky-700 border-b-2 border-sky-600'
+                    : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   aria-pressed={active}
                 >
                   {t.label}
@@ -399,9 +400,20 @@ export default function OrdersPage() {
                               {new Date(o.createdAt).toLocaleString('vi-VN')}
                             </span>
                           )}
+                          {o.groupOrderId && (
+                            <span className="ml-3 inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-600 px-2 py-0.5 rounded-full">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2a5 5 0 0 1 5 5v3h2a3 3 0 0 1 3 3v6h-2v-6a1 1 0 0 0-1-1h-2v7h-2v-7h-4v7H9v-7H7a1 1 0 0 0-1 1v6H4v-6a3 3 0 0 1 3-3h2V7a5 5 0 0 1 5-5z" />
+                              </svg>
+                              Mua nhóm
+                            </span>
+                          )}
                         </div>
+
                         {statusPill(o.status)}
                       </div>
+
+
 
                       {/* Products */}
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -424,24 +436,23 @@ export default function OrdersPage() {
 
                               {(o.status === 'delivered' ||
                                 o.status === 'completed') && (
-                                <button
-                                  className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${
-                                    it.isReviewed
+                                  <button
+                                    className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${it.isReviewed
                                       ? 'bg-sky-600 hover:bg-sky-700'
                                       : 'bg-emerald-600 hover:bg-emerald-700'
-                                  }`}
-                                  onClick={() => {
-                                    setOpenReview(true);
-                                    setSelectedProductId(
-                                      it.productId?.toString() ?? null
-                                    );
-                                    setSelectedOrderId(o.id);
-                                    setSelectedReviewId(it.reviewId ?? null);
-                                  }}
-                                >
-                                  {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
-                                </button>
-                              )}
+                                      }`}
+                                    onClick={() => {
+                                      setOpenReview(true);
+                                      setSelectedProductId(
+                                        it.productId?.toString() ?? null
+                                      );
+                                      setSelectedOrderId(o.id);
+                                      setSelectedReviewId(it.reviewId ?? null);
+                                    }}
+                                  >
+                                    {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
+                                  </button>
+                                )}
                             </div>
                           </div>
                         ))}
