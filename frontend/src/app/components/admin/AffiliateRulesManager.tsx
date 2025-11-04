@@ -30,6 +30,7 @@ import {
   InfoCircleOutlined,
   CopyOutlined,
   ExclamationCircleOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import {
   fetchDescendants,
@@ -42,6 +43,7 @@ import {
   createRule,
   deleteRule,
   updateRule,
+  createDefaultRulesForProgram,
   CommissionRule,
 } from '../../../service/affiliate-rules.service';
 import { getAllAffiliatePrograms, AffiliateProgram } from '../../../service/affiliate-programs.service';
@@ -62,10 +64,86 @@ export default function AffiliateRulesManager() {
   const [editingRule, setEditingRule] = useState<CommissionRule | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [bulkCreateVisible, setBulkCreateVisible] = useState(false);
+  
+  // New UI states
+  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [viewMode, setViewMode] = useState<'grouped' | 'table'>('grouped');
 
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [bulkForm] = Form.useForm();
+
+  // Grouped rules by program
+  const groupedRules = useMemo(() => {
+    const grouped: Record<string, CommissionRule[]> = {};
+    
+    // Add default group for rules without program_id
+    grouped['default'] = [];
+    
+    rules.forEach(rule => {
+      const key = rule.program_id ? `program-${rule.program_id}` : 'default';
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(rule);
+    });
+    
+    // Sort rules within each group by level
+    Object.keys(grouped).forEach(key => {
+      grouped[key].sort((a, b) => a.level - b.level);
+    });
+    
+    return grouped;
+  }, [rules]);
+
+  // Filtered and grouped rules based on search and program selection
+  const filteredGroupedRules = useMemo(() => {
+    const filtered = { ...groupedRules };
+    
+    // Apply program filter
+    if (selectedProgramId !== null) {
+      if (selectedProgramId === -1) {
+        // Show only default rules
+        Object.keys(filtered).forEach(key => {
+          if (key.startsWith('program-')) {
+            delete filtered[key];
+          }
+        });
+      } else {
+        // Show only selected program
+        Object.keys(filtered).forEach(key => {
+          if (key !== `program-${selectedProgramId}` && key !== 'default') {
+            delete filtered[key];
+          }
+        });
+      }
+    }
+    
+    // Apply search filter
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase();
+      Object.keys(filtered).forEach(key => {
+        filtered[key] = filtered[key].filter(rule => {
+          const rate = typeof rule.rate_percent === 'string' ? rule.rate_percent : String(rule.rate_percent);
+          return (
+            String(rule.level).includes(search) ||
+            rate.includes(search) ||
+            String(rule.id).includes(search)
+          );
+        });
+      });
+    }
+    
+    // Remove empty groups
+    Object.keys(filtered).forEach(key => {
+      if (filtered[key].length === 0) {
+        delete filtered[key];
+      }
+    });
+    
+    return filtered;
+  }, [groupedRules, selectedProgramId, searchText]);
 
   const fetchRules = useCallback(async () => {
     setLoading(true);
@@ -90,6 +168,19 @@ export default function AffiliateRulesManager() {
       msg.error(e?.message || 'Tải danh sách chương trình affiliate thất bại');
     }
   }, [msg]);
+
+  const handleCreateDefaultRules = useCallback(async (programId: number) => {
+    setLoading(true);
+    try {
+      const result = await createDefaultRulesForProgram(programId);
+      msg.success(result.message || 'Đã tạo các rule mặc định thành công');
+      fetchRules();
+    } catch (e: any) {
+      msg.error(e?.message || 'Tạo rule mặc định thất bại');
+    } finally {
+      setLoading(false);
+    }
+  }, [msg, fetchRules]);
 
   useEffect(() => {
     fetchRules();
@@ -625,6 +716,41 @@ export default function AffiliateRulesManager() {
             >
               Tạo hàng loạt
             </Button>
+            <Button 
+              type="default" 
+              icon={<SettingOutlined />}
+              onClick={() => {
+                const activePrograms = affiliatePrograms.filter(p => p.status === 'active');
+                if (activePrograms.length === 0) {
+                  msg.warning('Không có chương trình affiliate nào đang hoạt động');
+                  return;
+                }
+                
+                Modal.confirm({
+                  title: 'Tạo Rule Mặc Định',
+                  content: (
+                    <div>
+                      <p>Chọn chương trình để tạo các rule mặc định:</p>
+                      <Select
+                        style={{ width: '100%', marginTop: 8 }}
+                        placeholder="Chọn chương trình"
+                        options={activePrograms.map(program => ({
+                          value: program.id,
+                          label: `${program.name} (ID: ${program.id})`
+                        }))}
+                        onChange={(value) => {
+                          Modal.destroyAll();
+                          handleCreateDefaultRules(value);
+                        }}
+                      />
+                    </div>
+                  ),
+                  onCancel: () => Modal.destroyAll(),
+                });
+              }}
+            >
+              Tạo Rule Mặc Định
+            </Button>
             <Button onClick={fetchRules} loading={loading} icon={<ReloadOutlined />}>
               Refresh
             </Button>
@@ -737,19 +863,232 @@ export default function AffiliateRulesManager() {
             ),
             children: (
               <Card>
-                <Table
-                  rowKey={(r) => String((r as any).id)}
-                  loading={loading}
-                  dataSource={rules as any}
-                  columns={columns as any}
-                  pagination={{ 
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} rules`,
-                  }}
-                  scroll={{ x: 1200 }}
-                />
+                {/* Filter and View Controls */}
+                <Card 
+                  size="small" 
+                  style={{ marginBottom: 16, background: '#fafafa' }}
+                  title={
+                    <Space>
+                      <Text strong>Bộ lọc và Tìm kiếm</Text>
+                      <Badge count={Object.keys(filteredGroupedRules).reduce((sum, key) => sum + filteredGroupedRules[key].length, 0)} />
+                    </Space>
+                  }
+                  extra={
+                    <Space>
+                      <Button 
+                        size="small" 
+                        type={viewMode === 'grouped' ? 'primary' : 'default'}
+                        onClick={() => setViewMode('grouped')}
+                      >
+                        Nhóm theo Program
+                      </Button>
+                      <Button 
+                        size="small" 
+                        type={viewMode === 'table' ? 'primary' : 'default'}
+                        onClick={() => setViewMode('table')}
+                      >
+                        Bảng đơn giản
+                      </Button>
+                    </Space>
+                  }
+                >
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12} md={8}>
+                      <Input
+                        placeholder="🔍 Tìm kiếm theo level, rate, hoặc ID..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        allowClear
+                        prefix={<SearchOutlined />}
+                      />
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Select
+                        placeholder="Lọc theo Program"
+                        value={selectedProgramId}
+                        onChange={setSelectedProgramId}
+                        allowClear
+                        style={{ width: '100%' }}
+                      >
+                        <Select.Option value={-1}>📍 Tất cả chương trình (Default)</Select.Option>
+                        {affiliatePrograms.map(program => (
+                          <Select.Option key={program.id} value={program.id}>
+                            {program.status === 'active' ? '🟢' : '🔴'} {program.name} (ID: {program.id})
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Button 
+                        onClick={() => {
+                          setSearchText('');
+                          setSelectedProgramId(null);
+                        }}
+                        icon={<ReloadOutlined />}
+                      >
+                        Reset bộ lọc
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card>
+
+                {/* Grouped View */}
+                {viewMode === 'grouped' ? (
+                  <div>
+                    {Object.keys(filteredGroupedRules).length === 0 ? (
+                      <Alert
+                        message="Không tìm thấy rules nào"
+                        description="Hãy thử thay đổi bộ lọc hoặc tạo rules mới"
+                        type="info"
+                        showIcon
+                      />
+                    ) : (
+                      Object.keys(filteredGroupedRules).map(key => {
+                        const programId = key === 'default' ? null : parseInt(key.replace('program-', ''));
+                        const program = programId ? affiliatePrograms.find(p => p.id === programId) : null;
+                        const rulesInGroup = filteredGroupedRules[key];
+                        
+                        return (
+                          <Card
+                            key={key}
+                            title={
+                              <Space>
+                                {program ? (
+                                  <Badge 
+                                    status={program.status === 'active' ? 'success' : 'error'} 
+                                    text={
+                                      <Text strong>
+                                        {program.name} (ID: {program.id})
+                                      </Text>
+                                    } 
+                                  />
+                                ) : (
+                                  <Badge status="default" text={<Text strong>📍 Tất cả chương trình (Default)</Text>} />
+                                )}
+                                <Badge count={rulesInGroup.length} style={{ backgroundColor: '#1890ff' }} />
+                              </Space>
+                            }
+                            style={{ marginBottom: 16 }}
+                            extra={
+                              <Space>
+                                <Button 
+                                  size="small"
+                                  icon={<PlusOutlined />}
+                                  onClick={() => {
+                                    form.setFieldsValue({ program_id: programId });
+                                  }}
+                                >
+                                  Thêm rule cho chương trình này
+                                </Button>
+                                {program && (
+                                  <Button 
+                                    size="small"
+                                    type="primary"
+                                    icon={<SettingOutlined />}
+                                    onClick={() => handleCreateDefaultRules(program.id)}
+                                  >
+                                    Tạo rules mặc định
+                                  </Button>
+                                )}
+                              </Space>
+                            }
+                          >
+                            <Table
+                              rowKey={(r: any) => String(r.id)}
+                              dataSource={rulesInGroup}
+                              columns={[
+                                { 
+                                  title: 'Level', 
+                                  dataIndex: 'level', 
+                                  width: 80,
+                                  render: (level: number) => (
+                                    <Badge count={level} style={{ backgroundColor: level === 0 ? '#52c41a' : '#1890ff' }} />
+                                  ),
+                                },
+                                {
+                                  title: 'Rate %',
+                                  dataIndex: 'rate_percent',
+                                  width: 100,
+                                  render: (rate: string | number) => {
+                                    const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
+                                    return <Text strong style={{ color: numRate > 0 ? '#52c41a' : '#999' }}>{numRate}%</Text>;
+                                  },
+                                },
+                                {
+                                  title: 'Caps',
+                                  width: 150,
+                                  render: (_: any, record: CommissionRule) => {
+                                    const orderCap = record.cap_per_order ? parseFloat(record.cap_per_order) : null;
+                                    const userCap = record.cap_per_user ? parseFloat(record.cap_per_user) : null;
+                                    return (
+                                      <div>
+                                        {orderCap && <Text type="secondary" style={{ fontSize: '12px' }}>Order: {orderCap.toLocaleString()}đ</Text>}
+                                        {userCap && <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>User: {userCap.toLocaleString()}đ</Text>}
+                                        {!orderCap && !userCap && <Text type="secondary">Không giới hạn</Text>}
+                                      </div>
+                                    );
+                                  },
+                                },
+                                {
+                                  title: 'Hành động',
+                                  width: 150,
+                                  render: (_: any, record: CommissionRule) => (
+                                    <Space size="small">
+                                      <Button 
+                                        type="primary" 
+                                        size="small" 
+                                        icon={<EditOutlined />}
+                                        onClick={() => handleEditRule(record)}
+                                      />
+                                      <Button 
+                                        size="small" 
+                                        icon={<CopyOutlined />}
+                                        onClick={() => handleCopyRule(record)}
+                                      />
+                                      <Popconfirm
+                                        title="Xóa rule này?"
+                                        onConfirm={async () => {
+                                          setLoading(true);
+                                          try {
+                                            await deleteRule(record.id);
+                                            msg.success('Đã xoá');
+                                            fetchRules();
+                                          } catch (e: any) {
+                                            msg.error(e?.message || 'Xoá thất bại');
+                                          } finally {
+                                            setLoading(false);
+                                          }
+                                        }}
+                                      >
+                                        <Button danger size="small" icon={<DeleteOutlined />} />
+                                      </Popconfirm>
+                                    </Space>
+                                  ),
+                                },
+                              ]}
+                              pagination={false}
+                              size="small"
+                            />
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : (
+                  <Table
+                    rowKey={(r) => String((r as any).id)}
+                    loading={loading}
+                    dataSource={rules as any}
+                    columns={columns as any}
+                    pagination={{ 
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} rules`,
+                    }}
+                    scroll={{ x: 1200 }}
+                  />
+                )}
               </Card>
             ),
           },

@@ -71,4 +71,10 @@ export class AffiliateRulesController {
   async previewCommission(@Body() dto: PreviewCommissionDto) {
     return this.service.previewCommission(dto);
   }
+
+  @Post('create-default/:programId')
+  @Roles('Admin')
+  async createDefaultRules(@Param('programId', ParseIntPipe) programId: number) {
+    return this.service.createDefaultRules(programId);
+  }
 }

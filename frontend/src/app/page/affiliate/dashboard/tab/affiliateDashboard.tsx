@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   Wallet,
@@ -10,62 +11,107 @@ import {
   ExternalLink,
   Link,
 } from 'lucide-react';
-import { Button } from 'antd';
+import { Button, Spin } from 'antd';
 import { Card } from 'antd';
-
-const stats = [
-  {
-    title: 'Tổng doanh thu',
-    value: '₦0.000.00',
-    change: '0.0%',
-    icon: Wallet,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-  },
-  {
-    title: 'Số liên kết đã tạo',
-    value: '0.000',
-    change: '0.0%',
-    icon: Link,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-  },
-  {
-    title: 'Người mua từ liên kết',
-    value: '00',
-    change: '0.0%',
-    icon: Users,
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-600',
-  },
-];
+import { getDashboardStats, DashboardStats } from '../../../../../service/affiliate-links.service';
+import { fetchMyWallet } from '../../../../../service/wallet.service';
 
 const timeFilters = ['12 tháng', '30 ngày', '7 ngày', '24 giờ'];
 
 export function AffiliateDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [dashboardData, wallet] = await Promise.all([
+          getDashboardStats(),
+          fetchMyWallet()
+        ]);
+        setStats(dashboardData);
+        setWalletBalance(wallet.balance || 0);
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const displayStats = [
+    {
+      title: 'Tổng doanh thu',
+      value: `₦${stats?.totalRevenue || '0.00'}`,
+      change: '0.0%',
+      icon: Wallet,
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+    },
+    {
+      title: 'Số liên kết đã tạo',
+      value: stats?.totalLinks?.toLocaleString() || '0',
+      change: '0.0%',
+      icon: Link,
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+    },
+    {
+      title: 'Người mua từ liên kết',
+      value: stats?.totalBuyers?.toString() || '0',
+      change: '0.0%',
+      icon: Users,
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
-        <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
-          <span className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-          Có gì mới?
-        </Button>
-        <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
-          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
-          Giới thiệu - 0
-        </Button>
-        <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
-          <Copy className="h-4 w-4 mr-2" />
-          Sao chép liên kết
-        </Button>
-        <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
-          Truy cập cửa hàng
-          <ExternalLink className="h-4 w-4 ml-2" />
-        </Button>
+      <div className="space-y-4">
+        <Card className="border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Số dư ví của bạn</p>
+              <p className="text-3xl font-bold text-gray-900">₦{walletBalance.toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+
+        <div className="flex flex-wrap gap-3">
+          <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+            Có gì mới?
+          </Button>
+          <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+            Giới thiệu - 0
+          </Button>
+          <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+            <Copy className="h-4 w-4 mr-2" />
+            Sao chép liên kết
+          </Button>
+          <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
+            Truy cập cửa hàng
+            <ExternalLink className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat) => (
+        {displayStats.map((stat) => (
           <Card
             key={stat.title}
             className="border-gray-200 shadow-sm hover:shadow-md transition-shadow"
@@ -90,9 +136,9 @@ export function AffiliateDashboard() {
           <div>
             <p className="text-sm text-gray-600 mb-1">Số dư khả dụng</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-4xl font-bold text-gray-900">₦0.000.00</p>
+              <p className="text-4xl font-bold text-gray-900">₦{stats?.totalPaid || '0.00'}</p>
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                0.0%
+                ₦{stats?.totalPending || '0.00'} pending
               </span>
             </div>
           </div>

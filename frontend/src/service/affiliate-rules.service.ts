@@ -95,4 +95,13 @@ export async function previewCommission(request: PreviewCommissionRequest): Prom
   return await res.json();
 }
 
+export async function createDefaultRulesForProgram(programId: number) {
+  const res = await fetch(`${API_BASE}/affiliate-rules/create-default/${programId}`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to create default rules (${res.status})`);
+  return await res.json();
+}
+
 

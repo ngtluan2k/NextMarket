@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  Generated,
 } from 'typeorm';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { User } from '../user/user.entity';
@@ -16,6 +17,7 @@ export class AffiliateLink {
   id?: number;
 
   @Column({ type: 'char', unique: true })
+  @Generated('uuid')
   uuid?: string;
 
   @ManyToOne(() => AffiliateProgram, (program) => program.links)
@@ -33,5 +35,5 @@ export class AffiliateLink {
   created_at?: Date;
 
   @OneToMany(() => AffiliateCommission, (commission) => commission.link_id)
-  commissions?: AffiliateCommission[];
+  commissions?: AffiliateCommission[];  
 }

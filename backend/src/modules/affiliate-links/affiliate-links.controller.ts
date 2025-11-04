@@ -38,4 +38,10 @@ export class AffiliateLinksController {
     const userId = req.user.userId;
     return this.service.getAffiliatedProducts(userId);
   }
+
+  @Get('dashboard-stats')
+  async getDashboardStats(@Request() req: AuthRequest) {
+    const userId = req.user.userId;
+    return this.service.getDashboardStats(userId);
+  }
 }

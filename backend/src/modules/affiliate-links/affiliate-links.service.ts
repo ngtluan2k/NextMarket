@@ -7,6 +7,7 @@ import { AffiliateCommission } from '../affiliate-commissions/affiliate-commissi
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { Product } from '../product/product.entity';
 import { User } from '../user/user.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AffiliateLinksService {
@@ -46,6 +47,7 @@ export class AffiliateLinksService {
       existed ??
       (await this.linkRepo.save(
         this.linkRepo.create({
+          uuid: uuidv4(),
           user_id: user as any,
           program_id: program ?? null,
           code,
@@ -106,7 +108,7 @@ export class AffiliateLinksService {
   }
 
   async getAffiliatedProducts(userId: number) {
-    // Tuỳ logic của bạn (ví dụ lấy theo link đã tạo)
+    // Lấy theo link đã tạo
     const links = await this.linkRepo.find({ where: { user_id: { id: userId } as any } });
     const productIds = new Set<number>();
     links.forEach((l) => {
@@ -117,11 +119,50 @@ export class AffiliateLinksService {
 
     if (productIds.size === 0) return { message: 'OK', products: [] };
 
+    // Lấy products kèm relations
     const products = await this.productRepo
       .createQueryBuilder('p')
+      .leftJoinAndSelect('p.media', 'media')
+      .leftJoinAndSelect('p.store', 'store')
+      .leftJoinAndSelect('p.variants', 'variants')
+      .leftJoinAndSelect('p.brand', 'brand')
       .where('p.id IN (:...ids)', { ids: Array.from(productIds) })
       .getMany();
 
     return { message: 'OK', products };
+  }
+
+  async getDashboardStats(userId: number) {
+    // Get total number of affiliate links created
+    const totalLinks = await this.linkRepo.count({
+      where: { user_id: { id: userId } as any },
+    });
+
+    // Get commission statistics
+    const commissionStats = await this.commRepo
+      .createQueryBuilder('c')
+      .leftJoin('c.link_id', 'link')
+      .leftJoin('link.user_id', 'user')
+      .where('user.id = :userId', { userId })
+      .select([
+        'SUM(CASE WHEN c.status = "PENDING" THEN c.amount ELSE 0 END) as totalPending',
+        'SUM(CASE WHEN c.status = "PAID" THEN c.amount ELSE 0 END) as totalPaid',
+        'SUM(c.amount) as totalEarned',
+        'COUNT(DISTINCT c.order_item_id) as totalOrders',
+      ])
+      .getRawOne();
+
+    const totalRevenue = parseFloat(commissionStats?.totalEarned || '0');
+    const totalPending = parseFloat(commissionStats?.totalPending || '0');
+    const totalPaid = parseFloat(commissionStats?.totalPaid || '0');
+    const totalBuyers = parseInt(commissionStats?.totalOrders || '0', 10);
+
+    return {
+      totalRevenue: totalRevenue.toFixed(2),
+      totalPending: totalPending.toFixed(2),
+      totalPaid: totalPaid.toFixed(2),
+      totalLinks,
+      totalBuyers,
+    };
   }
 }

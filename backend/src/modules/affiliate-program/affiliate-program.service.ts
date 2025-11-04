@@ -23,7 +23,21 @@ export class AffiliateProgramsService {
       uuid: uuidv4(),
       created_at: new Date(),
     });
-    return this.repository.save(entity);
+    
+    const savedProgram = await this.repository.save(entity);
+    
+    // Tự động tạo các rule mặc định cho program mới
+    try {
+      console.log(`Creating default commission rules for new program: ${savedProgram.name} (ID: ${savedProgram.id})`);
+      await this.rulesService.createDefaultRules(savedProgram.id);
+      console.log(`Successfully created default rules for program ${savedProgram.id}`);
+    } catch (error) {
+      console.error(`Failed to create default rules for program ${savedProgram.id}:`, error);
+      // Không throw error để không làm fail việc tạo program
+      // Admin có thể tạo rules thủ công sau này
+    }
+    
+    return savedProgram;
   }
 
   async findAllActive(): Promise<AffiliateProgram[]> {

@@ -17,7 +17,7 @@ export class Referral {
   @Column({ type: 'varchar', length: 255, nullable: true })
   status!: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   created_at!: Date | null;
 }
 

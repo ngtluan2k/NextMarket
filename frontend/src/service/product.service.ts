@@ -204,6 +204,14 @@ class ProductService {
     });
     return res.data;
   }
+
+  async getProductById(id: number): Promise<Product> {
+    const response = await axios.get(`${API_BASE_URL}/products/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+    // Backend returns { data: <product> }, so we need to extract the data field
+    return response.data.data;
+  }
 }
 
 export const productService = new ProductService();

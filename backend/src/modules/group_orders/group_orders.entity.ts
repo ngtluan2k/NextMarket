@@ -22,7 +22,7 @@ export class GroupOrder {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @Column({ type: 'char', length: 36, unique: true })
+    @Column({ type: 'char', unique: true })
     @Generated('uuid')
     uuid!: string;
 
@@ -42,10 +42,10 @@ export class GroupOrder {
     })
     status!: GroupOrderStatus;
 
-    @Column({ type: 'datetime', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     expires_at!: Date | null;
 
-    @CreateDateColumn({ type: 'datetime' })
+    @CreateDateColumn({ type: 'timestamp' })
     created_at!: Date;
 
     @OneToMany(() => GroupOrderMember, (m) => m.group_order)

@@ -250,4 +250,91 @@ export class AffiliateRulesService {
     console.log(`Cleanup completed. Soft deleted ${cleanedCount} invalid rules.`);
     return { cleanedCount, totalRules: allRules.length };
   }
+
+  // Method để tạo các rule mặc định cho một affiliate program
+  async createDefaultRules(programId: number) {
+    console.log(`Creating default commission rules for program ${programId}`);
+    
+    // Kiểm tra xem program có tồn tại và active không
+    const program = await this.programRepo.findOne({ where: { id: programId } });
+    if (!program) {
+      throw new NotFoundException(`Affiliate program with ID ${programId} not found`);
+    }
+    
+    if (program.status !== 'active') {
+      throw new BadRequestException(`Cannot create default rules for inactive affiliate program "${program.name}"`);
+    }
+
+    // Kiểm tra xem đã có rules cho program này chưa
+    const existingRules = await this.repo.find({ where: { program_id: programId } });
+    if (existingRules.length > 0) {
+      console.log(`Program ${programId} already has ${existingRules.length} rules, skipping default creation`);
+      return { message: `Program already has ${existingRules.length} rules`, rules: existingRules };
+    }
+
+    // Định nghĩa các rule mặc định
+    const defaultRules = [
+      {
+        program_id: programId,
+        level: 0,
+        rate_percent: 5.0, // 5% cho level 0 (người giới thiệu trực tiếp)
+        active_from: null,
+        active_to: null,
+        cap_per_order: null,
+        cap_per_user: null,
+      },
+      {
+        program_id: programId,
+        level: 1,
+        rate_percent: 3.0, // 3% cho level 1
+        active_from: null,
+        active_to: null,
+        cap_per_order: null,
+        cap_per_user: null,
+      },
+      {
+        program_id: programId,
+        level: 2,
+        rate_percent: 2.0, // 2% cho level 2
+        active_from: null,
+        active_to: null,
+        cap_per_order: null,
+        cap_per_user: null,
+      },
+      {
+        program_id: programId,
+        level: 3,
+        rate_percent: 1.0, // 1% cho level 3
+        active_from: null,
+        active_to: null,
+        cap_per_order: null,
+        cap_per_user: null,
+      },
+    ];
+
+    const createdRules = [];
+    
+    // Tạo từng rule
+    for (const ruleData of defaultRules) {
+      const entity = new AffiliateCommissionRule();
+      (entity as any).program_id = ruleData.program_id;
+      (entity as any).level = ruleData.level;
+      (entity as any).rate_percent = String(ruleData.rate_percent);
+      (entity as any).active_from = ruleData.active_from ? new Date(ruleData.active_from) : null;
+      (entity as any).active_to = ruleData.active_to ? new Date(ruleData.active_to) : null;
+      (entity as any).cap_per_order = ruleData.cap_per_order != null ? String(ruleData.cap_per_order) : null;
+      (entity as any).cap_per_user = ruleData.cap_per_user != null ? String(ruleData.cap_per_user) : null;
+      
+      const savedRule = await this.repo.save(entity as any);
+      createdRules.push(savedRule);
+      console.log(`Created default rule for level ${ruleData.level} with ${ruleData.rate_percent}% commission`);
+    }
+
+    console.log(`Successfully created ${createdRules.length} default rules for program ${programId}`);
+    return {
+      message: `Successfully created ${createdRules.length} default commission rules`,
+      programId,
+      rules: createdRules
+    };
+  }
 }

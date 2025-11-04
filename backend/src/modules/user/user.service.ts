@@ -26,7 +26,10 @@ import { MailService } from '../../common/mail/mail.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { OtpService } from '../../common/otp/otp.service';
-import { RequestPasswordResetDto, ResetPasswordByOtpDto } from './dto/password-reset.dto';
+import {
+  RequestPasswordResetDto,
+  ResetPasswordByOtpDto,
+} from './dto/password-reset.dto';
 
 @Injectable()
 export class UserService {
@@ -42,8 +45,6 @@ export class UserService {
     private readonly jwtService: JwtService,
     private readonly otpService: OtpService,
     private readonly mailService: MailService
-              
-   
   ) {}
 
   // In-memory OTP store
@@ -62,7 +63,11 @@ export class UserService {
     console.log(`🔍 UserService: Searching for user with email: ${email}`);
     const user = await this.userRepository.findOne({ where: { email } });
     if (user) {
-      console.log(`✅ UserService: Found user:`, { id: user.id, email: user.email, username: user.username });
+      console.log(`✅ UserService: Found user:`, {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      });
     } else {
       console.log(`❌ UserService: User not found with email: ${email}`);
     }
@@ -81,7 +86,7 @@ export class UserService {
         throw new BadRequestException('Tên đăng nhập đã tồn tại');
     }
 
-     const hashed = await bcrypt.hash(dto.password, 16);
+    const hashed = await bcrypt.hash(dto.password, 16);
 
     const user = this.userRepository.create({
       uuid: uuidv4(),
@@ -115,7 +120,7 @@ export class UserService {
     }
 
     const role = await this.roleRepository.findOne({
-      where: { name: 'Customer' },
+      where: { name: 'User' },
     });
     if (!role) throw new BadRequestException('Default role not found');
 
@@ -228,7 +233,7 @@ export class UserService {
       expiresAt: Date.now() + this.otpTtlMs,
       attempts: 0,
     });
-
+    console.log('################## otp code : ' + code);
     await this.mailService.send(
       email,
       'Mã xác thực đăng ký EveryMart',
@@ -350,12 +355,12 @@ export class UserService {
   async requestPasswordReset(dto: RequestPasswordResetDto) {
     const { email } = dto;
     const user = await this.userRepository.findOne({ where: { email } });
-  
+
     if (user) {
       // tạo mã OTP cho mục đích reset - namespaced theo email
       const key = `${email}#reset`;
       const code = this.otpService.generate(key); // TTL theo OtpService (2 phút)
-  
+
       await this.mailService.send(
         email,
         'Mã đặt lại mật khẩu - EveryMart',
@@ -365,51 +370,51 @@ export class UserService {
             <b style="font-size:18px;letter-spacing:2px">${code}</b>
           </p>
           <p>Mã có hiệu lực trong 2 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
-        `,
+        `
       );
     }
-  
+
     return {
       success: true,
       message: 'Nếu email tồn tại, mã OTP đã được gửi đến hộp thư của bạn.',
     };
   }
-  
+
   /**
    * Xác thực OTP và đổi mật khẩu mới.
    */
   async resetPasswordByOtp(dto: ResetPasswordByOtpDto) {
     const { email, code, newPassword } = dto;
-  
+
     const key = `${email}#reset`;
     const ok = this.otpService.verify(key, code);
     if (!ok) {
       throw new BadRequestException('Mã OTP không hợp lệ hoặc đã hết hạn.');
     }
-  
+
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new BadRequestException('Không tìm thấy người dùng tương ứng.');
     }
-  
+
     const hashed = await bcrypt.hash(newPassword, 10);
     user.password = hashed;
     user.updated_at = new Date();
     await this.userRepository.save(user);
     this.otpService.clear(key);
-  
+
     return { success: true, message: 'Đặt lại mật khẩu thành công.' };
   }
-  
+
   async verifyPasswordOtp(dto: { email: string; code: string }) {
     const { email, code } = dto;
     const key = `${email}#reset`;
-  
+
     const ok = this.otpService.verify(key, code);
     if (!ok) {
       throw new BadRequestException('Mã OTP không hợp lệ hoặc đã hết hạn.');
     }
-  
+
     // Nếu hợp lệ thì cho phép sang bước 3
     return { success: true, message: 'OTP hợp lệ.' };
   }

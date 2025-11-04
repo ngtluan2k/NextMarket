@@ -50,7 +50,7 @@ export class AuthService {
 
       // ⚡ Gán role mặc định "user"
       const defaultRole = await this.roleRepository.findOne({
-        where: { name: 'user' },
+        where: { name: 'User' },
         relations: ['rolePermissions', 'rolePermissions.permission'],
       });
 
@@ -81,7 +81,7 @@ export class AuthService {
     }
 
     // ✅ Lấy roles
-    const roles = user.roles?.map((ur) => ur.role.name) || ['user'];
+    const roles = user.roles?.map((ur) => ur.role.name) || ['User'];
 
     // ✅ Lấy permissions qua bảng rolePermissions
     const permissions =

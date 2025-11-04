@@ -56,7 +56,30 @@ export type CreateLinkResponse = {
 export type AffiliatedProduct = {
   id: number;
   name?: string;
+  base_price?: number | string;
   created_at?: string;
+  media?: Array<{
+    id: number;
+    media_type: string;
+    url: string;
+    is_primary: boolean;
+    sort_order: number;
+  }>;
+  store?: {
+    id: number;
+    name: string;
+  };
+  variants?: Array<{
+    id: number;
+    sku: string;
+    variant_name: string;
+    price: string | number;
+    stock: number;
+  }>;
+  brand?: {
+    id: number;
+    name: string;
+  };
 };
 
 export type AffiliatedProductsResponse = {

@@ -14,10 +14,10 @@ export class AffiliateCommissionRule {
   @Column({ type: 'decimal', precision: 5, scale: 2 })
   rate_percent!: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   active_from!: Date | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   active_to!: Date | null;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })

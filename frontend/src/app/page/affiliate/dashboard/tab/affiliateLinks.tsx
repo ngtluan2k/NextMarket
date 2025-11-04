@@ -4,7 +4,6 @@ import {
   Card,
   Button,
   Form,
-  InputNumber,
   Table,
   Space,
   Tag,
@@ -25,6 +24,8 @@ import {
   Program,
   ProgramsResponse,
 } from '../../../../types/affiliate-links';
+import { getAllProducts, ProductOption, VariantOption } from '../../../../../service/product-helper.service';
+import { productService, Product } from '../../../../../service/product.service';
 
 const { Title, Text } = Typography;
 const API_BASE = 'http://localhost:3000';
@@ -39,6 +40,11 @@ export default function AffiliateLinks() {
     AffiliatedProduct[]
   >([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<number | undefined>();
+  const [productDetail, setProductDetail] = useState<Product | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>();
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
   // create form
   const [form] = Form.useForm<CreateLinkRequest>();
@@ -145,10 +151,7 @@ export default function AffiliateLinks() {
 
   const getPrograms = useCallback(async (): Promise<Program[]> => {
     const tryEndpoints = [
-      `${API_BASE}/affiliate-programs/active`,
       `${API_BASE}/affiliate-programs`,
-      `${API_BASE}/affiliate-program/active`,
-      `${API_BASE}/affiliate-program`,
     ];
     for (const url of tryEndpoints) {
       try {
@@ -164,8 +167,8 @@ export default function AffiliateLinks() {
             )
             .map((p: any) => ({ id: p.id, name: p.name, status: p.status }));
         }
-      } catch {
-        //cho xin 5 chuc
+      } catch (error) {
+        console.error('Failed to fetch programs:', error);
       }
     }
     return [];
@@ -198,16 +201,35 @@ export default function AffiliateLinks() {
     [authHeaders]
   );
 
+  const loadProducts = useCallback(async () => {
+    try {
+      const prods = await getAllProducts();
+      setProducts(prods);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    }
+  }, []);
+
+  const loadProductDetail = useCallback(async (productId: number) => {
+    try {
+      const detail = await productService.getProductById(productId);
+      setProductDetail(detail);
+    } catch (error) {
+      console.error('Failed to load product detail:', error);
+      setProductDetail(null);
+    }
+  }, []);
+
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [links, products, progs] = await Promise.all([
+      const [links, affiliatedProds, progs] = await Promise.all([
         getMyLinks(),
         getAffiliatedProducts(),
         getPrograms(),
       ]);
       setMyLinks(links);
-      setAffiliatedProducts(products);
+      setAffiliatedProducts(affiliatedProds);
       setPrograms(progs);
     } catch (e: any) {
       msg.error(e?.message || 'Failed to load affiliate data');
@@ -218,7 +240,8 @@ export default function AffiliateLinks() {
 
   useEffect(() => {
     refreshAll();
-  }, [refreshAll]);
+    loadProducts();
+  }, [refreshAll, loadProducts]);
 
   const handleCreateLink = useCallback(
     async (values: CreateLinkRequest) => {
@@ -343,12 +366,74 @@ export default function AffiliateLinks() {
 
   const productsColumns = useMemo(
     () => [
-      { title: 'ID', dataIndex: 'id', key: 'id' },
       {
-        title: 'Name',
-        dataIndex: 'name',
-        key: 'name',
-        render: (v: string | undefined) => v || '—',
+        title: 'Product',
+        key: 'product',
+        render: (record: any) => (
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {record.media && record.media.length > 0 ? (
+              <img
+                src={record.media[0].url}
+                alt={record.name}
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  objectFit: 'cover',
+                  borderRadius: '4px',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  backgroundColor: '#f0f0f0',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text type="secondary">No Image</Text>
+              </div>
+            )}
+            <div>
+              <div style={{ fontWeight: 500 }}>{record.name || '—'}</div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                ID: {record.id}
+              </Text>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: 'Store',
+        key: 'store',
+        render: (record: any) => (
+          <Text>{record.store?.name || '—'}</Text>
+        ),
+      },
+      {
+        title: 'Variants',
+        key: 'variants',
+        render: (record: any) => (
+          <Text>
+            {record.variants && record.variants.length > 0
+              ? record.variants.length
+              : '0'}
+          </Text>
+        ),
+      },
+      {
+        title: 'Price',
+        key: 'price',
+        render: (record: any) => (
+          <Text>
+            {record.base_price
+              ? `₦${Number(record.base_price).toFixed(2)}`
+              : '—'}
+          </Text>
+        ),
       },
       {
         title: 'Created',
@@ -409,15 +494,61 @@ export default function AffiliateLinks() {
           </Form.Item>
 
           <Form.Item
-            label="Product ID"
+            label="Product"
             name="productId"
-            rules={[{ required: true, message: 'Product ID is required' }]}
+            rules={[{ required: true, message: 'Please select a product' }]}
           >
-            <InputNumber min={1} placeholder="e.g., 4" />
+            <Select
+              placeholder="Select product"
+              style={{ minWidth: 250 }}
+              loading={loading && products.length === 0}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              onChange={(value) => {
+                setSelectedProduct(value);
+                setSelectedVariant(undefined);
+                setSelectedVariantId(undefined);
+                form.setFieldsValue({ variantId: undefined });
+                if (value) {
+                  loadProductDetail(value);
+                }
+              }}
+              options={products.map((p) => ({
+                value: p.id,
+                label: p.name,
+              }))}
+            />
           </Form.Item>
 
-          <Form.Item label="Variant ID" name="variantId">
-            <InputNumber min={1} placeholder="optional" />
+          <Form.Item 
+            label="Variant" 
+            name="variantId"
+          >
+            <Select
+              placeholder="Select variant (optional)"
+              style={{ minWidth: 250 }}
+              disabled={!selectedProduct}
+              allowClear
+              onChange={(value) => {
+                setSelectedVariantId(value);
+                if (value && productDetail) {
+                  const variant = productDetail.variants?.find(v => v.id === value);
+                  setSelectedVariant(variant || null);
+                } else {
+                  setSelectedVariant(null);
+                }
+              }}
+              options={
+                products
+                  .find((p) => p.id === selectedProduct)
+                  ?.variants?.map((v) => ({
+                    value: v.id,
+                    label: v.variant_name || v.sku,
+                  })) || []
+              }
+            />
           </Form.Item>
 
           <Form.Item>
@@ -438,6 +569,75 @@ export default function AffiliateLinks() {
           possible.
         </Text>
       </Card>
+
+      {productDetail && (
+        <Card
+          title={
+            <Title level={4} style={{ margin: 0 }}>
+              Product Preview
+            </Title>
+          }
+          style={{ marginBottom: 16 }}
+        >
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+            {productDetail.media && productDetail.media.length > 0 && (
+              <img
+                src={productDetail.media[0].url}
+                alt={productDetail.name}
+                style={{
+                  width: '200px',
+                  height: '200px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                }}
+              />
+            )}
+            <div style={{ flex: 1 }}>
+              <Title level={5}>{productDetail.name}</Title>
+              <Text type="secondary">
+                {productDetail.short_description || productDetail.description}
+              </Text>
+              <div style={{ marginTop: '12px' }}>
+                <Space direction="vertical" size="small">
+                  <div>
+                    <Text strong>Brand: </Text>
+                    {productDetail.brand?.name || 'N/A'}
+                  </div>
+                  <div>
+                    <Text strong>Store: </Text>
+                    {productDetail.store?.name || 'N/A'}
+                  </div>
+                  {selectedVariant ? (
+                    <>
+                      <div>
+                        <Text strong>Variant: </Text>
+                        {selectedVariant.variant_name} (SKU: {selectedVariant.sku})
+                      </div>
+                      <div>
+                        <Text strong>Price: </Text>
+                        <Text style={{ fontSize: '18px', color: '#1890ff' }}>
+                          ₦{Number(selectedVariant.price).toFixed(2)}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text strong>Stock: </Text>
+                        {selectedVariant.stock}
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <Text strong>Base Price: </Text>
+                      <Text style={{ fontSize: '18px', color: '#1890ff' }}>
+                        {productDetail.base_price ? `₦${Number(productDetail.base_price).toFixed(2)}` : 'N/A'}
+                      </Text>
+                    </div>
+                  )}
+                </Space>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Tabs
         items={[

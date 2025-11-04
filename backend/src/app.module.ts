@@ -84,7 +84,7 @@ import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.mod
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',
+        type: 'postgres',
         host: config.get('DB_HOST'),
         port: +config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
@@ -94,6 +94,7 @@ import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.mod
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
+        ssl: true,
       }),
     }),
 
