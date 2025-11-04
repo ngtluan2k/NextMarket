@@ -120,7 +120,7 @@ export class UserService {
     }
 
     const role = await this.roleRepository.findOne({
-      where: { name: 'User' },
+      where: { name: 'user' },
     });
     if (!role) throw new BadRequestException('Default role not found');
 
