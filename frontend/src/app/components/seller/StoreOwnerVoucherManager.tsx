@@ -211,6 +211,7 @@ const StoreOwnerVoucherManager: React.FC = () => {
         applicable_category_ids: values.applicable_category_ids || [],
         applicable_product_ids: values.applicable_product_ids || [],
         excluded_product_ids: values.excluded_product_ids || [],
+        applicable_user_ids: values.applicable_user_ids ? JSON.parse(values.applicable_user_ids) : undefined,
         user_conditions: values.user_conditions || undefined,
         time_restrictions: values.time_restrictions || undefined,
         theme_color: values.theme_color || '#FF6B6B',
@@ -278,6 +279,7 @@ const StoreOwnerVoucherManager: React.FC = () => {
       applicable_category_ids: voucher.applicable_category_ids || [],
       applicable_product_ids: voucher.applicable_product_ids || [],
       excluded_product_ids: voucher.excluded_product_ids || [],
+      applicable_user_ids: voucher.applicable_user_ids ? JSON.stringify(voucher.applicable_user_ids) : undefined,
       theme_color: voucher.theme_color,
     });
     setShowModal(true);

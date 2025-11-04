@@ -1,3 +1,4 @@
+// VoucherFormModal.tsx
 import React, { useEffect, useState } from 'react';
 import {
   Modal,
@@ -16,9 +17,9 @@ import {
   VoucherDiscountType,
   VoucherStatus,
   VoucherCollectionType,
-} from '../types/voucher';  // Giả định đường dẫn đúng
+} from '../types/voucher';
 import dayjs from 'dayjs';
-import { api, API_ENDPOINTS } from '../api/api';  // Giả định đường dẫn đúng
+import { api, API_ENDPOINTS } from '../api/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -64,6 +65,8 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Theo dõi giá trị của type, applicable_store_ids và applicable_category_ids
+  const collection_type = Form.useWatch('collection_type', form);
+
   const voucherType = Form.useWatch('type', form) || VoucherType.PLATFORM;
   const selectedStoreIds =
     Form.useWatch('applicable_store_ids', form) ||
@@ -76,7 +79,10 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
     if (!visible) return;
 
     // Dựa trên type, reset fields không áp dụng
-    if (voucherType === VoucherType.PLATFORM || voucherType === VoucherType.SHIPPING) {
+    if (
+      voucherType === VoucherType.PLATFORM ||
+      voucherType === VoucherType.SHIPPING
+    ) {
       form.setFieldsValue({
         applicable_store_ids: [],
         applicable_category_ids: [],
@@ -105,14 +111,16 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   }, [voucherType, visible, form]);
 
   // Kiểm tra xem có nên hiển thị các trường hay không (dựa trên type và giá trị cũ khi edit)
-  const shouldShowStores = 
+  const shouldShowStores =
     voucherType === VoucherType.STORE ||
     voucherType === VoucherType.CATEGORY ||
     voucherType === VoucherType.PRODUCT ||
-    (editingVoucher?.applicable_store_ids && editingVoucher.applicable_store_ids.length > 0);
+    (editingVoucher?.applicable_store_ids &&
+      editingVoucher.applicable_store_ids.length > 0);
 
   const shouldShowCategories =
-    (voucherType === VoucherType.CATEGORY || voucherType === VoucherType.PRODUCT) &&
+    (voucherType === VoucherType.CATEGORY ||
+      voucherType === VoucherType.PRODUCT) &&
     (selectedStoreIds.length > 0 ||
       (editingVoucher?.applicable_category_ids &&
         editingVoucher.applicable_category_ids.length > 0));
@@ -226,9 +234,16 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
   useEffect(() => {
     if (!visible || !initialLoadComplete) return;
 
-    if (selectedStoreIds.length > 0 && (voucherType === VoucherType.CATEGORY || voucherType === VoucherType.PRODUCT)) {
+    if (
+      selectedStoreIds.length > 0 &&
+      (voucherType === VoucherType.CATEGORY ||
+        voucherType === VoucherType.PRODUCT)
+    ) {
       fetchCategoriesByStoreIds(selectedStoreIds);
-    } else if (voucherType !== VoucherType.CATEGORY && voucherType !== VoucherType.PRODUCT) {
+    } else if (
+      voucherType !== VoucherType.CATEGORY &&
+      voucherType !== VoucherType.PRODUCT
+    ) {
       setCategories([]);
       form.setFieldsValue({
         applicable_category_ids: [],
@@ -690,6 +705,24 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
             </Form.Item>
           </Col>
         </Row>
+
+        {[
+          VoucherCollectionType.MANUAL,
+          VoucherCollectionType.TARGETED,
+        ].includes(collection_type) && (
+          <Form.Item
+            label="ID Người Dùng Áp Dụng"
+            name="applicable_user_ids"
+            tooltip="Nhập ID và Enter để thêm"
+          >
+            <Select
+              mode="tags"
+              placeholder="Nhập ID người dùng và Enter (ví dụ: 1, 2, 3)"
+              tokenSeparators={[',']}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );

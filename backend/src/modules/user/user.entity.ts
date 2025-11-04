@@ -20,6 +20,7 @@ import { AffiliateRegistration } from '../affiliate-registration/affiliate-regis
 import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
 import { GroupOrder } from '../group_orders/group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
+import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -87,4 +88,6 @@ export class User {
 
   @OneToMany(() => GroupOrderMember, (member) => member.user)
   group_order_members!: GroupOrderMember[];
+  @OneToMany(() => VoucherCollection, (collection) => collection.user)
+  voucherCollections!: VoucherCollection[];
 }

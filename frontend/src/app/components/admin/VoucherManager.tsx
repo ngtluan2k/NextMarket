@@ -151,90 +151,200 @@ const VoucherManager: React.FC = () => {
 
   // Create/Update voucher
   const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setLoading(true);
+  try {
+    const values = await form.validateFields();
+    setLoading(true);
 
-      // Validate JSON fields
-      if (values.user_conditions) {
-        try {
-          JSON.parse(values.user_conditions);
-        } catch {
-          message.error('Điều kiện người dùng phải là JSON hợp lệ');
-          setLoading(false);
-          return;
+    // Parse user_conditions JSON
+    let parsedUserConditions;
+    if (values.user_conditions) {
+      try {
+        parsedUserConditions = JSON.parse(values.user_conditions);
+        if (
+          typeof parsedUserConditions !== 'object' ||
+          parsedUserConditions === null
+        ) {
+          throw new Error('Không phải object');
         }
+      } catch {
+        message.error('Điều kiện người dùng phải là JSON hợp lệ (object)');
+        setLoading(false);
+        return;
       }
-
-      if (values.time_restrictions) {
-        try {
-          JSON.parse(values.time_restrictions);
-        } catch {
-          message.error('Giới hạn thời gian phải là JSON hợp lệ');
-          setLoading(false);
-          return;
-        }
-      }
-
-      const payload: CreateVoucherPayload = {
-        code: values.code.trim().toUpperCase(),
-        title: values.title,
-        description: values.description,
-        type: values.type,
-        discount_type: values.discount_type,
-        discount_value: Number(values.discount_value) || 0,
-        max_discount_amount: values.max_discount_amount
-          ? Number(values.max_discount_amount)
-          : undefined,
-        min_order_amount: values.min_order_amount
-          ? Number(values.min_order_amount)
-          : 0,
-        start_date: values.dateRange[0].toISOString(),
-        end_date: values.dateRange[1].toISOString(),
-        total_usage_limit: values.total_usage_limit
-          ? Number(values.total_usage_limit)
-          : undefined,
-        per_user_limit: values.per_user_limit
-          ? Number(values.per_user_limit)
-          : 1,
-        collection_limit: values.collection_limit
-          ? Number(values.collection_limit)
-          : undefined,
-        status: values.status,
-        collection_type: values.collection_type,
-        priority: values.priority ? Number(values.priority) : 0,
-        stackable: !!values.stackable,
-        new_user_only: !!values.new_user_only,
-        applicable_store_ids: values.applicable_store_ids || [], 
-        applicable_category_ids: values.applicable_category_ids || [], 
-        applicable_product_ids: values.applicable_product_ids || [], 
-        excluded_product_ids: values.excluded_product_ids || [], 
-        user_conditions: values.user_conditions || undefined, 
-        time_restrictions: values.time_restrictions || undefined, 
-        theme_color: values.theme_color || '#FF6B6B',
-      };
-
-      if (editingVoucher) {
-        await voucherApi.updateVoucher(editingVoucher.id, payload);
-        message.success('Cập nhật voucher thành công!');
-      } else {
-        await voucherApi.createVoucher(payload);
-        message.success('Tạo voucher thành công!');
-      }
-
-      setShowModal(false);
-      form.resetFields();
-      setEditingVoucher(null);
-      fetchVouchers();
-    } catch (err: any) {
-      console.error('Submit voucher failed:', err);
-      message.error(
-        err.response?.data?.message || 'Có lỗi xảy ra khi lưu voucher'
-      );
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // Parse time_restrictions JSON
+    let parsedTimeRestrictions;
+    if (values.time_restrictions) {
+      try {
+        parsedTimeRestrictions = JSON.parse(values.time_restrictions);
+        if (
+          typeof parsedTimeRestrictions !== 'object' ||
+          parsedTimeRestrictions === null
+        ) {
+          throw new Error('Không phải object');
+        }
+      } catch {
+        message.error('Giới hạn thời gian phải là JSON hợp lệ (object)');
+        setLoading(false);
+        return;
+      }
+    }
+
+    // ✅ FIX: Parse applicable_user_ids - hỗ trợ nhiều format
+    let parsedApplicableUserIds;
+    
+    // 🔄 Nếu đang edit, lấy danh sách cũ làm base
+    const existingUserIds = editingVoucher?.applicable_user_ids || [];
+    
+    if (values.applicable_user_ids) {
+      try {
+        const input = values.applicable_user_ids;
+        
+        // Nếu đã là array (từ Select mode="tags"), chỉ cần convert sang number
+        if (Array.isArray(input)) {
+          parsedApplicableUserIds = input
+            .map(id => {
+              const num = typeof id === 'number' ? id : parseInt(id.toString(), 10);
+              return num;
+            })
+            .filter(id => !isNaN(id) && id > 0);
+        } 
+        // Nếu là string (từ TextArea)
+        else if (typeof input === 'string') {
+          const trimmed = input.trim();
+          
+          // Nếu rỗng, bỏ qua
+          if (!trimmed) {
+            parsedApplicableUserIds = undefined;
+          }
+          // Format 1: JSON array "[1,2,3]"
+          else if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            const parsed = JSON.parse(trimmed);
+            if (!Array.isArray(parsed)) {
+              throw new Error('JSON phải là array');
+            }
+            parsedApplicableUserIds = parsed.map(Number).filter(id => !isNaN(id) && id > 0);
+          }
+          // Format 2: Số đơn lẻ "1" hoặc "123"
+          else if (/^\d+$/.test(trimmed)) {
+            const num = parseInt(trimmed, 10);
+            if (isNaN(num) || num <= 0) {
+              throw new Error('Số không hợp lệ');
+            }
+            parsedApplicableUserIds = [num];
+          }
+          // Format 3: Danh sách phân cách dấu phẩy "1,2,3" hoặc "1, 2, 3"
+          else if (/^[\d,\s]+$/.test(trimmed)) {
+            parsedApplicableUserIds = trimmed
+              .split(',')
+              .map(s => parseInt(s.trim(), 10))
+              .filter(id => !isNaN(id) && id > 0);
+          }
+          // Format không hợp lệ
+          else {
+            throw new Error('Format không hợp lệ');
+          }
+        }
+        
+        // Validate kết quả cuối cùng
+        if (parsedApplicableUserIds !== undefined) {
+          if (!Array.isArray(parsedApplicableUserIds) || parsedApplicableUserIds.length === 0) {
+            throw new Error('Phải có ít nhất 1 ID hợp lệ');
+          }
+          
+          if (!parsedApplicableUserIds.every((id: any) => 
+            typeof id === 'number' && !isNaN(id) && id > 0
+          )) {
+            throw new Error('Tất cả ID phải là số nguyên dương');
+          }
+          
+          // 🔄 Nếu đang edit: MERGE với danh sách cũ (bổ sung, không thay thế)
+          if (editingVoucher && existingUserIds.length > 0) {
+            // Kết hợp cũ + mới, loại bỏ trùng lặp
+            const mergedIds = [...new Set([...existingUserIds, ...parsedApplicableUserIds])];
+            parsedApplicableUserIds = mergedIds;
+            console.log('🔄 MERGE user IDs:', {
+              old: existingUserIds,
+              new: parsedApplicableUserIds,
+              merged: mergedIds
+            });
+          }
+        }
+        
+      } catch (error) {
+        console.error('Parse applicable_user_ids error:', error);
+        message.error(
+          'ID Người Dùng Áp Dụng không hợp lệ. ' +
+          'Hỗ trợ format: [1,2,3] hoặc 1,2,3 hoặc 1'
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Build payload
+    const payload: CreateVoucherPayload = {
+      code: values.code.trim().toUpperCase(),
+      title: values.title,
+      description: values.description,
+      type: values.type,
+      discount_type: values.discount_type,
+      discount_value: Number(values.discount_value) || 0,
+      max_discount_amount: values.max_discount_amount
+        ? Number(values.max_discount_amount)
+        : undefined,
+      min_order_amount: values.min_order_amount
+        ? Number(values.min_order_amount)
+        : 0,
+      start_date: values.dateRange[0].toISOString(),
+      end_date: values.dateRange[1].toISOString(),
+      total_usage_limit: values.total_usage_limit
+        ? Number(values.total_usage_limit)
+        : undefined,
+      per_user_limit: values.per_user_limit
+        ? Number(values.per_user_limit)
+        : 1,
+      collection_limit: values.collection_limit
+        ? Number(values.collection_limit)
+        : undefined,
+      status: values.status,
+      collection_type: values.collection_type,
+      priority: values.priority ? Number(values.priority) : 0,
+      stackable: !!values.stackable,
+      new_user_only: !!values.new_user_only,
+      applicable_store_ids: values.applicable_store_ids || [],
+      applicable_category_ids: values.applicable_category_ids || [],
+      applicable_product_ids: values.applicable_product_ids || [],
+      excluded_product_ids: values.excluded_product_ids || [],
+      applicable_user_ids: parsedApplicableUserIds, // ✅ Đã parse đúng format
+      user_conditions: parsedUserConditions,
+      time_restrictions: parsedTimeRestrictions,
+      theme_color: values.theme_color || '#FF6B6B',
+    };
+
+    // Submit
+    if (editingVoucher) {
+      await voucherApi.updateVoucher(editingVoucher.id, payload);
+      message.success('Cập nhật voucher thành công!');
+    } else {
+      await voucherApi.createVoucher(payload);
+      message.success('Tạo voucher thành công!');
+    }
+
+    setShowModal(false);
+    form.resetFields();
+    setEditingVoucher(null);
+    fetchVouchers();
+  } catch (err: any) {
+    console.error('Submit voucher failed:', err);
+    message.error(
+      err.response?.data?.message || 'Có lỗi xảy ra khi lưu voucher'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Delete voucher
   const handleDelete = async (id: number) => {
@@ -276,6 +386,9 @@ const VoucherManager: React.FC = () => {
       applicable_category_ids: voucher.applicable_category_ids || [],
       applicable_product_ids: voucher.applicable_product_ids || [],
       excluded_product_ids: voucher.excluded_product_ids || [],
+      applicable_user_ids: voucher.applicable_user_ids
+        ? JSON.stringify(voucher.applicable_user_ids)
+        : undefined,
       theme_color: voucher.theme_color,
     });
     setShowModal(true);

@@ -106,19 +106,29 @@ export class CreateVoucherDto {
 
   @IsOptional()
   @IsArray()
+  @Type(() => Number)
   applicable_store_ids?: number[];
 
   @IsOptional()
   @IsArray()
+  @Type(() => Number)
   applicable_category_ids?: number[];
 
   @IsOptional()
   @IsArray()
+  @Type(() => Number)
   applicable_product_ids?: number[];
 
   @IsOptional()
   @IsArray()
+  @Type(() => Number)
   excluded_product_ids?: number[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  applicable_user_ids?: number[];
 
   @IsOptional()
   @ValidateNested()
