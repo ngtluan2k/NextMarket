@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Pencil, Info, Users } from "lucide-react";
-import axios from "axios";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { groupOrdersApi } from '../../../service/groupOrderItems.service';
 
 export default function GroupOrderCreate() {
     const navigate = useNavigate();
@@ -41,8 +41,7 @@ export default function GroupOrderCreate() {
                 // expiresAt: new Date(Date.now() + 2*60*60*1000).toISOString(),
             };
 
-            const res = await axios.post("http://localhost:3000/group-orders", payload);
-            const group = res.data;
+            const group = await groupOrdersApi.create(payload);
             const storeSlug = group?.store?.slug; // service trả về group kèm relations
 
             if (!group?.id || !storeSlug) {
@@ -57,15 +56,6 @@ export default function GroupOrderCreate() {
             alert(e?.response?.data?.message ?? "Tạo nhóm thất bại");
         }
     };
-
-    const calculateDiscount = (memberCount: number) => {
-        if (memberCount >= 8) return 10;
-        if (memberCount >= 5) return 6;
-        if (memberCount >= 3) return 4;
-        if (memberCount >= 2) return 2;
-        return 0;
-    };
-
 
     return (
         <div className="min-h-screen bg-slate-50 flex justify-center py-10">

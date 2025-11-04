@@ -26,7 +26,10 @@ import { MailService } from '../../common/mail/mail.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { OtpService } from '../../common/otp/otp.service';
-import { RequestPasswordResetDto, ResetPasswordByOtpDto } from './dto/password-reset.dto';
+import {
+  RequestPasswordResetDto,
+  ResetPasswordByOtpDto,
+} from './dto/password-reset.dto';
 
 @Injectable()
 export class UserService {
@@ -42,8 +45,6 @@ export class UserService {
     private readonly jwtService: JwtService,
     private readonly otpService: OtpService,
     private readonly mailService: MailService
-              
-   
   ) {}
 
   // In-memory OTP store
@@ -70,7 +71,7 @@ export class UserService {
         throw new BadRequestException('Tên đăng nhập đã tồn tại');
     }
 
-     const hashed = await bcrypt.hash(dto.password, 16);
+    const hashed = await bcrypt.hash(dto.password, 16);
 
     const user = this.userRepository.create({
       uuid: uuidv4(),
@@ -127,10 +128,10 @@ export class UserService {
         'roles.role.rolePermissions.permission',
       ],
     });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    if (!isMatch) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
     const roles = user.roles.map((ur) => ur.role.name);
     const permissions = user.roles.flatMap((ur) =>
@@ -339,66 +340,123 @@ export class UserService {
   async requestPasswordReset(dto: RequestPasswordResetDto) {
     const { email } = dto;
     const user = await this.userRepository.findOne({ where: { email } });
-  
+
     if (user) {
       // tạo mã OTP cho mục đích reset - namespaced theo email
       const key = `${email}#reset`;
       const code = this.otpService.generate(key); // TTL theo OtpService (2 phút)
-  
+
       await this.mailService.send(
         email,
-        'Mã đặt lại mật khẩu - EveryMart',
+        '🔒 Mã đặt lại mật khẩu - EveryMart',
         `
-          <p>Xin chào,</p>
-          <p>Mã OTP đặt lại mật khẩu của bạn là:
-            <b style="font-size:18px;letter-spacing:2px">${code}</b>
-          </p>
-          <p>Mã có hiệu lực trong 2 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
-        `,
+  <div style="
+    font-family: Arial, sans-serif;
+    max-width: 480px;
+    margin: 0 auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  ">
+    <!-- Header -->
+    <div style="
+      background-color: #1677ff;
+      color: white;
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    ">
+      EveryMart
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 24px; color: #333;">
+      <p>Xin chào,</p>
+      <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản EveryMart.</p>
+      <p style="margin-bottom: 20px;">Mã OTP của bạn là:</p>
+
+      <div style="
+        text-align: center;
+        font-size: 26px;
+        letter-spacing: 4px;
+        font-weight: bold;
+        color: #1677ff;
+        border: 2px dashed #1677ff;
+        border-radius: 8px;
+        padding: 12px;
+        display: inline-block;
+      ">
+        ${code}
+      </div>
+
+      <p style="margin-top: 24px;">
+        Mã này sẽ <b>hết hiệu lực sau 2 phút</b>.  
+        Vui lòng không chia sẻ mã này cho bất kỳ ai.
+      </p>
+
+      <p style="margin-top: 24px; color: #666; font-size: 13px;">
+        Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="
+      background-color: #f8f8f8;
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #999;
+    ">
+      © ${new Date().getFullYear()} EveryMart. Mọi quyền được bảo lưu.
+    </div>
+  </div>
+  `
       );
     }
-  
+
     return {
       success: true,
       message: 'Nếu email tồn tại, mã OTP đã được gửi đến hộp thư của bạn.',
     };
   }
-  
+
   /**
    * Xác thực OTP và đổi mật khẩu mới.
    */
   async resetPasswordByOtp(dto: ResetPasswordByOtpDto) {
     const { email, code, newPassword } = dto;
-  
+
     const key = `${email}#reset`;
     const ok = this.otpService.verify(key, code);
     if (!ok) {
       throw new BadRequestException('Mã OTP không hợp lệ hoặc đã hết hạn.');
     }
-  
+
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new BadRequestException('Không tìm thấy người dùng tương ứng.');
     }
-  
+
     const hashed = await bcrypt.hash(newPassword, 10);
     user.password = hashed;
     user.updated_at = new Date();
     await this.userRepository.save(user);
     this.otpService.clear(key);
-  
+
     return { success: true, message: 'Đặt lại mật khẩu thành công.' };
   }
-  
+
   async verifyPasswordOtp(dto: { email: string; code: string }) {
     const { email, code } = dto;
     const key = `${email}#reset`;
-  
+
     const ok = this.otpService.verify(key, code);
     if (!ok) {
       throw new BadRequestException('Mã OTP không hợp lệ hoặc đã hết hạn.');
     }
-  
+
     // Nếu hợp lệ thì cho phép sang bước 3
     return { success: true, message: 'OTP hợp lệ.' };
   }

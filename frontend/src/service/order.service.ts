@@ -91,7 +91,7 @@ export const orderService = {
       throw error;
     }
   },
-  
+
   changeStatusByUser: async (
     userId: number,
     orderId: number,
@@ -151,6 +151,16 @@ export const orderService = {
   getStoreStats: async (storeId: number) => {
     const res = await api.get(
       `${API_ENDPOINTS.stores}/${storeId}/orders/reports/stats`
+    );
+    return res.data;
+  },
+  getOrderStats: async (storeId: number) => {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(
+      `http://localhost:3000/stores/${storeId}/orders/stats`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
     return res.data;
   },

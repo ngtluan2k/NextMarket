@@ -24,7 +24,7 @@ export class CodStrategy {
     @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>
   ) {}
 
-  async createPayment(order: Order, paymentMethod: PaymentMethod) {
+  async createPayment(order: Order, paymentMethod: PaymentMethod,isGroup: boolean = false) {
     return this.paymentRepo.manager.transaction(async (manager) => {
       // Tạo bản ghi thanh toán
       const payment = manager.create(Payment, {
@@ -33,6 +33,7 @@ export class CodStrategy {
         amount: order.totalAmount,
         status: PaymentStatus.Unpaid, // Đặt trạng thái thành công
         paidAt: new Date(),
+        isGroup,
       });
       await manager.save(payment);
 

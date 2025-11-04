@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Order } from '../orders/order.entity';
+import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
+
 
 @Entity('user_addresses')
 export class UserAddress {
@@ -63,4 +65,8 @@ export class UserAddress {
 
   @OneToMany(() => Order, (order) => order.userAddress, { cascade: true })
   orders!: Order;
+
+  @OneToMany(() => GroupOrderMember, (gom) => gom.address_id)
+  groupOrderMembers!: GroupOrderMember[];
+
 }

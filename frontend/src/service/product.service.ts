@@ -16,6 +16,7 @@ export interface Product {
   store_id?: number;
   brand_id?: number;
   avg_rating?: number;
+  review_count?:number;
   store?: {
     id: number;
     uuid: string;
@@ -94,8 +95,29 @@ export interface Product {
     variant_sku?: string;
     name?: string;
     status?: 'active' | 'inactive';
+    limit_quantity?:number;
   }>;
 }
+
+export interface ProductCardType {
+  id: number | string;
+  name: string;
+  slug?: string;
+  media?: Array<{
+    url: string;
+  }>;
+  avg_rating?: number;
+  review_count?: number;
+  base_price?: number | string;
+   pricing_rules?: Array<{
+    price: number | bigint;
+    type:string;
+  }>;
+  salePrice?: number | string;
+  originalPrice?: number | string;
+  discount?: number;
+}
+
 
 export interface CreateProductDto {
   name: string;
@@ -132,7 +154,8 @@ export interface CreateProductDto {
     ends_at?: string;
     variant_sku?: string; // <-- thêm
     name?: string; // <-- thêm
-    status?: 'active' | 'inactive'; // <-- thêm
+    status?: 'active' | 'inactive'; 
+    limit_quantity?:number;// <-- thêm
   }>;
 }
 

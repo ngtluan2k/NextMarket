@@ -20,7 +20,7 @@ import { CreateOrderDto } from '../orders/dto/create-order.dto';
 export class UserOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  // 🔹 GET /users/:userId/orders
+  // GET /users/:userId/orders
   @Get()
   @UseGuards(JwtAuthGuard)
   async findByUser(
@@ -56,7 +56,7 @@ export class UserOrdersController {
     }
     return this.ordersService.findByPaymentUuid(paymentUuid);
   }
-  // 🔹 GET /users/:userId/orders/:id
+  //  GET /users/:userId/orders/:id
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async findOne(
@@ -71,7 +71,7 @@ export class UserOrdersController {
     return this.ordersService.findOne(id);
   }
 
-  // 🔹 POST /users/:userId/orders — User tự tạo đơn hàng
+  //  POST /users/:userId/orders — User tự tạo đơn hàng
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(
@@ -97,7 +97,7 @@ export class UserOrdersController {
     return this.ordersService.create(orderData);
   }
 
-  // 🔹 PATCH /users/:userId/orders/:id/status/:status
+  // PATCH /users/:userId/orders/:id/status/:status
   @Patch(':id/status/:status')
   @UseGuards(JwtAuthGuard)
   async changeStatus(

@@ -11,6 +11,8 @@ import { Order } from '../orders/order.entity';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
 import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 
 @Entity('order_items')
 export class OrderItem {
@@ -47,9 +49,20 @@ export class OrderItem {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   subtotal?: number;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  note?: string | null;
+
   @OneToMany(
     () => AffiliateCommission,
     (commission) => commission.order_item_id
   )
   commissions!: AffiliateCommission[];
+
+  @ManyToOne(() => GroupOrderItem, { nullable: true })
+  @JoinColumn({ name: 'group_order_item_id' })
+  groupOrderItem?: GroupOrderItem | null;
+
+  @ManyToOne(() => PricingRules, { nullable: true })
+  @JoinColumn({ name: 'pricing_rule_id' })
+  pricing_rule?: PricingRules;
 }

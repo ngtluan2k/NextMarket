@@ -116,7 +116,7 @@ export default function ProductGridToday({
             <p className="mt-1 text-sm font-semibold">
               {Number(p.price).toLocaleString('vi-VN')}đ
             </p>
-            {/* ⭐ hiển thị sao trung bình */}
+          
             <div className="mt-1 flex items-center gap-1">
               <Rate disabled allowHalf value={p.avg_rating} style={{ fontSize: 14 }} />
               <span className="text-xs text-slate-500">

@@ -103,4 +103,5 @@ export class Product {
   subscriptions!: Subscription[];
   @OneToMany(() => GroupOrderItem, (item) => item.product)
   group_order_items!: GroupOrderItem[];
+
 }

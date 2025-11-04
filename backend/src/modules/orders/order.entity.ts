@@ -119,4 +119,7 @@ export class Order {
   @ManyToOne(() => GroupOrder, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'group_order_id' })
   group_order!: GroupOrder | null;
+
+  @Column({ name: 'group_order_id', nullable: true })
+  group_order_id?: number;
 }

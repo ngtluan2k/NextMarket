@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Star, StarHalf, Image as ImageIcon } from 'lucide-react';
 import { fetchProductReviews, Review } from '../../../service/product_review';
+import { Image } from 'antd';
 
 export type ProductReviewsProps = {
   productId: number;
@@ -296,21 +297,20 @@ export default function ProductReviews({
                 {/* Images of this review */}
                 {r.images?.length ? (
                   <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {r.images.slice(0, 8).map((src, i) => (
-                      <a
-                        key={i}
-                        href={getImageUrl(src)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block h-20 overflow-hidden rounded ring-1 ring-slate-200"
-                      >
-                        <img
+                    <Image.PreviewGroup>
+                      {r.images.slice(0, 8).map((src, i) => (
+                        <Image
+                          key={i}
                           src={getImageUrl(src)}
                           alt=""
-                          className="h-full w-full object-cover"
+                          className="h-20 w-full object-cover rounded ring-1 ring-slate-200"
+                          height={80}
+                          preview={{
+                            mask: null, // bỏ hiệu ứng che mờ khi hover
+                          }}
                         />
-                      </a>
-                    ))}
+                      ))}
+                    </Image.PreviewGroup>
                   </div>
                 ) : null}
               </div>

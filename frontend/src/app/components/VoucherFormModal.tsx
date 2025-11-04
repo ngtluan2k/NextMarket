@@ -268,6 +268,8 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
     }
   }, [selectedCategoryIds, visible, initialLoadComplete, form, voucherType]);
 
+  
+
   return (
     <Modal
       title={editingVoucher ? 'Chỉnh Sửa Voucher' : 'Thêm Voucher Mới'}

@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsPositive, IsUUID } from 'class-validator';
+import { IsNumber, IsOptional, IsPositive, IsString} from 'class-validator';
 
 export class CreateOrderItemDto {
   @IsNumber()
@@ -26,4 +26,8 @@ export class CreateOrderItemDto {
   @IsNumber()
   @IsOptional()
   subtotal?: number;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }

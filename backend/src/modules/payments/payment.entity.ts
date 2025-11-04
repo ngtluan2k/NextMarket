@@ -61,6 +61,14 @@ export class Payment {
 
   @Column({ name: 'raw_payload', type: 'text', nullable: true })
   rawPayload?: string;
+  
+  @Column({
+    name: 'is_group',
+    type: 'boolean',
+    default: false,
+    comment: 'Đánh dấu thanh toán cho group order',
+  })
+  isGroup!: boolean;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt!: Date;

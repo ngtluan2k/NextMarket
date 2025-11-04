@@ -20,7 +20,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
       <div className="cursor-pointer">
         <img
           src={
-            product.image || 'https://via.placeholder.com/300x300?text=No+Image'
+            product.image
           }
           alt={product.name}
           className="w-full aspect-square object-cover rounded-lg"

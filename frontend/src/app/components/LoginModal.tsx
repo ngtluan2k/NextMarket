@@ -11,7 +11,7 @@ import {
   EyeOff,
   Globe,
   ChevronDown,
-  Check, // NEW
+  Check,
 } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ import {
   validateRegister as validateRegisterPayload,
 } from '../../validation/auth.validation';
 import ForgotPasswordModal from './ForgotPasswordModal';
+import { createPortal } from 'react-dom';
 
 export type LoginPayload = { email: string; password: string };
 export type RegisterPayload = {
@@ -38,7 +39,9 @@ export type RegisterPayload = {
 type LoginModalProps = {
   open: boolean;
   onClose: () => void;
-  onLogin?: (data: LoginPayload) => Promise<void> | void;
+  onLogin?: (
+    data: LoginPayload
+  ) => Promise<{ ok: boolean; message?: string } | boolean | void>;
   onRegister?: (data: RegisterPayload) => Promise<void> | void;
   title?: string;
   sideImageUrl?: string;
@@ -70,7 +73,7 @@ export default function LoginModal({
   open,
   onClose,
   onLogin,
-  onRegister, // (chưa dùng)
+  onRegister, // chưa dùng
   title = 'Xin chào,',
   sideImageUrl,
   apiBase = 'http://localhost:3000',
@@ -83,13 +86,13 @@ export default function LoginModal({
     ? `Xin chào, ${me.email}`
     : title;
 
-  // login
+  // ===== Login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
 
-  // register
+  // ===== Register state
   const [reg, setReg] = useState<RegisterPayload>({
     username: '',
     full_name: '',
@@ -106,16 +109,23 @@ export default function LoginModal({
   const [regConfirmPw, setRegConfirmPw] = useState('');
   const [showRegConfirmPw, setShowRegConfirmPw] = useState(false);
 
+  // per-field errors & touched for REGISTER
+  const [regErrors, setRegErrors] = useState<
+    Partial<Record<keyof RegisterPayload | 'confirm_password', string>>
+  >({});
+  const [regTouched, setRegTouched] = useState<
+    Partial<Record<keyof RegisterPayload | 'confirm_password', boolean>>
+  >({});
+
   const [countries, setCountries] = useState<{ name: string; code: string }[]>(
     []
   );
   const [submitting, setSubmitting] = useState(false);
 
-  // lỗi theo tab
+  // banner theo tab
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
   const [errorRegister, setErrorRegister] = useState<string | null>(null);
 
-  // modal "Quên mật khẩu"
   const [showForgot, setShowForgot] = useState(false);
 
   const navigate = useNavigate();
@@ -126,7 +136,7 @@ export default function LoginModal({
     const el =
       document.querySelector<HTMLInputElement>(`input[name="${fieldName}"]`) ||
       document.querySelector<HTMLInputElement>(`select[name="${fieldName}"]`) ||
-      document.querySelector<HTMLElement>(`[data-focus="${fieldName}"]`); // NEW for custom select
+      document.querySelector<HTMLElement>(`[data-focus="${fieldName}"]`);
     el?.focus();
   }
 
@@ -159,7 +169,35 @@ export default function LoginModal({
 
   if (!open) return null;
 
-  // API login
+  // ===== Helpers: register validation mapping
+  function buildRegisterErrors(next: RegisterPayload, confirmPw: string) {
+    const v = validateRegisterPayload(next);
+    const map: Partial<Record<keyof RegisterPayload | 'confirm_password', string>> = {};
+    v.errors.forEach((e) => (map[e.field] = e.message));
+    if (confirmPw && next.password !== confirmPw) {
+      map.confirm_password = 'Mật khẩu và Nhập lại mật khẩu không khớp';
+    }
+    return map;
+  }
+
+  function updateField<K extends keyof RegisterPayload>(field: K, value: RegisterPayload[K]) {
+    const next = { ...reg, [field]: value };
+    setReg(next);
+    const errs = buildRegisterErrors(next, regConfirmPw);
+    const filtered: typeof regErrors = {};
+    (Object.keys(errs) as Array<keyof typeof errs>).forEach((k) => {
+      if (regTouched[k]) filtered[k] = errs[k];
+    });
+    setRegErrors((prev) => ({ ...prev, ...filtered }));
+  }
+
+  function touchField(name: keyof RegisterPayload | 'confirm_password') {
+    setRegTouched((t) => ({ ...t, [name]: true }));
+    const errs = buildRegisterErrors(reg, regConfirmPw);
+    setRegErrors((e) => ({ ...e, [name]: errs[name] }));
+  }
+
+  // ===== API login
   const callDefaultLogin = async (payload: LoginPayload) => {
     const res = await fetch(`${apiBase}/users/login`, {
       method: 'POST',
@@ -187,12 +225,32 @@ export default function LoginModal({
       focusFirstError(result.errors[0].field as string);
       return;
     }
+
     setErrorLogin(null);
     setSubmitting(true);
     try {
-      if (onLogin) await onLogin({ email, password });
-      else await callDefaultLogin({ email, password });
-      onClose();
+      const tokenBefore = localStorage.getItem('token');
+
+      if (onLogin) {
+        const r = await onLogin({ email, password });
+        let ok: boolean | undefined;
+        let msg: string | undefined;
+
+        if (typeof r === 'boolean') ok = r;
+        else if (r && typeof r === 'object') {
+          ok = !!(r as any).ok;
+          msg = (r as any).message;
+        }
+
+        const tokenAfter = localStorage.getItem('token');
+        if (ok !== true && tokenAfter === tokenBefore) {
+          throw new Error(msg || 'Sai email hoặc mật khẩu');
+        }
+        onClose();
+      } else {
+        await callDefaultLogin({ email, password });
+        onClose();
+      }
     } catch (err: any) {
       setErrorLogin(err?.message ?? 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
@@ -202,16 +260,20 @@ export default function LoginModal({
 
   const handleRegister = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const result = validateRegisterPayload(reg as any);
-    if (!result.ok) {
-      setErrorRegister(result.errors[0].message);
-      focusFirstError(result.errors[0].field as string);
-      return;
-    }
 
-    if (reg.password !== regConfirmPw) {
-      setErrorRegister('Mật khẩu và Nhập lại mật khẩu không khớp');
-      focusFirstError('confirm_password');
+    // Touch all để hiện toàn bộ lỗi khi submit lần đầu
+    const allTouched: Partial<Record<keyof RegisterPayload | 'confirm_password', boolean>> = {
+      username: true, full_name: true, dob: true, phone: true, gender: true,
+      email: true, password: true, country: true, confirm_password: true,
+    };
+    setRegTouched(allTouched);
+
+    const errs = buildRegisterErrors(reg, regConfirmPw);
+    setRegErrors(errs);
+
+    if (Object.keys(errs).length > 0) {
+      const first = Object.keys(errs)[0];
+      focusFirstError(first);
       return;
     }
 
@@ -332,7 +394,7 @@ export default function LoginModal({
               </button>
             </div>
 
-            {/* error theo tab */}
+            {/* banner theo tab (tùy chọn) */}
             {mode === 'login' && errorLogin && (
               <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 py-2.5 px-4 text-sm text-rose-700">
                 {errorLogin}
@@ -420,13 +482,15 @@ export default function LoginModal({
             ) : (
               // REGISTER FORM
               <form onSubmit={handleRegister} className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Hàng 1: Username | Họ và tên */}
+                {/* Username | Họ tên */}
                 <Field
                   name="username"
                   label="Username"
                   placeholder="Tên đăng nhập"
                   value={reg.username}
-                  onChange={(v) => setReg({ ...reg, username: v })}
+                  onChange={(v) => updateField('username', v)}
+                  onBlur={() => touchField('username')}
+                  error={regErrors.username}
                   iconLeft={<User className="h-4 w-4" />}
                 />
                 <Field
@@ -434,16 +498,20 @@ export default function LoginModal({
                   label="Họ và tên"
                   placeholder="Nguyễn Văn A"
                   value={reg.full_name}
-                  onChange={(v) => setReg({ ...reg, full_name: v })}
+                  onChange={(v) => updateField('full_name', v)}
+                  onBlur={() => touchField('full_name')}
+                  error={regErrors.full_name}
                   iconLeft={<BadgeCheck className="h-4 w-4" />}
                 />
 
-                {/* Hàng 2: Ngày sinh | Số điện thoại */}
+                {/* Ngày sinh | SĐT */}
                 <Field
                   name="dob"
                   label="Ngày sinh"
                   value={reg.dob}
-                  onChange={(v) => setReg({ ...reg, dob: v })}
+                  onChange={(v) => updateField('dob', v)}
+                  onBlur={() => touchField('dob')}
+                  error={regErrors.dob}
                   iconLeft={<Calendar className="h-4 w-4" />}
                   type="date"
                 />
@@ -452,17 +520,21 @@ export default function LoginModal({
                   label="Số điện thoại"
                   placeholder="09xx xxx xxx"
                   value={reg.phone}
-                  onChange={(v) => setReg({ ...reg, phone: v })}
+                  onChange={(v) => updateField('phone', v)}
+                  onBlur={() => touchField('phone')}
+                  error={regErrors.phone}
                   iconLeft={<Phone className="h-4 w-4" />}
                 />
 
-                {/* Hàng 3: Mật khẩu | Nhập lại mật khẩu */}
+                {/* Mật khẩu | Nhập lại mật khẩu */}
                 <Field
                   name="password"
                   label="Mật khẩu"
                   placeholder="mật khẩu"
                   value={reg.password}
-                  onChange={(v) => setReg({ ...reg, password: v })}
+                  onChange={(v) => updateField('password', v)}
+                  onBlur={() => touchField('password')}
+                  error={regErrors.password}
                   iconLeft={<Lock className="h-4 w-4" />}
                   type={showRegPw ? 'text' : 'password'}
                   autoComplete="new-password"
@@ -482,7 +554,15 @@ export default function LoginModal({
                   label="Nhập lại mật khẩu"
                   placeholder="nhập lại mật khẩu"
                   value={regConfirmPw}
-                  onChange={setRegConfirmPw}
+                  onChange={(v) => {
+                    setRegConfirmPw(v);
+                    if (regTouched.confirm_password) {
+                      const errs = buildRegisterErrors(reg, v);
+                      setRegErrors((e) => ({ ...e, confirm_password: errs.confirm_password }));
+                    }
+                  }}
+                  onBlur={() => touchField('confirm_password')}
+                  error={regErrors.confirm_password}
                   iconLeft={<Lock className="h-4 w-4" />}
                   type={showRegConfirmPw ? 'text' : 'password'}
                   autoComplete="new-password"
@@ -498,18 +578,15 @@ export default function LoginModal({
                   }
                 />
 
-                {/* Cảnh báo không khớp */}
-                {regConfirmPw && reg.password && reg.password !== regConfirmPw && (
-                  <p className="md:col-span-2 -mt-2 text-xs text-rose-600">Mật khẩu không khớp.</p>
-                )}
-
-                {/* Hàng 4: Email | Giới tính (CUSTOM SELECT) */}
+                {/* Email | Giới tính */}
                 <Field
                   name="email"
                   label="Email"
                   placeholder="nhapemail@domain.com"
                   value={reg.email}
-                  onChange={(v) => setReg({ ...reg, email: v })}
+                  onChange={(v) => updateField('email', v)}
+                  onBlur={() => touchField('email')}
+                  error={regErrors.email}
                   iconLeft={<Mail className="h-4 w-4" />}
                   type="email"
                   autoComplete="email"
@@ -519,7 +596,9 @@ export default function LoginModal({
                   name="gender"
                   label="Giới tính"
                   value={reg.gender}
-                  onChange={(v) => setReg({ ...reg, gender: v })}
+                  onChange={(v) => updateField('gender', v)}
+                  onBlur={() => touchField('gender')}
+                  error={regErrors.gender}
                   options={[
                     { label: 'Nam', value: 'male' },
                     { label: 'Nữ', value: 'female' },
@@ -529,13 +608,15 @@ export default function LoginModal({
                   iconLeft={<User className="h-4 w-4" />}
                 />
 
-                {/* Hàng 5: Country (CUSTOM SELECT full width) */}
+                {/* Country */}
                 <div className="md:col-span-2">
                   <SelectField
                     name="country"
                     label="Đất nước"
                     value={reg.country}
-                    onChange={(v) => setReg({ ...reg, country: v })}
+                    onChange={(v) => updateField('country', v)}
+                    onBlur={() => touchField('country')}
+                    error={regErrors.country}
                     options={[
                       { label: 'Vietnam', value: 'Vietnam' },
                       ...countries.map((c) => ({ label: c.name, value: c.name })),
@@ -598,12 +679,14 @@ type FieldProps = {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;                 // NEW
   placeholder?: string;
   type?: string;
   iconLeft?: React.ReactNode;
   rightSlot?: React.ReactNode;
   autoComplete?: string;
   name?: string;
+  error?: string;                      // NEW
 };
 
 const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
@@ -611,21 +694,30 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
     label,
     value,
     onChange,
+    onBlur,
     placeholder,
     type = 'text',
     iconLeft,
     rightSlot,
     autoComplete,
     name,
+    error,
   },
   ref
 ) {
+  const errorId = name ? `${name}-error` : undefined;
   return (
     <div className="group">
       <label className="mb-1 block text-sm font-medium text-slate-700">
         {label}
       </label>
-      <div className="relative flex items-center rounded-2xl border border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100">
+      <div
+        className={`relative flex items-center rounded-2xl border bg-white ${
+          error
+            ? 'border-rose-400 ring-2 ring-rose-100'
+            : 'border-slate-300 focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100'
+        }`}
+      >
         {iconLeft && (
           <span className="pointer-events-none absolute left-3 text-slate-400">
             {iconLeft}
@@ -636,15 +728,21 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
           name={name}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           type={type}
           autoComplete={autoComplete}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
           className={`w-full rounded-2xl bg-transparent py-2.5 text-sm text-slate-900 outline-none ${
             iconLeft ? 'pl-10' : 'pl-3'
           } ${rightSlot ? 'pr-10' : 'pr-3'}`}
         />
         {rightSlot && <span className="absolute right-2">{rightSlot}</span>}
       </div>
+      {error && (
+        <p id={errorId} className="mt-1 text-xs text-rose-600">{error}</p>
+      )}
     </div>
   );
 });
@@ -674,24 +772,84 @@ function SelectField({
   label,
   value,
   onChange,
+  onBlur,
   options,
   placeholder = 'Chọn…',
   iconLeft,
+  error,
 }: {
   name: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   options: SelectOption[];
   placeholder?: string;
   iconLeft?: React.ReactNode;
+  error?: string;
 }) {
   const [open, setOpen] = React.useState(false);
-  const [activeIndex, setActiveIndex] = React.useState(-1);
+  const [dir, setDir] = React.useState<'down' | 'up'>('down');
+  const [coords, setCoords] = React.useState({
+    left: 0,
+    top: 0,        // top cho menu khi mở xuống
+    bottom: 0,     // bottom cho menu khi mở lên (fixed)
+    width: 0,
+  });
+
   const btnRef = React.useRef<HTMLButtonElement>(null);
-  const wrapRef = useOutside(() => setOpen(false));
+  const menuRef = React.useRef<HTMLUListElement>(null);
 
   const current = options.find((o) => o.value === value);
+  const errorId = `${name}-error`;
+  const MENU_MAX_HEIGHT = 260;
+
+  function measureAndPlace() {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom;
+    const openDir: 'down' | 'up' = spaceBelow < MENU_MAX_HEIGHT + 8 ? 'up' : 'down';
+    setDir(openDir);
+    setCoords({
+      left: r.left,
+      top: r.bottom,
+      bottom: window.innerHeight - r.top,
+      width: r.width,
+    });
+  }
+
+  React.useEffect(() => {
+    if (!open) return;
+    measureAndPlace();
+
+    const onScroll = () => measureAndPlace();
+    const onResize = () => measureAndPlace();
+    const onDocDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    document.addEventListener('mousedown', onDocDown);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('mousedown', onDocDown);
+    };
+  }, [open]);
+
+  const triggerClass = cx(
+    'flex w-full items-center justify-between bg-white text-left text-sm pl-3 pr-10 py-2.5 border transition',
+    open
+      ? (error ? 'border-rose-400 ring-2 ring-rose-100' : 'border-sky-500 ring-2 ring-sky-100')
+      : (error ? 'border-rose-400 ring-2 ring-rose-100' : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-500'),
+    open
+      ? (dir === 'down' ? 'rounded-t-2xl rounded-b-none' : 'rounded-b-2xl rounded-t-none')
+      : 'rounded-2xl'
+  );
 
   function commit(idx: number) {
     if (idx < 0 || idx >= options.length) return;
@@ -704,18 +862,55 @@ function SelectField({
     if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       setOpen(true);
-      setActiveIndex(Math.max(0, options.findIndex((o) => o.value === value)));
+      // đo vị trí ngay khi mở
+      requestAnimationFrame(measureAndPlace);
       return;
     }
     if (!open) return;
     if (e.key === 'Escape') { setOpen(false); return; }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((i) => Math.min(options.length - 1, (i < 0 ? 0 : i + 1))); }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); setActiveIndex((i) => Math.max(0, (i < 0 ? 0 : i - 1))); }
-    if (e.key === 'Enter')     { e.preventDefault(); commit(activeIndex); }
   }
 
+  const menu = (
+    <ul
+      ref={menuRef}
+      role="listbox"
+      tabIndex={-1}
+      style={{
+        position: 'fixed',
+        left: coords.left,
+        width: coords.width,
+        top: dir === 'down' ? coords.top : undefined,
+        bottom: dir === 'up' ? coords.bottom : undefined,
+        maxHeight: MENU_MAX_HEIGHT,
+        overflowY: 'auto',
+      }}
+      className={cx(
+        'z-[1100] bg-white shadow-xl',
+        error ? 'border border-rose-400' : 'border border-slate-200',
+        dir === 'down' ? 'rounded-b-2xl rounded-t-none border-t-0' : 'rounded-t-2xl rounded-b-none border-b-0'
+      )}
+    >
+      {options.map((opt, idx) => {
+        const selected = opt.value === value;
+        return (
+          <li
+            key={opt.value}
+            role="option"
+            aria-selected={selected}
+            onMouseDown={(e) => e.preventDefault()} // giữ không mất focus trước khi click
+            onClick={() => commit(idx)}
+            className="flex cursor-pointer items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+          >
+            <span className="truncate">{opt.label}</span>
+            {selected && <Check className="h-4 w-4" />}
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
-    <div className="group" ref={wrapRef}>
+    <div className="group">
       <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
       <div className="relative">
         <input type="hidden" name={name} value={value} />
@@ -725,12 +920,12 @@ function SelectField({
           type="button"
           onClick={() => setOpen((v) => !v)}
           onKeyDown={onKey}
+          onBlur={onBlur}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className={cx(
-            'flex w-full items-center justify-between rounded-2xl border bg-white py-2.5 text-left text-sm',
-            'border-slate-300 pl-3 pr-10 focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-500'
-          )}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className={triggerClass}
         >
           <span className="flex items-center gap-2">
             {iconLeft && <span className="text-slate-400">{iconLeft}</span>}
@@ -740,41 +935,16 @@ function SelectField({
           </span>
           <ChevronDown className="absolute right-3 h-4 w-4 text-slate-400" />
         </button>
-
-        {open && (
-          <ul
-            role="listbox"
-            tabIndex={-1}
-            className="absolute z-20 mt-2 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-xl max-h-60"
-          >
-            {options.map((opt, idx) => {
-              const selected = opt.value === value;
-              const active = idx === activeIndex;
-              return (
-                <li
-                  key={opt.value}
-                  role="option"
-                  aria-selected={selected}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => commit(idx)}
-                  className={cx(
-                    'flex cursor-pointer items-center justify-between px-3 py-2 text-sm',
-                    active && 'bg-sky-50 text-sky-700',
-                    !active && 'text-slate-700'
-                  )}
-                >
-                  <span className="truncate">{opt.label}</span>
-                  {selected && <Check className="h-4 w-4" />}
-                </li>
-              );
-            })}
-          </ul>
-        )}
       </div>
+
+      {/* Menu render ra body để không bị cắt bởi overflow-hidden */}
+      {open && createPortal(menu, document.body)}
+
+      {error && <p id={errorId} className="mt-1 text-xs text-rose-600">{error}</p>}
     </div>
   );
 }
+
 
 function FancyButton({
   children,

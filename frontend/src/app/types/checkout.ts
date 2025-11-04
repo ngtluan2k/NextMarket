@@ -10,7 +10,8 @@ export type CheckoutItem = {
   product?: Product;
   store?: StoreInfo;
   variant?: { id: number; variant_name: string; price: number };
-  type?: 'bulk' | 'subscription' | 'normal';
+  type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+  pricingRuleId?: number; 
 };
 
 export type ShippingMethodType = 'economy' | 'fast';

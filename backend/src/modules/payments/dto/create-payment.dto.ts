@@ -28,4 +28,7 @@ export class CreatePaymentDto {
   @IsString()
   @IsOptional()
   rawPayload?: string;
+
+  @IsOptional()
+  isGroup?: boolean;
 }

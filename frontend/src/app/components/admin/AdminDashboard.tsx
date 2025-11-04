@@ -13,9 +13,29 @@ import StoreManager from './StoreManager';
 import AffiliateProgramDashboard from './AffiliateProgramDashboard';
 import AffiliateRegistration from './AffiliateRegistrationManager';
 import { Empty } from 'antd';
+import CampaignPage from './CampaignPage';
+import { Campaign } from '../../../service/campaign.service';
+import CampaignDetailPage from './campaigns_components/CampaignDetailPage';
+import AdminCampaignStoreProductsWrapper from './AdminCampaignStoreProductsWrapper';
+import PublishCampaignForm from './campaigns_components/PublishCampaignForm';
+import UpdateCampaignForm from './campaigns_components/UpdateCampaignForm';
+import FlashSaleManager, { FlashSale } from './FlashSaleManager';
+import FlashSaleStoreProducts from './flash_sale_components/FlashSaleStoreProducts';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
+    null
+  );
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [selectedFlashSale, setSelectedFlashSale] = useState<FlashSale | null>(
+    null
+  );
+
+  const handleSelectStore = (storeId: number) => {
+    setSelectedStoreId(storeId);
+    setActiveKey('8-2-store'); // chuyển sang tab xem sản phẩm store
+  };
 
   const Wip: React.FC<{ title?: string; desc?: string; img?: string }> = ({
     title = 'Chức năng đang phát triển...',
@@ -100,13 +120,76 @@ export const AdminDashboard: React.FC = () => {
         );
       case '8-1':
         return <VoucherManager />;
+
       case '8-2':
         return (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={<span>Chức năng đang phát triển...</span>}
+          <CampaignPage
+            onSelectCampaign={(c, mode) => {
+              setSelectedCampaign(c);
+              if (mode === 'detail') setActiveKey('8-2-detail');
+              else if (mode === 'publish') setActiveKey('8-2-publish');
+              else if (mode === 'update') setActiveKey('8-2-update');
+            }}
           />
         );
+      case '8-2-detail':
+        return (
+          <CampaignDetailPage
+            campaign={selectedCampaign}
+            onBack={() => setActiveKey('8-2')}
+            onSelectStore={(storeId) => {
+              setSelectedStoreId(storeId); // lưu storeId
+              setActiveKey('8-2-store'); // chuyển sang trang store products
+            }}
+          />
+        );
+
+      case '8-2-store':
+        return selectedCampaign && selectedStoreId ? (
+          <AdminCampaignStoreProductsWrapper
+            campaignId={selectedCampaign.id}
+            storeId={selectedStoreId}
+            onBack={() => setActiveKey('8-2-detail')}
+          />
+        ) : null;
+
+      case '8-2-publish':
+        return selectedCampaign ? (
+          <PublishCampaignForm
+            campaignId={selectedCampaign.id}
+            onClose={() => setActiveKey('8-2')}
+          />
+        ) : null;
+
+      case '8-2-update':
+        return selectedCampaign ? (
+          <UpdateCampaignForm
+            campaignId={selectedCampaign.id}
+            onClose={() => setActiveKey('8-2')}
+          />
+        ) : null;
+
+      case '8-3':
+        return (
+          <FlashSaleManager
+            onSelectFlashSale={(fs) => {
+              setSelectedFlashSale(fs); // lưu flash sale đã chọn
+              setActiveKey('8-3-store'); // chuyển view sang store products
+            }}
+          />
+        );
+      case '8-3-store':
+  return selectedFlashSale ? (
+    <FlashSaleStoreProducts
+      scheduleId={selectedFlashSale.id}
+      scheduleStartsAt={selectedFlashSale.starts_at}
+      scheduleEndsAt={selectedFlashSale.ends_at}
+      storeId={selectedStoreId || undefined} // nếu null thì bỏ qua filter
+      onBack={() => setActiveKey('8-3')}
+    />
+  ) : null;
+
+
       case '9':
         return (
           <Empty

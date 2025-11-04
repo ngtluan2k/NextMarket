@@ -1,4 +1,6 @@
 // main.ts
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
