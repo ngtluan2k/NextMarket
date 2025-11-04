@@ -1237,16 +1237,21 @@ export const ProductForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Loại</label>
-                  <input
+                  <select
                     value={pr.type}
                     onChange={(e) => {
                       const next = [...form.pricing_rules];
-                      next[i].type = e.target.value;
+                      next[i].type = e.target.value; // vẫn lưu "bulk" hoặc "tier"
                       setForm({ ...form, pricing_rules: next });
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="bulk / tier"
-                  />
+                  >
+                    <option value="">Chọn loại</option>
+                    <option value="bulk">Sỉ</option>{' '}
+                    {/* hiển thị "Sỉ", giá trị là "bulk" */}
+                    <option value="subscription">Gói Subs</option>{' '}
+                    {/* hiển thị "Cấp bậc", giá trị là "tier" */}
+                  </select>
                 </div>
 
                 <div className="md:col-span-2">

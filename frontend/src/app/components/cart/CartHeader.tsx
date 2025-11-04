@@ -265,7 +265,7 @@ export const CartHeader: React.FC<Props> = ({
                         </Text>
                       )}
                       <Text type="secondary" className="block text-xs">
-                        Type: {item.type}
+                        Loại hàng: {item.type}
                       </Text>
                       {color && (
                         <Text type="secondary" className="block text-xs">

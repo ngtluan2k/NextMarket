@@ -81,7 +81,7 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',
+        type: 'postgres',
         host: config.get('DB_HOST'),
         port: +config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
@@ -91,6 +91,9 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
+        ssl: {
+          rejectUnauthorized: false, // cho phép kết nối SSL không cần CA
+        },
       }),
     }),
 

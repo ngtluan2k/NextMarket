@@ -74,10 +74,10 @@ export class Store {
   @Column({ type: 'timestamp', nullable: true })
   deleted_at!: Date | null;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', nullable: true })
   created_at!: Date;
 
-  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @UpdateDateColumn({ type: 'timestamp', nullable: true })
   updated_at!: Date;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })

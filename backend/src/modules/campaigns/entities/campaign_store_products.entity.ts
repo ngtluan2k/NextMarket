@@ -45,6 +45,6 @@ export class CampaignStoreProduct {
   @CreateDateColumn({ name: 'registered_at' })
   registeredAt!: Date;
 
-  @Column({ name: 'approved_at', type: 'datetime', nullable: true })
+  @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
   approvedAt?: Date;
 }

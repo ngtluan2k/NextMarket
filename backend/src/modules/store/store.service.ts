@@ -891,13 +891,8 @@ export class StoreService {
     const store = await this.storeRepo.findOne({
       where: { slug, is_deleted: false },
       relations: [
-        'storeInformation',
-        'storeIdentification',
-        'bankAccount',
-        'address',
         'products',
         'products.media',
-        'orders',
         'followers',
       ],
     });

@@ -16,9 +16,10 @@ export type BestSellerProduct = {
 
 type Props = {
   storeSlug: string;
-  /** TUỲ CHỌN: nếu muốn override URL/fetch */
+  items?: BestSellerProduct[]; // <-- tên prop đúng là items
   fetchBestSellers?: (slug: string) => Promise<BestSellerProduct[]>;
 };
+
 
 export default function StoreBestSellers({
   storeSlug,
