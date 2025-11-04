@@ -60,10 +60,11 @@ import { AffiliateRulesModule } from './modules/affiliate-rules/affiliate-rules.
 import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.module';
 
 
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
 
 @Module({
   imports: [
-
     ScheduleModule.forRoot(),
     // Đọc file .env
     ConfigModule.forRoot({
@@ -90,7 +91,7 @@ import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.mod
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
-        
+
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
@@ -149,8 +150,10 @@ import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.mod
     GroupOrdersModule,
     AdminModule,
     AffiliateRulesModule,
-    AffiliateTreeModule
+    AffiliateTreeModule,
+    CampaignsModule,
+    FlashSaleSchedulesModule,
   ],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

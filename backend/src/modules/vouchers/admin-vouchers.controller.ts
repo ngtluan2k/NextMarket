@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,7 @@ import { UpdateVoucherDto } from './dto/update-vouchers.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
+import { Voucher } from './vouchers.entity';
 
 @ApiTags('admin-vouchers')
 @ApiBearerAuth()
@@ -29,6 +31,24 @@ import { RequirePermissions as Permissions } from '../../common/auth/permission.
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class AdminVouchersController {
   constructor(private readonly vouchersService: VouchersService) {}
+
+  
+  @Get('voucher-system')
+  @ApiOperation({ summary: 'Lấy danh sách voucher áp dụng cho mọi cửa hàng' })
+  @ApiResponse({ status: 200, description: 'Danh sách voucher hợp lệ' })
+  async getAvailableVouchersAnyStore(@Req() req: any): Promise<Voucher[]> {
+    const userIdStr = req.user?.sub;
+    if (!userIdStr) {
+      throw new BadRequestException('Người dùng chưa được xác thực');
+    }
+
+    const userId = Number(userIdStr); // <- ép kiểu sang number
+    if (isNaN(userId)) {
+      throw new BadRequestException('userId không hợp lệ');
+    }
+
+    return this.vouchersService.getAvailableVouchersForAnyStore();
+  }
 
   @Post()
   @Permissions('add_voucher')
@@ -97,4 +117,5 @@ export class AdminVouchersController {
     }
     return this.vouchersService.remove(id, userId, role);
   }
+
 }

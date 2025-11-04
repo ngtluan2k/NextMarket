@@ -12,12 +12,17 @@ export class MomoStrategy {
     private paymentRepo: Repository<Payment>
   ) {}
 
-  async createPayment(order: Order, paymentMethod: PaymentMethod) {
+  async createPayment(
+    order: Order,
+    paymentMethod: PaymentMethod,
+    isGroup: boolean = false
+  ) {
     const payment = this.paymentRepo.create({
       order,
       paymentMethod,
       amount: order.totalAmount,
       status: 0,
+      isGroup,
     });
     const saved = await this.paymentRepo.save(payment);
     const redirectUrl = `https://test-payment.momo.vn/pay?orderId=${saved.uuid}`;

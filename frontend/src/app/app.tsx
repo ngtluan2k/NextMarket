@@ -18,7 +18,6 @@ import ProfilePage from './page/account/ProfilePage';
 import ProductList from './components/ProductList';
 import SellerMainLayout from './page/Seller/MainLayout';
 
-
 import AffiliateGate from './page/affiliate';
 import AffiliateRegister from './page/affiliate/register';
 import AffiliateLinks from './page/affiliate/dashboard/tab/affiliateLinks';
@@ -44,14 +43,11 @@ import BrandPage from './page/BrandPage';
 import SearchPage from './page/SearchPage';
 import CartPage from './page/CartPage';
 import OtpVerifyPage from './page/OtpVerify';
-import TestWallet from './test';
 import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
 import StoreOwnerVoucherManager from '../app/components/seller/StoreOwnerVoucherManager';
 import AffiliateRulesManager from './components/admin/AffiliateRulesManager';
-
-import OrderDetailPage from "./page/account/OrderDetailPage";
-
 import ReviewForm from './test';
+import OrderDetailPage from './page/account/OrderDetailPage';
 import GroupOrders from './components/group_orders/GroupOrders';
 import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
 import GroupJoin from './components/group_orders/components/GroupJoin';
@@ -59,6 +55,12 @@ import ShopXuPage from './components/account/ShopXuPage';
 import FlashSalePage from './page/FlashSalePage';
 
 import AccountVoucher from './page/account/AccountVoucher';
+import StoreCampaignDetail from './page/Seller/tab/StoreCampaignDetail';
+import StoreCampaignManager from './page/Seller/tab/StoreCampaignManager';
+import Dashboard from './page/Seller/tab/StoreOwnerDashboard';
+import AdminCampaignStoreProductsWrapper from './components/admin/AdminCampaignStoreProductsWrapper';
+import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
+import CampaignAdPopup from './components/CampaignAdPopup';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -86,6 +88,8 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/catepage" element={<CategoryPage />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/campaign/:id" element={<PublicCampaignPageWrapper />} />
+
           <Route
             path="/products/slug/:slug"
             element={<ProductDetailPage showMessage={showMessage} />}
@@ -102,16 +106,20 @@ const App: React.FC = () => {
 
           {/* Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/affiliate-rules" element={<AffiliateRulesManager />} />
+
+          <Route
+            path="/admin/affiliate-rules"
+            element={<AffiliateRulesManager />}
+          />
+          <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
 
           {/* Seller */}
           <Route path="/seller-registration" element={<SellerRegistration />} />
           {/* <Route path="/seller-dashboard" element={<SellerDashboard />} /> */}
           <Route path="/myStores" element={<SellerMainLayout />} />
-          <Route path="/storeVoucher" element={<StoreOwnerVoucherManager/>} />
-          
-          <Route path="/flash-sale" element={<FlashSalePage />} />
+          <Route path="/storeVoucher" element={<StoreOwnerVoucherManager />} />
 
+          <Route path="/flash-sale" element={<FlashSalePage />} />
 
           {/* Account Routes */}
           <Route path="/account" element={<AccountLayout />}>
@@ -125,7 +133,7 @@ const App: React.FC = () => {
             {/* <Route path="addresses/create" element={<AddressCreatePage />} /> */}
             <Route path="xu" element={<ShopXuPage />} />
             <Route path="subscription" element={<MySubscriptionsPage />} />
-            <Route path="vouchers" element={<AccountVoucher/>}/>
+            <Route path="vouchers" element={<AccountVoucher />} />
           </Route>
 
           {/* Store Routes */}
@@ -141,15 +149,16 @@ const App: React.FC = () => {
             />
           </Route>
 
-          <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
+          <Route path="/store" element={<SellerMainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="campaigns" element={<StoreCampaignManager />} />
+          </Route>
           {/* Brands */}
           <Route path="/brands" element={<FeaturedBrandsPage />} />
           <Route path="/brands/:brandId" element={<BrandPage />} />
 
           {/* Search */}
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/test" element={<TestWallet />} />
-          <Route path="/test1" element={<ReviewForm />} />
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/verify-otp" element={<OtpVerifyPage />} />
@@ -185,13 +194,17 @@ const App: React.FC = () => {
             <Route path="/affiliate/dashboard/support" element={<Support />} />
           </Route>
           <Route path="/product/:id" element={<AffiliateLinkResolver />} />
-          <Route path="/group-orders/store/:storeId/create" element={<GroupOrders />} />
+          <Route
+            path="/group-orders/store/:storeId/create"
+            element={<GroupOrders />}
+          />
           <Route
             path="/group-orders/:id/detail"
             element={<GroupOrderDetail />}
           />
           <Route path="/group/:uuid" element={<GroupJoin />} />
         </Routes>
+        <CampaignAdPopup />
       </CartProvider>
     </AuthProvider>
   );

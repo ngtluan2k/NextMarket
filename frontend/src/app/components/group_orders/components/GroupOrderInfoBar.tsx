@@ -1,5 +1,5 @@
 import React from 'react';
-import axios from 'axios';
+import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -23,10 +23,8 @@ export default function GroupOrderInfoBar({ groupId }: Props) {
     (async () => {
       try {
         setLoading(true);
-        const res = await axios.get(
-          `http://localhost:3000/group-orders/${groupId}`
-        );
-        setGroup(res.data);
+        const res = await groupOrdersApi.getById(groupId);
+        setGroup(res);
         setError(null);
       } catch (e: any) {
         setError('Không tải được thông tin nhóm');

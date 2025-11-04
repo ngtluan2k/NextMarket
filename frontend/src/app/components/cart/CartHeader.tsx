@@ -51,7 +51,7 @@ export const CartHeader: React.FC<Props> = ({
     productId: number,
     productName: string,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal'
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
     try {
       console.log(productId);
@@ -189,39 +189,56 @@ export const CartHeader: React.FC<Props> = ({
 
             {/* Danh sách sản phẩm trong shop */}
             {items.map((item) => {
+              // ✅ Nếu đang chọn subscription → disable các type khác
+              const isDisabled =
+                selectedType === 'subscription' && item.type !== 'subscription';
+
+              // ✅ Nếu đang chọn type khác → chỉ disable checkbox của subscription
+              const disableSubscription =
+                selectedType !== null &&
+                selectedType !== 'subscription' &&
+                item.type === 'subscription';
+
+              const checked = selectedIds.includes(item.id);
               const mediaArray = Array.isArray(item.product?.media)
                 ? item.product.media
                 : item.product?.media
-                  ? [item.product.media]
-                  : [];
+                ? [item.product.media]
+                : [];
               const imageUrl = toImageUrl(
                 mediaArray.find((m: any) => m?.is_primary)?.url ||
-                mediaArray[0]?.url ||
-                item.product?.url
+                  mediaArray[0]?.url ||
+                  item.product?.url
               );
 
-              const checked = selectedIds.includes(item.id);
               const oldPrice: number | undefined = (item as any)?.old_price;
               const deliveryDate: string | undefined = (item as any)
                 ?.delivery_date;
               const color: string | undefined = (item as any)?.product?.color;
 
+              const checkboxDisabled = isDisabled || disableSubscription;
+
               return (
                 <div
                   key={item.id}
-                  className={`items-center border-b py-4 w-full ${item.is_group ? 'bg-blue-50 border-blue-200' : ''
-                    }`} // thêm style cho group items
+                  className={`items-center border-b py-4 w-full ${
+                    item.is_group ? 'bg-blue-50 border-blue-200' : ''
+                  }`}
                   style={{ display: 'grid', gridTemplateColumns: GRID }}
                 >
-                  {/* Checkbox từng sản phẩm */}
+                  {/* ✅ Chỉ disable checkbox, không ẩn sản phẩm */}
                   <Checkbox
                     checked={checked}
-                    disabled={!!(selectedType && selectedType !== item.type)}
+                    disabled={checkboxDisabled}
                     onChange={() => onToggleOne(item.id)}
                   />
 
                   {/* Thông tin sản phẩm */}
-                  <div className="flex gap-3 items-start">
+                  <div
+                    className={`flex gap-3 items-start ${
+                      checkboxDisabled ? 'opacity-60' : ''
+                    }`}
+                  >
                     <Image
                       src={imageUrl}
                       alt={item.product?.name}
@@ -241,7 +258,6 @@ export const CartHeader: React.FC<Props> = ({
                           </span>
                         )}
                       </div>
-
 
                       {item.variant && (
                         <Text type="secondary" className="block text-xs">
@@ -263,7 +279,6 @@ export const CartHeader: React.FC<Props> = ({
                       )}
                     </div>
                   </div>
-
                   {/* Đơn giá */}
                   <div className="text-right">
                     {typeof oldPrice === 'number' && (
@@ -276,7 +291,7 @@ export const CartHeader: React.FC<Props> = ({
                     </Text>
                   </div>
 
-                  {/* Số lượng */}
+                 {/* Số lượng */}
                   <div className="flex justify-center">
                     <div className="flex border rounded">
                       <button
@@ -313,7 +328,6 @@ export const CartHeader: React.FC<Props> = ({
                       </button>
                     </div>
                   </div>
-
                   {/* Thành tiền */}
                   <Text className="text-right text-red-500 font-semibold">
                     {(item.price * item.quantity).toLocaleString()}đ

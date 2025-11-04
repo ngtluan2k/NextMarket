@@ -136,22 +136,27 @@ export function validateProduct(
     });
 
     // Step 4: Pricing rules
+    // Step 4: Pricing rules
     const rules = Array.isArray(form?.pricing_rules) ? form.pricing_rules : [];
-    const todayTs = startOfToday();
 
     rules.forEach((pr: any, idx: number) => {
+      // 👉 Bỏ qua validate cho flash_sale
+      if (pr?.type === 'flash_sale') return;
+
       if (!isNonEmptyString(pr?.type))
         E(
           errors,
           ['pricing_rules', idx, 'type'],
           'Loại ưu đãi/bảng giá (type) là bắt buộc'
         );
+
       if (!isPosInt(Number(pr?.min_quantity)))
         E(
           errors,
           ['pricing_rules', idx, 'min_quantity'],
           'Số lượng tối thiểu phải là số nguyên ≥ 1'
         );
+
       if (!isNonNegNumber(Number(pr?.price)))
         E(errors, ['pricing_rules', idx, 'price'], 'Giá áp dụng phải ≥ 0');
 
@@ -161,38 +166,23 @@ export function validateProduct(
       const s = hasStart ? toTime(pr.starts_at) : NaN;
       const e = hasEnd ? toTime(pr.ends_at) : NaN;
 
-      if (hasStart) {
-        if (!Number.isFinite(s)) {
-          E(
-            errors,
-            ['pricing_rules', idx, 'starts_at'],
-            'Ngày bắt đầu không hợp lệ'
-          );
-        } else if (s < todayTs) {
-          E(
-            errors,
-            ['pricing_rules', idx, 'starts_at'],
-            'Ngày bắt đầu không được ở quá khứ'
-          );
-        }
+      if (hasStart && !Number.isFinite(s)) {
+        E(
+          errors,
+          ['pricing_rules', idx, 'starts_at'],
+          'Ngày bắt đầu không hợp lệ'
+        );
       }
 
-      if (hasEnd) {
-        if (!Number.isFinite(e)) {
-          E(
-            errors,
-            ['pricing_rules', idx, 'ends_at'],
-            'Ngày kết thúc không hợp lệ'
-          );
-        } else if (e < todayTs) {
-          E(
-            errors,
-            ['pricing_rules', idx, 'ends_at'],
-            'Ngày kết thúc không được ở quá khứ'
-          );
-        }
+      if (hasEnd && !Number.isFinite(e)) {
+        E(
+          errors,
+          ['pricing_rules', idx, 'ends_at'],
+          'Ngày kết thúc không hợp lệ'
+        );
       }
 
+      // 👉 Chỉ cần đảm bảo end >= start (nếu cả 2 hợp lệ)
       if (hasStart && hasEnd && Number.isFinite(s) && Number.isFinite(e)) {
         if (e < s) {
           E(

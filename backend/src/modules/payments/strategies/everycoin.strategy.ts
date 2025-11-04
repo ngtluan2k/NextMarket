@@ -18,7 +18,7 @@ export class EveryCoinStrategy {
     private historyRepo: Repository<OrderStatusHistory>
   ) {}
 
-  async createPayment(order: Order, paymentMethod: PaymentMethod) {
+  async createPayment(order: Order, paymentMethod: PaymentMethod,isGroup: boolean = false) {
     return this.paymentRepo.manager.transaction(async (manager) => {
       // Tạo bản ghi thanh toán
       const payment = manager.create(Payment, {
@@ -27,6 +27,7 @@ export class EveryCoinStrategy {
         amount: order.totalAmount,
         status: PaymentStatus.Paid, // trực tiếp success
         paidAt: new Date(),
+        isGroup,
       });
       await manager.save(payment);
 

@@ -11,6 +11,8 @@ import Footer from '../components/Footer';
 import YouMayAlsoLike from '../components/YouMayAlsoLike';
 import { fetchCategoriesAPI, Category } from '../../service/category.service';
 import { fetchBrandsAPI } from '../../service/brand.service';
+import CampaignCarousel from '../components/CampaignCarousel';
+import { Carousel } from 'bootstrap';
 
 type Slide = { imageUrl: string; alt?: string; href?: string };
 
@@ -24,7 +26,7 @@ interface ToastMessage {
 function BootstrapTwoUpCarousel({
   id = 'hero2up',
   slides,
-  interval = 5000,
+  interval = 1000,
 }: {
   id?: string;
   slides?: Slide[];
@@ -65,20 +67,18 @@ function BootstrapTwoUpCarousel({
 
   // Bootstrap init
   useEffect(() => {
-    let instance: any;
-    (async () => {
-      const { Carousel } = await import('bootstrap'); // ✅ có typings
-      if (hostRef.current) {
-        instance = Carousel.getOrCreateInstance(hostRef.current, {
-          interval,
-          pause: 'hover',
-          touch: true,
-          wrap: true,
-        });
-      }
-    })();
-    return () => instance?.dispose?.();
-  }, [interval, pages.length]);
+  let instance: any;
+  if (hostRef.current) {
+    instance = Carousel.getOrCreateInstance(hostRef.current, {
+      interval, // ⬅ sẽ dùng 3000ms
+      pause: 'hover',
+      touch: true,
+      wrap: true,
+    });
+  }
+  return () => instance?.dispose?.();
+}, [interval, pages.length]);
+
 
   return (
     <div
@@ -197,7 +197,7 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
           {/* Carousel bên phải */}
           <section>
             <div className="rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 p-4">
-              <BootstrapTwoUpCarousel slides={slidesState} interval={5000} />
+              <CampaignCarousel interval={2000} />
             </div>
             <PromoShortcuts className="mt-4" />
             <FeaturedBrands

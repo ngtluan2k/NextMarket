@@ -35,12 +35,18 @@ export class ProductController {
     private readonly productService: ProductService,
     private readonly storeService: StoreService
   ) {}
+  @Get('flash-sale')
+  @ApiOperation({ summary: 'Lấy tất cả sản phẩm flash sale (public)' })
+  async getFlashSaleProducts() {
+    return this.productService.findFlashSaleProducts();
+  }
 
   @Get()
   @ApiOperation({ summary: 'Lấy tất cả sản phẩm (public)' })
   async getAllProduct() {
     return this.productService.findAllProduct();
   }
+
   @Get('search')
   async search(@Query('q') q: string) {
     const products = await this.productService.searchProducts(q);
@@ -255,12 +261,13 @@ export class ProductController {
     @Body() dto: any,
     @Req() req: any
   ) {
-    // --- Parse JSON từ FormData và chuẩn hóa thành array ---
+    // --- Parse JSON ---
     dto.variants = dto.variants ? JSON.parse(dto.variants) : [];
     dto.inventory = dto.inventory ? JSON.parse(dto.inventory) : [];
     dto.pricing_rules = dto.pricing_rules ? JSON.parse(dto.pricing_rules) : [];
     dto.categories = dto.categories ? JSON.parse(dto.categories) : [];
     dto.media_meta = dto.media_meta ? JSON.parse(dto.media_meta) : [];
+
     if (Array.isArray(dto.inventory) && Array.isArray(dto.variants)) {
       dto.variants = dto.variants.map((v: any) => ({
         ...v,
@@ -269,25 +276,43 @@ export class ProductController {
         ),
       }));
     }
-    // --- Merge media_meta + files mới ---
-    dto.media = dto.media_meta.map((m: any) => ({
-      ...m,
-      url: m.url ? m.url.replace(/^https?:\/\/[^/]+/, '') : '', // chuyển URL cũ thành relative
-    }));
 
-    if (files?.length) {
-      files.forEach((file) => {
-        dto.media.push({
-          file_name: file.filename,
-          media_type: 'image',
-          is_primary: false,
-          url: `/uploads/products/${file.filename}`,
-          sort_order: dto.media.length + 1,
-        });
-      });
+    // --- 🔧 Xử lý ảnh ---
+    let mergedMedia: any[] = [];
+
+    // 🧩 1️⃣ Ảnh cũ (nếu có)
+    if (Array.isArray(dto.media_meta)) {
+      mergedMedia = dto.media_meta
+        .filter((m: any) => m && m.url)
+        .map((m: any) => ({
+          ...m,
+          url: m.url.replace(/^https?:\/\/[^/]+/, ''), // bỏ host nếu có
+        }));
     }
 
-    // --- Gọi service update ---
+    // 🧩 2️⃣ Thêm ảnh mới upload (nếu có)
+    if (Array.isArray(files) && files.length > 0) {
+      const newFiles = files.map((file, index) => ({
+        file_name: file.filename,
+        media_type: 'image',
+        url: `/uploads/products/${file.filename}`,
+        is_primary: false,
+        sort_order: mergedMedia.length + index + 1,
+      }));
+
+      mergedMedia.push(...newFiles);
+    }
+
+    // 🧩 3️⃣ Đặt ảnh đầu tiên làm đại diện
+    mergedMedia = mergedMedia.map((m, i) => ({
+      ...m,
+      is_primary: i === 0, // ✅ chỉ ảnh đầu là đại diện
+      sort_order: i + 1,
+    }));
+
+    dto.media = mergedMedia;
+
+    // --- Gọi service ---
     const userId = req.user.sub;
     return this.productService.updateProduct(id, dto, userId);
   }

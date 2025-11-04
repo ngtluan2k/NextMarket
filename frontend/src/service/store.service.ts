@@ -2,6 +2,12 @@ import axios from 'axios';
 import { getCurrentUserId } from './auth.helper';
 
 const API_BASE_URL = 'http://localhost:3000'; // Adjust based on your backend URL
+export interface StoreLevel {
+  id: number;
+  store_id: number;
+  level: 'basic' | 'trusted' | 'premium';
+  upgraded_at: string; // hoặc Date nếu parse
+}
 
 export interface Store {
   id: number;
@@ -12,6 +18,7 @@ export interface Store {
   status: string;
   created_at: Date;
   updated_at: Date;
+  storeLevels?: StoreLevel[];
   // Add other fields as needed
 }
 
@@ -49,7 +56,7 @@ export type RegisterSellerPayload = {
   };
 };
 
-class StoreService {
+export class StoreService {
   private getAuthHeaders() {
     const token = localStorage.getItem('token'); // Adjust based on how you store the token
     return {

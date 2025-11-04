@@ -6,6 +6,8 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { IsInt, Min, Max } from 'class-validator';
+import { OrderStatuses } from '../../orders/types/orders';
 
 const GROUP_ORDER_STATUSES = [
   'open',
@@ -42,4 +44,10 @@ export class UpdateGroupOrderDto {
   @IsOptional()
   @IsString()
   inviteLink?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(7)
+  order_status?: OrderStatuses;
 }

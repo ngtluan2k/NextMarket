@@ -174,7 +174,7 @@ export default function YouMayAlsoLikeProducts({
           {data.map((p) => (
             <div
               key={p.id}
-              className="snap-start h-[320px] w-[184px] shrink-0 cursor-pointer rounded-xl border border-slate-200 bg-white p-3
+              className="snap-start h-[280px] w-[184px] shrink-0 cursor-pointer rounded-xl border border-slate-200 bg-white p-3
                          ring-1 ring-slate-100 hover:shadow-md transition-shadow flex flex-col"
               onClick={() => goDetail(p.slug)}
             >
@@ -214,16 +214,6 @@ export default function YouMayAlsoLikeProducts({
                 </div>
               </div>
 
-              {/* Nút mua ngay bám đáy card */}
-              <button
-                className="mt-auto w-full rounded-md bg-slate-900 px-2 py-1.5 text-[11px] font-medium text-white hover:bg-black/90"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  buyNow(p.slug);
-                }}
-              >
-                Mua Ngay
-              </button>
             </div>
           ))}
         </div>

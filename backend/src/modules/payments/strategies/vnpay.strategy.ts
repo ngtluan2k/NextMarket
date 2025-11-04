@@ -16,7 +16,7 @@ export class VnpayStrategy implements PaymentStrategy {
     private paymentRepo: Repository<Payment>
   ) {}
 
-  async createPayment(order: any, paymentMethod: any) {
+  async createPayment(order: any, paymentMethod: any, isGroup = false) {
     if (order.status === 1) throw new Error('Đơn hàng đã thanh toán');
 
     const payment = this.paymentRepo.create({
@@ -25,6 +25,7 @@ export class VnpayStrategy implements PaymentStrategy {
       amount: order.totalAmount,
       status: 0,
       provider: 'vnpay',
+      isGroup,
     });
 
     const savedPayment = await this.paymentRepo.save(payment);

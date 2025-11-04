@@ -1,4 +1,3 @@
-// backend/src/modules/group_orders/group_orders.controller.ts
 import {
   Body,
   Controller,
@@ -15,6 +14,10 @@ import { CreateGroupOrderDto } from './dto/create-group-order.dto';
 import { JoinGroupOrderDto } from './dto/join-group-order.dto';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { CheckoutGroupOrderDto } from './dto/checkout-group-order.dto';
+import { BadRequestException } from '@nestjs/common';
+import { OrderStatuses } from '../orders/types/orders';
+
 
 @Controller('group-orders') //tạo group mới.
 export class GroupOrdersController {
@@ -50,7 +53,7 @@ export class GroupOrdersController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: any,
-    @Req() req: any,
+    @Req() req: any
   ) {
     const userId = req.user.userId; // hoặc req.user.sub
     return this.service.updateGroupOrder(id, userId, dto);
@@ -58,10 +61,7 @@ export class GroupOrdersController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: any,
-  ) {
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     const userId = req.user.userId; // hoặc req.user.sub
     return this.service.deleteGroupOrder(id, userId);
   }
@@ -74,4 +74,73 @@ export class GroupOrdersController {
   getUserActiveGroups(@Param('userId', ParseIntPipe) userId: number) {
     return this.service.getUserActiveGroupOrders(userId);
   }
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/checkout')
+  async checkoutGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CheckoutGroupOrderDto,
+    @Req() req: any
+  ) {
+    const userId = req.user.userId;
+    return this.service.checkoutGroupOrder(
+      id,
+      userId,
+      body.paymentMethodUuid,
+      body.addressId
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/members/me/address')
+  async updateMyAddress(
+    @Param('id', ParseIntPipe) groupId: number,
+    @Body() body: { addressId: number },
+    @Req() req: any
+  ) {
+    const userId = req.user.userId;
+    return this.service.updateMemberAddress(groupId, userId, body.addressId);
+  }
+
+  @Get(':id/with-orders')
+  @UseGuards(JwtAuthGuard)
+  async getGroupWithOrders(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any
+  ) {
+    const result = await this.service.getGroupOrderWithAllOrders(id);
+
+    return {
+      message: 'Group order with all member orders',
+      data: result,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/order-status/:status')
+  async updateOrderStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('status', ParseIntPipe) status: OrderStatuses,
+    @Req() req: any,
+  ) {
+    if (status < 0 || status > 7) {
+      throw new BadRequestException('Invalid order status. Must be 0-7');
+    }
+    const userId = req.user.userId;
+    return this.service.updateOrderStatus(id, status, userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/order-status/:status/bulk')
+  async updateOrderStatusBulk(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('status', ParseIntPipe) status: OrderStatuses,
+    @Req() req: any,
+  ) {
+    if (status < 0 || status > 7) {
+      throw new BadRequestException('Invalid order status. Must be 0-7');
+    }
+    const userId = req.user.userId;
+    return this.service.updateOrderStatusWithOrders(id, status, userId);
+  }
 }
+

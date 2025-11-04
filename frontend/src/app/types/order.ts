@@ -32,6 +32,36 @@ export interface ProductItem {
   uuid: string;
 }
 
+export interface GroupOrder {
+  id: number;
+  uuid: string;
+  name: string;
+  status: 'open' | 'locked' | 'completed' | 'cancelled';
+  delivery_mode: 'host_address' | 'member_address';
+  expires_at: string | null;
+  created_at: string;
+  discount_percent?: number;
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+    profile?: UserProfile;
+  };
+}
+
+export interface UserProfile {
+  id: number;
+  user_id: number;
+  full_name?: string;
+  phone?: string;
+  avatar?: string;
+  date_of_birth?: string;
+  gender?: string;
+  bio?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Payment {
   id: number;
   amount: string;
@@ -66,6 +96,7 @@ export interface Sale {
     uuid: string;
     created_at: string;
     updated_at?: string | null;
+    profile?: UserProfile;
   };
   userAddress?: {
     id: number;
@@ -85,4 +116,6 @@ export interface Sale {
   payment?: Payment[];
   paymentMethod?: string;
   notes?: string;
+  group_order?: GroupOrder | null;
+  group_order_id?: number | null;
 }

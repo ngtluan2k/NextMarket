@@ -58,7 +58,7 @@ export default function BuyBox({
     type: 'success' | 'error' | 'warning',
     content: string
   ) => void;
-  selectedType?: 'bulk' | 'subscription' | 'normal';
+  selectedType?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   groupId?: number | null;
 }) {
   const navigate = useNavigate();
@@ -89,78 +89,90 @@ export default function BuyBox({
     console.log(' Token:', token ? 'exists' : 'null');
   }, [location.pathname, showLoginModal, product, quantity]);
 
-  const handleBuyNow = async () => {
-    console.log(' BuyNow clicked', {
-      productId: product?.id,
-      quantity,
-      variantId: selectedVariantId,
-    });
-    console.log('product to buy: ' + JSON.stringify(product));
+ const handleBuyNow = async () => {
+  if (!product?.id) {
+    console.error('Invalid product data', product);
+    alert('Thông tin sản phẩm không hợp lệ');
+    return;
+  }
 
-    if (!product?.id) {
-      console.error('Invalid product data', product);
-      alert('Thông tin sản phẩm không hợp lệ');
-      return;
-    }
+  if (!availability) {
+    console.error('Sản phẩm hiện không đủ số lượng');
+    alert('Sản phẩm hiện không đủ số lượng');
+    return;
+  }
 
-    if (!availability) {
-      console.error('Sản phẩm hiện không đủ số lượng');
-      alert('Sản phẩm hiện không đủ số lượng');
-      return;
-    }
+  const selectedVariant = product.variants?.find(
+    (v) => v.id === selectedVariantId
+  );
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.log('No token, saving buyNowData');
-      localStorage.setItem(
-        'buyNowData',
-        JSON.stringify({ product: p, quantity, variantId: selectedVariantId })
-      );
-      localStorage.setItem('returnUrl', location.pathname);
-      setShowLoginModal(true);
-      return;
-    }
+  // 1️⃣ Tìm pricing rule trước khi log
+  const selectedRule = product.pricing_rules?.find(
+    (r) => r.variant_sku === selectedVariant?.sku && r.type === selectedType
+  );
 
-    const checkoutState: CheckoutLocationState = {
-      items: [
-        {
+  console.log('BuyNow clicked:');
+  console.log('Product ID:', product?.id);
+  console.log('Quantity:', quantity);
+  console.log('Selected Variant ID:', selectedVariantId);
+  console.log('Selected Pricing Rule ID:', selectedRule?.id); // ✅ bây giờ hợp lệ
+  console.log('Full product object:', product);
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.log('No token, saving buyNowData');
+    localStorage.setItem(
+      'buyNowData',
+      JSON.stringify({ product, quantity, variantId: selectedVariantId })
+    );
+    localStorage.setItem('returnUrl', location.pathname);
+    setShowLoginModal(true);
+    return;
+  }
+
+  const checkoutState: CheckoutLocationState = {
+    items: [
+      {
+        id: product.id,
+        product_id: product.id,
+        price: calculatedPrice,
+        quantity,
+        type: selectedType,
+        pricingRuleId: selectedRule?.id,
+        product: {
           id: product.id,
-          product_id: product.id,
-          price: calculatedPrice,
-          quantity: quantity,
-          type: selectedType,
-          product: {
-            id: product.id,
-            name: product.name,
-            media: (() => {
-              if (selectedVariantId && product.variants && product.media) {
-                const variantIndex = product.variants.findIndex(
-                  (v) => v.id === selectedVariantId
-                );
-                if (variantIndex >= 0 && product.media[variantIndex]) {
-                  return [product.media[variantIndex]];
-                }
+          name: product.name,
+          media: (() => {
+            if (selectedVariantId && product.variants && product.media) {
+              const variantIndex = product.variants.findIndex(
+                (v) => v.id === selectedVariantId
+              );
+              if (variantIndex >= 0 && product.media[variantIndex]) {
+                return [product.media[variantIndex]];
               }
-              return product.media
-                ? product.media.filter((m) => m.is_primary).length > 0
-                  ? product.media.filter((m) => m.is_primary)
-                  : [product.media[0]]
-                : [];
-            })(),
-            store: product.store,
-            rating: product.rating,
-            reviewsCount: product.reviewsCount,
-          },
-          variant: v,
+            }
+            return product.media
+              ? product.media.filter((m) => m.is_primary).length > 0
+                ? product.media.filter((m) => m.is_primary)
+                : [product.media[0]]
+              : [];
+          })(),
+          store: product.store,
+          rating: product.rating,
+          reviewsCount: product.reviewsCount,
         },
-      ],
-      subtotal: calculatedPrice * quantity,
-    };
-
-    console.log(JSON.stringify(checkoutState));
-    console.log('Navigating to /checkout with state:', checkoutState);
-    navigate('/checkout', { state: checkoutState });
+        variant: selectedVariant,
+      },
+    ],
+    subtotal: calculatedPrice * quantity,
   };
+
+  console.log(JSON.stringify(checkoutState));
+  console.log('Navigating to /checkout with state:', checkoutState);
+  console.log('Checkout items built:', checkoutState.items);
+  navigate('/checkout', { state: checkoutState });
+};
+
 
   // --- tính giá dựa trên variant + pricing_rules ---
 
@@ -173,8 +185,32 @@ export default function BuyBox({
   const handleAddToCart = async (
     product: Product,
     quantity: number,
-    type: 'bulk' | 'subscription' | 'normal'
+    type: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
+    // 1️⃣ Tìm variant đã chọn
+    const selectedVariant = product.variants?.find(
+      (v) => v.id === selectedVariantId
+    );
+
+    // 2️⃣ Tìm pricing rule đúng variant + type
+    const selectedRule = product.pricing_rules?.find(
+      (r) => r.variant_sku === selectedVariant?.sku && r.type === type
+    );
+    console.log('Selected pricing rule:', selectedRule);
+
+    // 3️⃣ Gán vào product
+    product.selectedPricingRule =
+      selectedRule?.id && selectedRule.type
+        ? {
+            id: selectedRule.id,
+            type: selectedRule.type as
+              | 'bulk'
+              | 'subscription'
+              | 'normal'
+              | 'flash_sale',
+          }
+        : null;
+
     console.log('🛒 Add to Cart clicked:', {
       productId: product.id,
       productName: product.name,
@@ -183,19 +219,19 @@ export default function BuyBox({
       type,
       price: calculatedPrice,
       groupId,
+      pricingRuleId: product.selectedPricingRule?.id ?? null,
     });
+
     setLoading(true);
     try {
-      console.log('Before addToCart, quantity =', quantity);
-
       await addToCart(
         Number(product.id),
         quantity,
         selectedVariantId ?? undefined,
         type,
-        !!groupId
+        !!groupId,
+        product.selectedPricingRule?.id ?? null
       );
-      console.log('After addToCart, quantity =', quantity);
 
       if (showMessage) {
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
@@ -228,9 +264,10 @@ export default function BuyBox({
       }
 
       // chuẩn hoá quantity
-      const qty = Number.isFinite(Number(quantity)) && Number(quantity) > 0
-        ? Number(quantity)
-        : 1;
+      const qty =
+        Number.isFinite(Number(quantity)) && Number(quantity) > 0
+          ? Number(quantity)
+          : 1;
 
       setLoading(true);
 
@@ -289,7 +326,9 @@ export default function BuyBox({
         {/* Nút tạo mua chung (chỉ hiện khi không ở group mode) */}
         {!groupId && (
           <button
-            onClick={() => navigate(`/group-orders/store/${product?.store?.id}/create`)}
+            onClick={() =>
+              navigate(`/group-orders/store/${product?.store?.id}/create`)
+            }
             className="absolute right-4 top-4 flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm hover:shadow-md hover:bg-slate-50 transition-all"
           >
             <Users size={16} />
@@ -400,8 +439,11 @@ export default function BuyBox({
           {groupId ? (
             <>
               <button
-                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${!availability || loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                  }`}
+                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
+                  !availability || loading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:opacity-90'
+                }`}
                 style={{ background: TIKI_RED }}
                 onClick={handleAddToGroup}
                 disabled={!availability || loading}
@@ -410,7 +452,13 @@ export default function BuyBox({
               </button>
               <button
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => handleAddToCart(product as any, quantity, selectedType ?? 'normal')}
+                onClick={() =>
+                  handleAddToCart(
+                    product as any,
+                    quantity,
+                    selectedType ?? 'normal'
+                  )
+                }
                 disabled={loading}
               >
                 Thêm vào giỏ
@@ -419,8 +467,11 @@ export default function BuyBox({
           ) : (
             <>
               <button
-                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${!availability || loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
-                  }`}
+                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
+                  !availability || loading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:opacity-90'
+                }`}
                 style={{ background: TIKI_RED }}
                 onClick={handleBuyNow}
                 disabled={!availability || loading}
@@ -429,7 +480,13 @@ export default function BuyBox({
               </button>
               <button
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 hover:bg-slate-50"
-                onClick={() => handleAddToCart(product as any, quantity, selectedType ?? 'normal')}
+                onClick={() =>
+                  handleAddToCart(
+                    product as any,
+                    quantity,
+                    selectedType ?? 'normal'
+                  )
+                }
                 disabled={loading}
               >
                 Thêm vào giỏ

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
+import { getGroupOrderWithOrders } from './../../../service/groupOrderItems.service';
 
 /* ===== Helpers ===== */
 type OrderTab =
@@ -169,6 +170,23 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<any | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
+  const [groupSummary, setGroupSummary] = useState<any | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (order?.group_order_id) {
+          const data = await getGroupOrderWithOrders(Number(order.group_order_id));
+          // API trả { message, data: { groupInfo, orders } } => hàm đã .data.data
+          setGroupSummary(data?.groupInfo ?? null);
+        } else {
+          setGroupSummary(null);
+        }
+      } catch (e) {
+        setGroupSummary(null);
+      }
+    })();
+  }, [order?.group_order_id]);
 
   useEffect(() => {
     if (!id) return;
@@ -324,6 +342,44 @@ export default function OrderDetailPage() {
               </div>
             </div>
           </section>
+
+
+          {/* Nhóm mua chung (nếu có) */}
+          {groupSummary && (
+            <section className="rounded-lg border border-slate-100 p-3">
+              <div className="flex items-center justify-between">
+                <div className="font-medium text-slate-900">
+                  Mua chung: {groupSummary.name || `Group #${groupSummary.id}`}
+                </div>
+                <a
+                  href={`/group-orders/${groupSummary.id}/detail`}
+                  className="text-sm text-sky-600 hover:underline"
+                >
+                  Xem nhóm
+                </a>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2 text-sm text-slate-700">
+                <div>
+                  Giao hàng:{' '}
+                  <span className="font-semibold">
+                    {groupSummary.delivery_mode === 'member_address'
+                      ? 'Giao riêng từng người'
+                      : 'Giao về chủ nhóm'}
+                  </span>
+                </div>
+                <div>
+                  Giảm giá nhóm:{' '}
+                  <span className="font-semibold">
+                    {(Number(groupSummary.discount_percent || 0)).toLocaleString()}%
+                  </span>
+                </div>
+                <div>
+                  Thành viên:{' '}
+                  <span className="font-semibold">{groupSummary.members?.length ?? 0}</span>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Sản phẩm */}
           <section className="rounded-lg border border-slate-100 p-3">

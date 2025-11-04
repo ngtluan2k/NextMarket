@@ -143,10 +143,10 @@ export class UserService {
         'roles.role.rolePermissions.permission',
       ],
     });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
     const isMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    if (!isMatch) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
     const roles = user.roles.map((ur) => ur.role.name);
     const permissions = user.roles.flatMap((ur) =>
@@ -363,14 +363,71 @@ export class UserService {
 
       await this.mailService.send(
         email,
-        'Mã đặt lại mật khẩu - EveryMart',
+        '🔒 Mã đặt lại mật khẩu - EveryMart',
         `
-          <p>Xin chào,</p>
-          <p>Mã OTP đặt lại mật khẩu của bạn là:
-            <b style="font-size:18px;letter-spacing:2px">${code}</b>
-          </p>
-          <p>Mã có hiệu lực trong 2 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
-        `
+  <div style="
+    font-family: Arial, sans-serif;
+    max-width: 480px;
+    margin: 0 auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  ">
+    <!-- Header -->
+    <div style="
+      background-color: #1677ff;
+      color: white;
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    ">
+      EveryMart
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 24px; color: #333;">
+      <p>Xin chào,</p>
+      <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản EveryMart.</p>
+      <p style="margin-bottom: 20px;">Mã OTP của bạn là:</p>
+
+      <div style="
+        text-align: center;
+        font-size: 26px;
+        letter-spacing: 4px;
+        font-weight: bold;
+        color: #1677ff;
+        border: 2px dashed #1677ff;
+        border-radius: 8px;
+        padding: 12px;
+        display: inline-block;
+      ">
+        ${code}
+      </div>
+
+      <p style="margin-top: 24px;">
+        Mã này sẽ <b>hết hiệu lực sau 2 phút</b>.  
+        Vui lòng không chia sẻ mã này cho bất kỳ ai.
+      </p>
+
+      <p style="margin-top: 24px; color: #666; font-size: 13px;">
+        Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="
+      background-color: #f8f8f8;
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #999;
+    ">
+      © ${new Date().getFullYear()} EveryMart. Mọi quyền được bảo lưu.
+    </div>
+  </div>
+  `
       );
     }
 

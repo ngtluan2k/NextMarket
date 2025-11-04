@@ -29,11 +29,12 @@ export class OrderStatusHistory {
   @Generated('uuid')
   uuid!: string;
 
+
   @ManyToOne(() => Order, (order) => order.orderStatusHistory, {
     nullable: false,
   })
   @JoinColumn({ name: 'order_id' })
-  order!: Order;
+  order?: Order;
 
   @Column({
     name: 'old_status',

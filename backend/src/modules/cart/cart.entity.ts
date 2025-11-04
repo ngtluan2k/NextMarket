@@ -17,9 +17,9 @@ export class ShoppingCart {
   @PrimaryGeneratedColumn()
   id!: number;
 
-@Column({ type: 'char', unique: true })
-@Generated('uuid')
-uuid!: string;
+  @Column({ type: 'varchar', unique: true })
+  @Generated('uuid')
+  uuid!: string;
 
   @OneToOne(() => User, (user) => user.cart)
   @JoinColumn({ name: 'user_id' })
@@ -81,8 +81,11 @@ export class CartItem {
   added_at!: Date;
 
   @Column({ type: 'varchar' })
-  type!: 'bulk' | 'subscription'| 'normal';
+  type!: 'bulk' | 'subscription'| 'normal' | 'flash_sale';
   
   @Column({ type: 'boolean', default: false })
   is_group!: boolean
+
+  @Column({ type: 'int', nullable: true })
+  pricing_rule_id?: number; // <-- thêm cột này
 }

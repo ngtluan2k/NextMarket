@@ -6,19 +6,20 @@ interface CartContextType {
     productId: number,
     quantity?: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal',
-    isGroup?: boolean
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
+    isGroup?: boolean,
+    pricingRuleId?: number | null
   ) => Promise<void>;
   removeFromCart: (
     productId: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal'
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => Promise<void>;
   updateQuantity: (
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal',
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
   ) => Promise<void>;
   clearCart: () => void;
   loadCart: () => void;
@@ -93,7 +94,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     productId: number,
     quantity = 1,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal',
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
     isGroup = false
   ) => {
     const currentToken = localStorage.getItem('token');
@@ -123,7 +124,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   const removeFromCart = async (
     productId: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal'
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
@@ -155,8 +156,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     productId: number,
     quantity: number,
     variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal'
+    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
   ) => {
+    console.log('FE updateQuantity called with:', {
+      productId,
+      quantity,
+      variantId,
+      type,
+    }); // <-- log ở đây
+
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       alert('Vui lòng đăng nhập để cập nhật số lượng');
@@ -169,7 +177,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type }),
+        body: JSON.stringify({
+          productId,
+          quantity,
+          variantId,
+          type,
+        }),
       });
       if (response.ok) {
         await loadCart();
