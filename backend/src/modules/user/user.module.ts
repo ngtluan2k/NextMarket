@@ -16,6 +16,7 @@ import { JwtStrategy } from '../../common/auth/jwt.strategy';
 import { ShoppingCart } from '../cart/cart.entity';
 import { OtpService } from '../../common/otp/otp.service';
 import { MailService } from '../../common/mail/mail.service';
+import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MailService } from '../../common/mail/mail.service';
       RolePermission,
       UserRole,
       ShoppingCart,
+      VoucherCollection,
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || '123', // nên đưa vào .env

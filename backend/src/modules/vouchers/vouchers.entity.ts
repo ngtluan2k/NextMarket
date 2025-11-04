@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { Store } from '../store/store.entity';
-
+import {VoucherCollection} from '../voucher-collection/voucher-collection.entity';
 export enum VoucherType {
   SHIPPING = 0,
   PRODUCT = 1,
@@ -133,6 +133,9 @@ export class Voucher {
   excluded_product_ids?: number[];
 
   @Column({ type: 'json', nullable: true })
+  applicable_user_ids?: number[];
+
+  @Column({ type: 'json', nullable: true })
   user_conditions?: {
     min_orders?: number;
     vip_level?: string[];
@@ -159,4 +162,7 @@ export class Voucher {
 
   @OneToMany(() => VoucherUsage, (usage) => usage.voucher)
   usages!: VoucherUsage[];
+
+  @OneToMany(() => VoucherCollection, (collection) => collection.voucher)
+  collections!: VoucherCollection[];
 }

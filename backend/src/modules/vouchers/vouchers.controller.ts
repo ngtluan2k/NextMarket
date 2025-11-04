@@ -6,6 +6,7 @@ import {
   Req,
   UseGuards,
   BadRequestException,
+  Param,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -69,5 +70,17 @@ export class VouchersController {
       calculateDiscountDto.storeId,
       calculateDiscountDto.orderAmount
     );
+  }
+  @Post(':id/collect')
+  @ApiOperation({ summary: 'Thu thập voucher' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({ status: 200, description: 'Thu thập voucher thành công' })
+  @ApiResponse({ status: 400, description: 'Lỗi khi thu thập voucher' })
+  async collect(@Param('id') id: number, @Req() req: any) {
+    const userId = req.user?.sub;
+    if (!userId) throw new BadRequestException('Người dùng chưa được xác thực');
+    await this.vouchersService.collectVoucher(id, userId);
+    return { message: 'Thu thập voucher thành công' };
   }
 }
