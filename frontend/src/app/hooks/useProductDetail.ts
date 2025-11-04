@@ -34,6 +34,8 @@ export function useProductDetail(slug: string) {
       .then((res) => res.json())
       .then((json) => {
         setProduct(json.data);
+                console.log(json.data)
+
         // nếu có combos, giả sử api trả về luôn hoặc lọc trong json.data
         setCombos(json.data.combos ?? []);
       })

@@ -387,109 +387,101 @@ export class VouchersService {
   }
 
   async getAvailableVouchers(
-    userId?: number,
-    storeId?: number,
-    filterByStoreOnly = false
-  ): Promise<Voucher[]> {
-    const now = new Date();
+  userId?: number,
+  storeId?: number,
+  filterByStoreOnly = false
+): Promise<Voucher[]> {
+  const now = new Date();
 
-    const queryBuilder = this.vouchersRepository
-      .createQueryBuilder('voucher')
-      .leftJoinAndSelect('voucher.store', 'store')
-      .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
-      .andWhere('voucher.start_date <= :now', { now })
-      .andWhere('voucher.end_date >= :now', { now });
+  const queryBuilder = this.vouchersRepository
+    .createQueryBuilder('voucher')
+    .leftJoinAndSelect('voucher.store', 'store')
+    .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
+    .andWhere('voucher.start_date <= :now', { now })
+    .andWhere('voucher.end_date >= :now', { now });
 
-    if (storeId && storeId !== 0 && filterByStoreOnly) {
-      queryBuilder
-        .andWhere(
-          new Brackets((qb) => {
-            qb.where('voucher.store_id = :storeId', { storeId });
-
-            if (storeId) {
-              qb.orWhere(
-                'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
-                { storeId: storeId.toString() }
-              );
-            }
-          })
-        )
-        .andWhere('voucher.store_id IS NOT NULL');
-    } else if (storeId && storeId !== 0 && !filterByStoreOnly) {
-      queryBuilder.andWhere(
+  if (storeId && storeId !== 0 && filterByStoreOnly) {
+    queryBuilder
+      .andWhere(
         new Brackets((qb) => {
-          // Admin/Platform vouchers (store_id = NULL)
-          qb.where('voucher.store_id IS NULL');
-
-          // Store-specific vouchers
-          qb.orWhere('voucher.store_id = :storeId', { storeId });
-
-          // Multi-store vouchers
-          if (storeId) {
-            qb.orWhere(
-              'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
-              { storeId: storeId.toString() }
-            );
-          }
+          qb.where('voucher.store_id = :storeId', { storeId })
+            .orWhere(`voucher.applicable_store_ids @> to_jsonb(:storeId::int)`, {
+              storeId,
+            });
         })
-      );
-    } else {
-      console.log('🌐 No storeId provided, returning ALL vouchers');
+      )
+      .andWhere('voucher.store_id IS NOT NULL');
+  } else if (storeId && storeId !== 0 && !filterByStoreOnly) {
+    queryBuilder.andWhere(
+      new Brackets((qb) => {
+        // Admin/Platform vouchers (store_id = NULL)
+        qb.where('voucher.store_id IS NULL')
+          // Store-specific vouchers
+          .orWhere('voucher.store_id = :storeId', { storeId })
+          // Multi-store vouchers (Postgres jsonb contains)
+          .orWhere(`voucher.applicable_store_ids @> to_jsonb(:storeId::int)`, {
+            storeId,
+          });
+      })
+    );
+  } else {
+    console.log('🌐 No storeId provided, returning ALL vouchers');
+  }
+
+  const vouchers = await queryBuilder
+    .orderBy('voucher.priority', 'DESC')
+    .addOrderBy('voucher.created_at', 'DESC')
+    .getMany();
+
+  console.log(
+    `📦 Found ${vouchers.length} vouchers before user-specific filtering`
+  );
+
+  const availableVouchers = [];
+  for (const voucher of vouchers) {
+    // Check total usage limit
+    if (
+      voucher.total_usage_limit &&
+      voucher.total_used_count >= voucher.total_usage_limit
+    ) {
+      continue;
     }
 
-    const vouchers = await queryBuilder
-      .orderBy('voucher.priority', 'DESC')
-      .addOrderBy('voucher.created_at', 'DESC')
-      .getMany();
+    // Check collection limit
+    if (
+      voucher.collection_limit &&
+      voucher.collected_count >= voucher.collection_limit
+    ) {
+      continue;
+    }
 
-    console.log(
-      `📦 Found ${vouchers.length} vouchers before user-specific filtering`
-    );
-
-    const availableVouchers = [];
-    for (const voucher of vouchers) {
-      // Check total usage limit
-      if (
-        voucher.total_usage_limit &&
-        voucher.total_used_count >= voucher.total_usage_limit
-      ) {
+    if (userId) {
+      // Check per-user usage limit
+      const userUsageCount = await this.voucherUsageRepository.count({
+        where: { voucher: { id: voucher.id }, user: { id: userId } },
+      });
+      if (userUsageCount >= voucher.per_user_limit) {
         continue;
       }
 
-      // Check collection limit
-      if (
-        voucher.collection_limit &&
-        voucher.collected_count >= voucher.collection_limit
-      ) {
-        continue;
-      }
-
-      if (userId) {
-        // Check per-user usage limit
-        const userUsageCount = await this.voucherUsageRepository.count({
-          where: { voucher: { id: voucher.id }, user: { id: userId } },
+      // Check new user only
+      if (voucher.new_user_only) {
+        const userOrders = await this.ordersRepository.count({
+          where: { user: { id: userId } },
         });
-        if (userUsageCount >= voucher.per_user_limit) {
+        if (userOrders > 0) {
           continue;
         }
-
-        // Check new user only
-        if (voucher.new_user_only) {
-          const userOrders = await this.ordersRepository.count({
-            where: { user: { id: userId } },
-          });
-          if (userOrders > 0) {
-            continue;
-          }
-        }
       }
-
-      availableVouchers.push(voucher);
     }
 
-    console.log(` Returning ${availableVouchers.length} available vouchers`);
-    return availableVouchers;
+    availableVouchers.push(voucher);
   }
+
+  console.log(`🎟 Returning ${availableVouchers.length} available vouchers`);
+  return availableVouchers;
+}
+
 
   async getAvailableVouchersForAnyStore(): Promise<Voucher[]> {
   const now = new Date();
