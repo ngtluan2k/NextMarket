@@ -39,6 +39,6 @@
 //   @Column({ type: 'decimal', precision: 10, scale: 2 })
 //   price!: number;
 
-//   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+//   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
 //   added_at!: Date;
 // }

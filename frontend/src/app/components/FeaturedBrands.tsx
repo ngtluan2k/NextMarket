@@ -105,18 +105,8 @@ export default function FeaturedBrands({
     let cancelled = false;
 
     const apply = (arr: any[], tag: string) => {
-      if (DEBUG) {
-        console.groupCollapsed(`[FeaturedBrands] ${tag} → normalize`);
-        console.log('length:', arr.length, 'first:', arr[0]);
-        console.groupEnd();
-      }
       const mapped = arr.map(normalizeBrand);
       if (!cancelled) setList(mapped);
-      if (DEBUG) {
-        console.groupCollapsed('[FeaturedBrands] list after normalize');
-        console.table(mapped.map(({ id, name }) => ({ id, name })));
-        console.groupEnd();
-      }
       return mapped;
     };
 

@@ -257,7 +257,9 @@ export class StoreController {
     }
     const productCount = await this.productService.countByStoreId(store.id);
 
-    // Chỉ trả về thông tin profile, bank, address, info, identification
+    // Tính số lượng follower
+    const followerCount = store.followers ? store.followers.length : 0;
+
     const profileData = {
       id: store.id,
       name: store.name,
@@ -269,13 +271,10 @@ export class StoreController {
       status: store.status,
       created_at: store.created_at,
       updated_at: store.updated_at,
-      storeInformation: store.storeInformation,
-      storeIdentification: store.storeIdentification,
-      bankAccount: store.bankAccount,
-      address: store.address,
       avg_rating: store.avg_rating,
       review_count: store.review_count,
       totalProducts: productCount,
+      followerCount, // dùng số lượng thay vì mảng
     };
 
     return {

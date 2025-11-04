@@ -36,6 +36,8 @@ function calcAge(dob: string): number | null {
   return age;
 }
 
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+
 export function validateLogin(data: LoginPayload): {
   ok: boolean;
   errors: FieldError<keyof LoginPayload>[];
@@ -99,9 +101,15 @@ export function validateRegister(data: RegisterPayload): {
     errors.push({ field: 'email', message: 'Email không hợp lệ' });
   }
 
-  // password
-  if (!data.password || data.password.length < 6) {
-    errors.push({ field: 'password', message: 'Mật khẩu tối thiểu 6 ký tự' });
+  //password
+  if (!data.password) {
+    errors.push({ field: 'password', message: 'Vui lòng nhập mật khẩu' });
+  } else if (!STRONG_PASSWORD_REGEX.test(data.password)) {
+    errors.push({
+      field: 'password',
+      message:
+        'Mật khẩu phải có ít nhất 6 ký tự, gồm ít nhất 1 chữ hoa và 1 ký tự đặc biệt',
+    });
   }
 
   // country

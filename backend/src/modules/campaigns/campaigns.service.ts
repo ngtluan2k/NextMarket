@@ -68,7 +68,7 @@ export class CampaignsService {
   async getAllCampaigns(): Promise<Campaign[]> {
     return this.campaignRepo.find({
       order: { starts_at: 'DESC' },
-      relations: ['images', 'vouchers', 'sections', 'stores.store'], // load quan hệ nếu cần
+      relations: ['images', 'vouchers', 'stores.store'], // load quan hệ nếu cần
     });
   }
 

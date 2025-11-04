@@ -13,26 +13,27 @@ export class FlashSaleSchedule {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'nvarchar', length: 255 })
+  @Column({ type: 'varchar', length: 255 })
   name!: string;
 
-  @Column({ type: 'nvarchar', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   description?: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   starts_at!: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   ends_at!: Date;
 
-  @Column({ type: 'nvarchar', length: 50, default: 'upcoming' })
+  @Column({ type: 'varchar', length: 50, default: 'upcoming' })
   status!: 'upcoming' | 'active' | 'ended';
 
-  @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date;
+@CreateDateColumn({ type: 'timestamp', precision: 6 })
+created_at!: Date;
 
-  @UpdateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
-  updated_at!: Date;
+@UpdateDateColumn({ type: 'timestamp', precision: 6 })
+updated_at!: Date;
+
 
   // 1 schedule có thể có nhiều pricing rules
   @OneToMany(() => PricingRules, (rule) => rule.schedule)
