@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../../config/api';
+
 export type CommissionRule = {
   id: number;
   program_id: number | null;
@@ -40,7 +42,11 @@ export type PreviewCommissionResponse = {
   };
 };
 
-const API_BASE = 'http://localhost:3000';
+export type CalculateMethod = {
+  uuid: string;
+  name: string;
+  description: string;
+};
 
 function authHeaders() {
   const token = localStorage.getItem('token') || '';
@@ -51,13 +57,17 @@ function authHeaders() {
 }
 
 export async function listRules(): Promise<CommissionRule[]> {
-  const res = await fetch(`${API_BASE}/affiliate-rules`, { headers: authHeaders() });
+  const res = await fetch(`${API_BASE_URL}/affiliate-rules`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(`Failed to fetch rules (${res.status})`);
   return await res.json();
 }
 
-export async function createRule(body: Partial<CommissionRule> & { level: number; rate_percent: number }) {
-  const res = await fetch(`${API_BASE}/affiliate-rules`, {
+export async function createRule(
+  body: Partial<CommissionRule> & { level: number; rate_percent: number }
+) {
+  const res = await fetch(`${API_BASE_URL}/affiliate-rules`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -67,7 +77,7 @@ export async function createRule(body: Partial<CommissionRule> & { level: number
 }
 
 export async function updateRule(id: number, body: Partial<CommissionRule>) {
-  const res = await fetch(`${API_BASE}/affiliate-rules/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/affiliate-rules/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -77,7 +87,7 @@ export async function updateRule(id: number, body: Partial<CommissionRule>) {
 }
 
 export async function deleteRule(id: number) {
-  const res = await fetch(`${API_BASE}/affiliate-rules/${id}`, {
+  const res = await fetch(`${API_BASE_URL}/affiliate-rules/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -85,23 +95,39 @@ export async function deleteRule(id: number) {
   return await res.json();
 }
 
-export async function previewCommission(request: PreviewCommissionRequest): Promise<PreviewCommissionResponse> {
-  const res = await fetch(`${API_BASE}/affiliate-rules/preview-commission`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(request),
-  });
+export async function previewCommission(
+  request: PreviewCommissionRequest
+): Promise<PreviewCommissionResponse> {
+  const res = await fetch(
+    `${API_BASE_URL}/affiliate-rules/preview-commission`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(request),
+    }
+  );
   if (!res.ok) throw new Error(`Failed to preview commission (${res.status})`);
   return await res.json();
 }
 
 export async function createDefaultRulesForProgram(programId: number) {
-  const res = await fetch(`${API_BASE}/affiliate-rules/create-default/${programId}`, {
-    method: 'POST',
-    headers: authHeaders(),
-  });
-  if (!res.ok) throw new Error(`Failed to create default rules (${res.status})`);
+  const res = await fetch(
+    `${API_BASE_URL}/affiliate-rules/create-default/${programId}`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+    }
+  );
+  if (!res.ok)
+    throw new Error(`Failed to create default rules (${res.status})`);
   return await res.json();
 }
 
-
+export async function getAllCalculateMethod(): Promise<CalculateMethod[]> {
+  const res = await fetch(`${API_BASE_URL}/calculation-method`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to get calculate methods (${res.status})`);
+  return await res.json();
+}

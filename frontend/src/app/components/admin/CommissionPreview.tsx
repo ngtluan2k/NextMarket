@@ -29,8 +29,8 @@ import {
   EyeOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { previewCommission, PreviewCommissionResponse, listRules } from '../../../service/affiliate-rules.service';
-import { AffiliateProgram } from '../../../service/affiliate-programs.service';
+import { previewCommission, PreviewCommissionResponse, listRules } from '../../../service/afiliate/affiliate-rules.service';
+import { AffiliateProgram } from '../../../service/afiliate/affiliate-programs.service';
 
 const { Text } = Typography;
 
@@ -97,7 +97,7 @@ export default function CommissionPreview({ affiliatePrograms }: Props) {
     }
   }, [form]);
 
-  const quickCalculate = useCallback((amount: number, maxLevels: number = 5) => {
+  const quickCalculate = useCallback((amount: number, maxLevels = 5) => {
     form.setFieldsValue({ amount, maxLevels });
     handlePreview({ amount, maxLevels, programId: null });
   }, [form, handlePreview]);

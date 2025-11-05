@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isAffiliateUser } from '../../../service/affiliate.service';
-import { decodeJwtToken } from '../../../service/auth.helper';
+import { isAffiliateUser } from '../../../../service/afiliate/affiliate.service';
+import { decodeJwtToken } from '../../../../service/auth.helper';
 
 interface JwtPayload {
   sub: number;

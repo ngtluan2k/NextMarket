@@ -62,6 +62,7 @@ import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.mod
 
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
+import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
 
 @Module({
   imports: [
@@ -98,7 +99,7 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
         ssl: true,
       }),
     }),
-
+    
     ProductModule,
     UserModule,
     CategoryModule,
@@ -146,6 +147,7 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
     AffiliateRegistrationModule,
     AffiliatePlatformModule,
     AffiliateRegistrationPlatformModule,
+    CalculationMethodModule,
     InventoryTransactionModule,
     GroupOrdersModule,
     AdminModule,

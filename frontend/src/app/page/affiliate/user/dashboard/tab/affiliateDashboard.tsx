@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { Button, Spin } from 'antd';
 import { Card } from 'antd';
-import { getDashboardStats, DashboardStats } from '../../../../../service/affiliate-links.service';
-import { fetchMyWallet } from '../../../../../service/wallet.service';
+import { getDashboardStats, DashboardStats } from "../../../../../../service/afiliate/affiliate-links.service";
+import { fetchMyWallet } from '../../../../../../service/wallet.service';
 
 const timeFilters = ['12 tháng', '30 ngày', '7 ngày', '24 giờ'];
 

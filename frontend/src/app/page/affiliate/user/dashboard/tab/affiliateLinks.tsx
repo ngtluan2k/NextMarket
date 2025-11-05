@@ -23,9 +23,9 @@ import {
   MyLinksResponse,
   Program,
   ProgramsResponse,
-} from '../../../../types/affiliate-links';
-import { getAllProducts, ProductOption, VariantOption } from '../../../../../service/product-helper.service';
-import { productService, Product } from '../../../../../service/product.service';
+} from "../../../../../types/affiliate-links";
+import { getAllProducts, ProductOption, VariantOption } from "../../../../../../service/product-helper.service";
+import { productService, Product } from '../../../../../../service/product.service';
 
 const { Title, Text } = Typography;
 const API_BASE = 'http://localhost:3000';

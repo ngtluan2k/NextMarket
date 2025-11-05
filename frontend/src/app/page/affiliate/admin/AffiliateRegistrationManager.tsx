@@ -185,7 +185,7 @@ const AffiliateRegistrationManager: React.FC = () => {
     },
   ];
 
-  // ==== Thống kê ====
+
   const total = registrations.length;
   const approved = registrations.filter((r) => r.status === 'APPROVED').length;
   const rejected = registrations.filter((r) => r.status === 'REJECTED').length;

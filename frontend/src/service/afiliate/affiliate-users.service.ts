@@ -1,12 +1,11 @@
-import { api } from '../config/api';
+import { api } from '../../config/api';
 import {
   AffiliateLink,
   AffiliateProduct,
   CreateAffiliateLinkPayload,
-} from '../app/types/affiliate-links';
+} from '../../app/types/affiliate-links';
 import { getAuthHeaders } from './affiliate.service';
-
-const API_BASE_URL = 'http://localhost:3000/affiliate-links';
+import { API_BASE_URL } from '../../app/api/api';
 
 const handleApiError = (error: any) => {
   console.error('API Error:', error);

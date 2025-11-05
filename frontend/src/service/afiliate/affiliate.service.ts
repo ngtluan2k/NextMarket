@@ -2,10 +2,8 @@ import axios from 'axios';
 import {
   AffiliateProgram,
   CreateAffiliateProgramDto,
-} from '../app/types/affiliate';
-
-const API_BASE_URL = 'http://localhost:3000';
-
+} from '../../app/types/affiliate';
+import { API_BASE_URL } from '../../app/api/api';
 export const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   if (!token) {

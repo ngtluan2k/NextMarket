@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Tree, Tooltip, Tag, Card, Statistic, Row, Col } from 'antd';
+import { Tree, Tag, Card, Statistic, Row, Col } from 'antd';
 import type { TreeDataNode, TreeProps } from 'antd';
-import { DollarOutlined, UserOutlined, PercentageOutlined } from '@ant-design/icons';
+import { DollarOutlined} from '@ant-design/icons';
 
 interface CommissionInfo {
   totalEarned: number;
@@ -134,10 +134,10 @@ const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = fa
     return (
       <div className="ml-2 text-xs text-gray-600">
         <div className="flex items-center gap-2 mb-1">
-          <Tag color="blue" size="small">
+          <Tag color="blue">
             Level {commission.currentLevel}
           </Tag>
-          <Tag color="green" size="small">
+          <Tag color="green" >
             {commission.ratePercent}%
           </Tag>
         </div>

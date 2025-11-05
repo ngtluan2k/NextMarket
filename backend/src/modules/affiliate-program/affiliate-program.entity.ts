@@ -6,7 +6,12 @@ export class AffiliateProgram {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', unique: true })
+  @Column({
+    type: 'uuid',
+    unique: true,
+    nullable: false,
+    default: () => 'gen_random_uuid()',
+  })
   uuid!: string;
 
   @Column({ length: 255 })
