@@ -1,6 +1,6 @@
 // src/calculation-method/calculation-method.controller.ts
 import { Controller, Get } from '@nestjs/common';
-import { CalculationMethodService } from '../service/calculate-commission.service';
+import { CalculationMethodService } from '../../affiliate-rules/service/rule-calculator.service';
 import { Roles } from '../../../common/auth/roles.decorator';
 
 @Controller('calculation-method')

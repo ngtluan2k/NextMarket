@@ -45,19 +45,19 @@ export class AffiliateTreeController {
     };
   }
 
-  @Get('with-commissions/:userId')
-  @ApiOperation({ summary: 'Lấy cây affiliate với thông tin commission cho từng user' })
-  @ApiQuery({ name: 'maxDepth', required: false, type: Number, description: 'Default is 10' })
-  async getAffiliateTreeWithCommissions(
-    @Param('userId', ParseIntPipe) userId: number,
-    @Query('maxDepth', new DefaultValuePipe(10), ParseIntPipe) maxDepth: number,
-  ) {
-    const treeData = await this.affiliateTreeService.getAffiliateTreeWithCommissions(userId, maxDepth);
-    return {
-      message: 'Lấy cây affiliate với commission thành công',
-      data: treeData,
-    };
-  }
+  // @Get('with-commissions/:userId')
+  // @ApiOperation({ summary: 'Lấy cây affiliate với thông tin commission cho từng user' })
+  // @ApiQuery({ name: 'maxDepth', required: false, type: Number, description: 'Default is 10' })
+  // async getAffiliateTreeWithCommissions(
+  //   @Param('userId', ParseIntPipe) userId: number,
+  //   @Query('maxDepth', new DefaultValuePipe(10), ParseIntPipe) maxDepth: number,
+  // ) {
+  //   const treeData = await this.affiliateTreeService.getAffiliateTreeWithCommissions(userId, maxDepth);
+  //   return {
+  //     message: 'Lấy cây affiliate với commission thành công',
+  //     data: treeData,
+  //   };
+  // }
 
   @Get('commission-summary/:userId')
   @ApiOperation({ summary: 'Lấy tổng kết commission cho một user' })
@@ -88,17 +88,17 @@ export class AffiliateTreeController {
     };
   }
 
-  @Post('set-commission-rules')
-  @Roles('Admin')
-  @ApiOperation({ summary: 'Admin quy định mức affiliate cho chuỗi người trong cây' })
-  @ApiBody({ type: SetCommissionRulesDto })
-  async setCommissionRulesForUsers(@Body() dto: SetCommissionRulesDto) {
-    const results = await this.affiliateTreeService.setCommissionRulesForUsers(dto.rules, dto.programId);
-    return {
-      message: 'Cập nhật commission rules thành công',
-      data: results,
-    };
-  }
+  // @Post('set-commission-rules')
+  // @Roles('Admin')
+  // @ApiOperation({ summary: 'Admin quy định mức affiliate cho chuỗi người trong cây' })
+  // @ApiBody({ type: SetCommissionRulesDto })
+  // async setCommissionRulesForUsers(@Body() dto: SetCommissionRulesDto) {
+  //   const results = await this.affiliateTreeService.setCommissionRulesForUsers(dto.rules, dto.programId);
+  //   return {
+  //     message: 'Cập nhật commission rules thành công',
+  //     data: results,
+  //   };
+  // }
 
   @Get('commission-rules-for-users')
   @Roles('Admin')

@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -10,71 +12,79 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AffiliateRulesService } from './affiliate-rules.service';
-import { CreateCommissionRuleDto } from './dto/create-commission-rule.dto';
-import { UpdateCommissionRuleDto } from './dto/update-commission-rule.dto';
-import { PreviewCommissionDto } from './dto/preview-commission.dto';
+import { CreateRuleDto } from './dto/create-commission-rule.dto';
+// import { UpdateCommissionRuleDto } from './dto/update-commission-rule.dto';
+// import { PreviewCommissionDto } from './dto/preview-commission.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
-import { Roles } from '../../common/auth/roles.decorator';
+import {
+  PreviewRuleDto,
+  PreviewRuleResponseDto,
+} from './dto/PreviewRuleDto.dto';
+import { CalculationMethodService } from './service/rule-calculator.service';
 @Controller('affiliate-rules')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AffiliateRulesController {
-  constructor(private readonly service: AffiliateRulesService) {}
+  constructor(
+    private readonly service: AffiliateRulesService,
+    private readonly calculatorService: CalculationMethodService
+  ) {}
 
   @Post()
-  @Roles('Admin')
-  create(@Body() dto: CreateCommissionRuleDto) {
+  // @Roles('Admin')
+  create(@Body() dto: CreateRuleDto) {
     return this.service.create(dto);
   }
 
   @Get()
-  @Roles('Admin')
+  // @Roles('Admin')
   findAll() {
     return this.service.findAll();
   }
 
-  @Get(':id')
-  @Roles('Admin')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.service.findOne(id);
+  // @Get(':id')
+  // @Roles('Admin')
+  // findOne(@Param('id', ParseIntPipe) id: number) {
+  //   return this.service.findOne(id);
+  // }
+
+  @Post('preview')
+  // @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  preview(@Body() dto: PreviewRuleDto): PreviewRuleResponseDto {
+    return this.calculatorService.calculatePreview(dto);
   }
 
-  @Put(':id')
-  @Roles('Admin')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateCommissionRuleDto
-  ) {
-    return this.service.update(id, dto);
-  }
+  // @Put(':id')
+  // @Roles('Admin')
+  // update(
+  //   @Param('id', ParseIntPipe) id: number,
+  //   @Body() dto: UpdateCommissionRuleDto
+  // ) {
+  //   return this.service.update(id, dto);
+  // }
 
-  @Delete(':id')
-  @Roles('Admin')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id);
-  }
+  // @Delete(':id')
+  // @Roles('Admin')
+  // remove(@Param('id', ParseIntPipe) id: number) {
+  //   return this.service.remove(id);
+  // }
 
-  @Get('status')
-  @Roles('Admin')
-  checkStatus() {
-    return this.service.checkRulesStatus();
-  }
+  // @Get('status')
+  // @Roles('Admin')
+  // checkStatus() {
+  //   return this.service.checkRulesStatus();
+  // }
 
-  @Post('cleanup')
-  @Roles('Admin')
-  validateAndCleanup() {
-    return this.service.validateAndCleanupRules();
-  }
+  // @Post('preview-commission')
+  // @Roles('Admin')
+  // async previewCommission(@Body() dto: PreviewCommissionDto) {
+  //   return this.service.previewCommission(dto);
+  // }
 
-  @Post('preview-commission')
-  @Roles('Admin')
-  async previewCommission(@Body() dto: PreviewCommissionDto) {
-    return this.service.previewCommission(dto);
-  }
-
-  @Post('create-default/:programId')
-  @Roles('Admin')
-  async createDefaultRules(@Param('programId', ParseIntPipe) programId: number) {
-    return this.service.createDefaultRules(programId);
-  }
+  // @Post('create-default/:programId')
+  // @Roles('Admin')
+  // async createDefaultRules(@Param('programId', ParseIntPipe) programId: number) {
+  //   return this.service.createDefaultRules(programId);
+  // }
 }

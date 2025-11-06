@@ -1,7 +1,22 @@
 import React from 'react';
-import { Card, Avatar, Descriptions, Tag, Statistic, Row, Col, Divider } from 'antd';
-import { UserOutlined, PhoneOutlined, MailOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
-import { User } from '../../../service/user-helper.service';
+import {
+  Card,
+  Avatar,
+  Descriptions,
+  Tag,
+  Statistic,
+  Row,
+  Col,
+  Divider,
+} from 'antd';
+import {
+  UserOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  CalendarOutlined,
+  DollarOutlined,
+} from '@ant-design/icons';
+import { User } from '../../../../../service/user-helper.service';
 import dayjs from 'dayjs';
 
 interface CommissionInfo {
@@ -18,13 +33,17 @@ interface UserInfoCardProps {
   loading?: boolean;
 }
 
-const UserInfoCard: React.FC<UserInfoCardProps> = ({ user, commissionInfo, loading = false }) => {
+const UserInfoCard: React.FC<UserInfoCardProps> = ({
+  user,
+  commissionInfo,
+  loading = false,
+}) => {
   console.log('UserInfoCard rendering:', { user, commissionInfo, loading });
-  
+
   if (loading) {
     return (
-      <Card 
-        title="Thông tin User" 
+      <Card
+        title="Thông tin User"
         loading={true}
         style={{ height: 'fit-content' }}
       >
@@ -38,8 +57,8 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({ user, commissionInfo, loadi
 
   if (!user) {
     return (
-      <Card 
-        title="Thông tin User" 
+      <Card
+        title="Thông tin User"
         loading={false}
         style={{ height: 'fit-content' }}
       >
@@ -54,7 +73,7 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({ user, commissionInfo, loadi
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('vi-VN', {
       style: 'currency',
-      currency: 'VND'
+      currency: 'VND',
     });
   };
 
@@ -64,22 +83,23 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({ user, commissionInfo, loadi
   };
 
   return (
-    <Card 
-      title="Thông tin User" 
+    <Card
+      title="Thông tin User"
       loading={loading}
       style={{ height: 'fit-content' }}
     >
       <div className="space-y-4">
         {/* Debug info - sẽ xóa sau khi fix */}
         <div className="bg-yellow-100 p-2 text-xs">
-          DEBUG: User ID: {user.id}, Name: {user.full_name}, Email: {user.user?.email}
+          DEBUG: User ID: {user.id}, Name: {user.full_name}, Email:{' '}
+          {user.user?.email}
         </div>
-        
+
         {/* Avatar và thông tin cơ bản */}
         <div className="text-center">
-          <Avatar 
-            size={80} 
-            src={user.avatar_url || undefined} 
+          <Avatar
+            size={80}
+            src={user.avatar_url || undefined}
             icon={<UserOutlined />}
             className="mb-3"
           />
@@ -98,53 +118,99 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({ user, commissionInfo, loadi
 
         {/* Thông tin chi tiết */}
         <Descriptions column={1} size="small">
-          <Descriptions.Item 
-            label={<><MailOutlined className="mr-1" />Email</>}
+          <Descriptions.Item
+            label={
+              <>
+                <MailOutlined className="mr-1" />
+                Email
+              </>
+            }
           >
             {user.user?.email || '—'}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><PhoneOutlined className="mr-1" />Số điện thoại</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <PhoneOutlined className="mr-1" />
+                Số điện thoại
+              </>
+            }
           >
             {user.phone || '—'}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><CalendarOutlined className="mr-1" />Ngày sinh</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <CalendarOutlined className="mr-1" />
+                Ngày sinh
+              </>
+            }
           >
             {formatDate(user.dob)}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><UserOutlined className="mr-1" />Giới tính</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <UserOutlined className="mr-1" />
+                Giới tính
+              </>
+            }
           >
-            {user.gender === 'male' ? 'Nam' : user.gender === 'female' ? 'Nữ' : (user.gender || '—')}
+            {user.gender === 'male'
+              ? 'Nam'
+              : user.gender === 'female'
+              ? 'Nữ'
+              : user.gender || '—'}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><UserOutlined className="mr-1" />Quốc gia</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <UserOutlined className="mr-1" />
+                Quốc gia
+              </>
+            }
           >
             {user.country || '—'}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><CalendarOutlined className="mr-1" />Ngày tạo</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <CalendarOutlined className="mr-1" />
+                Ngày tạo
+              </>
+            }
           >
             {formatDate(user.created_at)}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><CalendarOutlined className="mr-1" />Cập nhật cuối</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <CalendarOutlined className="mr-1" />
+                Cập nhật cuối
+              </>
+            }
           >
             {formatDate(user.user?.updated_at ?? undefined)}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={<><UserOutlined className="mr-1" />Trạng thái</>}
+
+          <Descriptions.Item
+            label={
+              <>
+                <UserOutlined className="mr-1" />
+                Trạng thái
+              </>
+            }
           >
             <Tag color={user.user?.status === 'active' ? 'green' : 'red'}>
-              {user.user?.status === 'active' ? 'Hoạt động' : (user.user?.status || '—')}
+              {user.user?.status === 'active'
+                ? 'Hoạt động'
+                : user.user?.status || '—'}
             </Tag>
           </Descriptions.Item>
         </Descriptions>
@@ -158,7 +224,7 @@ const UserInfoCard: React.FC<UserInfoCardProps> = ({ user, commissionInfo, loadi
                 <DollarOutlined className="mr-2" />
                 Thông tin Affiliate
               </h4>
-              
+
               <Row gutter={[16, 16]}>
                 <Col span={12}>
                   <Statistic

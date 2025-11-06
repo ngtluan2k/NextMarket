@@ -1,39 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Card,
-  Form,
-  InputNumber,
-  DatePicker,
-  Select,
-  Button,
-  Table,
-  Space,
-  message,
-  Tabs,
-  Input,
-  Row,
-  Col,
-  Tooltip,
-  Modal,
-  Popconfirm,
-  Badge,
-  Alert,
-  Typography,
-  Collapse,
-  Dropdown,
-  MenuProps,
-} from 'antd';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-  InfoCircleOutlined,
-  CopyOutlined,
-  ExclamationCircleOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
+import { Card, Form, Button, Space, message, Tabs, Input, Badge } from 'antd';
+import { SettingOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import {
   fetchDescendants,
   fetchAncestors,
@@ -59,13 +26,12 @@ import {
   User,
 } from '../../../../service/user-helper.service';
 import AffiliateTree from './AffiliateTree';
-import UserInfoCard from '../../../components/admin/UserInfoCard';
+import UserInfoCard from '../../../components/admin/affiliate_admin_components/affiliate-tree/UserInfoCard';
 import CommissionPreview from '../../../components/admin/CommissionPreview';
 import CreateRuleCard from '../../../components/admin/affiliate_admin_components/affiliate-rule/CreateRuleCard';
 import ModalBulkCreateRules from './ModalBulkCreateRules';
 import ModalEditRules from './ModalEditRules';
 import AffiliateRuleList from './AffiliateRuleList';
-
 
 export default function AffiliateRulesManager() {
   const [loading, setLoading] = useState(false);
@@ -378,7 +344,6 @@ export default function AffiliateRulesManager() {
     [form, msg]
   );
 
-
   // Tree tab với commission info
   const [treeUserEmail, setTreeUserEmail] = useState<string>('');
   const [treeData, setTreeData] = useState<any[]>([]);
@@ -581,8 +546,6 @@ export default function AffiliateRulesManager() {
     <div style={{ padding: 16 }}>
       {ctx}
 
-      {/* Rules Management Card */}
-
       <CreateRuleCard
         rules={rules}
         setBulkCreateVisible={setBulkCreateVisible}
@@ -655,7 +618,6 @@ export default function AffiliateRulesManager() {
             ),
             children: (
               <div style={{ display: 'flex', gap: '16px' }}>
-                {/* Left side - Tree */}
                 <div style={{ flex: 1 }}>
                   <Card>
                     <Space style={{ marginBottom: 12 }}>

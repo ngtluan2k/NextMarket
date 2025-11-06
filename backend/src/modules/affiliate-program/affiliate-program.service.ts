@@ -29,7 +29,7 @@ export class AffiliateProgramsService {
     // Tự động tạo các rule mặc định cho program mới
     try {
       console.log(`Creating default commission rules for new program: ${savedProgram.name} (ID: ${savedProgram.id})`);
-      await this.rulesService.createDefaultRules(savedProgram.id);
+      // await this.rulesService.createDefaultRules(savedProgram.id);
       console.log(`Successfully created default rules for program ${savedProgram.id}`);
     } catch (error) {
       console.error(`Failed to create default rules for program ${savedProgram.id}:`, error);
@@ -76,7 +76,7 @@ export class AffiliateProgramsService {
       await this.repository.save(program);
       
       // Soft delete all commission rules for this program
-      await this.rulesService.softDeleteRulesByProgram(program.id);
+      // await this.rulesService.softDeleteRulesByProgram(program.id);
       
       return {
         message: `Affiliate program "${program.name}" has been deleted successfully. All associated commission rules have been deactivated.`,

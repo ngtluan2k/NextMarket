@@ -26,9 +26,16 @@ import {
 } from '../../../../../service/afiliate/affiliate-rules.service';
 import { AffiliateProgram } from '../../../../../service/afiliate/affiliate-programs.service';
 import { MessageInstance } from 'antd/es/message/interface';
+import { useState } from 'react';
 const { Panel } = Collapse;
 const { RangePicker } = DatePicker;
 type FetchRulesFunction = () => Promise<void>;
+
+interface Method {
+  uuid: string;
+  name: string;
+  description: string;
+}
 
 interface CreateRuleProps {
   rules: CommissionRule[];
@@ -55,15 +62,22 @@ const CreateRuleCard = ({
   onCreate,
   method,
 }: CreateRuleProps) => {
+
+  const [selected, setSelected] = useState<Method | null>(
+    method.length > 0 ? method[0] : null
+  );
+
   const menuItems: MenuProps['items'] = method.map((item) => ({
     key: item.uuid,
     label: item.name,
   }));
 
   const handleMenuClick: MenuProps['onClick'] = (e) => {
-    console.log('Selected:', e.key);
-    const selected = method.find((m) => m.uuid === e.key);
-    console.log('Selected method:', selected);
+    const foundMethod = method.find((m) => m.uuid === e.key);
+    if (foundMethod) {
+      console.log(foundMethod)
+      setSelected(foundMethod);
+    }
   };
   return (
     <Card
@@ -158,7 +172,7 @@ const CreateRuleCard = ({
               </Col>
               <Col xs={24} sm={12} md={4}>
                 <Form.Item
-                  label="Level"
+                  label="Cấp"
                   name="level"
                   rules={[{ required: true, message: 'Bắt buộc' }]}
                   tooltip="Cấp độ affiliate (0 = người mua trực tiếp)"
@@ -217,12 +231,12 @@ const CreateRuleCard = ({
                 >
                   <Dropdown
                     menu={{
-                      items: menuItems, // Use 'items', not 'menuItems'
+                      items: menuItems,
                       onClick: handleMenuClick,
                     }}
                     placement="bottomLeft"
                   >
-                    <Button>Select Method</Button>
+                    <Button>{selected?.name || 'Select Method'}</Button>
                   </Dropdown>
                 </Form.Item>
               </Col>
