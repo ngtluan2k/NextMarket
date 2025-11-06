@@ -6,11 +6,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 // Entities
 import { Order } from '../orders/order.entity';
 import { OrderItem } from '../order-items/order-item.entity';
-import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
 
 // Services
 import { AffiliateRulesService } from '../affiliate-rules/affiliate-rules.service';
+import { WalletService } from '../wallet/wallet.service';
 import { User } from '../user/user.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 
@@ -19,68 +19,114 @@ export class CommissionCalcService {
   constructor(
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     @InjectRepository(OrderItem) private readonly orderItemRepo: Repository<OrderItem>,
-    @InjectRepository(AffiliateLink) private readonly linkRepo: Repository<AffiliateLink>,
     @InjectRepository(AffiliateCommission) private readonly commRepo: Repository<AffiliateCommission>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(AffiliateProgram) private readonly programRepo: Repository<AffiliateProgram>,
     private readonly rulesService: AffiliateRulesService,
+    private readonly walletService: WalletService,
   ) {}
 
   // Hàm gọi khi đơn hàng chuyển sang PAID
   async handleOrderPaid(orderId: number) {
-    const order = await this.orderRepo.findOne({ where: { id: orderId } });
-    if (!order) return;
-
-    // Xác định cấp 0: chủ link > affiliate_user_id
-    let level0UserId: number | null = null;
-    let programId: number | null = null;
-
-    if ((order as any).affiliate_link_id) {
-      const link = await this.linkRepo.findOne({
-        where: { id: (order as any).affiliate_link_id },
-        relations: ['program_id', 'user_id'],
+    try {
+      console.log(`🎯 Starting commission calculation for order ${orderId}`);
+      
+      const order = await this.orderRepo.findOne({ 
+        where: { id: orderId },
+        relations: ['user'] // Load user relation for better type safety
       });
-      if ((link as any)?.user_id?.id) level0UserId = (link as any).user_id.id;
-      if ((link as any)?.program_id?.id) programId = (link as any).program_id.id;
-    } else if ((order as any).affiliate_user_id) {
-      level0UserId = (order as any).affiliate_user_id;
-      programId = null; // rule mặc định (program_id null)
-    }
-
-    // Check if program is active before proceeding
-    if (programId) {
-      const program = await this.programRepo.findOne({ where: { id: programId } });
-      if (!program || program.status !== 'active') {
-        return; // Skip commission calculation for inactive programs
-      }
-    }
-
-    if (!level0UserId) {
-      return; // không có affiliate -> không tạo hoa hồng
-    }
-
-    // Lấy các item đủ điều kiện
-    const items = await this.orderItemRepo.find({
-      where: { order_id: { id: (order as any).id } as any },
-      relations: [],
-    });
-
-    // Tính base_amount theo policy (ví dụ dùng subtotal)
-    for (const item of items) {
-      const baseAmount = Number((item as any).subtotal ?? 0);
-      if (baseAmount <= 0) continue;
-
-      // chặn self-commission nếu policy không cho
-      if ((order as any).user_id && (order as any).user_id === level0UserId) {
-        continue;
+      
+      if (!order) {
+        console.warn(`⚠️ Order ${orderId} not found for commission calculation`);
+        return;
       }
 
-      // Level 0
-      await this.allocateLevel(order, item, level0UserId, 0, programId, baseAmount);
+      // 🐛 DEBUG: Log all affiliate fields from the order
+      console.log(`🔍 DEBUG - Order ${orderId} affiliate fields:`, {
+        affiliate_code: (order as any).affiliate_code,
+        affiliate_user_id: (order as any).affiliate_user_id,
+        affiliate_program_id: (order as any).affiliate_program_id,
+        affiliate_link_id: (order as any).affiliate_link_id,
+      });
 
-      // Có thể mở rộng cho Level 1..N:
-      // Với yêu cầu hiện tại (không MLM), bạn dừng ở Level 0.
-      // Nếu muốn đa cấp, thêm truy vấn sponsor/closure table để tìm ancestor & tăng level.
+      // Xác định affiliate trực tiếp (level 0 trong chuỗi giới thiệu, nhận hoa hồng level 1)
+      // level0UserId = người tạo link affiliate (direct referrer)
+      // Họ sẽ nhận commission rate của "level 1" từ rule
+      let level0UserId: number | null = null;
+      let programId: number | null = null;
+
+      if ((order as any).affiliate_user_id) {
+        level0UserId = Number((order as any).affiliate_user_id);
+        programId = (order as any).affiliate_program_id ? Number((order as any).affiliate_program_id) : null;
+        console.log(`👤 Using affiliate user: ${level0UserId}, program: ${programId}`);
+      }
+
+      // Check if program is active before proceeding
+      if (programId) {
+        const program = await this.programRepo.findOne({ where: { id: programId } });
+        if (!program) {
+          console.warn(`⚠️ Affiliate program ${programId} not found`);
+          return;
+        }
+        if (program.status !== 'active') {
+          console.warn(`⚠️ Affiliate program ${programId} is not active (status: ${program.status})`);
+          return; // Skip commission calculation for inactive programs
+        }
+        console.log(`✅ Using active affiliate program: ${program.name}`);
+      }
+
+      if (!level0UserId) {
+        console.log(`ℹ️ No affiliate tracking found for order ${orderId}`);
+        return; // không có affiliate -> không tạo hoa hồng
+      }
+
+      // Improved self-commission check with strict type comparison
+      const orderUserId = Number(order.user?.id || (order as any).user_id);
+      if (orderUserId === level0UserId) {
+        console.log(`🚫 Preventing self-commission for user ${level0UserId} on order ${orderId}`);
+        return;
+      }
+
+      // Lấy các item đủ điều kiện
+      const items = await this.orderItemRepo.find({
+        where: { order: { id: order.id } },
+        relations: ['product'],
+      });
+
+      if (!items || items.length === 0) {
+        console.warn(`⚠️ No order items found for order ${orderId}`);
+        return;
+      }
+
+      console.log(`📦 Processing ${items.length} items for commission calculation`);
+
+      // Tính base_amount theo policy (ví dụ dùng subtotal)
+      for (const item of items) {
+        const baseAmount = Number((item as any).subtotal ?? 0);
+        if (baseAmount <= 0) {
+          console.log(`⏭️ Skipping item ${item.id} with zero/negative amount: ${baseAmount}`);
+          continue;
+        }
+
+        console.log(`💰 Processing item ${item.id} with base amount: ${baseAmount}`);
+
+        // Level 1 - wrap in try-catch for individual item error handling
+        try {
+          await this.allocateLevel(order, item, level0UserId, 1, programId, baseAmount);
+        } catch (error) {
+          console.error(`❌ Failed to allocate commission for item ${item.id}:`, error);
+          // Continue with other items even if one fails
+        }
+
+        // Có thể mở rộng cho Level 2..N:
+        // Với yêu cầu hiện tại (không MLM), bạn dừng ở Level 1.
+        // Nếu muốn đa cấp, thêm truy vấn sponsor/closure table để tìm ancestor & tăng level.
+      }
+      
+      console.log(`✅ Commission calculation completed for order ${orderId}`);
+    } catch (error) {
+      console.error(`❌ Critical error in commission calculation for order ${orderId}:`, error);
+      throw error; // Re-throw to ensure calling code is aware of the failure
     }
   }
 
@@ -92,35 +138,114 @@ export class CommissionCalcService {
     programId: number | null,
     baseAmount: number,
   ) {
+    const orderId = order.id;
     const now = new Date();
+    
+    console.log(`🔍 Looking for active rule - Program: ${programId}, Level: ${level}`);
     const rule = await this.rulesService.getActiveRule(programId, level, now);
-    if (!rule) return;
+    
+    if (!rule) {
+      console.warn(`⚠️ No active commission rule found for program ${programId}, level ${level}`);
+      return;
+    }
 
     const rate = Number((rule as any).rate_percent);
+    if (isNaN(rate) || rate <= 0) {
+      console.warn(`⚠️ Invalid commission rate: ${rate}`);
+      return;
+    }
+
     let computed = Math.max(0, baseAmount * (rate / 100));
+    
+    // Apply cap_per_order if exists
     if ((rule as any).cap_per_order != null) {
       const cap = Number((rule as any).cap_per_order);
-      if (!Number.isNaN(cap) && cap >= 0) computed = Math.min(computed, cap);
+      if (!Number.isNaN(cap) && cap >= 0) {
+        computed = Math.min(computed, cap);
+        console.log(`🧢 Applied order cap: ${cap}, final amount: ${computed}`);
+      }
     }
+    
     computed = Math.round(computed * 100) / 100;
 
-    if (computed <= 0) return;
+    if (computed <= 0) {
+      console.log(`⏭️ Skipping commission allocation - computed amount is zero`);
+      return;
+    }
 
-    const rec = this.commRepo.create({
-      order_item_id: (item as any).id,
-      payer_user_id: (order as any).user_id as any,           // có thể là number hoặc relation tùy entity
-      beneficiary_user_id: beneficiaryUserId,
-      program_id: programId,
-      level,
-      base_amount: baseAmount,
-      rate_percent: rate,
-      computed_amount: computed,
-      amount: computed,                               // giữ compat cột amount cũ
-      status: 'PENDING',
-      created_at: new Date(),
-      link_id: (order as any).affiliate_link_id ?? null,       // ghi lại nguồn link nếu có
-    } as any);
+    console.log(`💵 Calculated commission: ${computed} VND (${rate}% of ${baseAmount})`);
 
-    await this.commRepo.save(rec);
+    // Use database transaction to ensure consistency
+    return await this.commRepo.manager.transaction(async (manager) => {
+      const rec = manager.create(this.commRepo.target, {
+        uuid: crypto.randomUUID(), // ✅ Generate UUID
+        order_item_id: item.id,
+        payer_user_id: Number(order.user?.id || (order as any).user_id),
+        beneficiary_user_id: beneficiaryUserId,
+        program_id: programId,
+        level,
+        base_amount: baseAmount,
+        rate_percent: rate,
+        computed_amount: computed,
+        amount: computed,
+        status: 'PENDING', // Start as PENDING, will be updated to PAID after successful wallet operation
+        created_at: new Date(),
+        link_id: null,
+      } as any);
+
+      const savedCommission = await manager.save(rec);
+      const commissionId = (savedCommission as any).id;
+
+      console.log(`💾 Commission record created with ID: ${commissionId}`);
+
+      // ✅ AUTO-CONVERT COMMISSION TO COINS AND ADD TO WALLET with retry mechanism
+      const maxRetries = 3;
+      let walletSuccess = false;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`💰 Attempt ${attempt}/${maxRetries}: Adding commission to wallet`);
+          
+          await this.walletService.addCommissionToWallet(
+            beneficiaryUserId,
+            computed,
+            commissionId?.toString() || 'unknown',
+            `Commission from order #${orderId} - Level ${level}`
+          );
+          
+          // Update commission status to PAID after successful wallet operation
+          await manager.update(this.commRepo.target, commissionId, { 
+            status: 'PAID'
+          });
+          
+          console.log(`✅ Commission ${computed} VND successfully added to user ${beneficiaryUserId} wallet`);
+          walletSuccess = true;
+          break;
+          
+        } catch (error) {
+          console.error(`❌ Wallet operation attempt ${attempt} failed:`, error);
+          
+          if (attempt === maxRetries) {
+            // Final attempt failed - keep commission as PENDING
+            console.error(`🚨 All wallet operation attempts failed for commission ${commissionId}`);
+            await manager.update(this.commRepo.target, commissionId, { 
+              status: 'PENDING'
+            });
+            
+            // TODO: Add notification system for manual review
+            // await this.notificationService.createFailedCommissionAlert(commissionId, error);
+          } else {
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
+        }
+      }
+      
+      if (!walletSuccess) {
+        console.warn(`⚠️ Commission ${commissionId} created but wallet operation failed - status set to PENDING`);
+      }
+      
+      return savedCommission;
+    });
   }
 }

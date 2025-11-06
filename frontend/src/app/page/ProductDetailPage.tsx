@@ -25,6 +25,7 @@ import {
 import { VariantInfo } from '../types/product';
 import { fetchProductReviews, Review } from '../../service/product_review';
 import GroupOrderInfoBar from '../components/group_orders/components/GroupOrderInfoBar';
+import { initializeAffiliateTracking } from '../../utils/affiliate-tracking';
 
 
 interface Props {
@@ -144,6 +145,12 @@ export default function ProductDetailPage({ showMessage }: Props) {
     if (!product) return;
     setQuantity(1);
   }, [product]);
+
+  // Initialize affiliate tracking on product page load
+  useEffect(() => {
+    initializeAffiliateTracking();
+    console.log('🔗 Affiliate tracking initialized on product page');
+  }, []);
 
   const totalPrice = useMemo(
     () => calculatedPrice * quantity,

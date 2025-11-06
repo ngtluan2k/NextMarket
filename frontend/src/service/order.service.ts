@@ -1,7 +1,7 @@
 import { api, API_ENDPOINTS } from '../app/api/api';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:3000/orders';
+import { getAffiliateDataForOrder } from '../utils/affiliate-tracking';
+import { API_BASE_URL } from '../config/api';
 
 export const orderService = {
   // ========== USER ENDPOINTS ==========
@@ -23,7 +23,7 @@ export const orderService = {
 
   async getOrderByUser(userId: number) {
     try {
-      const res = await axios.get(`${API_URL}/user/${userId}`);
+      const res = await axios.get(`${API_BASE_URL}/orders/user/${userId}`);
       return res.data;
     } catch (error: any) {
       console.error(
@@ -60,22 +60,43 @@ export const orderService = {
   },
 
   createOrder: async (userId: number, payload: any) => {
+    // Include affiliate tracking data if available
+    const affiliateData = getAffiliateDataForOrder();
+    
+    const orderPayload = {
+      ...payload,
+      ...affiliateData  // Add affiliate fields (affiliateCode, etc.)
+    };
+
+    console.log('🛒 Creating order with affiliate data:', {
+      hasAffiliateData: !!affiliateData.affiliateCode,
+      fullAffiliateData: affiliateData,
+    });
+    
+    console.log('🔍 DEBUG - Complete order payload:', orderPayload);
+
+    const token = localStorage.getItem('token');
     const res = await api.post(
       `${API_ENDPOINTS.users}/${userId}/orders`,
-      payload
+      orderPayload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
     return res.data;
   },
+
   async changeStatus(
     orderId: number,
     status: string,
     token: string,
-    note?: string
   ) {
     try {
+      console.log("order status: ", status)
       const res = await axios.patch(
-        `${API_URL}/${orderId}/status/${status}`,
-        { note }, // gửi note nếu có
+        `${API_BASE_URL}/orders/${orderId}/status/${status}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

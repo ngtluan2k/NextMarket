@@ -496,6 +496,13 @@ export class ProductService {
         variant_name: v.variant_name,
         price: v.price,
         stock: v.stock,
+        // For now, include all product media for each variant
+        // TODO: Implement variant-specific media in the future
+        media: product.media.map((m) => ({
+          url: m.url,
+          is_primary: m.is_primary,
+          sort_order: m.sort_order,
+        })),
         inventory: variantInventoryMap[v.sku] || [],
       })),
       inventories: variantInventoryMap, // toàn bộ inventory map
@@ -615,7 +622,7 @@ export class ProductService {
     return similarProducts;
   }
 
-  async findById(id: number) {
+  async findById(id: number): Promise<ProductResponseDto> {
     const product = await this.productRepo
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.media', 'media')
@@ -632,7 +639,80 @@ export class ProductService {
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return product; // or map to your existing DTO
+
+    // Map inventory by variant SKU (same as findBySlug)
+    const variantInventoryMap: Record<string, InventoryDto[]> = {};
+    product.variants.forEach((v) => {
+      variantInventoryMap[v.sku] = (v.inventories || []).map((inv) => ({
+        id: inv.id,
+        variant_sku: v.sku,
+        location: inv.location,
+        quantity: inv.quantity,
+        used_quantity: inv.used_quantity,
+      }));
+    });
+
+    // Map to consistent DTO format (same as findBySlug)
+    const response: ProductResponseDto = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      short_description: product.short_description,
+      description: product.description,
+      status: product.status,
+      base_price: product.base_price,
+      avg_rating: product.avg_rating,
+      review_count: product.review_count,
+      media: product.media.map((m) => ({
+        url: m.url,
+      })),
+      variants: product.variants.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        variant_name: v.variant_name,
+        price: v.price,
+        stock: v.stock,
+        // Include all product media for each variant (consistent with findBySlug)
+        media: product.media.map((m) => ({
+          url: m.url,
+          is_primary: m.is_primary,
+          sort_order: m.sort_order,
+        })),
+        inventory: variantInventoryMap[v.sku] || [],
+      })),
+      inventories: variantInventoryMap,
+      brand: product.brand
+        ? { id: product.brand.id, name: product.brand.name }
+        : undefined,
+      categories: product.categories.map((pc) => ({
+        id: pc.category.id,
+        name: pc.category.name,
+      })),
+      pricing_rules: product.pricing_rules.map((pr) => ({
+        id: pr.id,
+        type: pr.type,
+        min_quantity: pr.min_quantity,
+        price: pr.price,
+        cycle: pr.cycle,
+        starts_at: pr.starts_at,
+        ends_at: pr.ends_at,
+        name: pr.name,
+        status: pr.status,
+        variant_sku: pr.variant ? pr.variant.sku : null,
+      })),
+      store: product.store
+        ? {
+            id: product.store.id,
+            name: product.store.name,
+            slug: product.store.slug,
+            logo_url: product.store.logo_url,
+            avg_rating: product.store.avg_rating,
+            review_count: product.store.review_count,
+          }
+        : undefined,
+    };
+
+    return response;
   }
 
   async getSlugById(id: number): Promise<string> {

@@ -46,6 +46,21 @@ export class AffiliateProgramsController {
     return this.service.findAll();
   }
 
+  @Get('manage/with-counts')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermissions('manage_affiliate')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: '(Admin) Get all affiliate programs with user enrollment counts' })
+  findAllWithUserCounts() {
+    return this.service.findAllWithUserCounts();
+  }
+
+  @Get('active/with-counts')
+  @ApiOperation({ summary: 'Get all active affiliate programs with user enrollment counts' })
+  findAllActiveWithUserCounts() {
+    return this.service.findAllActiveWithUserCounts();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get an affiliate program by ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {

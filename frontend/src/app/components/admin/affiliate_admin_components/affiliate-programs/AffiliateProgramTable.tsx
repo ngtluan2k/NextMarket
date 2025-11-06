@@ -78,6 +78,18 @@ const AffiliateProgramsTable = ({ programs, loading, onView, onEdit, onDelete }:
       onFilter: (value, record) => record.status === value,
     },
     {
+      title: 'Số người tham gia',
+      dataIndex: 'user_enrolled',
+      key: 'user_enrolled',
+      width: 150,
+      render: (count: number) => (
+        <Tag color={count > 0 ? 'blue' : 'default'}>
+          {count.toLocaleString()} người
+        </Tag>
+      ),
+      sorter: (a, b) => (a.user_enrolled || 0) - (b.user_enrolled || 0),
+    },
+    {
       title: 'Ngày tạo',
       dataIndex: 'created_at',
       key: 'created_at',

@@ -30,6 +30,7 @@ export type MyLink = {
   link_id: number;
   productId?: number;
   variantId?: number;
+  programId?: number;
   affiliate_link?: string | null;
   program_name?: string;
   created_at?: string;

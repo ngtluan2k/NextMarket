@@ -21,6 +21,7 @@ import {
   Select,
   Space,
   Table,
+  Tag,
   Tooltip,
   Typography,
 } from 'antd';
@@ -28,7 +29,6 @@ import { CommissionRule, deleteRule } from '../../../../service/afiliate/affilia
 import { AffiliateProgram } from '../../../../service/afiliate/affiliate-programs.service';
 import { MessageInstance } from 'antd/es/message/interface';
 import { useMemo } from 'react';
-import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
@@ -74,14 +74,43 @@ const AffiliateRuleList = ({
 }: AffiliateRuleListProps) => {
   
   
+  // Transform rules to flat structure for table display
+  const flattenedRules = useMemo(() => {
+    const flattened: any[] = [];
+    rules.forEach(rule => {
+      rule.calculated_rates.forEach(rate => {
+        flattened.push({
+          ...rule,
+          level: rate.level,
+          rate_percent: rate.rate,
+          weight: rate.weight,
+          // Create unique key for each level
+          unique_key: `${rule.id}-${rate.level}`
+        });
+      });
+    });
+    return flattened;
+  }, [rules]);
+
   const columns = useMemo(
     () => [
+      {
+        title: 'Rule Name',
+        dataIndex: 'name',
+        key: 'name',
+        width: 200,
+        sorter: (a: any, b: any) => a.name.localeCompare(b.name),
+      },
       {
         title: 'ID',
         dataIndex: 'id',
         key: 'id',
-        width: 80,
-        sorter: (a: CommissionRule, b: CommissionRule) => a.id - b.id,
+        width: 120,
+        render: (id: string) => (
+          <Text code style={{ fontSize: '11px' }}>
+            {id.substring(0, 8)}...
+          </Text>
+        ),
       },
       {
         title: 'Chương trình',
@@ -90,15 +119,15 @@ const AffiliateRuleList = ({
         width: 150,
         filters: [
           { text: 'Tất cả chương trình', value: null },
-          ...affiliatePrograms.map((p) => ({ text: p.name, value: p.id })),
+          ...affiliatePrograms.map((p) => ({ text: p.name, value: p.id.toString() })),
         ],
-        onFilter: (value: any, record: CommissionRule) => {
+        onFilter: (value: any, record: any) => {
           if (value === null) return record.program_id === null;
           return record.program_id === value;
         },
-        render: (v: number | null) => {
+        render: (v: string | null) => {
           if (!v) return <Badge status="default" text="Tất cả" />;
-          const program = affiliatePrograms.find((p) => p.id === v);
+          const program = affiliatePrograms.find((p) => p.id.toString() === v);
           return program ? (
             <Badge
               status={program.status === 'active' ? 'success' : 'error'}
@@ -114,7 +143,7 @@ const AffiliateRuleList = ({
         dataIndex: 'level',
         key: 'level',
         width: 80,
-        sorter: (a: CommissionRule, b: CommissionRule) => a.level - b.level,
+        sorter: (a: any, b: any) => a.level - b.level,
         render: (level: number) => (
           <Badge
             count={level}
@@ -127,50 +156,36 @@ const AffiliateRuleList = ({
         dataIndex: 'rate_percent',
         key: 'rate_percent',
         width: 100,
-        sorter: (a: CommissionRule, b: CommissionRule) => {
-          const aRate =
-            typeof a.rate_percent === 'string'
-              ? parseFloat(a.rate_percent)
-              : a.rate_percent;
-          const bRate =
-            typeof b.rate_percent === 'string'
-              ? parseFloat(b.rate_percent)
-              : b.rate_percent;
+        sorter: (a: any, b: any) => {
+          const aRate = typeof a.rate_percent === 'string' ? parseFloat(a.rate_percent) : a.rate_percent;
+          const bRate = typeof b.rate_percent === 'string' ? parseFloat(b.rate_percent) : b.rate_percent;
           return aRate - bRate;
         },
         render: (rate: string | number) => {
           const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
           return (
             <Text strong style={{ color: numRate > 0 ? '#52c41a' : '#999' }}>
-              {numRate}%
+              {numRate.toFixed(2)}%
             </Text>
           );
         },
       },
       {
-        title: 'Thời gian hiệu lực',
-        key: 'active_period',
-        width: 200,
-        render: (_: any, record: CommissionRule) => {
-          const from = record.active_from
-            ? dayjs(record.active_from).format('DD/MM/YYYY')
-            : 'Không giới hạn';
-          const to = record.active_to
-            ? dayjs(record.active_to).format('DD/MM/YYYY')
-            : 'Không giới hạn';
-          const now = dayjs();
-          const isActive =
-            (!record.active_from || dayjs(record.active_from).isBefore(now)) &&
-            (!record.active_to || dayjs(record.active_to).isAfter(now));
-
+        title: 'Trạng thái',
+        key: 'status',
+        width: 120,
+        render: (_: any, record: any) => {
           return (
             <div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Từ: {from}</div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Đến: {to}</div>
               <Badge
-                status={isActive ? 'success' : 'error'}
-                text={isActive ? 'Đang hiệu lực' : 'Hết hiệu lực'}
+                status={record.is_active ? 'success' : 'error'}
+                text={record.is_active ? 'Hoạt động' : 'Tạm dừng'}
               />
+              {record.time_limit_days && (
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  Giới hạn: {record.time_limit_days} ngày
+                </div>
+              )}
             </div>
           );
         },
@@ -179,26 +194,21 @@ const AffiliateRuleList = ({
         title: 'Giới hạn',
         key: 'caps',
         width: 150,
-        render: (_: any, record: CommissionRule) => {
-          const orderCap = record.cap_per_order
-            ? parseFloat(record.cap_per_order)
-            : null;
-          const userCap = record.cap_per_user
-            ? parseFloat(record.cap_per_user)
-            : null;
+        render: (_: any, record: any) => {
+          const orderCap = record.cap_order;
+          const userCap = record.cap_user;
 
           return (
             <div>
               {orderCap && (
                 <div style={{ fontSize: '12px' }}>
                   <Text type="secondary">Order:</Text>{' '}
-                  {orderCap.toLocaleString()}đ
+                  {orderCap.toLocaleString()}
                 </div>
               )}
               {userCap && (
                 <div style={{ fontSize: '12px' }}>
                   <Text type="secondary">User:</Text> {userCap.toLocaleString()}
-                  đ
                 </div>
               )}
               {!orderCap && !userCap && (
@@ -212,7 +222,7 @@ const AffiliateRuleList = ({
         title: 'Hành động',
         key: 'actions',
         width: 200,
-        render: (_: any, record: CommissionRule) => (
+        render: (_: any, record: any) => (
           <Space size="small">
             <Tooltip title="Chỉnh sửa">
               <Button
@@ -419,67 +429,53 @@ const AffiliateRuleList = ({
                     dataSource={rulesInGroup}
                     columns={[
                       {
-                        title: 'Level',
-                        dataIndex: 'level',
-                        width: 80,
-                        render: (level: number) => (
-                          <Badge
-                            count={level}
-                            style={{
-                              backgroundColor:
-                                level === 0 ? '#52c41a' : '#1890ff',
-                            }}
-                          />
+                        title: 'Rule Name',
+                        dataIndex: 'name',
+                        width: 200,
+                        render: (name: string) => (
+                          <Text strong>{name}</Text>
                         ),
                       },
                       {
-                        title: 'Rate %',
-                        dataIndex: 'rate_percent',
-                        width: 100,
-                        render: (rate: string | number) => {
-                          const numRate =
-                            typeof rate === 'string' ? parseFloat(rate) : rate;
-                          return (
-                            <Text
-                              strong
-                              style={{
-                                color: numRate > 0 ? '#52c41a' : '#999',
-                              }}
-                            >
-                              {numRate}%
-                            </Text>
-                          );
-                        },
+                        title: 'Method',
+                        dataIndex: 'calculation_method',
+                        width: 120,
+                        render: (method: string) => (
+                          <Tag color="blue">{method}</Tag>
+                        ),
+                      },
+                      {
+                        title: 'Levels & Rates',
+                        width: 200,
+                        render: (_: any, record: CommissionRule) => (
+                          <div>
+                            {record.calculated_rates.map((rate, idx) => (
+                              <div key={idx} style={{ fontSize: '12px', marginBottom: '2px' }}>
+                                <Badge count={rate.level} size="small" style={{ marginRight: '8px' }} />
+                                <Text strong style={{ color: '#52c41a' }}>
+                                  {rate.rate.toFixed(2)}%
+                                </Text>
+                              </div>
+                            ))}
+                          </div>
+                        ),
                       },
                       {
                         title: 'Caps',
-                        width: 150,
+                        width: 120,
                         render: (_: any, record: CommissionRule) => {
-                          const orderCap = record.cap_per_order
-                            ? parseFloat(record.cap_per_order)
-                            : null;
-                          const userCap = record.cap_per_user
-                            ? parseFloat(record.cap_per_user)
-                            : null;
+                          const orderCap = record.cap_order;
+                          const userCap = record.cap_user;
                           return (
                             <div>
                               {orderCap && (
-                                <Text
-                                  type="secondary"
-                                  style={{ fontSize: '12px' }}
-                                >
-                                  Order: {orderCap.toLocaleString()}đ
+                                <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>
+                                  Order: {orderCap.toLocaleString()}
                                 </Text>
                               )}
                               {userCap && (
-                                <Text
-                                  type="secondary"
-                                  style={{
-                                    fontSize: '12px',
-                                    display: 'block',
-                                  }}
-                                >
-                                  User: {userCap.toLocaleString()}đ
+                                <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>
+                                  User: {userCap.toLocaleString()}
                                 </Text>
                               )}
                               {!orderCap && !userCap && (
@@ -540,16 +536,16 @@ const AffiliateRuleList = ({
         </div>
       ) : (
         <Table
-          rowKey={(r) => String((r as any).id)}
+          rowKey={(r) => (r as any).unique_key}
           loading={loading}
-          dataSource={rules as any}
+          dataSource={flattenedRules}
           columns={columns as any}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} rules`,
+              `${range[0]}-${range[1]} của ${total} levels`,
           }}
           scroll={{ x: 1200 }}
         />

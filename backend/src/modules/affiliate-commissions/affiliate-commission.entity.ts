@@ -17,9 +17,9 @@ export class AffiliateCommission {
   @Column({ type: 'char', unique: true })
   uuid!: string;
 
-  @ManyToOne(() => AffiliateLink, (link) => link.commissions)
+  @ManyToOne(() => AffiliateLink, (link) => link.commissions, { nullable: true })
   @JoinColumn({ name: 'link_id' })
-  link_id!: AffiliateLink;
+  link_id?: AffiliateLink;
 
   @ManyToOne(() => OrderItem, (orderItem) => orderItem.commissions, { nullable: true })
   @JoinColumn({ name: 'order_item_id' })

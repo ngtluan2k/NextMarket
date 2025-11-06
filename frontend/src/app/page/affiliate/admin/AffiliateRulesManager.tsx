@@ -6,15 +6,13 @@ import {
   fetchAncestors,
   fetchAffiliateTreeWithCommissions,
 } from '../../../../service/afiliate/affiliate-tree.service';
-import dayjs from 'dayjs';
 import {
   listRules,
   createRule,
+  createNewRule,
   updateRule,
   createDefaultRulesForProgram,
   CommissionRule,
-  getAllCalculateMethod,
-  CalculateMethod,
 } from '../../../../service/afiliate/affiliate-rules.service';
 import {
   getAllAffiliatePrograms,
@@ -27,8 +25,7 @@ import {
 } from '../../../../service/user-helper.service';
 import AffiliateTree from './AffiliateTree';
 import UserInfoCard from '../../../components/admin/affiliate_admin_components/affiliate-tree/UserInfoCard';
-import CommissionPreview from '../../../components/admin/CommissionPreview';
-import CreateRuleCard from '../../../components/admin/affiliate_admin_components/affiliate-rule/CreateRuleCard';
+import CreateRuleCardWithPreview from '../../../components/admin/affiliate_admin_components/affiliate-rule/CreateRuleCardWithPreview';
 import ModalBulkCreateRules from './ModalBulkCreateRules';
 import ModalEditRules from './ModalEditRules';
 import AffiliateRuleList from './AffiliateRuleList';
@@ -55,17 +52,6 @@ export default function AffiliateRulesManager() {
   const [editForm] = Form.useForm();
   const [bulkForm] = Form.useForm();
 
-  const [method, setMethod] = useState<CalculateMethod[]>([]);
-
-  useEffect(() => {
-    async function fetchMethods() {
-      const calMed = await getAllCalculateMethod();
-      console.log('all calculate method : ' + JSON.stringify(calMed));
-      setMethod(calMed);
-    }
-
-    fetchMethods();
-  }, []);
 
   // Grouped rules by program
   const groupedRules = useMemo(() => {
@@ -82,9 +68,9 @@ export default function AffiliateRulesManager() {
       grouped[key].push(rule);
     });
 
-    // Sort rules within each group by level
+    // Sort rules within each group by name
     Object.keys(grouped).forEach((key) => {
-      grouped[key].sort((a, b) => a.level - b.level);
+      grouped[key].sort((a, b) => a.name.localeCompare(b.name));
     });
 
     return grouped;
@@ -118,14 +104,14 @@ export default function AffiliateRulesManager() {
       const search = searchText.toLowerCase();
       Object.keys(filtered).forEach((key) => {
         filtered[key] = filtered[key].filter((rule) => {
-          const rate =
-            typeof rule.rate_percent === 'string'
-              ? rule.rate_percent
-              : String(rule.rate_percent);
           return (
-            String(rule.level).includes(search) ||
-            rate.includes(search) ||
-            String(rule.id).includes(search)
+            rule.name.toLowerCase().includes(search) ||
+            rule.id.toLowerCase().includes(search) ||
+            rule.calculation_method.toLowerCase().includes(search) ||
+            rule.calculated_rates.some(rate => 
+              String(rate.level).includes(search) || 
+              String(rate.rate).includes(search)
+            )
           );
         });
       });
@@ -190,18 +176,23 @@ export default function AffiliateRulesManager() {
     async (values: any) => {
       setLoading(true);
       try {
+        // Map the new form structure to the backend API
         const payload: any = {
-          program_id: values.program_id ?? null,
-          level: values.level,
-          rate_percent: values.rate_percent,
-          active_from: values.range?.[0] ? values.range[0].toISOString() : null,
-          active_to: values.range?.[1] ? values.range[1].toISOString() : null,
-          cap_per_order: values.cap_per_order ?? null,
-          cap_per_user: values.cap_per_user ?? null,
+          program_id: values.program_id || null,
+          name: values.name,
+          total_budget: values.total_budget,
+          num_levels: values.num_levels,
+          calculation_method: values.calculation_method,
+          decay_rate: values.decay_rate,
+          starting_index: values.starting_index,
+          weights: values.weights,
+          cap_order: values.cap_order,
+          cap_user: values.cap_user,
+          time_limit_days: values.time_limit_days,
         };
-        await createRule(payload);
+        
+        await createNewRule(payload);
         msg.success('Tạo rule thành công');
-        form.resetFields();
         fetchRules();
       } catch (e: any) {
         msg.error(e?.message || 'Tạo rule thất bại');
@@ -209,7 +200,7 @@ export default function AffiliateRulesManager() {
         setLoading(false);
       }
     },
-    [fetchRules, form, msg]
+    [fetchRules, msg]
   );
 
   const onEdit = useCallback(
@@ -220,12 +211,16 @@ export default function AffiliateRulesManager() {
       try {
         const payload: any = {
           program_id: values.program_id ?? null,
-          level: values.level,
-          rate_percent: values.rate_percent,
-          active_from: values.range?.[0] ? values.range[0].toISOString() : null,
-          active_to: values.range?.[1] ? values.range[1].toISOString() : null,
-          cap_per_order: values.cap_per_order ?? null,
-          cap_per_user: values.cap_per_user ?? null,
+          name: values.name,
+          total_budget: values.total_budget,
+          num_levels: values.num_levels,
+          calculation_method: values.calculation_method,
+          decay_rate: values.decay_rate,
+          starting_index: values.starting_index,
+          weights: values.weights,
+          cap_order: values.cap_order ?? null,
+          cap_user: values.cap_user ?? null,
+          time_limit_days: values.time_limit_days ?? null,
         };
         await updateRule(editingRule.id, payload);
         msg.success('Cập nhật rule thành công');
@@ -288,26 +283,21 @@ export default function AffiliateRulesManager() {
   );
 
   const handleEditRule = useCallback(
-    (rule: CommissionRule) => {
+    (rule: any) => {
+      // For the new structure, we'll edit the whole rule
       setEditingRule(rule);
-      const rate =
-        typeof rule.rate_percent === 'string'
-          ? parseFloat(rule.rate_percent)
-          : rule.rate_percent;
       editForm.setFieldsValue({
         program_id: rule.program_id ?? undefined,
-        level: rule.level,
-        rate_percent: rate,
-        range: [
-          rule.active_from ? dayjs(rule.active_from) : null,
-          rule.active_to ? dayjs(rule.active_to) : null,
-        ].filter(Boolean),
-        cap_per_order: rule.cap_per_order
-          ? parseFloat(rule.cap_per_order)
-          : undefined,
-        cap_per_user: rule.cap_per_user
-          ? parseFloat(rule.cap_per_user)
-          : undefined,
+        name: rule.name,
+        total_budget: rule.total_budget,
+        num_levels: rule.num_levels,
+        calculation_method: rule.calculation_method,
+        decay_rate: rule.decay_rate,
+        starting_index: rule.starting_index,
+        weights: rule.weights,
+        cap_order: rule.cap_order,
+        cap_user: rule.cap_user,
+        time_limit_days: rule.time_limit_days,
       });
       setIsModalVisible(true);
     },
@@ -315,29 +305,18 @@ export default function AffiliateRulesManager() {
   );
 
   const handleCopyRule = useCallback(
-    (rule: CommissionRule) => {
-      const rate =
-        typeof rule.rate_percent === 'string'
-          ? parseFloat(rule.rate_percent)
-          : rule.rate_percent;
+    (rule: any) => {
+      // Copy the rule structure to the create form
       form.setFieldsValue({
         program_id: rule.program_id ?? undefined,
-        level: rule.level,
-        rate_percent: rate,
-        range: [
-          rule.active_from ? dayjs(rule.active_from) : null,
-          rule.active_to
-            ? rule.active_to
-              ? dayjs(rule.active_to)
-              : null
-            : null,
-        ].filter(Boolean),
-        cap_per_order: rule.cap_per_order
-          ? parseFloat(rule.cap_per_order)
-          : undefined,
-        cap_per_user: rule.cap_per_user
-          ? parseFloat(rule.cap_per_user)
-          : undefined,
+        num_levels: rule.num_levels,
+        calculation_method: rule.calculation_method,
+        decay_rate: rule.decay_rate,
+        starting_index: rule.starting_index,
+        weights: rule.weights,
+        cap_order: rule.cap_order,
+        cap_user: rule.cap_user,
+        time_limit_days: rule.time_limit_days,
       });
       msg.success('Đã copy thông tin rule vào form tạo mới');
     },
@@ -546,33 +525,14 @@ export default function AffiliateRulesManager() {
     <div style={{ padding: 16 }}>
       {ctx}
 
-      <CreateRuleCard
-        rules={rules}
-        setBulkCreateVisible={setBulkCreateVisible}
+      <CreateRuleCardWithPreview
         affiliatePrograms={affiliatePrograms}
-        handleCreateDefaultRules={handleCreateDefaultRules}
-        fetchRules={fetchRules}
+        onCreateRule={onCreate}
         loading={loading}
-        form={form}
-        msg={msg}
-        onCreate={onCreate}
-        method={method}
       />
 
       <Tabs
         items={[
-          {
-            key: 'preview',
-            label: (
-              <Space>
-                <InfoCircleOutlined />
-                <span>Xem trước Hoa hồng Dự kiến</span>
-              </Space>
-            ),
-            children: (
-              <CommissionPreview affiliatePrograms={affiliatePrograms} />
-            ),
-          },
           {
             key: 'rules',
             label: (

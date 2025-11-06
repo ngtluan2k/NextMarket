@@ -91,6 +91,12 @@ export default function AffiliateLinks() {
       ) {
         url.searchParams.set('variant', String(link.variantId));
       }
+      if (
+        !url.searchParams.get('program') &&
+        typeof link.programId === 'number'
+      ) {
+        url.searchParams.set('program', String(link.programId));
+      }
       return url.toString();
     },
     [affiliateCode]
@@ -430,7 +436,7 @@ export default function AffiliateLinks() {
         render: (record: any) => (
           <Text>
             {record.base_price
-              ? `₦${Number(record.base_price).toFixed(2)}`
+              ? `VND ${Number(record.base_price).toFixed(2)}`
               : '—'}
           </Text>
         ),
@@ -616,7 +622,7 @@ export default function AffiliateLinks() {
                       <div>
                         <Text strong>Price: </Text>
                         <Text style={{ fontSize: '18px', color: '#1890ff' }}>
-                          ₦{Number(selectedVariant.price).toFixed(2)}
+                          VND {Number(selectedVariant.price).toFixed(2)}
                         </Text>
                       </div>
                       <div>
@@ -628,7 +634,7 @@ export default function AffiliateLinks() {
                     <div>
                       <Text strong>Base Price: </Text>
                       <Text style={{ fontSize: '18px', color: '#1890ff' }}>
-                        {productDetail.base_price ? `₦${Number(productDetail.base_price).toFixed(2)}` : 'N/A'}
+                        {productDetail.base_price ? `VND ${Number(productDetail.base_price).toFixed(2)}` : 'N/A'}
                       </Text>
                     </div>
                   )}

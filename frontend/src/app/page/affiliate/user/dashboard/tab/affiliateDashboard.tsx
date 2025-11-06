@@ -1,6 +1,5 @@
 'use client';
 
-import type React from 'react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -13,28 +12,52 @@ import {
 } from 'lucide-react';
 import { Button, Spin } from 'antd';
 import { Card } from 'antd';
-import { getDashboardStats, DashboardStats } from "../../../../../../service/afiliate/affiliate-links.service";
+import { 
+  getDashboardStats, 
+  DashboardStats, 
+  getBalance, 
+  BalanceInfo, 
+  getCommissionSummary, 
+  CommissionSummaryPeriod 
+} from "../../../../../../service/afiliate/affiliate-links.service";
 import { fetchMyWallet } from '../../../../../../service/wallet.service';
 
 const timeFilters = ['12 tháng', '30 ngày', '7 ngày', '24 giờ'];
 
 export function AffiliateDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [balance, setBalance] = useState<BalanceInfo | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [commissionSummary, setCommissionSummary] = useState<CommissionSummaryPeriod[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [dashboardData, wallet] = await Promise.all([
+        const [dashboardData, balanceData, wallet, summaryData] = await Promise.all([
           getDashboardStats(),
-          fetchMyWallet()
+          getBalance(),
+          fetchMyWallet(),
+          getCommissionSummary('monthly', 6)
         ]);
+        
+        console.log('🔍 Dashboard data received:', {
+          dashboardData,
+          balanceData,
+          wallet,
+          summaryData
+        });
+        
         setStats(dashboardData);
+        setBalance(balanceData);
         setWalletBalance(wallet.balance || 0);
+        setCommissionSummary(summaryData);
+        setError(null);
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
+        setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
       } finally {
         setLoading(false);
       }
@@ -46,7 +69,7 @@ export function AffiliateDashboard() {
   const displayStats = [
     {
       title: 'Tổng doanh thu',
-      value: `₦${stats?.totalRevenue || '0.00'}`,
+      value: `VND ${stats?.totalRevenue || '0.00'}`,
       change: '0.0%',
       icon: Wallet,
       iconBg: 'bg-blue-100',
@@ -78,17 +101,40 @@ export function AffiliateDashboard() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <div className="text-red-500 mb-4">⚠️ {error}</div>
+        <Button onClick={() => window.location.reload()}>
+          Thử lại
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <Card className="border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Số dư ví của bạn</p>
-              <p className="text-3xl font-bold text-gray-900">₦{walletBalance.toFixed(2)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Số dư ví của bạn</p>
+                <p className="text-3xl font-bold text-gray-900">VND {walletBalance.toFixed(2)}</p>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+          
+          <Card className="border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Hoa hồng khả dụng</p>
+                <p className="text-3xl font-bold text-green-600">VND {balance?.availableBalance?.toFixed(2) || '0.00'}</p>
+                <p className="text-sm text-gray-500">VND {balance?.pendingBalance?.toFixed(2) || '0.00'} đang chờ</p>
+              </div>
+            </div>
+          </Card>
+        </div>
 
         <div className="flex flex-wrap gap-3">
           <Button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50">
@@ -136,9 +182,9 @@ export function AffiliateDashboard() {
           <div>
             <p className="text-sm text-gray-600 mb-1">Số dư khả dụng</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-4xl font-bold text-gray-900">₦{stats?.totalPaid || '0.00'}</p>
+              <p className="text-4xl font-bold text-gray-900">VND {stats?.totalPaid || '0.00'}</p>
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                ₦{stats?.totalPending || '0.00'} pending
+                VND {stats?.totalPending || '0.00'} pending
               </span>
             </div>
           </div>
@@ -175,71 +221,69 @@ export function AffiliateDashboard() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="mb-6 opacity-20">
-            <svg
-              className="h-32 w-32 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
+        {commissionSummary.length > 0 ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Lịch sử hoa hồng theo tháng</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {commissionSummary.map((period, index) => (
+                <Card key={index} className="border-gray-200 shadow-sm">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-600">{period.period}</p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Tổng thu:</span>
+                        <span className="text-sm font-medium text-green-600">
+                          VND {period.totalEarned.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Đã trả:</span>
+                        <span className="text-sm font-medium">VND {period.totalPaid.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Đang chờ:</span>
+                        <span className="text-sm font-medium text-orange-600">
+                          VND {period.totalPending.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Đơn hàng:</span>
+                        <span className="text-sm font-medium">{period.totalOrders}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Danh mục đầu tư của bạn không có doanh thu
-          </h3>
-          <p className="text-gray-600 max-w-md">
-            Khi mọi người bắt đầu mua hàng qua liên kết của bạn, doanh thu và
-            biểu đồ sẽ xuất hiện tại đây.
-          </p>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-6 opacity-20">
+              <svg
+                className="h-32 w-32 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1}
+                  d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Danh mục đầu tư của bạn không có doanh thu
+            </h3>
+            <p className="text-gray-600 max-w-md">
+              Khi mọi người bắt đầu mua hàng qua liên kết của bạn, doanh thu và
+              biểu đồ sẽ xuất hiện tại đây.
+            </p>
+          </div>
+        )}
       </Card>
     </div>
   );
 }
 
-function Avatar({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={`rounded-full overflow-hidden ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-function AvatarImage({ src }: { src: string }) {
-  return (
-    <img
-      src={src || '/placeholder.svg'}
-      alt=""
-      className="w-full h-full object-cover"
-    />
-  );
-}
-
-function AvatarFallback({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`w-full h-full flex items-center justify-center font-medium ${className}`}
-    >
-      {children}
-    </div>
-  );
-}

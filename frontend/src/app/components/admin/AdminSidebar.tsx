@@ -11,7 +11,6 @@ import {
   DollarOutlined,
   GiftOutlined,
   BarChartOutlined,
-  DeploymentUnitOutlined,
   SignatureOutlined,
 } from '@ant-design/icons';
 

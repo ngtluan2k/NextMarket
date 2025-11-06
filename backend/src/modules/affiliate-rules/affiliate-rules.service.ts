@@ -6,7 +6,7 @@ import {
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateRuleDto } from './dto/create-commission-rule.dto';
-// import { UpdateCommissionRuleDto } from './dto/update-commission-rule.dto';
+import { UpdateCommissionRuleDto } from './dto/update-commission-rule.dto';
 // import { PreviewCommissionDto } from './dto/preview-commission.dto';
 import { AffiliateCommissionRule } from './affiliate-rules.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
@@ -22,6 +22,21 @@ export class AffiliateRulesService {
   ) {}
 
   async create(createRuleDTO: CreateRuleDto): Promise<AffiliateCommissionRule> {
+    // Validate program_id if provided
+    if (createRuleDTO.program_id) {
+      const programNumericId = parseInt(createRuleDTO.program_id, 10);
+      if (isNaN(programNumericId)) {
+        throw new BadRequestException(`Invalid program_id format: ${createRuleDTO.program_id}`);
+      }
+      const program = await this.programRepo.findOne({ where: { id: programNumericId } });
+      if (!program) {
+        throw new NotFoundException(`Affiliate program with ID ${createRuleDTO.program_id} not found`);
+      }
+      if (program.status !== 'active') {
+        throw new BadRequestException(`Cannot create rule for inactive affiliate program "${program.name}" (Status: ${program.status})`);
+      }
+    }
+
     const previewDto = this.mapToPreviewDto(createRuleDTO);
     const previewResult = this.calculatorService.calculatePreview(previewDto);
 
@@ -56,6 +71,70 @@ export class AffiliateRulesService {
   }
 
 
+  /**
+   * Update an existing rule
+   */
+  async update(id: string, updateDto: UpdateCommissionRuleDto): Promise<AffiliateCommissionRule> {
+    const existingRule = await this.findOne(id);
+    
+    // Validate program_id if provided
+    if (updateDto.program_id !== undefined) {
+      const programNumericId = parseInt(updateDto.program_id, 10);
+      if (isNaN(programNumericId)) {
+        throw new BadRequestException(`Invalid program_id format: ${updateDto.program_id}`);
+      }
+      const program = await this.programRepo.findOne({ where: { id: programNumericId } });
+      if (!program) {
+        throw new NotFoundException(`Affiliate program with ID ${updateDto.program_id} not found`);
+      }
+      if (program.status !== 'active') {
+        throw new BadRequestException(`Cannot update rule for inactive affiliate program "${program.name}" (Status: ${program.status})`);
+      }
+    }
+
+    // If calculation method or related fields are being updated, recalculate rates
+    let calculated_rates = existingRule.calculated_rates;
+    if (updateDto.calculation_method || updateDto.total_budget || updateDto.num_levels || 
+        updateDto.decay_rate !== undefined || updateDto.starting_index !== undefined || updateDto.weights) {
+      
+      const previewDto = this.mapToPreviewDto({
+        ...existingRule,
+        ...updateDto
+      });
+      const previewResult = this.calculatorService.calculatePreview(previewDto);
+      
+      if (previewResult.warnings && previewResult.warnings.length > 0) {
+        console.warn('Rule updated with warning: ', previewResult.warnings);
+      }
+      
+      calculated_rates = previewResult.levels;
+    }
+
+    // Update the rule
+    Object.assign(existingRule, {
+      ...updateDto,
+      calculated_rates,
+      updated_at: new Date()
+    });
+
+    return await this.repo.save(existingRule);
+  }
+
+  /**
+   * Hard delete a rule (as requested)
+   */
+  async remove(id: string): Promise<{ success: boolean; message: string }> {
+    const rule = await this.findOne(id);
+    
+    // Hard delete (not soft delete)
+    await this.repo.remove(rule);
+    
+    return { 
+      success: true, 
+      message: `Commission rule "${rule.name}" has been permanently deleted` 
+    };
+  }
+
   private mapToPreviewDto(dto: any) {
     return {
       total_budget: dto.total_budget,
@@ -65,6 +144,56 @@ export class AffiliateRulesService {
       starting_index: dto.starting_index,
       weights: dto.weights,
       round_to: 2, // Default precision
+    };
+  }
+
+  /**
+   * Get active rule for commission calculation
+   * Returns the calculated rate for a specific level from the rule's calculated_rates
+   */
+  async getActiveRule(programId: number | null, level: number, now = new Date()) {
+    const qb = this.repo
+      .createQueryBuilder('r')
+      .where('r.is_active = :active', { active: true });
+
+    // Filter by program ID
+    if (programId) {
+      qb.andWhere('r.program_id = :pid', { pid: programId.toString() });
+    } else {
+      qb.andWhere('r.program_id IS NULL');
+    }
+
+    // Filter by time limit if rule has time_limit_days
+    // Rule is valid if: time_limit_days IS NULL OR (created_at + time_limit_days) >= now
+    qb.andWhere(
+      '(r.time_limit_days IS NULL OR (r.created_at + INTERVAL \'1 day\' * r.time_limit_days) >= :now)',
+      { now }
+    );
+    
+    qb.orderBy('r.created_at', 'DESC'); // Get most recent rule
+
+    const rule = await qb.getOne();
+    
+    if (!rule || !rule.calculated_rates) {
+      return null;
+    }
+
+    // Find the rate for the requested level from calculated_rates
+    const levelRate = rule.calculated_rates.find((rate: any) => rate.level === level);
+    
+    if (!levelRate) {
+      return null;
+    }
+
+    // Return an object that matches the expected interface
+    return {
+      id: rule.id,
+      rate_percent: levelRate.rate,
+      cap_per_order: rule.cap_order,
+      cap_per_user: rule.cap_user,
+      program_id: rule.program_id,
+      level: level,
+      rule: rule // Include full rule for reference
     };
   }
 

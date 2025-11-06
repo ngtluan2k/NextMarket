@@ -37,7 +37,18 @@ export async function isAffiliateUser(userId: number) {
 
 export async function getAllAffiliatePrograms() {
   try {
-    const res = await axios.get(`${API_BASE_URL}/affiliate-programs/`, {
+    const res = await axios.get(`${API_BASE_URL}/affiliate-programs/manage/with-counts`, {
+      headers: getAuthHeaders(),
+    });
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function getAllAffiliateProgramsBasic() {
+  try {
+    const res = await axios.get(`${API_BASE_URL}/affiliate-programs/manage`, {
       headers: getAuthHeaders(),
     });
     return res.data;

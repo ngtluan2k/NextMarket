@@ -250,18 +250,34 @@ export class AffiliateTreeService {
   async getCommissionRulesForLevel(level: number, programId?: number) {
     const query = this.rulesRepository
       .createQueryBuilder('r')
-      .where('r.level = :level', { level })
-      .andWhere('(r.active_from IS NULL OR r.active_from <= :now)', { now: new Date() })
-      .andWhere('(r.active_to IS NULL OR r.active_to >= :now)', { now: new Date() })
+      .where('r.is_active = :isActive', { isActive: true })
       .orderBy('r.program_id', 'DESC');
 
     if (programId) {
-      query.andWhere('(r.program_id = :programId OR r.program_id IS NULL)', { programId });
+      query.andWhere('(r.program_id = :programId OR r.program_id IS NULL)', { programId: programId.toString() });
     } else {
       query.andWhere('r.program_id IS NULL');
     }
 
-    return await query.getOne();
+    const rules = await query.getMany();
+    
+    // Find rules that contain the specified level in their calculated_rates
+    const matchingRules = rules.filter(rule => 
+      rule.calculated_rates && 
+      rule.calculated_rates.some(rate => rate.level === level)
+    );
+
+    // Return the first matching rule (highest priority by program_id)
+    if (matchingRules.length > 0) {
+      const rule = matchingRules[0];
+      const levelRate = rule.calculated_rates.find(rate => rate.level === level);
+      return {
+        ...rule,
+        level_rate: levelRate
+      };
+    }
+
+    return null;
   }
 
   /**
@@ -329,18 +345,23 @@ export class AffiliateTreeService {
    * Lấy commission rules cho một chuỗi users
    */
   async getCommissionRulesForUsers(userIds: number[], programId?: number) {
-    const rules = await this.rulesRepository
+    const query = this.rulesRepository
       .createQueryBuilder('r')
-      .where('r.level IN (SELECT DISTINCT level FROM referrals WHERE referrer_id IN (:...userIds) OR referee_id IN (:...userIds))', { userIds })
-      .andWhere('(r.active_from IS NULL OR r.active_from <= :now)', { now: new Date() })
-      .andWhere('(r.active_to IS NULL OR r.active_to >= :now)', { now: new Date() });
+      .where('r.is_active = :isActive', { isActive: true });
 
     if (programId) {
-      rules.andWhere('(r.program_id = :programId OR r.program_id IS NULL)', { programId });
+      query.andWhere('(r.program_id = :programId OR r.program_id IS NULL)', { programId: programId.toString() });
     } else {
-      rules.andWhere('r.program_id IS NULL');
+      query.andWhere('r.program_id IS NULL');
     }
 
-    return await rules.getMany();
+    const rules = await query.getMany();
+    
+    // Return rules with their calculated_rates for the frontend to process
+    return rules.map(rule => ({
+      ...rule,
+      // Include all calculated rates for each rule
+      levels: rule.calculated_rates || []
+    }));
   }
 }

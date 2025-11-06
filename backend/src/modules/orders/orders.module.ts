@@ -13,6 +13,8 @@ import { VouchersModule } from '../vouchers/vouchers.module';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { ProductReviewsModule } from '../product_reviews/product_reviews.module';
 import { CartModule } from '../cart/cart.module';
+import { AffiliateLinksModule } from '../affiliate-links/affiliate-links.module';
+import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 import { UserOrdersController } from './UserOrdersController';
 import { StoreOrdersController } from './StoreOrdersController';
 import { AdminOrdersController } from './AdminOrdersController';
@@ -32,6 +34,8 @@ import{OrdersController} from './orders.controller'
     ]),
     CartModule,
     VouchersModule,
+    AffiliateLinksModule,
+    AffiliateCommissionsModule,
     forwardRef(() => ProductReviewsModule),
   ],
   controllers: [

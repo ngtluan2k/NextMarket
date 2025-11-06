@@ -1,7 +1,8 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { message } from 'antd';
+import { initializeAffiliateTracking } from '../utils/affiliate-tracking';
 import { SellerRegistration } from './components/register_seller/SellerRegistration';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
@@ -67,6 +68,12 @@ interface CartProps {
 
 const App: React.FC = () => {
   const [messageApi, contextHolder] = message.useMessage();
+
+  // Initialize affiliate tracking globally
+  useEffect(() => {
+    initializeAffiliateTracking();
+    console.log('🌐 Global affiliate tracking initialized');
+  }, []);
 
   const showMessage: CartProps['showMessage'] = (type, content) => {
     const localizedContent = {

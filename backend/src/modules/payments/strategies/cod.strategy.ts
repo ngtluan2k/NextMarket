@@ -11,6 +11,8 @@ import {
 import { OrderItem } from '../../order-items/order-item.entity';
 import { Variant } from '../../variant/variant.entity';
 import { Inventory } from '../../inventory/inventory.entity';
+import { OrderStatuses } from '../../orders/types/orders';
+import { CommissionCalcService } from '../../affiliate-commissions/commission-calc.service';
 
 @Injectable()
 export class CodStrategy {
@@ -21,7 +23,8 @@ export class CodStrategy {
     private historyRepo: Repository<OrderStatusHistory>,
     @InjectRepository(OrderItem) private orderItemsRepo: Repository<OrderItem>,
     @InjectRepository(Variant) private variantsRepo: Repository<Variant>,
-    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>
+    @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
+    private commissionCalcService: CommissionCalcService
   ) {}
 
   async createPayment(order: Order, paymentMethod: PaymentMethod,isGroup: boolean = false) {
@@ -31,26 +34,46 @@ export class CodStrategy {
         order,
         paymentMethod,
         amount: order.totalAmount,
-        status: PaymentStatus.Unpaid, // Đặt trạng thái thành công
+        status: PaymentStatus.Paid, // ✅ Set to Paid for testing
         paidAt: new Date(),
         isGroup,
       });
       await manager.save(payment);
 
-      // Cập nhật trạng thái đơn hàng
+      // ✅ FOR TESTING: Automatically set order to COMPLETED to trigger affiliate commissions
       const oldStatus = order.status;
-      order.status = 0; // Đặt trạng thái đơn hàng là "Đã thanh toán"
-      await manager.save(order);
+      order.status = OrderStatuses.completed; // Status = 5 (completed)
+      const updatedOrder = await manager.save(order);
 
       // Tạo lịch sử trạng thái đơn hàng
       const history = manager.create(OrderStatusHistory, {
         order,
         oldStatus: oldStatus as unknown as historyStatus,
-        newStatus: order.status as unknown as historyStatus,
+        newStatus: OrderStatuses.completed as unknown as historyStatus,
         changedAt: new Date(),
-        note: 'Payment completed via COD',
+        note: '🧪 TEST MODE: COD payment auto-completed for affiliate commission testing',
       });
       await manager.save(history);
+
+      console.log(`🧪 TEST MODE: Order ${order.id} auto-completed via COD`);
+
+      // ✅ Trigger affiliate commission calculation immediately
+      if ((order as any).affiliate_user_id) {
+        try {
+          console.log(`🎯 Triggering affiliate commission for order ${order.id}`);
+          // Use setTimeout to run after transaction commits
+          setTimeout(async () => {
+            try {
+              await this.commissionCalcService.handleOrderPaid(order.id);
+              console.log(`✅ Affiliate commission calculated for order ${order.id}`);
+            } catch (error) {
+              console.error(`❌ Commission calculation failed for order ${order.id}:`, error);
+            }
+          }, 1000);
+        } catch (error) {
+          console.error(`❌ Failed to trigger commission:`, error);
+        }
+      }
 
       // Cập nhật kho hàng
       // const items: OrderItem[] = await manager.find(OrderItem, {

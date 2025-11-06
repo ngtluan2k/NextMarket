@@ -3,14 +3,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AffiliateLinksService } from './affiliate-links.service';
 import { AffiliateLinksController } from './affiliate-links.controller';
 import { AffiliateLink } from './affiliate-links.entity';
-import { UserModule } from '../user/user.module';
-import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
+import { AffiliateResolutionService } from './affiliate-resolution.service';
 import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
-import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.module';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { Product } from '../product/product.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 import { User } from '../user/user.entity';
+import { UserModule } from '../user/user.module';
+import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
+import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -25,9 +27,10 @@ import { User } from '../user/user.entity';
     UserModule,
     AffiliateCommissionsModule,
     AffiliateProgramsModule,
+    WalletModule,
   ],
   controllers: [AffiliateLinksController],
-  providers: [AffiliateLinksService],
-  exports: [AffiliateLinksService],
+  providers: [AffiliateLinksService, AffiliateResolutionService],
+  exports: [AffiliateLinksService, AffiliateResolutionService, TypeOrmModule],
 })
 export class AffiliateLinksModule {}

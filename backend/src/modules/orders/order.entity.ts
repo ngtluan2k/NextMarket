@@ -122,4 +122,14 @@ export class Order {
 
   @Column({ name: 'group_order_id', nullable: true })
   group_order_id?: number;
+
+  // Affiliate tracking fields
+  @Column({ name: 'affiliate_user_id', nullable: true })
+  affiliate_user_id?: number;
+
+  @Column({ name: 'affiliate_code', length: 50, nullable: true })
+  affiliate_code?: string;
+
+  @Column({ name: 'affiliate_program_id', nullable: true })
+  affiliate_program_id?: number;
 }

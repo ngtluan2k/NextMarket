@@ -1,5 +1,5 @@
 // modules/affiliate-links/affiliate-links.controller.ts
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { AffiliateLinksService } from './affiliate-links.service';
 
@@ -43,5 +43,42 @@ export class AffiliateLinksController {
   async getDashboardStats(@Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.getDashboardStats(userId);
+  }
+
+  @Get('commission-history')
+  async getCommissionHistory(
+    @Request() req: AuthRequest,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ) {
+    const userId = req.user.userId;
+    return this.service.getCommissionHistory(userId, page || 1, limit || 20);
+  }
+
+  @Get('commission-summary')
+  async getCommissionSummary(
+    @Request() req: AuthRequest,
+    @Query('period') period?: 'daily' | 'weekly' | 'monthly',
+    @Query('limit') limit?: number
+  ) {
+    const userId = req.user.userId;
+    return this.service.getCommissionSummaryByPeriod(userId, period || 'monthly', limit || 12);
+  }
+
+  @Get('balance')
+  async getBalance(@Request() req: AuthRequest) {
+    const userId = req.user.userId;
+    return this.service.getAvailableBalance(userId);
+  }
+
+  @Get('search-products')
+  async searchProducts(
+    @Request() req: AuthRequest,
+    @Query('search') search: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ) {
+    const userId = req.user.userId;
+    return this.service.searchProductsForAffiliate(userId, search, page || 1, limit || 20);
   }
 }

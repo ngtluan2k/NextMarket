@@ -7,7 +7,7 @@ export interface AffiliateProgram {
   commission_value: number | null;
   status: 'active' | 'inactive';
   created_at: string;
-  user_enrolled?: number;
+  user_enrolled: number;
 }
 
 export interface AffiliateProgramFormData {

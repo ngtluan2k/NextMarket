@@ -6,12 +6,15 @@ import { UpdateAffiliateProgramDto } from './dto/update-affiliate-program.dto';
 import { CreateAffiliateProgramDto } from './dto/create-affiliate-program.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { AffiliateRulesService } from '../affiliate-rules/affiliate-rules.service';
+import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 
 @Injectable()
 export class AffiliateProgramsService {
   constructor(
     @InjectRepository(AffiliateProgram)
     private repository: Repository<AffiliateProgram>,
+    @InjectRepository(AffiliateLink)
+    private linkRepository: Repository<AffiliateLink>,
     private readonly rulesService: AffiliateRulesService,
   ) {}
 
@@ -46,6 +49,50 @@ export class AffiliateProgramsService {
 
   async findAll(): Promise<AffiliateProgram[]> {
     return this.repository.find();
+  }
+
+  async findAllWithUserCounts(): Promise<(AffiliateProgram & { user_enrolled: number })[]> {
+    const programs = await this.repository.find();
+    
+    // Get user counts for each program
+    const programsWithCounts = await Promise.all(
+      programs.map(async (program) => {
+        const userCount = await this.linkRepository
+          .createQueryBuilder('link')
+          .select('COUNT(DISTINCT link.user_id)', 'count')
+          .where('link.program_id = :programId', { programId: program.id })
+          .getRawOne();
+        
+        return {
+          ...program,
+          user_enrolled: parseInt(userCount?.count || '0', 10),
+        };
+      })
+    );
+    
+    return programsWithCounts;
+  }
+
+  async findAllActiveWithUserCounts(): Promise<(AffiliateProgram & { user_enrolled: number })[]> {
+    const programs = await this.repository.find({ where: { status: 'active' } });
+    
+    // Get user counts for each program
+    const programsWithCounts = await Promise.all(
+      programs.map(async (program) => {
+        const userCount = await this.linkRepository
+          .createQueryBuilder('link')
+          .select('COUNT(DISTINCT link.user_id)', 'count')
+          .where('link.program_id = :programId', { programId: program.id })
+          .getRawOne();
+        
+        return {
+          ...program,
+          user_enrolled: parseInt(userCount?.count || '0', 10),
+        };
+      })
+    );
+    
+    return programsWithCounts;
   }
 
   async findOne(id: number): Promise<AffiliateProgram> {

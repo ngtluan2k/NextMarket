@@ -9,6 +9,7 @@ import {
   HelpCircle,
   Bell,
   X,
+  Search,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -25,6 +26,11 @@ const Sidebar = () => {
       name: 'Liên kết tiếp thị',
       href: '/affiliate/dashboard/links',
       icon: Link2,
+    },
+    {
+      name: 'Tìm kiếm sản phẩm',
+      href: '/affiliate/dashboard/products',
+      icon: Search,
     },
     {
       name: 'Thanh toán',

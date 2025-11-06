@@ -5,7 +5,7 @@ export type AffiliateProgram = {
   name: string;
   cookie_days: number;
   commission_type: string;
-  commission_value: number;
+  commission_value: string | number; // Can be string from API or number
   status: string;
   created_at: string;
 };

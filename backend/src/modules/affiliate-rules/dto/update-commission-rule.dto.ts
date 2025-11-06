@@ -1,35 +1,60 @@
-import { IsInt, IsNumber, IsOptional, IsDateString, Min } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsArray, Min, Max, ValidateIf } from 'class-validator';
+import { CalculationMethod } from '../affiliate-rules.entity';
 
 export class UpdateCommissionRuleDto {
   @IsOptional()
-  @IsInt()
-  program_id?: number | null;
+  @IsString()
+  program_id?: string;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  level?: number;
+  @IsString()
+  name?: string;
+
+  // === Calculation Config ===
+  @IsOptional()
+  @IsNumber()
+  @Min(0.01)
+  @Max(100)
+  total_budget?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  rate_percent?: number;
+  @Min(1)
+  @Max(10)
+  num_levels?: number;
 
   @IsOptional()
-  @IsDateString()
-  active_from?: string | null;
+  @IsEnum(CalculationMethod)
+  calculation_method?: CalculationMethod;
 
+  // Method-specific fields
+  @ValidateIf(o => o.calculation_method === CalculationMethod.GEOMETRIC_DECAY)
   @IsOptional()
-  @IsDateString()
-  active_to?: string | null;
+  @IsNumber()
+  @Min(0.1)
+  @Max(0.95)
+  decay_rate?: number;
+
+  @ValidateIf(o => o.calculation_method === CalculationMethod.FIBONACCI_RATIO)
+  @IsOptional()
+  @IsNumber()
+  starting_index?: number;
+
+  @ValidateIf(o => o.calculation_method === CalculationMethod.WEIGHTED_CUSTOM)
+  @IsOptional()
+  @IsArray()
+  weights?: number[];
+
+  // === Caps & Limits ===
+  @IsOptional()
+  @IsNumber()
+  cap_order?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  cap_per_order?: number | null;
+  cap_user?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
-  cap_per_user?: number | null;
+  time_limit_days?: number;
 }
