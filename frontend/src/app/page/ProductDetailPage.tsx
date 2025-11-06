@@ -68,7 +68,6 @@ export default function ProductDetailPage({ showMessage }: Props) {
   const [reviewPage, setReviewPage] = useState(1);
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(false);
-  console.log('product in product detail page: ' + JSON.stringify(product));
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {

@@ -44,12 +44,15 @@ const CheckoutPayment: React.FC = () => {
       ? Number(state.subtotal)
       : state.subtotal ?? 0;
 
+      
+  
   const checkoutItems: CheckoutItem[] = useMemo(() => {
     return items.map((i) => {
       const primaryImage =
         i.product.media?.find((m) => m.is_primary)?.url ??
         i.product.media?.[0]?.url ??
         '';
+
       const variant =
         i.variant && i.variant.id && i.variant.variant_name && i.variant.price
           ? {
@@ -58,6 +61,11 @@ const CheckoutPayment: React.FC = () => {
               price: i.variant.price,
             }
           : undefined;
+
+      // Chỉ lấy id nếu selectedPricingRule tồn tại, không dùng null
+         const pricingRuleId = i.pricingRuleId ?? undefined;
+
+
       return {
         id: i.id,
         name: i.product.name ?? 'Sản phẩm không xác định',
@@ -67,9 +75,13 @@ const CheckoutPayment: React.FC = () => {
         type: i.type,
         product: i.product,
         variant,
+        pricingRuleId, // sẽ là undefined nếu chưa chọn rule
       };
     });
+    
   }, [items]);
+  console.log('Checkout items built:', checkoutItems);
+
 
   // Kiểm tra có subscription hay không
   const isSubscription = useMemo(

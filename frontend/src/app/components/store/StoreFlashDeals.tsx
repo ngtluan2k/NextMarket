@@ -14,6 +14,7 @@ type Props = {
   /** thời điểm kết thúc đợt deal (ISO string từ BE) */
   endsAt?: string; // optional nếu BE không trả
   /** override fetcher nếu cần */
+    items?: FlashDealItem[]; 
   fetchFlashDeals?: (
     slug: string
   ) => Promise<{ items: FlashDealItem[]; endsAt?: string }>;

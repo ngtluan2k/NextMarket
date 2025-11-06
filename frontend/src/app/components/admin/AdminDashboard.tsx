@@ -19,6 +19,8 @@ import CampaignDetailPage from './campaigns_components/CampaignDetailPage';
 import AdminCampaignStoreProductsWrapper from './AdminCampaignStoreProductsWrapper';
 import PublishCampaignForm from './campaigns_components/PublishCampaignForm';
 import UpdateCampaignForm from './campaigns_components/UpdateCampaignForm';
+import FlashSaleManager, { FlashSale } from './FlashSaleManager';
+import FlashSaleStoreProducts from './flash_sale_components/FlashSaleStoreProducts';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -26,6 +28,9 @@ export const AdminDashboard: React.FC = () => {
     null
   );
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [selectedFlashSale, setSelectedFlashSale] = useState<FlashSale | null>(
+    null
+  );
 
   const handleSelectStore = (storeId: number) => {
     setSelectedStoreId(storeId);
@@ -163,6 +168,27 @@ export const AdminDashboard: React.FC = () => {
             onClose={() => setActiveKey('8-2')}
           />
         ) : null;
+
+      case '8-3':
+        return (
+          <FlashSaleManager
+            onSelectFlashSale={(fs) => {
+              setSelectedFlashSale(fs); // lưu flash sale đã chọn
+              setActiveKey('8-3-store'); // chuyển view sang store products
+            }}
+          />
+        );
+      case '8-3-store':
+  return selectedFlashSale ? (
+    <FlashSaleStoreProducts
+      scheduleId={selectedFlashSale.id}
+      scheduleStartsAt={selectedFlashSale.starts_at}
+      scheduleEndsAt={selectedFlashSale.ends_at}
+      storeId={selectedStoreId || undefined} // nếu null thì bỏ qua filter
+      onBack={() => setActiveKey('8-3')}
+    />
+  ) : null;
+
 
       case '9':
         return (

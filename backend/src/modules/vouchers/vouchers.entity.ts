@@ -80,10 +80,10 @@ export class Voucher {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   min_order_amount!: number;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   start_date!: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   end_date!: Date;
 
   @Column({ type: 'int', nullable: true })

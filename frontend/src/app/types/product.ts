@@ -36,6 +36,7 @@ export type PricingRuleInfo = {
   cycle?: string;
   starts_at?: string;
   ends_at?: string;
+  variant_sku?: string;
 };
 
 export type Product = {
@@ -57,6 +58,7 @@ export type Product = {
   rating?: number;
   reviewsCount?: number;
   sellerName?: string;
+  selectedPricingRule?: { id: number; type: 'bulk' | 'subscription' | 'normal' | 'flash_sale' } | null;
 };
 
 export type LikeItem = {

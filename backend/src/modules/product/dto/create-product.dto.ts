@@ -70,5 +70,6 @@ export class CreateProductDto {
     name?: string; // tên rule
     status?: 'active' | 'inactive'; // trạng thái
     limit_quantity?: number;
+    schedule_id?: number;
   }[];
 }

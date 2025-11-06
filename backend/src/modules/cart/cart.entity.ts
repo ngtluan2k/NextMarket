@@ -17,7 +17,7 @@ export class ShoppingCart {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', length: 36, unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -28,11 +28,11 @@ export class ShoppingCart {
   @Column()
   user_id!: number;
 
-  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
   @Column({
-    type: 'datetime',
+    type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
     onUpdate: 'CURRENT_TIMESTAMP',
   })
@@ -81,8 +81,11 @@ export class CartItem {
   added_at!: Date;
 
   @Column({ type: 'varchar' })
-  type!: 'bulk' | 'subscription'| 'normal' | 'flash_sale';
-  
+  type!: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+
   @Column({ type: 'boolean', default: false })
-  is_group!: boolean
+  is_group!: boolean;
+
+  @Column({ type: 'int', nullable: true })
+  pricing_rule_id?: number; // <-- thêm cột này
 }

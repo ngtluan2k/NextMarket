@@ -96,6 +96,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Active groups loaded:', data); 
         setActiveGroups(data);
       } else {
         setActiveGroups([]);
@@ -110,7 +111,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
 
   useEffect(() => {
     loadActiveGroups();
-  }, [user?.id]);
+  }, [user?.user_id]);
 
   const handleGoCheckout = () => {
     if (selectedIds.length === 0) return;

@@ -36,7 +36,7 @@ export class CartController {
       body.productId,
       body.quantity,
       body.variantId,
-      body.type ,
+      body.type,
       body.isGroup
     );
   }
@@ -57,7 +57,6 @@ export class CartController {
       body.quantity,
       body.variantId,
       body.type,
-      body.isGroup
     );
   }
 

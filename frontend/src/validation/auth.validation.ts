@@ -25,6 +25,14 @@ const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 // VN phone (9–11 digits). Điều chỉnh theo backend nếu cần.
 const PHONE_REGEX = /^(?:0|\+?84)?[1-9]\d{7,10}$/;
 
+const FULLNAME_WORD_REGEX = /^[A-Za-zÀ-ỹĐđ'’-]+$/;
+
+function isValidFullNameFE(name: string): boolean {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return false;
+  return parts.every((p) => FULLNAME_WORD_REGEX.test(p));
+}
+
 function calcAge(dob: string): number | null {
   if (!dob) return null;
   const d = new Date(dob);
@@ -36,17 +44,24 @@ function calcAge(dob: string): number | null {
   return age;
 }
 
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/;
+
 export function validateLogin(data: LoginPayload): {
   ok: boolean;
   errors: FieldError<keyof LoginPayload>[];
 } {
   const errors: FieldError<keyof LoginPayload>[] = [];
+  const password = (data.password || '').trim();
+
 
   if (!EMAIL_REGEX.test(data.email || '')) {
     errors.push({ field: 'email', message: 'Email không hợp lệ' });
   }
-  if ((data.password || '').length < 6) {
-    errors.push({ field: 'password', message: 'Mật khẩu tối thiểu 6 ký tự' });
+  if (!STRONG_PASSWORD_REGEX.test(password)) {
+    errors.push({
+      field: 'password',
+      message: 'Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt',
+    });
   }
 
   return { ok: errors.length === 0, errors };
@@ -67,6 +82,17 @@ export function validateRegister(data: RegisterPayload): {
   if (!data.full_name || data.full_name.trim().length < 2) {
     errors.push({ field: 'full_name', message: 'Vui lòng nhập Họ và tên' });
   }
+
+  if (data.full_name && data.full_name.trim().length >= 2) {
+    const full = data.full_name.trim();
+    if (!isValidFullNameFE(full)) {
+      errors.push({
+        field: 'full_name',
+        message: 'Full name phải ít nhất 2 từ và không được rỗng',
+      });
+    }
+  }
+  
 
   // dob (>= 14 tuổi)
   if (!data.dob) {
@@ -99,9 +125,14 @@ export function validateRegister(data: RegisterPayload): {
     errors.push({ field: 'email', message: 'Email không hợp lệ' });
   }
 
-  // password
-  if (!data.password || data.password.length < 6) {
-    errors.push({ field: 'password', message: 'Mật khẩu tối thiểu 6 ký tự' });
+  const pwd = (data.password || '').trim();
+  if (!pwd) {
+    errors.push({ field: 'password', message: 'Vui lòng nhập mật khẩu' });
+  } else if (!STRONG_PASSWORD_REGEX.test(pwd)) {
+    errors.push({
+      field: 'password',
+      message: 'Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt',
+    });
   }
 
   // country

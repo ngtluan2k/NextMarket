@@ -157,6 +157,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     variantId?: number,
     type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
+    console.log('FE updateQuantity called with:', {
+      productId,
+      quantity,
+      variantId,
+      type,
+    }); // <-- log ở đây
+
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       alert('Vui lòng đăng nhập để cập nhật số lượng');
@@ -169,7 +176,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type }),
+        body: JSON.stringify({
+          productId,
+          quantity,
+          variantId,
+          type,
+        }),
       });
       if (response.ok) {
         await loadCart();

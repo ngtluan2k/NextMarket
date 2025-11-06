@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Progress } from 'antd';
-
+import { Flame } from 'lucide-react';
 const DEBUG = true;
 
 type ProductRaw = {
@@ -17,6 +17,7 @@ type ProductRaw = {
     type: string;
     price: string | number;
     limit_quantity?: number;
+    remaining_quantity?: number;
   }[];
 };
 
@@ -29,6 +30,7 @@ export type ProductFlashSaleItem = {
   originalPrice?: number;
   brandName?: string;
   limitQuantity?: number;
+  remainingQuantity?: number;
 };
 
 type ProductFlashSaleProps = {
@@ -125,10 +127,11 @@ export default function ProductFlashSale({
           );
           const original = toNumber(p.base_price);
 
-          const flashRule = p['pricing_rules']?.find(
+          const flashRule = p.pricing_rules?.find(
             (r) => r.type === 'flash_sale'
           );
-          const limitQuantity = flashRule?.limit_quantity;
+          const limitQuantity = flashRule?.limit_quantity; // tổng số lượng tối đa
+          const remainingQuantity = flashRule?.remaining_quantity; // số lượng còn lại
 
           const it: ProductFlashSaleItem = {
             id: p.id,
@@ -139,6 +142,7 @@ export default function ProductFlashSale({
             originalPrice: original || undefined,
             brandName: p.brand?.name,
             limitQuantity,
+            remainingQuantity,
           };
 
           if (DEBUG) {
@@ -151,6 +155,7 @@ export default function ProductFlashSale({
           }
           return it;
         });
+        console.log(mapped);
 
         if (!cancel) setData(mapped);
       } catch (e) {
@@ -183,7 +188,18 @@ export default function ProductFlashSale({
       className={`rounded-2xl bg-white ring-1 ring-slate-200 shadow ${className}`}
     >
       <div className="flex items-center justify-between px-4 py-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          {title}
+
+          {/* Nếu có sản phẩm flash sale => hiển thị chữ “Đang diễn ra” */}
+          {data.length > 0 && (
+            <span className="flex items-center gap-1 text-rose-600 text-xs font-medium animate-pulse">
+              <Flame className="w-4 h-4 text-rose-500 animate-bounce" />
+              Đang diễn ra
+            </span>
+          )}
+        </h2>
+
         <Link to={seeAllHref} className="text-sm text-sky-600 hover:underline">
           Xem tất cả
         </Link>
@@ -271,17 +287,24 @@ export default function ProductFlashSale({
                         {formatVND(p.price)} {/* Giá flash sale */}
                       </div>
 
-                      
-
                       {p.brandName && (
                         <div className="text-[11px] text-slate-400">
                           {p.brandName}
                         </div>
                       )}
-                      {p.limitQuantity && (
+                      {p.limitQuantity && p.remainingQuantity !== undefined && (
                         <div className="mt-3 relative">
                           <Progress
-                            percent={100}
+                            percent={
+                              p.limitQuantity &&
+                              p.remainingQuantity !== undefined
+                                ? Math.max(
+                                    0,
+                                    (p.remainingQuantity / p.limitQuantity) *
+                                      100
+                                  )
+                                : 100
+                            }
                             showInfo={false}
                             strokeColor="#f43f5e"
                             trailColor="#fca5a5"
@@ -290,7 +313,7 @@ export default function ProductFlashSale({
                           />
 
                           <div className="absolute inset-0 flex items-center justify-center text-[10.5px] text-white font-medium pointer-events-none">
-                            Còn lại: {p.limitQuantity} sản phẩm
+                            Còn lại: {p.remainingQuantity} sản phẩm
                           </div>
                         </div>
                       )}
