@@ -10,7 +10,7 @@ import {
 import { Order } from '../orders/order.entity';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 

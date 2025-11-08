@@ -17,7 +17,7 @@ import { Product } from '../product/product.entity';
 import { Payment } from '../payments/payment.entity';
 import { VouchersService } from '../vouchers/vouchers.service';
 import { AffiliateResolutionService } from '../affiliate-links/affiliate-resolution.service';
-import { CommissionCalcService } from '../affiliate-commissions/commission-calc.service';
+import { CommissionCalcService } from '../affiliate-commissions/service/commission-calc.service';
 import { Subscription } from '../subscription/subscription.entity';
 import {
   OrderStatusHistory,

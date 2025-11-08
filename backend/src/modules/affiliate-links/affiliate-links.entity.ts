@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { User } from '../user/user.entity';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 
 @Entity('affiliate_links')
 export class AffiliateLink {

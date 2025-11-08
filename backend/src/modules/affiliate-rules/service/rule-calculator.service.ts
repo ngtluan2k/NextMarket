@@ -109,27 +109,20 @@ export class CalculationMethodService {
     return levels;
   }
 
-  /**
-   * FIBONACCI RATIO Implementation
-   */
+
   private calculateFibonacci(dto: PreviewRuleDto): LevelRate[] {
     const { total_budget, num_levels, starting_index } = dto;
 
-    // Generate Fibonacci sequence
-    const fibSequence = this.generateFibonacci(num_levels + 10); // Generate extra
+    const fibSequence = this.generateFibonacci(num_levels + 10); 
 
-    // Determine starting index
     const startIdx = starting_index ?? this.getOptimalFibStartIndex(num_levels);
 
-    // Get weights (reversed)
     const weights = fibSequence
       .slice(startIdx, startIdx + num_levels)
       .reverse();
 
-    // Calculate total weight
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
-    // Calculate rates
     const levels: LevelRate[] = weights.map((weight, index) => ({
       level: index + 1,
       rate: (total_budget * weight) / totalWeight,
@@ -139,9 +132,7 @@ export class CalculationMethodService {
     return levels;
   }
 
-  /**
-   * Generate Fibonacci sequence
-   */
+
   private generateFibonacci(n: number): number[] {
     const fib = [1, 1];
     for (let i = 2; i < n; i++) {
@@ -150,17 +141,12 @@ export class CalculationMethodService {
     return fib;
   }
 
-  /**
-   * Get optimal Fibonacci starting index
-   */
+
   private getOptimalFibStartIndex(numLevels: number): number {
     if (numLevels <= 5) return 3;
     return 5;
   }
 
-  /**
-   * WEIGHTED CUSTOM Implementation
-   */
   private calculateWeightedCustom(dto: PreviewRuleDto): LevelRate[] {
     const { total_budget, num_levels, weights } = dto;
 
@@ -170,19 +156,17 @@ export class CalculationMethodService {
       );
     }
 
-    // Check for negative weights
     if (weights.some((w) => w < 0)) {
       throw new BadRequestException('All weights must be non-negative');
     }
 
-    // Calculate total weight
     const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
     if (totalWeight === 0) {
       throw new BadRequestException('Total weight cannot be zero');
     }
 
-    // Calculate rates
+
     const levels: LevelRate[] = weights.map((weight, index) => ({
       level: index + 1,
       rate: (total_budget * weight) / totalWeight,
@@ -192,9 +176,7 @@ export class CalculationMethodService {
     return levels;
   }
 
-  /**
-   * Validation for Geometric Decay
-   */
+
   private validateGeometricDecay(
     dto: PreviewRuleDto,
     levels: LevelRate[],
@@ -203,7 +185,6 @@ export class CalculationMethodService {
   ): void {
     const { decay_rate, num_levels } = dto;
 
-    // Check if decay rate too low
     if (decay_rate !== undefined && decay_rate < 0.3) {
       const f1Percentage = (levels[0].rate / dto.total_budget) * 100;
       warnings.push(
@@ -214,7 +195,7 @@ export class CalculationMethodService {
       suggestions.push('Try decay_rate between 0.5-0.7 for better balance');
     }
 
-    // Check if decay rate too high
+
     if (decay_rate !== undefined && decay_rate > 0.9) {
       warnings.push(
         'Rates are nearly equal. Consider Flat allocation instead.'
@@ -222,7 +203,6 @@ export class CalculationMethodService {
       suggestions.push('For more differentiation, use decay_rate < 0.8');
     }
 
-    // Check for very small rates
     const verySmallRates = levels.filter((l) => l.rate < 0.5);
     if (verySmallRates.length > 0) {
       warnings.push(
@@ -234,9 +214,7 @@ export class CalculationMethodService {
     }
   }
 
-  /**
-   * Validation for Fibonacci
-   */
+
   private validateFibonacci(
     dto: PreviewRuleDto,
     levels: LevelRate[],

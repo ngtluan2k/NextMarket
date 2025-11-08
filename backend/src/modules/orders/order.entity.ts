@@ -131,5 +131,8 @@ export class Order {
   affiliate_code?: string;
 
   @Column({ name: 'affiliate_program_id', nullable: true })
-  affiliate_program_id?: number;
+  affiliate_program_id?: number; 
+
+  @Column({ name: 'affiliate_link_id', nullable: true })
+  affiliate_link_id?: number;
 }

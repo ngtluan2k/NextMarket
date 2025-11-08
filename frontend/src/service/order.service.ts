@@ -60,12 +60,11 @@ export const orderService = {
   },
 
   createOrder: async (userId: number, payload: any) => {
-    // Include affiliate tracking data if available
     const affiliateData = getAffiliateDataForOrder();
     
     const orderPayload = {
       ...payload,
-      ...affiliateData  // Add affiliate fields (affiliateCode, etc.)
+      ...affiliateData 
     };
 
     console.log('🛒 Creating order with affiliate data:', {
@@ -73,7 +72,7 @@ export const orderService = {
       fullAffiliateData: affiliateData,
     });
     
-    console.log('🔍 DEBUG - Complete order payload:', orderPayload);
+    // console.log('🔍 DEBUG - Complete order payload:', orderPayload);
 
     const token = localStorage.getItem('token');
     const res = await api.post(
@@ -178,7 +177,7 @@ export const orderService = {
   getOrderStats: async (storeId: number) => {
     const token = localStorage.getItem('token');
     const res = await axios.get(
-      `http://localhost:3000/stores/${storeId}/orders/stats`,
+      `${API_BASE_URL}/stores/${storeId}/orders/stats`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -186,7 +185,7 @@ export const orderService = {
     return res.data;
   },
 
-  // ========== ADMIN ENDPOINTS ==========
+
 
   getAllOrders: async () => {
     const res = await api.get(`${API_ENDPOINTS.admin}/orders`);

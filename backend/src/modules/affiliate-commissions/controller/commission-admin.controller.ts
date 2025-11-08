@@ -1,8 +1,8 @@
 import { Controller, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
-import { CommissionCalcService } from './commission-calc.service';
-import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
-import { RolesGuard } from '../../common/auth/roles.guard';
-import { Roles } from '../../common/auth/roles.decorator';
+import { CommissionCalcService } from '../service/commission-calc.service';
+import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../../common/auth/roles.guard';
+import { Roles } from '../../../common/auth/roles.decorator';
 
 @Controller('admin/affiliate-commissions')
 @UseGuards(JwtAuthGuard, RolesGuard)

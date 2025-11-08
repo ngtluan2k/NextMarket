@@ -4,15 +4,16 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 // Entities
-import { Order } from '../orders/order.entity';
-import { OrderItem } from '../order-items/order-item.entity';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { Order } from '../../orders/order.entity';
+import { OrderItem } from '../../order-items/order-item.entity';
+import { AffiliateCommission } from '../entity/affiliate-commission.entity';
 
 // Services
-import { AffiliateRulesService } from '../affiliate-rules/affiliate-rules.service';
-import { WalletService } from '../wallet/wallet.service';
-import { User } from '../user/user.entity';
-import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
+import { AffiliateRulesService } from '../../affiliate-rules/affiliate-rules.service';
+import { WalletService } from '../../wallet/wallet.service';
+import { FraudDetectionService } from '../../affiliate-fraud/service/fraud-detection.service';
+import { User } from '../../user/user.entity';
+import { AffiliateProgram } from '../../affiliate-program/affiliate-program.entity';
 
 @Injectable()
 export class CommissionCalcService {
@@ -24,6 +25,7 @@ export class CommissionCalcService {
     @InjectRepository(AffiliateProgram) private readonly programRepo: Repository<AffiliateProgram>,
     private readonly rulesService: AffiliateRulesService,
     private readonly walletService: WalletService,
+    private readonly fraudDetectionService: FraudDetectionService,
   ) {}
 
   // Hàm gọi khi đơn hàng chuyển sang PAID
@@ -54,11 +56,13 @@ export class CommissionCalcService {
       // Họ sẽ nhận commission rate của "level 1" từ rule
       let level0UserId: number | null = null;
       let programId: number | null = null;
+      let linkId: number | null = null;
 
       if ((order as any).affiliate_user_id) {
         level0UserId = Number((order as any).affiliate_user_id);
         programId = (order as any).affiliate_program_id ? Number((order as any).affiliate_program_id) : null;
-        console.log(`👤 Using affiliate user: ${level0UserId}, program: ${programId}`);
+        linkId =(order as any).affiliate_link_id ? Number((order as any).affiliate_link_id) : null;
+        console.log(`👤 Using affiliate user: ${level0UserId}, program: ${programId},  link: ${linkId}`);
       }
 
       // Check if program is active before proceeding
@@ -87,6 +91,21 @@ export class CommissionCalcService {
         return;
       }
 
+      // 🚨 Run fraud detection checks
+      console.log(`🔍 Running fraud detection checks for order ${orderId}`);
+      const fraudCheck = await this.fraudDetectionService.runFraudChecks({
+        user_id: orderUserId,
+        affiliate_user_id: level0UserId,
+        ip_address: (order as any).ip_address,
+      });
+
+      if (fraudCheck.fraudDetected) {
+        console.warn(`🚨 Fraud detected for order ${orderId}:`, fraudCheck.checks);
+        // Block commission creation if fraud is detected
+        return;
+      }
+      console.log(`✅ Fraud checks passed for order ${orderId}`);
+
       // Lấy các item đủ điều kiện
       const items = await this.orderItemRepo.find({
         where: { order: { id: order.id } },
@@ -112,7 +131,7 @@ export class CommissionCalcService {
 
         // Level 1 - wrap in try-catch for individual item error handling
         try {
-          await this.allocateLevel(order, item, level0UserId, 1, programId, baseAmount);
+          await this.allocateLevel(order, item, level0UserId, 1, programId, linkId, baseAmount);
         } catch (error) {
           console.error(`❌ Failed to allocate commission for item ${item.id}:`, error);
           // Continue with other items even if one fails
@@ -136,6 +155,7 @@ export class CommissionCalcService {
     beneficiaryUserId: number,
     level: number,
     programId: number | null,
+    linkId: number| null,
     baseAmount: number,
   ) {
     const orderId = order.id;
@@ -190,7 +210,8 @@ export class CommissionCalcService {
         amount: computed,
         status: 'PENDING', // Start as PENDING, will be updated to PAID after successful wallet operation
         created_at: new Date(),
-        link_id: null,
+        link_id: linkId,
+        related_order_id: orderId
       } as any);
 
       const savedCommission = await manager.save(rec);

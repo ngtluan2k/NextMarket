@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AffiliateCommission } from './affiliate-commission.entity';
-import { CreateAffiliateCommissionDto } from './dto/create-affiliate-commission.dto';
-import { UpdateAffiliateCommissionDto } from './dto/update-affiliate-commission.dto';
-import { OrderItem } from '../order-items/order-item.entity';
-import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
+import { Repository, In } from 'typeorm';
+import { AffiliateCommission } from '../entity/affiliate-commission.entity';
+import { CreateAffiliateCommissionDto } from '../dto/create-affiliate-commission.dto';
+import { UpdateAffiliateCommissionDto } from '../dto/update-affiliate-commission.dto';
+import { OrderItem } from '../../order-items/order-item.entity';
+import { AffiliateLink } from '../../affiliate-links/affiliate-links.entity';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -103,5 +103,27 @@ export class AffiliateCommissionsService {
 
   async remove(id: number): Promise<void> {
     await this.repository.delete(id);
+  }
+
+  // Find reversed/voided commissions for a user
+  async findReversedByUser(userId: number, page: number = 1, limit: number = 20) {
+    const [commissions, total] = await this.repository.findAndCount({
+      where: {
+        beneficiary_user_id: { id: userId } as any,
+        status: In(['REVERSED', 'VOIDED']),
+      },
+      relations: ['order_item_id', 'order_item_id.order', 'order_item_id.product'],
+      order: { reversed_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      commissions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

@@ -58,15 +58,21 @@ import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AffiliateRulesModule } from './modules/affiliate-rules/affiliate-rules.module';
 import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.module';
-
+import { AffiliateFraudModule } from './modules/affiliate-fraud/affiliate-fraud.module';
 
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
 import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 60 seconds
+      limit: 10, // 10 requests per TTL
+    }]),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -153,6 +159,7 @@ import { CalculationMethodModule } from './modules/affiliate-calculation-method/
     AdminModule,
     AffiliateRulesModule,
     AffiliateTreeModule,
+    AffiliateFraudModule,
     CampaignsModule,
     FlashSaleSchedulesModule,
   ],

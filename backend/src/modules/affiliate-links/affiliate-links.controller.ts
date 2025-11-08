@@ -1,5 +1,6 @@
 // modules/affiliate-links/affiliate-links.controller.ts
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { AffiliateLinksService } from './affiliate-links.service';
 
@@ -80,5 +81,43 @@ export class AffiliateLinksController {
   ) {
     const userId = req.user.userId;
     return this.service.searchProductsForAffiliate(userId, search, page || 1, limit || 20);
+  }
+
+  @Post('track-click')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 clicks per minute per IP
+  async trackClick(
+    @Body() body: {
+      affiliateCode: string;
+      clickId: string;
+      productId?: number;
+      variantId?: number;
+      programId?: number;
+      source?: string;
+      timestamp: number;
+    },
+    @Request() req: any,
+  ) {
+    try {
+      const ipAddress = req.ip || req.connection?.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+      const referrer = req.headers['referer'] || req.headers['referrer'];
+
+      await this.service.trackClick({
+        ...body,
+        ipAddress,
+        userAgent,
+        referrer,
+      });
+
+      return {
+        success: true,
+        message: 'Click tracked successfully',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error?.message || 'Failed to track click',
+      };
+    }
   }
 }

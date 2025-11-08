@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Referral } from '../referral/referrals.entity';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.entity';
 @Injectable()
 export class AffiliateTreeService {

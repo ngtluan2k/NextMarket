@@ -3,8 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AffiliateLinksService } from './affiliate-links.service';
 import { AffiliateLinksController } from './affiliate-links.controller';
 import { AffiliateLink } from './affiliate-links.entity';
+import { AffiliateClick } from './entity/affiliate-click.entity';
 import { AffiliateResolutionService } from './affiliate-resolution.service';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { Product } from '../product/product.entity';
 import { OrderItem } from '../order-items/order-item.entity';
@@ -18,6 +19,7 @@ import { WalletModule } from '../wallet/wallet.module';
   imports: [
     TypeOrmModule.forFeature([
       AffiliateLink,
+      AffiliateClick,
       AffiliateCommission,
       AffiliateProgram,
       Product,

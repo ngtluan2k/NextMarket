@@ -3,7 +3,8 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AffiliateLink } from './affiliate-links.entity';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { AffiliateClick } from './entity/affiliate-click.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { Product } from '../product/product.entity';
 import { User } from '../user/user.entity';
@@ -14,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class AffiliateLinksService {
   constructor(
     @InjectRepository(AffiliateLink) private readonly linkRepo: Repository<AffiliateLink>,
+    @InjectRepository(AffiliateClick) private readonly clickRepo: Repository<AffiliateClick>,
     @InjectRepository(AffiliateCommission) private readonly commRepo: Repository<AffiliateCommission>,
     @InjectRepository(AffiliateProgram) private readonly programRepo: Repository<AffiliateProgram>,
     @InjectRepository(Product) private readonly productRepo: Repository<Product>,
@@ -430,5 +432,94 @@ export class AffiliateLinksService {
         totalPages: Math.ceil(total / limit),
       }
     };
+  }
+
+  // Track affiliate click
+  async trackClick(data: {
+    affiliateCode: string;
+    clickId: string;
+    productId?: number;
+    variantId?: number;
+    programId?: number;
+    source?: string;
+    timestamp: number;
+    ipAddress?: string;
+    userAgent?: string;
+    referrer?: string;
+  }) {
+    try {
+      // Find affiliate link by code
+      const link = await this.linkRepo.findOne({
+        where: { code: data.affiliateCode },
+      });
+
+      if (!link) {
+        console.warn(`⚠️ Affiliate link not found for code: ${data.affiliateCode}`);
+        // Still track the click even if link not found for analytics
+      }
+
+      // Parse UTM parameters from referrer if available
+      let utmParams = null;
+      if (data.source) {
+        utmParams = { utm_source: data.source };
+      }
+
+      // Create click record
+      const click = this.clickRepo.create({
+        click_id: data.clickId,
+        affiliate_code: data.affiliateCode,
+        affiliate_link_id: link?.id,
+        product_id: data.productId,
+        variant_id: data.variantId,
+        ip_address: data.ipAddress,
+        user_agent: data.userAgent,
+        referrer: data.referrer,
+        utm_params: utmParams,
+        clicked_at: new Date(data.timestamp),
+        converted: false,
+      });
+
+      await this.clickRepo.save(click);
+
+      // Increment click count on the link
+      if (link) {
+        await this.linkRepo.increment({ id: link.id }, 'clicks', 1);
+      }
+
+      console.log(`📊 Click tracked: ${data.clickId} for affiliate ${data.affiliateCode}`);
+      
+      return {
+        success: true,
+        clickId: data.clickId,
+      };
+    } catch (error) {
+      console.error('❌ Failed to track click:', error);
+      throw error;
+    }
+  }
+
+  // Mark click as converted (called when order is created)
+  async markClickAsConverted(affiliateCode: string, orderId: number) {
+    try {
+      // Find the most recent unconverted click for this affiliate code
+      const click = await this.clickRepo.findOne({
+        where: {
+          affiliate_code: affiliateCode,
+          converted: false,
+        },
+        order: { clicked_at: 'DESC' },
+      });
+
+      if (click) {
+        click.converted = true;
+        click.order_id = orderId;
+        click.converted_at = new Date();
+        await this.clickRepo.save(click);
+        
+        console.log(`✅ Click ${click.click_id} marked as converted for order ${orderId}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to mark click as converted:', error);
+    }
   }
 }

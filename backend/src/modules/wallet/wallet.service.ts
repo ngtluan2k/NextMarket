@@ -111,4 +111,66 @@ export class WalletService {
       take: limit,
     });
   }
+
+  async deductCommissionFromWallet(
+    userId: number, 
+    amount: number, 
+    commissionId: string, 
+    reason: string,
+    manager?: any  // ✅ Thêm optional EntityManager parameter
+  ): Promise<{ wallet: Wallet; transaction: WalletTransaction }> {
+    
+    // ✅ Dùng manager nếu có, không thì dùng repo
+    const walletRepo = manager ? manager.getRepository(Wallet) : this.walletRepo;
+    const txRepo = manager ? manager.getRepository(WalletTransaction) : this.walletTransactionRepo;
+    
+    // Tìm hoặc tạo wallet
+    let wallet = await walletRepo.findOne({ where: { user_id: userId } });
+    
+    if (!wallet) {
+      wallet = walletRepo.create({
+        uuid: uuidv4(),
+        user_id: userId,
+        balance: 0,
+        currency: 'VND',
+      });
+      wallet = await walletRepo.save(wallet);
+    }
+    
+    // Check balance
+    if (Number(wallet.balance) < Number(amount)) {
+      throw new Error(`Insufficient balance for userid: ${userId}. Required: ${amount}, Available: ${wallet.balance}`);
+    }
+
+    // Update balance
+    wallet.balance = Number(wallet.balance) - Number(amount);
+    wallet.updated_at = new Date();
+
+    // ✅ Save với repo (có thể là manager hoặc this.walletRepo)
+    const updatedWallet = await walletRepo.save(wallet);
+
+    // Create transaction record
+    const transaction = txRepo.create({
+      uuid: uuidv4(),
+      wallet_id: wallet.id,
+      wallet: wallet,
+      type: 'Hủy hoa hồng',
+      amount: -Number(amount),
+      reference: `commission_reversal: ${commissionId}`,
+      description: reason,
+      created_at: new Date(),
+    });
+    
+    // ✅ Save với repo
+    const savedTransaction = await txRepo.save(transaction);
+
+    console.log(
+      `💸 Deducted ${amount} coins from user ${userId} wallet (Commission reversal: ${commissionId}, Reason: ${reason})`
+    );
+
+    return {
+      wallet: updatedWallet,
+      transaction: savedTransaction,
+    };
+  }
 }

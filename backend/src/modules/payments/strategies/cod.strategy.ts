@@ -12,7 +12,7 @@ import { OrderItem } from '../../order-items/order-item.entity';
 import { Variant } from '../../variant/variant.entity';
 import { Inventory } from '../../inventory/inventory.entity';
 import { OrderStatuses } from '../../orders/types/orders';
-import { CommissionCalcService } from '../../affiliate-commissions/commission-calc.service';
+import { CommissionCalcService } from '../../affiliate-commissions/service/commission-calc.service';
 
 @Injectable()
 export class CodStrategy {

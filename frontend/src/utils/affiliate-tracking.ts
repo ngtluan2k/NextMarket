@@ -1,6 +1,9 @@
 /**
  * Affiliate tracking utilities for capturing and managing affiliate codes
+ * Uses cookies for 30-day attribution window
  */
+
+import Cookies from 'js-cookie';
 
 export interface AffiliateTrackingData {
   affiliateCode?: string;
@@ -8,10 +11,12 @@ export interface AffiliateTrackingData {
   variantId?: number;
   programId?: number;
   timestamp: number;
+  clickId?: string; // Unique click ID
+  source?: string; // utm_source
 }
 
 const AFFILIATE_STORAGE_KEY = 'affiliate_tracking';
-const AFFILIATE_EXPIRY_HOURS = 24; // 24 hours
+const ATTRIBUTION_WINDOW_DAYS = 30; // 30 days attribution window
 
 /**
  * Capture affiliate code from URL parameters
@@ -33,12 +38,16 @@ export function captureAffiliateFromUrl(): AffiliateTrackingData | null {
     ? parseInt(pathParts[productIndex + 1], 10) 
     : undefined;
 
+  // Get utm_source if available
+  const utmSource = urlParams.get('utm_source');
+  
   const trackingData: AffiliateTrackingData = {
     affiliateCode,
     productId: productId && !isNaN(productId) ? productId : undefined,
     variantId: variantId ? parseInt(variantId, 10) : undefined,
     programId: programId ? parseInt(programId, 10) : undefined,
     timestamp: Date.now(),
+    source: utmSource || undefined,
   };
 
   // Store in sessionStorage for checkout process
@@ -49,35 +58,74 @@ export function captureAffiliateFromUrl(): AffiliateTrackingData | null {
 }
 
 /**
- * Store affiliate data in session storage
+ * Generate unique click ID
+ */
+function generateClickId(): string {
+  return `click_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
+
+/**
+ * Track click to backend
+ */
+async function trackAffiliateClick(data: AffiliateTrackingData): Promise<void> {
+  try {
+    await fetch('/api/affiliate-links/track-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    console.log('📊 Click tracked to backend:', data.clickId);
+  } catch (error) {
+    console.warn('Failed to track click to backend:', error);
+  }
+}
+
+/**
+ * Store affiliate data in cookies (30 days)
  */
 export function storeAffiliateData(data: AffiliateTrackingData): void {
   if (typeof window === 'undefined') return;
   
   try {
-    sessionStorage.setItem(AFFILIATE_STORAGE_KEY, JSON.stringify(data));
+    const trackingData = {
+      ...data,
+      clickId: data.clickId || generateClickId(),
+      timestamp: Date.now(),
+    };
+    
+    // Set cookie with 30 days expiry
+    Cookies.set(AFFILIATE_STORAGE_KEY, JSON.stringify(trackingData), {
+      expires: ATTRIBUTION_WINDOW_DAYS,
+      sameSite: 'lax',
+      secure: window.location.protocol === 'https:',
+    });
+    
+    // Track click to backend
+    trackAffiliateClick(trackingData);
+    
+    console.log('🍪 Affiliate data stored in cookie (30 days):', trackingData);
   } catch (error) {
     console.warn('Failed to store affiliate data:', error);
   }
 }
 
 /**
- * Retrieve stored affiliate data
+ * Retrieve stored affiliate data from cookies
  */
 export function getStoredAffiliateData(): AffiliateTrackingData | null {
   if (typeof window === 'undefined') return null;
 
   try {
-    const stored = sessionStorage.getItem(AFFILIATE_STORAGE_KEY);
+    const stored = Cookies.get(AFFILIATE_STORAGE_KEY);
     if (!stored) return null;
 
     const data: AffiliateTrackingData = JSON.parse(stored);
     
-    // Check if data has expired
+    // Check if data has expired (30 days)
     const now = Date.now();
-    const expiryTime = data.timestamp + (AFFILIATE_EXPIRY_HOURS * 60 * 60 * 1000);
+    const daysSinceClick = (now - data.timestamp) / (1000 * 60 * 60 * 24);
     
-    if (now > expiryTime) {
+    if (daysSinceClick > ATTRIBUTION_WINDOW_DAYS) {
       clearAffiliateData();
       return null;
     }
@@ -90,13 +138,14 @@ export function getStoredAffiliateData(): AffiliateTrackingData | null {
 }
 
 /**
- * Clear stored affiliate data
+ * Clear stored affiliate data from cookies
  */
 export function clearAffiliateData(): void {
   if (typeof window === 'undefined') return;
   
   try {
-    sessionStorage.removeItem(AFFILIATE_STORAGE_KEY);
+    Cookies.remove(AFFILIATE_STORAGE_KEY);
+    console.log('🗑️ Affiliate cookie cleared');
   } catch (error) {
     console.warn('Failed to clear affiliate data:', error);
   }

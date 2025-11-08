@@ -63,7 +63,7 @@ const ProductSearch = () => {
     }
   };
 
-  const handleSearch = async (query: string, page: number = 1) => {
+  const handleSearch = async (query: string, page = 1) => {
     if (!query.trim()) return;
 
     try {

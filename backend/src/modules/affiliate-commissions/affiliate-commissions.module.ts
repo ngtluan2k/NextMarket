@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AffiliateCommissionsService } from './affiliate-commissions.service';
-import { AffiliateCommissionsController } from './affiliate-commissions.controller';
-import { CommissionCalcService } from './commission-calc.service';
-import { AffiliateCommission } from './affiliate-commission.entity';
+import { AffiliateCommissionsService } from './service/affiliate-commissions.service';
+import { AffiliateCommissionsController } from './controller/affiliate-commissions.controller';
+import { CommissionCalcService } from './service/commission-calc.service';
+import { CommissionRevesalService } from './service/commision-revesal.service';
+import { AffiliateCommission } from './entity/affiliate-commission.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { Order } from '../orders/order.entity';
@@ -11,6 +12,7 @@ import { User } from '../user/user.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { WalletModule } from '../wallet/wallet.module';
 import { AffiliateRulesModule } from '../affiliate-rules/affiliate-rules.module';
+import { AffiliateFraudModule } from '../affiliate-fraud/affiliate-fraud.module';
 
 @Module({
   imports: [
@@ -24,9 +26,10 @@ import { AffiliateRulesModule } from '../affiliate-rules/affiliate-rules.module'
     ]),
     WalletModule,
     AffiliateRulesModule,
+    AffiliateFraudModule,
   ],
   controllers: [AffiliateCommissionsController],
-  providers: [AffiliateCommissionsService, CommissionCalcService],
-  exports: [CommissionCalcService],
+  providers: [AffiliateCommissionsService, CommissionCalcService, CommissionRevesalService],
+  exports: [CommissionCalcService, CommissionRevesalService],
 })
 export class AffiliateCommissionsModule {}
