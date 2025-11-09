@@ -4,12 +4,14 @@ import { Referral } from '../referral/referrals.entity';
 import { User } from '../user/user.entity';
 import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.entity';
+import { AffiliateProgramParticipant } from '../affiliate-program/affiliate-program-participant.entity';
+import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { AffiliateTreeService } from './affiliate-tree.service';
 import { AffiliateTreeController } from './affiliate-tree.controller';
 import { UserModule } from '../user/user.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Referral, User, AffiliateCommission, AffiliateCommissionRule]), UserModule],
+  imports: [TypeOrmModule.forFeature([Referral, User, AffiliateCommission, AffiliateCommissionRule, AffiliateProgramParticipant, AffiliateProgram]), UserModule],
   providers: [AffiliateTreeService],
   controllers: [AffiliateTreeController],
   exports: [AffiliateTreeService, TypeOrmModule],

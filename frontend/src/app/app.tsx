@@ -7,6 +7,7 @@ import { SellerRegistration } from './components/register_seller/SellerRegistrat
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationSocketProvider } from './components/NotificationSocketProvider';
 import Home from './page/Home';
 import CategoryPage from './page/CategoryPage';
 import AccountLayout from './page/account/AccountLayout';
@@ -87,9 +88,10 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <CartProvider>
-        {contextHolder}
-        <Routes>
+      <NotificationSocketProvider>
+        <CartProvider>
+          {contextHolder}
+          <Routes>
           {/* Home & General */}
           <Route path="/" element={<Home />} />
           <Route path="/catepage" element={<CategoryPage />} />
@@ -211,7 +213,8 @@ const App: React.FC = () => {
           <Route path="/group/:uuid" element={<GroupJoin />} />
         </Routes>
         <CampaignAdPopup />
-      </CartProvider>
+        </CartProvider>
+      </NotificationSocketProvider>
     </AuthProvider>
   );
 };

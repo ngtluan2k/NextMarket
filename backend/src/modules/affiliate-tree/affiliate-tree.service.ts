@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Referral } from '../referral/referrals.entity';
 import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.entity';
+import { AffiliateProgramParticipant } from '../affiliate-program/affiliate-program-participant.entity';
+import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
+
 @Injectable()
 export class AffiliateTreeService {
   constructor(
@@ -16,6 +19,10 @@ export class AffiliateTreeService {
     private readonly commissionRepository: Repository<AffiliateCommission>,
     @InjectRepository(AffiliateCommissionRule)
     private readonly rulesRepository: Repository<AffiliateCommissionRule>,
+    @InjectRepository(AffiliateProgramParticipant)
+    private readonly participantRepository: Repository<AffiliateProgramParticipant>,
+    @InjectRepository(AffiliateProgram)
+    private readonly programRepository: Repository<AffiliateProgram>,
   ) {}
 
   async findAncestors(userId: number, maxDepth: number): Promise<number[]> {
@@ -28,7 +35,7 @@ export class AffiliateTreeService {
         FROM 
           referrals
         WHERE 
-          referee_id = ?
+          referee_id = $1
 
         UNION ALL
 
@@ -41,7 +48,7 @@ export class AffiliateTreeService {
         INNER JOIN 
           AncestorsCTE ucte ON r.referee_id = ucte.referrer_id
         WHERE 
-          ucte.level < ?
+          ucte.level < $2
       )
       SELECT referrer_id FROM AncestorsCTE;
     `;
@@ -82,137 +89,212 @@ export class AffiliateTreeService {
 
   /**
    * Lấy cây affiliate với thông tin commission cho từng user
+   * @param userId - User ID to get tree for
+   * @param maxDepth - Maximum depth of tree
+   * @param programId - Optional program ID to filter rates and participation
    */
-  // async getAffiliateTreeWithCommissions(userId: number, maxDepth: number = 10) {
-  //   // Lấy ancestors với level
-  //   const ancestorsQuery = `
-  //     WITH RECURSIVE AncestorsCTE AS (
-  //       SELECT 
-  //         referrer_id,
-  //         1 AS level
-  //       FROM 
-  //         referrals
-  //       WHERE 
-  //         referee_id = ?
+  async getAffiliateTreeWithCommissions(userId: number, maxDepth = 10, programId?: number) {
+    // Lấy ancestors với level
+    const ancestorsQuery = `
+      WITH RECURSIVE AncestorsCTE AS (
+        SELECT 
+          referrer_id,
+          1 AS level
+        FROM 
+          referrals
+        WHERE 
+          referee_id = $1
 
-  //       UNION ALL
+        UNION ALL
 
-  //       SELECT 
-  //         r.referrer_id,
-  //         ucte.level + 1
-  //       FROM 
-  //         referrals r
-  //       INNER JOIN 
-  //         AncestorsCTE ucte ON r.referee_id = ucte.referrer_id
-  //       WHERE 
-  //         ucte.level < ?
-  //     )
-  //     SELECT 
-  //       referrer_id,
-  //       level
-  //     FROM AncestorsCTE
-  //     ORDER BY level ASC;
-  //   `;
+        SELECT 
+          r.referrer_id,
+          ucte.level + 1
+        FROM 
+          referrals r
+        INNER JOIN 
+          AncestorsCTE ucte ON r.referee_id = ucte.referrer_id
+        WHERE 
+          ucte.level < $2
+      )
+      SELECT 
+        referrer_id,
+        level
+      FROM AncestorsCTE
+      ORDER BY level ASC;
+    `;
 
-  //   const ancestors = await this.referralRepository.query(ancestorsQuery, [userId, maxDepth]);
+    const ancestors = await this.referralRepository.query(ancestorsQuery, [userId, maxDepth]);
 
-  //   // Lấy descendants với level
-  //   const descendantsQuery = `
-  //     WITH RECURSIVE DescendantsCTE AS (
-  //       SELECT 
-  //         referee_id,
-  //         1 AS level
-  //       FROM 
-  //         referrals
-  //       WHERE 
-  //         referrer_id = ?
+    // Lấy descendants với level
+    const descendantsQuery = `
+      WITH RECURSIVE DescendantsCTE AS (
+        SELECT 
+          referee_id,
+          1 AS level
+        FROM 
+          referrals
+        WHERE 
+          referrer_id = $1
 
-  //       UNION ALL
+        UNION ALL
 
-  //       SELECT 
-  //         r.referee_id,
-  //         dcte.level + 1
-  //       FROM 
-  //         referrals r
-  //       INNER JOIN 
-  //         DescendantsCTE dcte ON r.referrer_id = dcte.referee_id
-  //       WHERE 
-  //         dcte.level < ?
-  //     )
-  //     SELECT 
-  //       referee_id,
-  //       level
-  //     FROM DescendantsCTE
-  //     ORDER BY level ASC;
-  //   `;
+        SELECT 
+          r.referee_id,
+          dcte.level + 1
+        FROM 
+          referrals r
+        INNER JOIN 
+          DescendantsCTE dcte ON r.referrer_id = dcte.referee_id
+        WHERE 
+          dcte.level < $2
+      )
+      SELECT 
+        referee_id,
+        level
+      FROM DescendantsCTE
+      ORDER BY level ASC;
+    `;
 
-  //   const descendants = await this.referralRepository.query(descendantsQuery, [userId, maxDepth]);
+    const descendants = await this.referralRepository.query(descendantsQuery, [userId, maxDepth]);
 
-  //   // Lấy thông tin user và commission cho tất cả user trong cây
-  //   const allUserIds = [
-  //     userId,
-  //     ...ancestors.map(a => a.referrer_id),
-  //     ...descendants.map(d => d.referee_id)
-  //   ];
+    // Lấy thông tin user và commission cho tất cả user trong cây
+    const allUserIds = [
+      userId,
+      ...ancestors.map((a: any) => a.referrer_id),
+      ...descendants.map((d: any) => d.referee_id)
+    ];
 
-  //   const users = await this.userRepository.findByIds(allUserIds);
-  //   const userMap = new Map(users.map(u => [u.id, u]));
+    const users = await this.userRepository.findBy({ id: In(allUserIds) });
+    const userMap = new Map(users.map(u => [u.id, u]));
 
-  //   // Lấy commission summary cho mỗi user
-  //   const commissionSummaries = await this.getCommissionSummaryForUsers(allUserIds);
+    // Lấy commission summary cho mỗi user
+    const commissionSummaries = await this.getCommissionSummaryForUsers(allUserIds);
 
-  //   // Xây dựng cây với thông tin commission
-  //   const buildTreeWithCommissions = (userIds: any[], levelOffset: number = 0) => {
-  //     return userIds.map(item => {
-  //       const user = userMap.get(item.referrer_id || item.referee_id);
-  //       const level = (item.level || 0) + levelOffset;
-  //       const commission = commissionSummaries.get(item.referrer_id || item.referee_id) || {
-  //         totalEarned: 0,
-  //         totalPending: 0,
-  //         totalPaid: 0,
-  //         currentLevel: level,
-  //         ratePercent: 0
-  //       };
+    // Xây dựng cây với thông tin commission
+    const buildTreeWithCommissions = async (userIds: any[], levelOffset = 0) => {
+      const results = [];
+      
+      for (const item of userIds) {
+        const currentUserId = item.referrer_id || item.referee_id;
+        const user = userMap.get(currentUserId);
+        const level = Math.abs((item.level || 0) + levelOffset); // Lấy absolute level
+        const commission = commissionSummaries.get(currentUserId) || {
+          totalEarned: 0,
+          totalPending: 0,
+          totalPaid: 0,
+          currentLevel: level,
+          ratePercent: 0
+        };
 
-  //       return {
-  //         userId: item.referrer_id || item.referee_id,
-  //         level,
-  //         user: user ? {
-  //           id: user.id,
-  //           email: user.email,
-  //           username: user.username,
-  //           is_affiliate: user.is_affiliate
-  //         } : null,
-  //         commission: {
-  //           ...commission,
-  //           currentLevel: level
-  //         }
-  //       };
-  //     });
-  //   };
+        // Nếu có programId: Check participation và lấy rate từ rules
+        let programParticipation = null;
+        if (programId) {
+          const isJoined = await this.checkProgramParticipation(currentUserId, programId);
+          let ratePercent = 0;
+          let earnedFromProgram = 0;
 
-  //   return {
-  //     rootUser: {
-  //       userId,
-  //       level: 0,
-  //       user: userMap.get(userId) ? {
-  //         id: userMap.get(userId)!.id,
-  //         email: userMap.get(userId)!.email,
-  //         username: userMap.get(userId)!.username,
-  //         is_affiliate: userMap.get(userId)!.is_affiliate
-  //       } : null,
-  //       commission: commissionSummaries.get(userId) || {
-  //         totalEarned: 0,
-  //         totalPending: 0,
-  //         totalPaid: 0,
-  //         currentLevel: 0,
-  //         ratePercent: 0
-  //       }
-  //     },
-  //     ancestors: buildTreeWithCommissions(ancestors, -1), // Level âm cho ancestors
-  //     descendants: buildTreeWithCommissions(descendants, 1) // Level dương cho descendants
-  //   };
-  // }
+          if (isJoined) {
+            // Lấy rate từ rules của program này
+            try {
+              const ruleForLevel = await this.getCommissionRulesForLevel(level, programId);
+              if (ruleForLevel && ruleForLevel.level_rate) {
+                ratePercent = parseFloat(String(ruleForLevel.level_rate.rate)) || 0;
+              }
+            } catch (error) {
+              console.warn(`Could not fetch commission rule for level ${level}, program ${programId}:`, error);
+            }
+
+            // Lấy commission đã nhận từ program này
+            const programCommission = await this.getCommissionFromProgram(currentUserId, programId);
+            earnedFromProgram = programCommission.totalEarned;
+          }
+
+          programParticipation = {
+            isJoined,
+            rate: ratePercent,
+            earnedFromProgram
+          };
+        }
+
+        results.push({
+          userId: currentUserId,
+          level: (item.level || 0) + levelOffset, // Giữ nguyên level âm/dương cho ancestors/descendants
+          user: user ? {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            is_affiliate: user.is_affiliate
+          } : null,
+          commission: {
+            ...commission,
+            currentLevel: level,
+            ratePercent: programParticipation?.rate || commission.ratePercent // Rate từ program hoặc average
+          },
+          programParticipation // Null nếu không có programId filter
+        });
+      }
+      
+      return results;
+    };
+
+    // Lấy commission rate cho root user (level 0)
+    const rootCommission = commissionSummaries.get(userId) || {
+      totalEarned: 0,
+      totalPending: 0,
+      totalPaid: 0,
+      currentLevel: 0,
+      ratePercent: 0
+    };
+
+    // Nếu có programId: Check participation và lấy rate từ rules
+    let rootProgramParticipation = null;
+    if (programId) {
+      const isJoined = await this.checkProgramParticipation(userId, programId);
+      let ratePercent = 0;
+      let earnedFromProgram = 0;
+
+      if (isJoined) {
+        try {
+          const rootRule = await this.getCommissionRulesForLevel(0, programId);
+          if (rootRule && rootRule.level_rate) {
+            ratePercent = parseFloat(String(rootRule.level_rate.rate)) || 0;
+          }
+        } catch (error) {
+          console.warn('Could not fetch commission rule for root level 0:', error);
+        }
+
+        const programCommission = await this.getCommissionFromProgram(userId, programId);
+        earnedFromProgram = programCommission.totalEarned;
+      }
+
+      rootProgramParticipation = {
+        isJoined,
+        rate: ratePercent,
+        earnedFromProgram
+      };
+    }
+
+    return {
+      rootUser: {
+        userId,
+        level: 0,
+        user: userMap.get(userId) ? {
+          id: userMap.get(userId)!.id,
+          email: userMap.get(userId)!.email,
+          username: userMap.get(userId)!.username,
+          is_affiliate: userMap.get(userId)!.is_affiliate
+        } : null,
+        commission: {
+          ...rootCommission,
+          ratePercent: rootProgramParticipation?.rate || rootCommission.ratePercent
+        },
+        programParticipation: rootProgramParticipation
+      },
+      ancestors: await buildTreeWithCommissions(ancestors, -1), // Level âm cho ancestors
+      descendants: await buildTreeWithCommissions(descendants, 1) // Level dương cho descendants
+    };
+  }
 
   /**
    * Lấy tổng kết commission cho danh sách users
@@ -222,8 +304,8 @@ export class AffiliateTreeService {
       .createQueryBuilder('c')
       .select([
         'c.beneficiary_user_id as userId',
-        'SUM(CASE WHEN c.status = "PENDING" THEN c.amount ELSE 0 END) as totalPending',
-        'SUM(CASE WHEN c.status = "PAID" THEN c.amount ELSE 0 END) as totalPaid',
+        "SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END) as totalPending",
+        "SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END) as totalPaid",
         'SUM(c.amount) as totalEarned',
         'AVG(c.rate_percent) as avgRatePercent'
       ])
@@ -363,5 +445,79 @@ export class AffiliateTreeService {
       // Include all calculated rates for each rule
       levels: rule.calculated_rates || []
     }));
+  }
+
+  /**
+   * Check if user has joined a specific program
+   */
+  async checkProgramParticipation(userId: number, programId: number): Promise<boolean> {
+    const participant = await this.participantRepository.findOne({
+      where: {
+        user_id: userId,
+        program_id: programId,
+        status: 'active'
+      }
+    });
+    return !!participant;
+  }
+
+  /**
+   * Get all programs a user has joined
+   */
+  async getUserPrograms(userId: number): Promise<AffiliateProgramParticipant[]> {
+    return this.participantRepository.find({
+      where: {
+        user_id: userId,
+        status: 'active'
+      },
+      relations: ['program']
+    });
+  }
+
+  /**
+   * Get program participation info for multiple users and programs
+   */
+  async getBulkProgramParticipation(userIds: number[], programIds: number[]): Promise<Map<string, Set<number>>> {
+    const participants = await this.participantRepository.find({
+      where: {
+        user_id: In(userIds),
+        program_id: In(programIds),
+        status: 'active'
+      }
+    });
+
+    // Map: userId -> Set of programIds
+    const participationMap = new Map<string, Set<number>>();
+    participants.forEach(p => {
+      const key = String(p.user_id);
+      if (!participationMap.has(key)) {
+        participationMap.set(key, new Set());
+      }
+      participationMap.get(key)!.add(p.program_id);
+    });
+
+    return participationMap;
+  }
+
+  /**
+   * Get commission earned from a specific program for a user
+   */
+  async getCommissionFromProgram(userId: number, programId: number) {
+    const result = await this.commissionRepository
+      .createQueryBuilder('c')
+      .select([
+        "SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END) as totalPending",
+        "SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END) as totalPaid",
+        'SUM(c.amount) as totalEarned'
+      ])
+      .where('c.beneficiary_user_id = :userId', { userId })
+      .andWhere('c.program_id = :programId', { programId })
+      .getRawOne();
+
+    return {
+      totalEarned: parseFloat(result?.totalEarned) || 0,
+      totalPending: parseFloat(result?.totalPending) || 0,
+      totalPaid: parseFloat(result?.totalPaid) || 0
+    };
   }
 }

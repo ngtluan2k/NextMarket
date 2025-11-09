@@ -12,6 +12,8 @@ import { AffiliateCommission } from '../entity/affiliate-commission.entity';
 import { AffiliateRulesService } from '../../affiliate-rules/affiliate-rules.service';
 import { WalletService } from '../../wallet/wallet.service';
 import { FraudDetectionService } from '../../affiliate-fraud/service/fraud-detection.service';
+import { BudgetTrackingService } from '../../affiliate-program/service/budget-tracking.service';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { User } from '../../user/user.entity';
 import { AffiliateProgram } from '../../affiliate-program/affiliate-program.entity';
 
@@ -26,6 +28,8 @@ export class CommissionCalcService {
     private readonly rulesService: AffiliateRulesService,
     private readonly walletService: WalletService,
     private readonly fraudDetectionService: FraudDetectionService,
+    private readonly budgetTrackingService: BudgetTrackingService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   // Hàm gọi khi đơn hàng chuyển sang PAID
@@ -105,6 +109,40 @@ export class CommissionCalcService {
         return;
       }
       console.log(`✅ Fraud checks passed for order ${orderId}`);
+
+      // 💰 Check budget availability before processing
+      if (programId) {
+        // Calculate total potential commission amount
+        const items = await this.orderItemRepo.find({
+          where: { order: { id: order.id } },
+          relations: ['product'],
+        });
+
+        let totalPotentialCommission = 0;
+        for (const item of items) {
+          const baseAmount = Number((item as any).subtotal ?? 0);
+          if (baseAmount > 0) {
+            // Estimate commission (assuming average 10% rate for budget check)
+            // This is a rough estimate; actual rates will be calculated later
+            totalPotentialCommission += baseAmount * 0.1;
+          }
+        }
+
+        console.log(`💰 Checking budget for program ${programId}, estimated commission: ${totalPotentialCommission.toFixed(2)}`);
+        
+        const budgetCheck = await this.budgetTrackingService.checkBudgetAvailable(
+          programId,
+          totalPotentialCommission,
+        );
+
+        if (!budgetCheck.available) {
+          console.warn(`⚠️ Budget limit reached for program ${programId}: ${budgetCheck.reason}`);
+          // TODO: Send notification to admin about budget limit
+          return;
+        }
+        
+        console.log(`✅ Budget check passed for program ${programId}`);
+      }
 
       // Lấy các item đủ điều kiện
       const items = await this.orderItemRepo.find({
@@ -195,6 +233,17 @@ export class CommissionCalcService {
 
     console.log(`💵 Calculated commission: ${computed} VND (${rate}% of ${baseAmount})`);
 
+    // 💰 Reserve budget before creating commission
+    if (programId) {
+      try {
+        await this.budgetTrackingService.reserveBudget(programId, computed);
+        console.log(`💰 Reserved ${computed} from program ${programId} budget`);
+      } catch (error) {
+        console.error(`❌ Failed to reserve budget for program ${programId}:`, error);
+        return; // Skip commission creation if budget reservation fails
+      }
+    }
+
     // Use database transaction to ensure consistency
     return await this.commRepo.manager.transaction(async (manager) => {
       const rec = manager.create(this.commRepo.target, {
@@ -236,10 +285,57 @@ export class CommissionCalcService {
           
           // Update commission status to PAID after successful wallet operation
           await manager.update(this.commRepo.target, commissionId, { 
-            status: 'PAID'
+            status: 'PAID',
+            paid_at: new Date()
           });
           
+          // 💰 Commit budget (move from pending to spent)
+          if (programId) {
+            try {
+              await this.budgetTrackingService.commitBudget(programId, computed);
+              console.log(`💰 Committed ${computed} to spent budget for program ${programId}`);
+            } catch (error) {
+              console.error(`❌ Failed to commit budget for program ${programId}:`, error);
+              // Continue anyway as commission is already paid
+            }
+          }
+          
           console.log(`✅ Commission ${computed} VND successfully added to user ${beneficiaryUserId} wallet`);
+          
+          // 🔔 Send real-time notification to affiliate user
+          try {
+            // Get program info for notification
+            const program = programId ? await this.programRepo.findOne({ where: { id: programId } }) : null;
+            
+            // Get order item details for notification
+            const orderItem = await this.orderItemRepo.findOne({
+              where: { id: item.id },
+              relations: ['product']
+            });
+            
+            await this.notificationsGateway.notifyCommissionPaid(beneficiaryUserId, {
+              commissionId: savedCommission.uuid,
+              amount: computed,
+              newBalance: 0, // Will be updated by frontend after receiving notification
+            });
+            
+            // Also send commission earned notification with details
+            await this.notificationsGateway.notifyCommissionEarned(beneficiaryUserId, {
+              commissionId: savedCommission.uuid,
+              amount: computed,
+              level,
+              orderId,
+              orderNumber: `#${orderId}`,
+              productName: orderItem?.product?.name || 'Unknown Product',
+              programName: program?.name || 'Unknown Program',
+            });
+            
+            console.log(`🔔 Notification sent to user ${beneficiaryUserId}`);
+          } catch (notifError) {
+            console.error(`⚠️ Failed to send notification:`, notifError);
+            // Don't fail the commission if notification fails
+          }
+          
           walletSuccess = true;
           break;
           

@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { AffiliateFraudLog } from '../entity/affiliate-fraud-log.entity';
 import { Order } from '../../orders/order.entity';
+import { AffiliateClick } from '../../affiliate-links/entity/affiliate-click.entity';
+import { AffiliateLink } from '../../affiliate-links/affiliate-links.entity';
 
 export interface FraudCheckResult {
   fraudDetected: boolean;
@@ -24,6 +26,10 @@ export class FraudDetectionService {
     private readonly fraudLogRepo: Repository<AffiliateFraudLog>,
     @InjectRepository(Order)
     private readonly ordersRepo: Repository<Order>,
+    @InjectRepository(AffiliateClick)
+    private readonly clicksRepo: Repository<AffiliateClick>,
+    @InjectRepository(AffiliateLink)
+    private readonly linksRepo: Repository<AffiliateLink>,
   ) {}
 
   // Log fraud attempt
@@ -113,11 +119,108 @@ export class FraudDetectionService {
     return false;
   }
 
+  // Check abnormal conversion rate
+  async checkAbnormalConversionRate(
+    affiliateUserId: number,
+  ): Promise<boolean> {
+    if (!affiliateUserId) return false;
+
+    try {
+      // Get affiliate's links
+      const links = await this.linksRepo.find({
+        where: { user_id: { id: affiliateUserId } as any },
+      });
+
+      if (links.length === 0) return false;
+
+      const linkIds = links.map((link) => link.id);
+
+      // Count total clicks
+      const totalClicks = await this.clicksRepo.count({
+        where: linkIds.map((id) => ({ affiliate_link_id: id })),
+      });
+
+      // Count conversions
+      const conversions = await this.clicksRepo.count({
+        where: linkIds.map((id) => ({
+          affiliate_link_id: id,
+          converted: true,
+        })),
+      });
+
+      if (totalClicks === 0) return false;
+
+      const conversionRate = (conversions / totalClicks) * 100;
+
+      // Conversion rate > 50% is suspicious
+      if (conversionRate > 50 && totalClicks > 10) {
+        await this.logFraud({
+          type: 'ABNORMAL_CONVERSION_RATE',
+          affiliate_user_id: affiliateUserId,
+          details: {
+            conversion_rate: conversionRate.toFixed(2),
+            total_clicks: totalClicks,
+            conversions: conversions,
+          },
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(
+        `Error checking conversion rate for user ${affiliateUserId}:`,
+        error,
+      );
+      return false;
+    }
+  }
+
+  // Check rapid purchase (click -> buy < 1 minute)
+  async checkRapidPurchase(
+    clickId: string,
+    orderTime: Date,
+  ): Promise<boolean> {
+    if (!clickId) return false;
+
+    try {
+      const click = await this.clicksRepo.findOne({
+        where: { click_id: clickId },
+      });
+
+      if (!click) return false;
+
+      const timeDiff =
+        (orderTime.getTime() - click.clicked_at.getTime()) / 1000; // seconds
+
+      // Less than 60 seconds = suspicious
+      if (timeDiff < 60) {
+        await this.logFraud({
+          type: 'RAPID_PURCHASE',
+          details: {
+            click_id: clickId,
+            time_diff_seconds: timeDiff.toFixed(2),
+            clicked_at: click.clicked_at,
+            order_time: orderTime,
+          },
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`Error checking rapid purchase for click ${clickId}:`, error);
+      return false;
+    }
+  }
+
   // Run all checks
   async runFraudChecks(order: {
     user_id: number;
     affiliate_user_id?: number;
     ip_address?: string;
+    click_id?: string;
+    created_at?: Date;
   }): Promise<FraudCheckResult> {
     const checks: FraudCheckResult['checks'] = {};
 
@@ -140,6 +243,21 @@ export class FraudDetectionService {
       checks.suspiciousIP = await this.checkSuspiciousIP(order.ip_address);
     }
 
+    // Check abnormal conversion rate
+    if (order.affiliate_user_id) {
+      checks.abnormalConversionRate = await this.checkAbnormalConversionRate(
+        order.affiliate_user_id,
+      );
+    }
+
+    // Check rapid purchase
+    if (order.click_id && order.created_at) {
+      checks.rapidPurchase = await this.checkRapidPurchase(
+        order.click_id,
+        order.created_at,
+      );
+    }
+
     const fraudDetected = Object.values(checks).some((check) => check === true);
 
     return {
@@ -149,7 +267,7 @@ export class FraudDetectionService {
   }
 
   // Get fraud logs
-  async getFraudLogs(page: number = 1, limit: number = 20) {
+  async getFraudLogs(page = 1, limit = 20) {
     const [logs, total] = await this.fraudLogRepo.findAndCount({
       relations: ['affiliate_user', 'order'],
       order: { detected_at: 'DESC' },

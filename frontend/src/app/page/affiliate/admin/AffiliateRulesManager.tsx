@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Form, Button, Space, message, Tabs, Input, Badge } from 'antd';
+import { Card, Form, Button, Space, message, Tabs, Input, Badge, Select } from 'antd';
 import { SettingOutlined, InfoCircleOutlined } from '@ant-design/icons';
+
+const { Option } = Select;
 import {
   fetchDescendants,
   fetchAncestors,
@@ -329,6 +331,9 @@ export default function AffiliateRulesManager() {
   const [commissionData, setCommissionData] = useState<any>(null);
   const [showCommissions, setShowCommissions] = useState<boolean>(true);
   const [treeLoading, setTreeLoading] = useState<boolean>(false);
+  
+  // Program filter for tree
+  const [selectedTreeProgramId, setSelectedTreeProgramId] = useState<number | null>(null);
 
   // User info card state
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -379,9 +384,10 @@ export default function AffiliateRulesManager() {
 
       if (showCommissions) {
         console.log(
-          `🔄 Loading affiliate tree with commissions for user ID: ${userId}`
+          `🔄 Loading affiliate tree with commissions for user ID: ${userId}`,
+          selectedTreeProgramId ? `with program filter: ${selectedTreeProgramId}` : 'without program filter'
         );
-        const response = await fetchAffiliateTreeWithCommissions(userId, 10);
+        const response = await fetchAffiliateTreeWithCommissions(userId, 10, selectedTreeProgramId || undefined);
         const data = response.data;
         console.log(`✅ Loaded tree data:`, data);
 
@@ -398,16 +404,43 @@ export default function AffiliateRulesManager() {
                   <span className="text-gray-500 ml-2">
                     (Level {node.level})
                   </span>
+                  {/* Program participation status */}
+                  {selectedTreeProgramId && node.programParticipation && (
+                    <span className={`ml-2 px-2 py-0.5 text-xs rounded ${
+                      node.programParticipation.isJoined 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {node.programParticipation.isJoined ? '✓ Joined' : '✗ Not Joined'}
+                    </span>
+                  )}
                 </div>
                 {showCommissions && (
                   <div className="text-xs text-gray-600">
                     <div className="flex items-center gap-2">
-                      <span className="text-green-600 font-medium">
-                        {node.commission.totalEarned.toLocaleString()}đ
-                      </span>
-                      <span className="text-yellow-600">
-                        {node.commission.totalPending.toLocaleString()}đ
-                      </span>
+                      {selectedTreeProgramId && node.programParticipation ? (
+                        <>
+                          {node.programParticipation.isJoined && (
+                            <>
+                              <span className="text-blue-600 font-medium">
+                                Rate: {node.programParticipation.rate}%
+                              </span>
+                              <span className="text-green-600 font-medium">
+                                {node.programParticipation.earnedFromProgram.toLocaleString()}đ
+                              </span>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-green-600 font-medium">
+                            {node.commission.totalEarned.toLocaleString()}đ
+                          </span>
+                          <span className="text-yellow-600">
+                            {node.commission.totalPending.toLocaleString()}đ
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -519,7 +552,7 @@ export default function AffiliateRulesManager() {
     } finally {
       setTreeLoading(false);
     }
-  }, [treeUserEmail, showCommissions, handleUserSelect]);
+  }, [treeUserEmail, showCommissions, selectedTreeProgramId, handleUserSelect]);
 
   return (
     <div style={{ padding: 16 }}>
@@ -580,25 +613,50 @@ export default function AffiliateRulesManager() {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <Card>
-                    <Space style={{ marginBottom: 12 }}>
-                      <Input
-                        placeholder="Nhập email người dùng"
-                        value={treeUserEmail}
-                        onChange={(e) => setTreeUserEmail(e.target.value)}
-                        style={{ width: 300 }}
-                      />
-                      <Button
-                        onClick={loadTreeWithUserSelect}
-                        loading={treeLoading}
-                      >
-                        Xem cây affiliate
-                      </Button>
-                      <Button
-                        type={showCommissions ? 'primary' : 'default'}
-                        onClick={() => setShowCommissions(!showCommissions)}
-                      >
-                        {showCommissions ? 'Ẩn Commission' : 'Hiện Commission'}
-                      </Button>
+                    <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
+                      <Space style={{ width: '100%' }}>
+                        <Input
+                          placeholder="Nhập email người dùng"
+                          value={treeUserEmail}
+                          onChange={(e) => setTreeUserEmail(e.target.value)}
+                          style={{ width: 300 }}
+                        />
+                        <Button
+                          onClick={loadTreeWithUserSelect}
+                          loading={treeLoading}
+                        >
+                          Xem cây affiliate
+                        </Button>
+                        <Button
+                          type={showCommissions ? 'primary' : 'default'}
+                          onClick={() => setShowCommissions(!showCommissions)}
+                        >
+                          {showCommissions ? 'Ẩn Commission' : 'Hiện Commission'}
+                        </Button>
+                      </Space>
+                      
+                      {/* Program Filter */}
+                      <Space style={{ width: '100%' }}>
+                        <span style={{ fontWeight: 500 }}>Filter by Program:</span>
+                        <Select
+                          value={selectedTreeProgramId}
+                          onChange={(value) => setSelectedTreeProgramId(value === undefined ? null : value)}
+                          placeholder="Tất cả programs (Summary)"
+                          style={{ width: 300 }}
+                          allowClear
+                        >
+                          {affiliatePrograms.map(program => (
+                            <Option key={program.id} value={program.id}>
+                              {program.name} (Budget: {program.commission_value}%)
+                            </Option>
+                          ))}
+                        </Select>
+                        {selectedTreeProgramId && (
+                          <span style={{ fontSize: 12, color: '#666' }}>
+                            Hiển thị rates và participation cho program đã chọn
+                          </span>
+                        )}
+                      </Space>
                     </Space>
                     <AffiliateTree
                       treeData={treeData}

@@ -28,9 +28,12 @@ export async function fetchDescendants(userId: number, maxDepth = 10) {
 }
 
 // API mới cho affiliate tree với commission
-export async function fetchAffiliateTreeWithCommissions(userId: number, maxDepth = 10) {
+export async function fetchAffiliateTreeWithCommissions(userId: number, maxDepth = 10, programId?: number | string) {
   const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/with-commissions/${userId}`);
   url.searchParams.set('maxDepth', String(maxDepth));
+  if (programId) {
+    url.searchParams.set('programId', String(programId));
+  }
   const res = await fetch(url.toString(), { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch affiliate tree with commissions (${res.status})`);
   return await res.json();

@@ -16,11 +16,15 @@ import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionGuard } from '../../common/auth/permission.guard';
 import { RequirePermissions } from '../../common/auth/permission.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { BudgetTrackingService } from './service/budget-tracking.service';
 
 @ApiTags('affiliate-programs')
 @Controller('affiliate-programs')
 export class AffiliateProgramsController {
-  constructor(private readonly service: AffiliateProgramsService) {}
+  constructor(
+    private readonly service: AffiliateProgramsService,
+    private readonly budgetService: BudgetTrackingService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -95,5 +99,24 @@ export class AffiliateProgramsController {
     @Body() updateDto: UpdateAffiliateProgramDto
   ) {
     return this.service.update(id, updateDto);
+  }
+
+  // Budget Management APIs
+  @Get(':id/budget-status')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermissions('manage_affiliate')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: '(Admin) Get budget status for a program' })
+  async getBudgetStatus(@Param('id', ParseIntPipe) id: number) {
+    return this.budgetService.getBudgetStatus(id);
+  }
+
+  @Get('budget/alerts')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermissions('manage_affiliate')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: '(Admin) Get programs near budget limit' })
+  async getBudgetAlerts() {
+    return this.budgetService.getProgramsNearBudgetLimit();
   }
 }

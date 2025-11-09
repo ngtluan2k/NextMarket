@@ -50,8 +50,9 @@ export class AffiliateLinksService {
       if (!program) throw new NotFoundException('Program not found');
     }
 
-    // code dạng: AFF:{productId}:{variantId?}
-    const code = `AFF:${productId}${variantId ? `:${variantId}` : ''}`;
+    // code dạng: AFF:{userId}:{productId}:{variantId?}
+    // Thêm userId vào code để đảm bảo unique cho mỗi user
+    const code = `AFF:${userId}:${productId}${variantId ? `:${variantId}` : ''}`;
 
     // kiểm tra duplicate theo user + code
     const existed = await this.linkRepo.findOne({ where: { code, user_id: { id: userId } as any } });
@@ -90,8 +91,10 @@ export class AffiliateLinksService {
 
     const mapped = links.map((l) => {
       const parts = (l.code || '').split(':');
-      const pid = parts[1] ? Number(parts[1]) : undefined;
-      const vid = parts[2] ? Number(parts[2]) : undefined;
+      // Code format: AFF:{userId}:{productId}:{variantId?}
+      // parts[0] = 'AFF', parts[1] = userId, parts[2] = productId, parts[3] = variantId (optional)
+      const pid = parts[2] ? Number(parts[2]) : undefined;
+      const vid = parts[3] ? Number(parts[3]) : undefined;
       const affCode = ((l as any).user_id?.code as string) || '';
       const programId = (l as any).program_id?.id;
       return {
@@ -128,7 +131,9 @@ export class AffiliateLinksService {
     const productIds = new Set<number>();
     links.forEach((l) => {
       const parts = (l.code || '').split(':');
-      const pid = parts[1] ? Number(parts[1]) : undefined;
+      // Code format: AFF:{userId}:{productId}:{variantId?}
+      // parts[0] = 'AFF', parts[1] = userId, parts[2] = productId, parts[3] = variantId (optional)
+      const pid = parts[2] ? Number(parts[2]) : undefined;
       if (pid) productIds.add(pid);
     });
 
@@ -175,7 +180,7 @@ export class AffiliateLinksService {
         .leftJoin('c.beneficiary_user_id', 'beneficiary')
         .leftJoin('c.order_item_id', 'orderItem')
         .leftJoin('orderItem.order', 'order')
-        .leftJoin('c.affiliate_link_id', 'link')
+        .leftJoin('c.link_id', 'link')
         .where('beneficiary.id = :userId', { userId })
         .andWhere('c.level = :level', { level: 1 }) // Only count direct purchases (level 1)
         .select([

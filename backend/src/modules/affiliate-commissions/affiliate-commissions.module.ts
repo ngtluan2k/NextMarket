@@ -13,6 +13,8 @@ import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity'
 import { WalletModule } from '../wallet/wallet.module';
 import { AffiliateRulesModule } from '../affiliate-rules/affiliate-rules.module';
 import { AffiliateFraudModule } from '../affiliate-fraud/affiliate-fraud.module';
+import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { AffiliateFraudModule } from '../affiliate-fraud/affiliate-fraud.module'
     WalletModule,
     AffiliateRulesModule,
     AffiliateFraudModule,
+    AffiliateProgramsModule,
+    NotificationsModule,
   ],
   controllers: [AffiliateCommissionsController],
   providers: [AffiliateCommissionsService, CommissionCalcService, CommissionRevesalService],

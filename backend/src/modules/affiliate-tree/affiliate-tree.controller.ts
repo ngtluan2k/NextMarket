@@ -1,10 +1,9 @@
-import { Controller, Get, Post, Body, Query, Param, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Query, Param, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Roles } from '../../common/auth/roles.decorator';
 import { JwtAuthGuard} from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import { AffiliateTreeService } from './affiliate-tree.service';
-import { SetCommissionRulesDto } from './dto/set-commission-rules.dto';
 
 @ApiTags('Admin - Affiliate Tree')
 @Controller('admin/affiliate-tree')
@@ -45,19 +44,24 @@ export class AffiliateTreeController {
     };
   }
 
-  // @Get('with-commissions/:userId')
-  // @ApiOperation({ summary: 'Lấy cây affiliate với thông tin commission cho từng user' })
-  // @ApiQuery({ name: 'maxDepth', required: false, type: Number, description: 'Default is 10' })
-  // async getAffiliateTreeWithCommissions(
-  //   @Param('userId', ParseIntPipe) userId: number,
-  //   @Query('maxDepth', new DefaultValuePipe(10), ParseIntPipe) maxDepth: number,
-  // ) {
-  //   const treeData = await this.affiliateTreeService.getAffiliateTreeWithCommissions(userId, maxDepth);
-  //   return {
-  //     message: 'Lấy cây affiliate với commission thành công',
-  //     data: treeData,
-  //   };
-  // }
+  @Get('with-commissions/:userId')
+  @ApiOperation({ summary: 'Lấy cây affiliate với thông tin commission cho từng user' })
+  @ApiQuery({ name: 'maxDepth', required: false, type: Number, description: 'Default is 10' })
+  @ApiQuery({ name: 'programId', required: false, type: Number, description: 'Filter by program ID' })
+  async getAffiliateTreeWithCommissions(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query('maxDepth', new DefaultValuePipe(10), ParseIntPipe) maxDepth: number,
+    @Query('programId') programIdStr?: string,
+  ) {
+    // Parse programId manually to handle optional case
+    const programId = programIdStr ? parseInt(programIdStr, 10) : undefined;
+    
+    const treeData = await this.affiliateTreeService.getAffiliateTreeWithCommissions(userId, maxDepth, programId);
+    return {
+      message: 'Lấy cây affiliate với commission thành công',
+      data: treeData,
+    };
+  }
 
   @Get('commission-summary/:userId')
   @ApiOperation({ summary: 'Lấy tổng kết commission cho một user' })
@@ -79,8 +83,9 @@ export class AffiliateTreeController {
   @ApiQuery({ name: 'programId', required: false, type: Number })
   async getCommissionRules(
     @Param('level', ParseIntPipe) level: number,
-    @Query('programId', ParseIntPipe) programId?: number,
+    @Query('programId') programIdStr?: string,
   ) {
+    const programId = programIdStr ? parseInt(programIdStr, 10) : undefined;
     const rules = await this.affiliateTreeService.getCommissionRulesForLevel(level, programId);
     return {
       message: 'Lấy commission rules thành công',
@@ -107,9 +112,10 @@ export class AffiliateTreeController {
   @ApiQuery({ name: 'programId', required: false, type: Number })
   async getCommissionRulesForUsers(
     @Query('userIds') userIds: string,
-    @Query('programId', ParseIntPipe) programId?: number,
+    @Query('programId') programIdStr?: string,
   ) {
     const userIdArray = userIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+    const programId = programIdStr ? parseInt(programIdStr, 10) : undefined;
     const rules = await this.affiliateTreeService.getCommissionRulesForUsers(userIdArray, programId);
     return {
       message: 'Lấy commission rules cho users thành công',

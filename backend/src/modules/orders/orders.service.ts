@@ -18,6 +18,8 @@ import { Payment } from '../payments/payment.entity';
 import { VouchersService } from '../vouchers/vouchers.service';
 import { AffiliateResolutionService } from '../affiliate-links/affiliate-resolution.service';
 import { CommissionCalcService } from '../affiliate-commissions/service/commission-calc.service';
+import { ReferralsService } from '../referral/referrals.service';
+import { Referral } from '../referral/referrals.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import {
   OrderStatusHistory,
@@ -44,6 +46,7 @@ export class OrdersService {
     private readonly vouchersService: VouchersService,
     private readonly affiliateResolutionService: AffiliateResolutionService,
     private readonly commissionCalcService: CommissionCalcService,
+    private readonly referralsService: ReferralsService,
     @InjectRepository(OrderStatusHistory)
     private orderStatusHistoryRepository: Repository<OrderStatusHistory>
   ) { }
@@ -200,6 +203,68 @@ export class OrdersService {
 
       const savedOrder = await manager.save(order);
       console.log('✅ Order saved successfully with ID:', savedOrder.id);
+
+      // === Tạo Referral Relationship nếu có affiliate ===
+      // Single-Parent Model: User chỉ có 1 referrer duy nhất (first come first serve)
+      if (affiliateInfo && affiliateInfo.isValid && affiliateInfo.userId) {
+        try {
+          console.log('🔗 Attempting to create referral relationship:', {
+            referrer_id: affiliateInfo.userId,
+            referee_id: createOrderDto.userId,
+            code: createOrderDto.affiliateCode
+          });
+
+          // CHECK 1: User đã là child của ai chưa? (Single-Parent Rule)
+          const existingAsReferee = await manager.findOne(Referral, {
+            where: {
+              referee: { id: createOrderDto.userId }
+            },
+            relations: ['referrer']
+          });
+
+          if (existingAsReferee) {
+            console.log('ℹ️ User already has a referrer (Single-Parent Rule):', {
+              existing_referrer_id: existingAsReferee.referrer.id,
+              current_affiliate_id: affiliateInfo.userId
+            });
+            console.log('⚠️ Skipping referral creation - First referrer wins!');
+            console.log('💰 Note: Current affiliate will still receive commission for this order');
+          } else {
+            // CHECK 2: Tránh duplicate với cùng 1 affiliate (không cần thiết nhưng để chắc chắn)
+            const existingReferral = await manager.findOne(Referral, {
+              where: {
+                referrer: { id: affiliateInfo.userId },
+                referee: { id: createOrderDto.userId }
+              }
+            });
+
+            if (!existingReferral) {
+              // Tạo referral mới - User này chưa có referrer
+              const referral = manager.create(Referral, {
+                referrer: { id: affiliateInfo.userId } as any,
+                referee: { id: createOrderDto.userId } as any,
+                code: createOrderDto.affiliateCode,
+                status: 'active',
+                uuid: randomUUID(),
+                created_at: new Date(),
+              });
+
+              await manager.save(referral);
+              console.log('✅ Referral relationship created - First referrer wins!');
+              console.log('🌳 User is now part of affiliate tree:', {
+                parent: affiliateInfo.userId,
+                child: createOrderDto.userId
+              });
+            } else {
+              console.log('ℹ️ Referral relationship already exists with this affiliate');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error creating referral relationship:', error);
+          // Don't fail the order if referral creation fails
+          console.warn('⚠️ Continuing order creation despite referral error');
+        }
+      }
 
       // === Tạo OrderItems và cập nhật Inventory / Variant ===
       for (const itemDto of createOrderDto.items) {

@@ -98,7 +98,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
-
         autoLoadEntities: true,
         synchronize: false,
         logging: true,

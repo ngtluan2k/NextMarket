@@ -64,6 +64,34 @@ export function AffiliateDashboard() {
     };
 
     fetchData();
+
+    // Listen for commission events to refresh dashboard
+    const handleCommissionEarned = () => {
+      console.log('💰 Commission earned - refreshing dashboard...');
+      fetchData();
+    };
+
+    const handleCommissionPaid = () => {
+      console.log('💵 Commission paid - refreshing dashboard...');
+      fetchData();
+    };
+
+    const handleCommissionReversed = () => {
+      console.log('⚠️ Commission reversed - refreshing dashboard...');
+      fetchData();
+    };
+
+    // Add event listeners
+    window.addEventListener('commission-earned', handleCommissionEarned);
+    window.addEventListener('commission-paid', handleCommissionPaid);
+    window.addEventListener('commission-reversed', handleCommissionReversed);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('commission-earned', handleCommissionEarned);
+      window.removeEventListener('commission-paid', handleCommissionPaid);
+      window.removeEventListener('commission-reversed', handleCommissionReversed);
+    };
   }, []);
 
   const displayStats = [

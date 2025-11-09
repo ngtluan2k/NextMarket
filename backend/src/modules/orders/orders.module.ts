@@ -15,6 +15,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
 import { CartModule } from '../cart/cart.module';
 import { AffiliateLinksModule } from '../affiliate-links/affiliate-links.module';
 import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
+import { ReferralsModule } from '../referral/refferal.module';
 import { UserOrdersController } from './UserOrdersController';
 import { StoreOrdersController } from './StoreOrdersController';
 import { AdminOrdersController } from './AdminOrdersController';
@@ -36,6 +37,7 @@ import{OrdersController} from './orders.controller'
     VouchersModule,
     AffiliateLinksModule,
     AffiliateCommissionsModule,
+    ReferralsModule,
     forwardRef(() => ProductReviewsModule),
   ],
   controllers: [

@@ -42,7 +42,8 @@ export class AffiliateResolutionService {
 
     // If product is specified, try to find specific affiliate link
     if (productId) {
-      const linkCode = `AFF:${productId}${variantId ? `:${variantId}` : ''}`;
+      // Code format: AFF:{userId}:{productId}:{variantId?}
+      const linkCode = `AFF:${user.id}:${productId}${variantId ? `:${variantId}` : ''}`;
       
       const link = await this.linkRepo.findOne({
         where: {

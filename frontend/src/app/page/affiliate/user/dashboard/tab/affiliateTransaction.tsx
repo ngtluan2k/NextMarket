@@ -29,6 +29,22 @@ const AffiliateTransaction = () => {
 
   useEffect(() => {
     fetchCommissions(currentPage);
+
+    // Listen for commission events to refresh transaction list
+    const handleCommissionUpdate = () => {
+      console.log('💰 Commission update - refreshing transaction list...');
+      fetchCommissions(currentPage);
+    };
+
+    window.addEventListener('commission-earned', handleCommissionUpdate);
+    window.addEventListener('commission-paid', handleCommissionUpdate);
+    window.addEventListener('commission-reversed', handleCommissionUpdate);
+
+    return () => {
+      window.removeEventListener('commission-earned', handleCommissionUpdate);
+      window.removeEventListener('commission-paid', handleCommissionUpdate);
+      window.removeEventListener('commission-reversed', handleCommissionUpdate);
+    };
   }, [currentPage]);
 
   const handlePageChange = (page: number) => {

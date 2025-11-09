@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button, Col, Form, Input, InputNumber, Modal, Row, Select, Space } from 'antd';
+import { Button, Col, Divider, Form, Input, InputNumber, Modal, Row, Select, Space, Switch } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { AffiliateProgram, AffiliateProgramFormData } from '../../../../types/affiliate';
 
 interface Props {
@@ -23,12 +24,17 @@ const AffiliateProgramFormModal = ({ visible, editingProgram, onCancel, onSubmit
           commission_type: editingProgram.commission_type ?? undefined,
           commission_value: editingProgram.commission_value ?? undefined,
           status: editingProgram.status,
+          total_budget_amount: editingProgram.total_budget_amount ?? undefined,
+          monthly_budget_cap: editingProgram.monthly_budget_cap ?? undefined,
+          daily_budget_cap: editingProgram.daily_budget_cap ?? undefined,
+          auto_pause_on_budget_limit: editingProgram.auto_pause_on_budget_limit ?? false,
         });
       } else {
         form.resetFields();
         form.setFieldsValue({
           status: 'active',
           commission_type: 'percentage',
+          auto_pause_on_budget_limit: false,
         } as any);
       }
     }
@@ -37,7 +43,7 @@ const AffiliateProgramFormModal = ({ visible, editingProgram, onCancel, onSubmit
   const title = editingProgram ? 'Chỉnh sửa Chương trình' : 'Tạo Chương trình Mới';
 
   return (
-    <Modal title={title} open={visible} onCancel={onCancel} footer={null} width={600} destroyOnClose>
+    <Modal title={title} open={visible} onCancel={onCancel} footer={null} width={800} destroyOnClose>
       <Form form={form} layout="vertical" onFinish={onSubmit}>
         <Form.Item
           label="Tên Chương trình"
@@ -76,7 +82,85 @@ const AffiliateProgramFormModal = ({ visible, editingProgram, onCancel, onSubmit
           <Select>
             <Select.Option value="active">Hoạt động</Select.Option>
             <Select.Option value="inactive">Ngừng hoạt động</Select.Option>
+            <Select.Option value="paused">Tạm dừng</Select.Option>
           </Select>
+        </Form.Item>
+
+        <Divider orientation="left">
+          Kiểm soát Ngân sách (Budget Control)
+        </Divider>
+
+        <Form.Item
+          label={
+            <span>
+              Tổng ngân sách{' '}
+              <QuestionCircleOutlined title="Tổng số tiền tối đa có thể chi trả cho chương trình này (VND). Để trống nếu không giới hạn." />
+            </span>
+          }
+          name="total_budget_amount"
+          tooltip="Tổng số tiền tối đa có thể chi trả cho chương trình này (VND)"
+        >
+          <InputNumber
+            min={0}
+            placeholder="Ví dụ: 100000000 (100 triệu)"
+            className="w-full"
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <span>
+                  Giới hạn tháng{' '}
+                  <QuestionCircleOutlined title="Số tiền tối đa có thể chi trong 1 tháng (VND)" />
+                </span>
+              }
+              name="monthly_budget_cap"
+              tooltip="Số tiền tối đa có thể chi trong 1 tháng"
+            >
+              <InputNumber
+                min={0}
+                placeholder="Ví dụ: 20000000"
+                className="w-full"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <span>
+                  Giới hạn ngày{' '}
+                  <QuestionCircleOutlined title="Số tiền tối đa có thể chi trong 1 ngày (VND)" />
+                </span>
+              }
+              name="daily_budget_cap"
+              tooltip="Số tiền tối đa có thể chi trong 1 ngày"
+            >
+              <InputNumber
+                min={0}
+                placeholder="Ví dụ: 2000000"
+                className="w-full"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item
+          label={
+            <span>
+              Tự động tạm dừng{' '}
+              <QuestionCircleOutlined title="Tự động tạm dừng chương trình khi hết ngân sách" />
+            </span>
+          }
+          name="auto_pause_on_budget_limit"
+          valuePropName="checked"
+          tooltip="Tự động tạm dừng chương trình khi hết ngân sách"
+        >
+          <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
         </Form.Item>
 
         <Form.Item className="mb-0">
