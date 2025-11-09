@@ -16,10 +16,8 @@ interface CartContextType {
     type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => Promise<void>;
   updateQuantity: (
-    productId: number,
-    quantity: number,
-    variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
+    cartItemId: number,
+    quantity: number
   ) => Promise<void>;
   clearCart: () => void;
   loadCart: () => void;
@@ -58,6 +56,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       if (response.ok) {
         const data = await response.json();
         setCart(data.items);
+        console.log('Cart loaded:', data.items);
       } else {
         setCart([]);
       }
@@ -95,12 +94,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     quantity = 1,
     variantId?: number,
     type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
-    isGroup = false
+    isGroup = false,
+    pricingRuleId?: number | null // ✅ thêm tham số này
   ) => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) {
       throw new Error('Vui lòng đăng nhập để thêm vào giỏ hàng');
     }
+
     try {
       const response = await fetch('http://localhost:3000/cart/add', {
         method: 'POST',
@@ -108,11 +109,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${currentToken}`,
         },
-        body: JSON.stringify({ productId, quantity, variantId, type, isGroup }),
+        body: JSON.stringify({
+          productId,
+          quantity,
+          variantId,
+          type,
+          isGroup,
+          pricingRuleId, // ✅ gửi thêm vào body
+        }),
       });
+
       if (response.ok) {
-        await loadCart();
+        await loadCart(); // vẫn giữ nguyên
       } else {
+        const errorText = await response.text();
+        console.error('❌ Lỗi khi thêm vào giỏ hàng:', errorText);
         throw new Error('Không thể thêm vào giỏ hàng');
       }
     } catch (error) {
@@ -152,46 +163,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const updateQuantity = async (
-    productId: number,
-    quantity: number,
-    variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
-  ) => {
-    console.log('FE updateQuantity called with:', {
-      productId,
-      quantity,
-      variantId,
-      type,
-    }); // <-- log ở đây
+ const updateQuantity = async (cartItemId: number, quantity: number) => {
+  console.log('FE updateQuantity called with:', { cartItemId, quantity });
 
-    const currentToken = localStorage.getItem('token');
-    if (!currentToken) {
-      alert('Vui lòng đăng nhập để cập nhật số lượng');
-      return;
+  const currentToken = localStorage.getItem('token');
+  if (!currentToken) {
+    alert('Vui lòng đăng nhập để cập nhật số lượng');
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:3000/cart/update', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentToken}`,
+      },
+      body: JSON.stringify({ cartItemId, quantity }),
+    });
+
+    if (response.ok) {
+      await loadCart();
     }
-    try {
-      const response = await fetch('http://localhost:3000/cart/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${currentToken}`,
-        },
-        body: JSON.stringify({
-          productId,
-          quantity,
-          variantId,
-          type,
-        }),
-      });
-      if (response.ok) {
-        await loadCart();
-      }
-    } catch (error) {
-      alert('Không thể cập nhật số lượng');
-      console.error('Không thể cập nhật số lượng:', error);
-    }
-  };
+  } catch (error) {
+    alert('Không thể cập nhật số lượng');
+    console.error('Không thể cập nhật số lượng:', error);
+  }
+};
+
 
   const clearCart = () => {
     setCart([]);

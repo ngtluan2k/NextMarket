@@ -11,6 +11,7 @@ import {
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 
 @Entity('shopping_carts')
 export class ShoppingCart {
@@ -87,5 +88,9 @@ export class CartItem {
   is_group!: boolean;
 
   @Column({ type: 'int', nullable: true })
-  pricing_rule_id?: number; // <-- thêm cột này
+  pricing_rule_id?: number | null;
+
+  @ManyToOne(() => PricingRules, { nullable: true })
+  @JoinColumn({ name: 'pricing_rule_id' })
+  pricing_rule?: PricingRules | null;
 }

@@ -197,8 +197,8 @@ export default function OrderDetailPage() {
         const numericId = Number(id);
         if (Number.isNaN(numericId)) throw new Error('Order id phải là số');
         const res = await orderService.getOrderDetail(numericId);
-        console.log('🧩 Chi tiết đơn hàng:', res);
         if (!cancelled) setOrder(res ?? null);
+        console.log('Loaded order detail:', res);
       } catch (e) {
         console.error('Lỗi load chi tiết đơn:', e);
         if (!cancelled) setOrder(null);

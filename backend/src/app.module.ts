@@ -56,7 +56,6 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
-import { VoucherCollectionModule } from './modules/voucher-collection/voucher-collection.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
 
@@ -148,9 +147,8 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
     InventoryTransactionModule,
     GroupOrdersModule,
     AdminModule,
-    VoucherCollectionModule,
     CampaignsModule,
-    
+    FlashSaleSchedulesModule,
   ],
   providers: [],
 })

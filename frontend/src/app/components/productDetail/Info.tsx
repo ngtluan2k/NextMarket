@@ -78,6 +78,8 @@ export default function Info({
   setCalculatedPrice,
   selectedType,
   setSelectedType,
+  selectedRuleId,
+  setSelectedRuleId,
 }: {
   product?: Product;
   selectedVariantId: number | null;
@@ -91,12 +93,14 @@ export default function Info({
   setSelectedType: (
     type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => void;
+  selectedRuleId: number | null;
+  setSelectedRuleId: (id: number | null) => void;
 }) {
   const navigate = useNavigate();
   const pricingRules = product?.pricing_rules ?? [];
 
   /** --------------------- State --------------------- */
-  const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
+  // const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
   const selectedRule = pricingRules.find((r) => r.id === selectedRuleId);
 
   /** --------------------- Selected Variant --------------------- */
@@ -120,6 +124,10 @@ export default function Info({
     setCalculatedPrice,
     setSelectedType,
   ]);
+
+  useEffect(() => {
+  console.log('🧩 [Info] selectedRuleId (prop):', selectedRuleId);
+}, [selectedRuleId]);
 
   /** --------------------- Stock & Max Quantity --------------------- */
   const stock = selectedVariant?.stock ?? 0;
