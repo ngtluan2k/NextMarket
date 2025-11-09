@@ -5,9 +5,8 @@ import { Table, Card, Tag, Button, Pagination, Spin, Image, Tooltip } from 'antd
 import { Eye, Package, Calendar, DollarSign } from 'lucide-react';
 import { 
   getCommissionHistory, 
-  CommissionHistory, 
-  CommissionHistoryItem 
 } from '../../../../../../service/afiliate/affiliate-links.service';
+import { CommissionHistory, CommissionHistoryItem } from '../../../../../types/affiliate-links';
 
 const AffiliateTransaction = () => {
   const [commissionData, setCommissionData] = useState<CommissionHistory | null>(null);
@@ -81,7 +80,7 @@ const AffiliateTransaction = () => {
         <div>
           <p className="font-medium text-gray-900">#{record.order.order_number}</p>
           <p className="text-sm text-gray-500">
-            Tổng: VND {record.order.total_amount.toLocaleString()}
+            Tổng: VND {record.order.total_amount}
           </p>
         </div>
       ),

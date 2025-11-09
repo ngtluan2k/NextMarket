@@ -20,13 +20,11 @@ import {
 import { Search, Plus, Link, Package, Store, Tag as TagIcon } from 'lucide-react';
 import { 
   searchProducts, 
-  ProductSearchResult, 
-  ProductSearchResponse 
 } from '../../../../../../service/afiliate/affiliate-links.service';
 import { 
   createAffiliateLink
 } from '../../../../../../service/afiliate/affiliate-users.service';
-import { CreateLinkRequest } from '../../../../../types/affiliate-links';
+import { CreateLinkRequest, ProductSearchResponse, ProductSearchResult } from '../../../../../types/affiliate-links';
 import { getAllAffiliatePrograms } from '../../../../../../service/afiliate/affiliate.service';
 
 const { Search: SearchInput } = Input;

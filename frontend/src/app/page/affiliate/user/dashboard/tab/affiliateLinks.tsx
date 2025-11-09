@@ -16,29 +16,23 @@ import {
 } from 'antd';
 import {
   AffiliatedProduct,
-  AffiliatedProductsResponse,
   CreateLinkRequest,
-  CreateLinkResponse,
   MyLink,
-  MyLinksResponse,
   Program,
-  ProgramsResponse,
 } from "../../../../../types/affiliate-links";
 import { getAllProducts, ProductOption, VariantOption } from "../../../../../../service/product-helper.service";
 import { productService, Product } from '../../../../../../service/product.service';
+import { createLink, deleteLink, getMyAffiliatedProducts, getMyLinks, getPrograms } from '../../../../../../service/afiliate/affiliate-links.service';
 
 const { Title, Text } = Typography;
-const API_BASE = 'http://localhost:3000';
 
 export default function AffiliateLinks() {
   const [msg, ctx] = message.useMessage();
   const [loading, setLoading] = useState(false);
 
-  // lists
+  // danh sách
   const [myLinks, setMyLinks] = useState<MyLink[]>([]);
-  const [affiliatedProducts, setAffiliatedProducts] = useState<
-    AffiliatedProduct[]
-  >([]);
+  const [affiliatedProducts, setAffiliatedProducts] = useState<AffiliatedProduct[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<number | undefined>();
@@ -46,7 +40,7 @@ export default function AffiliateLinks() {
   const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
-  // create form
+  // form tạo liên kết
   const [form] = Form.useForm<CreateLinkRequest>();
 
   const token = useMemo(() => localStorage.getItem('token') || '', []);
@@ -55,13 +49,6 @@ export default function AffiliateLinks() {
     []
   );
 
-  const authHeaders = useMemo(
-    () => ({
-      'Content-Type': 'application/json',
-      Authorization: token ? `Bearer ${token}` : '',
-    }),
-    [token]
-  );
 
   const ensureUrl = useCallback(
     (link: MyLink): string => {
@@ -85,16 +72,10 @@ export default function AffiliateLinks() {
       if (!url.searchParams.get('aff') && affiliateCode) {
         url.searchParams.set('aff', affiliateCode);
       }
-      if (
-        !url.searchParams.get('variant') &&
-        typeof link.variantId === 'number'
-      ) {
+      if (!url.searchParams.get('variant') && typeof link.variantId === 'number') {
         url.searchParams.set('variant', String(link.variantId));
       }
-      if (
-        !url.searchParams.get('program') &&
-        typeof link.programId === 'number'
-      ) {
+      if (!url.searchParams.get('program') && typeof link.programId === 'number') {
         url.searchParams.set('program', String(link.programId));
       }
       return url.toString();
@@ -106,12 +87,12 @@ export default function AffiliateLinks() {
     async (text: string) => {
       const value = (text || '').trim();
       if (!value) {
-        msg.warning('Affiliate link is not ready yet');
+        msg.warning('Liên kết tiếp thị chưa sẵn sàng');
         return;
       }
       try {
         await navigator.clipboard.writeText(value);
-        msg.success('Copied affiliate link');
+        msg.success('Đã sao chép liên kết tiếp thị');
       } catch {
         try {
           const textarea = document.createElement('textarea');
@@ -122,97 +103,27 @@ export default function AffiliateLinks() {
           textarea.select();
           document.execCommand('copy');
           document.body.removeChild(textarea);
-          msg.success('Copied affiliate link');
+          msg.success('Đã sao chép liên kết tiếp thị');
         } catch {
-          msg.error('Unable to copy link');
+          msg.error('Không thể sao chép liên kết');
         }
       }
     },
     [msg]
   );
+
   const openInNewTab = (url: string) => {
     const href = (url || '').trim();
     if (!href) return;
     window.open(href, '_blank', 'noopener,noreferrer');
   };
 
-  const getMyLinks = useCallback(async () => {
-    const res = await fetch(`${API_BASE}/affiliate-links/my-links`, {
-      headers: authHeaders,
-    });
-    if (!res.ok) throw new Error(`Failed to load my links (${res.status})`);
-    const json: MyLinksResponse = await res.json();
-    return Array.isArray(json?.links) ? json.links : [];
-  }, [authHeaders]);
-
-  const getAffiliatedProducts = useCallback(async () => {
-    const res = await fetch(`${API_BASE}/affiliate-links/affiliated-products`, {
-      headers: authHeaders,
-    });
-    if (!res.ok)
-      throw new Error(`Failed to load affiliated products (${res.status})`);
-    const json: AffiliatedProductsResponse = await res.json();
-    return (json?.data || json?.products || []) as AffiliatedProduct[];
-  }, [authHeaders]);
-
-  const getPrograms = useCallback(async (): Promise<Program[]> => {
-    const tryEndpoints = [
-      `${API_BASE}/affiliate-programs`,
-    ];
-    for (const url of tryEndpoints) {
-      try {
-        const res = await fetch(url, { headers: authHeaders });
-        if (!res.ok) continue;
-        const data: ProgramsResponse = await res.json();
-        const arr = Array.isArray(data) ? data : data?.data || [];
-        if (Array.isArray(arr) && arr.length) {
-          return arr
-            .filter(
-              (p: any) =>
-                p && typeof p.id === 'number' && typeof p.name === 'string'
-            )
-            .map((p: any) => ({ id: p.id, name: p.name, status: p.status }));
-        }
-      } catch (error) {
-        console.error('Failed to fetch programs:', error);
-      }
-    }
-    return [];
-  }, [authHeaders]);
-
-  const postCreateLink = useCallback(
-    async (payload: CreateLinkRequest) => {
-      const res = await fetch(`${API_BASE}/affiliate-links/create-link`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`Create link failed (${res.status})`);
-      const json: CreateLinkResponse = await res.json();
-      return json;
-    },
-    [authHeaders]
-  );
-
-  const deleteLink = useCallback(
-    async (id: number) => {
-      const res = await fetch(`${API_BASE}/affiliate-links/${id}`, {
-        method: 'DELETE',
-        headers: authHeaders,
-      });
-      if (!res.ok) throw new Error(`Delete link failed (${res.status})`);
-      const text = await res.text();
-      return text ? JSON.parse(text) : { success: true };
-    },
-    [authHeaders]
-  );
-
   const loadProducts = useCallback(async () => {
     try {
       const prods = await getAllProducts();
       setProducts(prods);
     } catch (error) {
-      console.error('Failed to load products:', error);
+      console.error('Không thể tải danh sách sản phẩm:', error);
     }
   }, []);
 
@@ -221,7 +132,7 @@ export default function AffiliateLinks() {
       const detail = await productService.getProductById(productId);
       setProductDetail(detail);
     } catch (error) {
-      console.error('Failed to load product detail:', error);
+      console.error('Không thể tải chi tiết sản phẩm:', error);
       setProductDetail(null);
     }
   }, []);
@@ -231,18 +142,18 @@ export default function AffiliateLinks() {
     try {
       const [links, affiliatedProds, progs] = await Promise.all([
         getMyLinks(),
-        getAffiliatedProducts(),
+        getMyAffiliatedProducts(),
         getPrograms(),
       ]);
       setMyLinks(links);
       setAffiliatedProducts(affiliatedProds);
       setPrograms(progs);
     } catch (e: any) {
-      msg.error(e?.message || 'Failed to load affiliate data');
+      msg.error(e?.message || 'Không thể tải dữ liệu liên kết tiếp thị');
     } finally {
       setLoading(false);
     }
-  }, [getAffiliatedProducts, getMyLinks, getPrograms, msg]);
+  }, [getMyAffiliatedProducts, getMyLinks, getPrograms, msg]);
 
   useEffect(() => {
     refreshAll();
@@ -266,45 +177,45 @@ export default function AffiliateLinks() {
               ? (values as any).programId
               : undefined,
         };
-        const created = await postCreateLink(payload);
-        msg.success('Affiliate link created');
+        const created = await createLink(payload);
+        msg.success('Đã tạo liên kết tiếp thị');
         await refreshAll();
         if (created?.affiliate_link) {
           copyToClipboard(created.affiliate_link);
         }
         form.resetFields();
       } catch (e: any) {
-        msg.error(e?.message || 'Create link failed');
+        msg.error(e?.message || 'Tạo liên kết thất bại');
       } finally {
         setLoading(false);
       }
     },
-    [copyToClipboard, form, msg, postCreateLink, refreshAll]
+    [copyToClipboard, form, msg, createLink, refreshAll]
   );
 
   const myLinksColumns = useMemo(
     () => [
       {
-        title: 'Program',
+        title: 'Chương trình',
         dataIndex: 'program_name',
         key: 'program_name',
         render: (v: string) =>
-          v ? <Tag color="blue">{v}</Tag> : <Tag>Unknown</Tag>,
+          v ? <Tag color="blue">{v}</Tag> : <Tag>Không xác định</Tag>,
       },
       {
-        title: 'Product ID',
+        title: 'ID sản phẩm',
         dataIndex: 'productId',
         key: 'productId',
         render: (v: number | undefined) => (typeof v === 'number' ? v : '—'),
       },
       {
-        title: 'Variant',
+        title: 'Biến thể',
         dataIndex: 'variantId',
         key: 'variantId',
         render: (v: number | undefined) => (typeof v === 'number' ? v : '—'),
       },
       {
-        title: 'Affiliate Link',
+        title: 'Liên kết tiếp thị',
         key: 'link',
         render: (_: unknown, record: MyLink) => {
           const url = ensureUrl(record);
@@ -319,49 +230,49 @@ export default function AffiliateLinks() {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}
-                title={url || 'Link not ready'}
+                title={url || 'Liên kết chưa sẵn sàng'}
               >
-                {disabled ? 'Link not ready' : url}
+                {disabled ? 'Liên kết chưa sẵn sàng' : url}
               </span>
               <Button
                 type="primary"
                 disabled={disabled}
                 onClick={() => copyToClipboard(url)}
               >
-                Copy
+                Sao chép
               </Button>
               <Button disabled={disabled} onClick={() => openInNewTab(url)}>
-                Open
+                Mở
               </Button>
             </Space>
           );
         },
       },
       {
-        title: 'Created',
+        title: 'Ngày tạo',
         dataIndex: 'created_at',
         key: 'created_at',
         render: (v: string | undefined) =>
           v ? new Date(v).toLocaleString() : '—',
       },
       {
-        title: 'Actions',
+        title: 'Thao tác',
         key: 'actions',
         render: (_: unknown, record: MyLink) => (
           <Space>
             <Popconfirm
-              title="Delete this affiliate link?"
+              title="Xóa liên kết tiếp thị này?"
               onConfirm={async () => {
                 try {
                   await deleteLink(record.link_id);
-                  msg.success('Deleted link');
+                  msg.success('Đã xóa liên kết');
                   await refreshAll();
                 } catch (e: any) {
-                  msg.error(e?.message || 'Delete failed');
+                  msg.error(e?.message || 'Xóa thất bại');
                 }
               }}
             >
-              <Button danger>Delete</Button>
+              <Button danger>Xóa</Button>
             </Popconfirm>
           </Space>
         ),
@@ -373,7 +284,7 @@ export default function AffiliateLinks() {
   const productsColumns = useMemo(
     () => [
       {
-        title: 'Product',
+        title: 'Sản phẩm',
         key: 'product',
         render: (record: any) => (
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -400,7 +311,7 @@ export default function AffiliateLinks() {
                   justifyContent: 'center',
                 }}
               >
-                <Text type="secondary">No Image</Text>
+                <Text type="secondary">Không có ảnh</Text>
               </div>
             )}
             <div>
@@ -413,14 +324,14 @@ export default function AffiliateLinks() {
         ),
       },
       {
-        title: 'Store',
+        title: 'Cửa hàng',
         key: 'store',
         render: (record: any) => (
           <Text>{record.store?.name || '—'}</Text>
         ),
       },
       {
-        title: 'Variants',
+        title: 'Biến thể',
         key: 'variants',
         render: (record: any) => (
           <Text>
@@ -431,7 +342,7 @@ export default function AffiliateLinks() {
         ),
       },
       {
-        title: 'Price',
+        title: 'Giá',
         key: 'price',
         render: (record: any) => (
           <Text>
@@ -442,7 +353,7 @@ export default function AffiliateLinks() {
         ),
       },
       {
-        title: 'Created',
+        title: 'Ngày tạo',
         dataIndex: 'created_at',
         key: 'created_at',
         render: (v: string | undefined) =>
@@ -459,8 +370,8 @@ export default function AffiliateLinks() {
         <Alert
           type="warning"
           showIcon
-          message="You are not logged in"
-          description="Please log in to manage affiliate links."
+          message="Bạn chưa đăng nhập"
+          description="Vui lòng đăng nhập để quản lý liên kết tiếp thị."
           style={{ marginBottom: 16 }}
         />
       )}
@@ -468,7 +379,7 @@ export default function AffiliateLinks() {
       <Card
         title={
           <Title level={4} style={{ margin: 0 }}>
-            Create Affiliate Link
+            Tạo liên kết tiếp thị
           </Title>
         }
         style={{ marginBottom: 16 }}
@@ -484,12 +395,12 @@ export default function AffiliateLinks() {
           }}
         >
           <Form.Item
-            label="Program"
+            label="Chương trình"
             name="programId"
-            rules={[{ required: true, message: 'Please select a program' }]}
+            rules={[{ required: true, message: 'Vui lòng chọn một chương trình' }]}
           >
             <Select
-              placeholder="Select program"
+              placeholder="Chọn chương trình"
               style={{ minWidth: 220 }}
               loading={loading && programs.length === 0}
               options={programs.map((p) => ({
@@ -500,12 +411,12 @@ export default function AffiliateLinks() {
           </Form.Item>
 
           <Form.Item
-            label="Product"
+            label="Sản phẩm"
             name="productId"
-            rules={[{ required: true, message: 'Please select a product' }]}
+            rules={[{ required: true, message: 'Vui lòng chọn sản phẩm' }]}
           >
             <Select
-              placeholder="Select product"
+              placeholder="Chọn sản phẩm"
               style={{ minWidth: 250 }}
               loading={loading && products.length === 0}
               showSearch
@@ -529,11 +440,11 @@ export default function AffiliateLinks() {
           </Form.Item>
 
           <Form.Item 
-            label="Variant" 
+            label="Biến thể" 
             name="variantId"
           >
             <Select
-              placeholder="Select variant (optional)"
+              placeholder="Chọn biến thể (không bắt buộc)"
               style={{ minWidth: 250 }}
               disabled={!selectedProduct}
               allowClear
@@ -564,15 +475,13 @@ export default function AffiliateLinks() {
               loading={loading}
               disabled={!token}
             >
-              Create Link
+              Tạo liên kết
             </Button>
           </Form.Item>
         </Form>
         <Divider style={{ margin: '12px 0' }} />
         <Text type="secondary">
-          Program selection applies to link creation. Links are normalized to
-          your current origin and will backfill missing aff/variant when
-          possible.
+          Việc chọn chương trình được áp dụng khi tạo liên kết. Liên kết sẽ được chuẩn hóa theo origin hiện tại của bạn và sẽ tự bổ sung tham số aff/variant nếu còn thiếu khi có thể.
         </Text>
       </Card>
 
@@ -580,7 +489,7 @@ export default function AffiliateLinks() {
         <Card
           title={
             <Title level={4} style={{ margin: 0 }}>
-              Product Preview
+              Xem trước sản phẩm
             </Title>
           }
           style={{ marginBottom: 16 }}
@@ -606,33 +515,33 @@ export default function AffiliateLinks() {
               <div style={{ marginTop: '12px' }}>
                 <Space direction="vertical" size="small">
                   <div>
-                    <Text strong>Brand: </Text>
+                    <Text strong>Thương hiệu: </Text>
                     {productDetail.brand?.name || 'N/A'}
                   </div>
                   <div>
-                    <Text strong>Store: </Text>
+                    <Text strong>Cửa hàng: </Text>
                     {productDetail.store?.name || 'N/A'}
                   </div>
                   {selectedVariant ? (
                     <>
                       <div>
-                        <Text strong>Variant: </Text>
+                        <Text strong>Biến thể: </Text>
                         {selectedVariant.variant_name} (SKU: {selectedVariant.sku})
                       </div>
                       <div>
-                        <Text strong>Price: </Text>
+                        <Text strong>Giá: </Text>
                         <Text style={{ fontSize: '18px', color: '#1890ff' }}>
                           VND {Number(selectedVariant.price).toFixed(2)}
                         </Text>
                       </div>
                       <div>
-                        <Text strong>Stock: </Text>
+                        <Text strong>Tồn kho: </Text>
                         {selectedVariant.stock}
                       </div>
                     </>
                   ) : (
                     <div>
-                      <Text strong>Base Price: </Text>
+                      <Text strong>Giá cơ bản: </Text>
                       <Text style={{ fontSize: '18px', color: '#1890ff' }}>
                         {productDetail.base_price ? `VND ${Number(productDetail.base_price).toFixed(2)}` : 'N/A'}
                       </Text>
@@ -649,7 +558,7 @@ export default function AffiliateLinks() {
         items={[
           {
             key: 'my-links',
-            label: 'My Links',
+            label: 'Liên kết của tôi',
             children: (
               <Table
                 rowKey={(r) => String(r.link_id)}
@@ -662,7 +571,7 @@ export default function AffiliateLinks() {
           },
           {
             key: 'affiliated-products',
-            label: 'Affiliated Products',
+            label: 'Sản phẩm liên kết',
             children: (
               <Table
                 rowKey={(r) => String(r.id)}

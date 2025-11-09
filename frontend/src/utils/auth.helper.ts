@@ -15,3 +15,10 @@ export function getCurrentUserId(): number | null {
   console.log(decoded);
   return decoded?.userId || decoded?.sub || null;
 }
+
+export function getCurrentUser() {
+  const token = localStorage.getItem('token');
+  const decoded = decodeJwtToken(token || '');
+  console.log(decoded);
+  return decoded;
+}

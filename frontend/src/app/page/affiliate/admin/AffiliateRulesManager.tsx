@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Form, Button, Space, message, Tabs, Input, Badge, Select } from 'antd';
-import { SettingOutlined, InfoCircleOutlined } from '@ant-design/icons';
-
-const { Option } = Select;
+import {
+  Card,
+  Form,
+  Button,
+  Space,
+  message,
+  Tabs,
+  Input,
+  Badge,
+  Select,
+} from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import {
   fetchDescendants,
   fetchAncestors,
@@ -32,6 +40,8 @@ import ModalBulkCreateRules from './ModalBulkCreateRules';
 import ModalEditRules from './ModalEditRules';
 import AffiliateRuleList from './AffiliateRuleList';
 
+const { Option } = Select;
+
 export default function AffiliateRulesManager() {
   const [loading, setLoading] = useState(false);
   const [rules, setRules] = useState<CommissionRule[]>([]);
@@ -42,8 +52,6 @@ export default function AffiliateRulesManager() {
   const [editingRule, setEditingRule] = useState<CommissionRule | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [bulkCreateVisible, setBulkCreateVisible] = useState(false);
-
-  // New UI states
   const [selectedProgramId, setSelectedProgramId] = useState<number | null>(
     null
   );
@@ -54,12 +62,9 @@ export default function AffiliateRulesManager() {
   const [editForm] = Form.useForm();
   const [bulkForm] = Form.useForm();
 
-
-  // Grouped rules by program
   const groupedRules = useMemo(() => {
     const grouped: Record<string, CommissionRule[]> = {};
 
-    // Add default group for rules without program_id
     grouped['default'] = [];
 
     rules.forEach((rule) => {
@@ -70,7 +75,6 @@ export default function AffiliateRulesManager() {
       grouped[key].push(rule);
     });
 
-    // Sort rules within each group by name
     Object.keys(grouped).forEach((key) => {
       grouped[key].sort((a, b) => a.name.localeCompare(b.name));
     });
@@ -78,21 +82,17 @@ export default function AffiliateRulesManager() {
     return grouped;
   }, [rules]);
 
-  // Filtered and grouped rules based on search and program selection
   const filteredGroupedRules = useMemo(() => {
     const filtered = { ...groupedRules };
 
-    // Apply program filter
     if (selectedProgramId !== null) {
       if (selectedProgramId === -1) {
-        // Show only default rules
         Object.keys(filtered).forEach((key) => {
           if (key.startsWith('program-')) {
             delete filtered[key];
           }
         });
       } else {
-        // Show only selected program
         Object.keys(filtered).forEach((key) => {
           if (key !== `program-${selectedProgramId}` && key !== 'default') {
             delete filtered[key];
@@ -101,7 +101,6 @@ export default function AffiliateRulesManager() {
       }
     }
 
-    // Apply search filter
     if (searchText.trim()) {
       const search = searchText.toLowerCase();
       Object.keys(filtered).forEach((key) => {
@@ -110,9 +109,10 @@ export default function AffiliateRulesManager() {
             rule.name.toLowerCase().includes(search) ||
             rule.id.toLowerCase().includes(search) ||
             rule.calculation_method.toLowerCase().includes(search) ||
-            rule.calculated_rates.some(rate => 
-              String(rate.level).includes(search) || 
-              String(rate.rate).includes(search)
+            rule.calculated_rates.some(
+              (rate) =>
+                String(rate.level).includes(search) ||
+                String(rate.rate).includes(search)
             )
           );
         });
@@ -143,12 +143,12 @@ export default function AffiliateRulesManager() {
 
   const fetchAffiliatePrograms = useCallback(async () => {
     try {
-      console.log('🔄 Loading affiliate programs...');
+      console.log(' Loading affiliate programs...');
       const programs = await getAllAffiliatePrograms();
       setAffiliatePrograms(programs || []);
-      console.log(`✅ Loaded ${programs.length} affiliate programs`);
+      console.log(` Loaded ${programs.length} affiliate programs`);
     } catch (e: any) {
-      console.error('❌ Error loading affiliate programs:', e);
+      console.error(' Error loading affiliate programs:', e);
       msg.error(e?.message || 'Tải danh sách chương trình affiliate thất bại');
     }
   }, [msg]);
@@ -192,7 +192,7 @@ export default function AffiliateRulesManager() {
           cap_user: values.cap_user,
           time_limit_days: values.time_limit_days,
         };
-        
+
         await createNewRule(payload);
         msg.success('Tạo rule thành công');
         fetchRules();
@@ -325,38 +325,37 @@ export default function AffiliateRulesManager() {
     [form, msg]
   );
 
-  // Tree tab với commission info
+
   const [treeUserEmail, setTreeUserEmail] = useState<string>('');
   const [treeData, setTreeData] = useState<any[]>([]);
   const [commissionData, setCommissionData] = useState<any>(null);
   const [showCommissions, setShowCommissions] = useState<boolean>(true);
   const [treeLoading, setTreeLoading] = useState<boolean>(false);
-  
-  // Program filter for tree
-  const [selectedTreeProgramId, setSelectedTreeProgramId] = useState<number | null>(null);
 
-  // User info card state
+
+  const [selectedTreeProgramId, setSelectedTreeProgramId] = useState<
+    number | null
+  >(null);
+
+
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedUserCommission, setSelectedUserCommission] =
     useState<any>(null);
   const [userInfoLoading, setUserInfoLoading] = useState<boolean>(false);
 
-  // Handle user selection from tree
   const handleUserSelect = useCallback(
     async (userId: number, commissionInfo?: any) => {
-      console.log(`🔍 User selected: ${userId}`, commissionInfo);
+      console.log(` User selected: ${userId}`, commissionInfo);
 
       setUserInfoLoading(true);
       try {
-        // Luôn gọi API để lấy thông tin profile đầy đủ
         const user = await getUserById(userId);
         setSelectedUser(user);
         setSelectedUserCommission(commissionInfo);
-        console.log(`✅ Loaded user info:`, user);
+        console.log(`Loaded user info:`, user);
       } catch (error: any) {
-        console.error(`❌ Error loading user info:`, error);
+        console.error(`Error loading user info:`, error);
         msg.error(error?.message || 'Không thể tải thông tin user');
-        // Reset selected user nếu có lỗi
         setSelectedUser(null);
         setSelectedUserCommission(null);
       } finally {
@@ -366,7 +365,6 @@ export default function AffiliateRulesManager() {
     [msg]
   );
 
-  // Update loadTree to use handleUserSelect
   const loadTreeWithUserSelect = useCallback(async () => {
     if (!treeUserEmail.trim()) {
       setTreeData([]);
@@ -376,20 +374,25 @@ export default function AffiliateRulesManager() {
 
     setTreeLoading(true);
     try {
-      console.log(`🔍 Converting email to user ID: ${treeUserEmail}`);
+      console.log(`Converting email to user ID: ${treeUserEmail}`);
 
-      // Tìm user_id từ email
       const userId = await findUserIdByEmail(treeUserEmail.trim());
-      console.log(`✅ Found user ID: ${userId} for email: ${treeUserEmail}`);
+      // console.log(`Found user ID: ${userId} for email: ${treeUserEmail}`);
 
       if (showCommissions) {
         console.log(
-          `🔄 Loading affiliate tree with commissions for user ID: ${userId}`,
-          selectedTreeProgramId ? `with program filter: ${selectedTreeProgramId}` : 'without program filter'
+          `Loading affiliate tree with commissions for user ID: ${userId}`,
+          selectedTreeProgramId
+            ? `with program filter: ${selectedTreeProgramId}`
+            : 'without program filter'
         );
-        const response = await fetchAffiliateTreeWithCommissions(userId, 10, selectedTreeProgramId || undefined);
+        const response = await fetchAffiliateTreeWithCommissions(
+          userId,
+          10,
+          selectedTreeProgramId || undefined
+        );
         const data = response.data;
-        console.log(`✅ Loaded tree data:`, data);
+        // console.log(`Loaded tree data:`, data);
 
         const buildTreeNodes = (nodes: any[], levelOffset = 0) => {
           return nodes.map((node, idx) => ({
@@ -404,14 +407,17 @@ export default function AffiliateRulesManager() {
                   <span className="text-gray-500 ml-2">
                     (Level {node.level})
                   </span>
-                  {/* Program participation status */}
                   {selectedTreeProgramId && node.programParticipation && (
-                    <span className={`ml-2 px-2 py-0.5 text-xs rounded ${
-                      node.programParticipation.isJoined 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {node.programParticipation.isJoined ? '✓ Joined' : '✗ Not Joined'}
+                    <span
+                      className={`ml-2 px-2 py-0.5 text-xs rounded ${
+                        node.programParticipation.isJoined
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {node.programParticipation.isJoined
+                        ? '✓ Joined'
+                        : '✗ Not Joined'}
                     </span>
                   )}
                 </div>
@@ -419,18 +425,19 @@ export default function AffiliateRulesManager() {
                   <div className="text-xs text-gray-600">
                     <div className="flex items-center gap-2">
                       {selectedTreeProgramId && node.programParticipation ? (
-                        <>
+                        <div>
                           {node.programParticipation.isJoined && (
                             <>
                               <span className="text-blue-600 font-medium">
                                 Rate: {node.programParticipation.rate}%
                               </span>
                               <span className="text-green-600 font-medium">
-                                {node.programParticipation.earnedFromProgram.toLocaleString()}đ
+                                {node.programParticipation.earnedFromProgram.toLocaleString()}
+                                đ
                               </span>
                             </>
                           )}
-                        </>
+                        </div>
                       ) : (
                         <>
                           <span className="text-green-600 font-medium">
@@ -446,7 +453,7 @@ export default function AffiliateRulesManager() {
                 )}
               </div>
             ),
-            key: `${node.userId}-${idx}`, // userId-index format để dễ parse
+            key: `${node.userId}-${idx}`,
             children: [],
           }));
         };
@@ -503,14 +510,12 @@ export default function AffiliateRulesManager() {
         ]);
 
         setCommissionData(data);
-
-        // Tự động load thông tin user root khi tìm kiếm
         if (data.rootUser) {
           handleUserSelect(data.rootUser.userId, data.rootUser.commission);
         }
       } else {
-        console.log(`🔄 Loading basic affiliate tree for user ID: ${userId}`);
-        // Sử dụng API cũ
+        console.log(` Loading basic affiliate tree for user ID: ${userId}`);
+
         const [descendants, ancestors] = await Promise.all([
           fetchDescendants(userId, 1),
           fetchAncestors(userId, 10),
@@ -544,10 +549,10 @@ export default function AffiliateRulesManager() {
           },
         ]);
         setCommissionData(null);
-        console.log(`✅ Loaded basic tree data for user ID: ${userId}`);
+        console.log(` Loaded basic tree data for user ID: ${userId}`);
       }
     } catch (e: any) {
-      console.error(`❌ Error loading affiliate tree:`, e);
+      console.error(`Error loading affiliate tree:`, e);
       message.error(e?.message || 'Tải cây thất bại');
     } finally {
       setTreeLoading(false);
@@ -613,7 +618,10 @@ export default function AffiliateRulesManager() {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <Card>
-                    <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
+                    <Space
+                      direction="vertical"
+                      style={{ width: '100%', marginBottom: 12 }}
+                    >
                       <Space style={{ width: '100%' }}>
                         <Input
                           placeholder="Nhập email người dùng"
@@ -631,23 +639,32 @@ export default function AffiliateRulesManager() {
                           type={showCommissions ? 'primary' : 'default'}
                           onClick={() => setShowCommissions(!showCommissions)}
                         >
-                          {showCommissions ? 'Ẩn Commission' : 'Hiện Commission'}
+                          {showCommissions
+                            ? 'Ẩn Commission'
+                            : 'Hiện Commission'}
                         </Button>
                       </Space>
-                      
+
                       {/* Program Filter */}
                       <Space style={{ width: '100%' }}>
-                        <span style={{ fontWeight: 500 }}>Filter by Program:</span>
+                        <span style={{ fontWeight: 500 }}>
+                          Filter by Program:
+                        </span>
                         <Select
                           value={selectedTreeProgramId}
-                          onChange={(value) => setSelectedTreeProgramId(value === undefined ? null : value)}
+                          onChange={(value) =>
+                            setSelectedTreeProgramId(
+                              value === undefined ? null : value
+                            )
+                          }
                           placeholder="Tất cả programs (Summary)"
                           style={{ width: 300 }}
                           allowClear
                         >
-                          {affiliatePrograms.map(program => (
+                          {affiliatePrograms.map((program) => (
                             <Option key={program.id} value={program.id}>
-                              {program.name} (Budget: {program.commission_value}%)
+                              {program.name} (Budget: {program.commission_value}
+                              %)
                             </Option>
                           ))}
                         </Select>

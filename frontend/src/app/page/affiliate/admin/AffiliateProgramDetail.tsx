@@ -44,11 +44,10 @@ export default function AffiliateProgramDetail({
       fetchProgramById(programId);
     } else if (!visible) {
       setProgram(null);
-      return; // Early return to avoid redundant logic
+      return; 
     }
   }, [programId, visible]);
 
-  // Conditional rendering based on state
   if (!visible) {
     return null;
   }

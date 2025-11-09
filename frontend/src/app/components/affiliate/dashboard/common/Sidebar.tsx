@@ -1,18 +1,14 @@
 import { Button } from 'antd';
-import React from 'react';
 import {
   Home,
   Link2,
   CreditCard,
-  BookOpen,
   Settings,
   HelpCircle,
-  Bell,
   X,
-  Search,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-
+import logo from '../../../../../../public/logo.jpg';
 const Sidebar = () => {
   const location = useLocation();
 
@@ -28,19 +24,9 @@ const Sidebar = () => {
       icon: Link2,
     },
     {
-      name: 'Tìm kiếm sản phẩm',
-      href: '/affiliate/dashboard/products',
-      icon: Search,
-    },
-    {
       name: 'Thanh toán',
       href: '/affiliate/dashboard/payments',
       icon: CreditCard,
-    },
-    {
-      name: 'Tài nguyên',
-      href: '/affiliate/dashboard/resource',
-      icon: BookOpen,
     },
   ];
 
@@ -52,11 +38,6 @@ const Sidebar = () => {
       icon: HelpCircle,
       badge: 'Trực tuyến',
     },
-    {
-      name: 'Thông báo',
-      href: '/affiliate/dashboard/notifications',
-      icon: Bell,
-    },
   ];
 
   return (
@@ -66,12 +47,9 @@ const Sidebar = () => {
         transform transition-transform duration-300 ease-in-out translate-x-full lg:translate-x-0 `}
     >
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 border-b border-gray-200">
           <NavLink to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">E</span>
-            </div>
-            <span className="font-bold text-gray-900 text-lg">Everymart</span>
+            <img src={logo} alt="everymart" className='w-44'/>
           </NavLink>
         </div>
 
@@ -152,7 +130,7 @@ const Sidebar = () => {
             </p>
             <div className="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
               <code className="flex-1 text-xs text-gray-900 truncate">
-                uui.com/40B0020
+                chức năng đang phát triển
               </code>
               <Button
                 size="small"

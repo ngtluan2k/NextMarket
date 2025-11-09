@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3000';
-
+import { API_BASE_URL } from '../app/api/api';
 export interface Product {
   id: number;
   uuid: string;
@@ -228,11 +227,10 @@ class ProductService {
     return res.data;
   }
 
-  async getProductById(id: number): Promise<Product> {
+ async getProductById(id: number): Promise<Product> {
     const response = await axios.get(`${API_BASE_URL}/products/${id}`, {
       headers: this.getAuthHeaders(),
     });
-    // Backend returns { data: <product> }, so we need to extract the data field
     return response.data.data;
   }
 }

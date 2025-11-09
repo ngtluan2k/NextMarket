@@ -1,6 +1,5 @@
 import { message } from 'antd';
-
-const API_BASE_URL = 'http://localhost:3000';
+import { API_BASE_URL } from '../../config/api';
 
 export interface BudgetStatus {
   program_id: number;

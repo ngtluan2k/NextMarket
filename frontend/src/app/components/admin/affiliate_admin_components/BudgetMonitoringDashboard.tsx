@@ -25,7 +25,7 @@ import {
   getBudgetAlerts,
   BudgetStatus,
   BudgetAlert,
-} from '../../../../services/budget-tracking.service';
+} from '../../../../service/afiliate/budget-tracking.service';
 
 const BudgetMonitoringDashboard: React.FC = () => {
   const [budgetStatuses, setBudgetStatuses] = useState<BudgetStatus[]>([]);

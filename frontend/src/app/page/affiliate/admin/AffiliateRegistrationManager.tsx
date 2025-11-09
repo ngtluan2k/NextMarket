@@ -17,7 +17,7 @@ import {
   EyeOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
-import axios from 'axios';
+import { approveRegistration, getAffiliateRegistrations, rejectRegistration } from '../../../../service/afiliate/affiliate-registration.service';
 
 interface AffiliateRegistration {
   createdAt: string | number | Date;
@@ -37,15 +37,6 @@ const AffiliateRegistrationManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [viewingRegistration, setViewingRegistration] =
     useState<AffiliateRegistration | null>(null);
-  const token = localStorage.getItem('token');
-
-  const apiClient = axios.create({
-    baseURL: 'http://localhost:3000', // chỉnh lại theo BE thật
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
 
   useEffect(() => {
     fetchRegistrations();
@@ -54,8 +45,7 @@ const AffiliateRegistrationManager: React.FC = () => {
   const fetchRegistrations = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/affiliate-registrations');
-      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      const data = await getAffiliateRegistrations();
       setRegistrations(data);
     } catch (err: any) {
       message.error('Không thể tải danh sách đăng ký Affiliate');
@@ -74,7 +64,7 @@ const AffiliateRegistrationManager: React.FC = () => {
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          await apiClient.patch(`/affiliate-registrations/${id}/approve`);
+          await approveRegistration(id);
           message.success('Đã phê duyệt thành công');
           await fetchRegistrations();
         } catch {
@@ -94,7 +84,7 @@ const AffiliateRegistrationManager: React.FC = () => {
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          await apiClient.patch(`/affiliate-registrations/${id}/reject`);
+          await rejectRegistration(id);
           message.success('Đã từ chối thành công');
           await fetchRegistrations();
         } catch {
@@ -184,7 +174,6 @@ const AffiliateRegistrationManager: React.FC = () => {
       ),
     },
   ];
-
 
   const total = registrations.length;
   const approved = registrations.filter((r) => r.status === 'APPROVED').length;

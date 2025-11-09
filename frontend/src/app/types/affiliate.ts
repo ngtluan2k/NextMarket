@@ -38,7 +38,7 @@ export interface CreateAffiliateProgramDto {
   cookie_days: number;
   commission_type: 'percentage' | 'fixed';
   commission_value: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'paused';
   
   // Budget fields
   total_budget_amount?: number;

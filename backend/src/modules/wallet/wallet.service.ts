@@ -112,6 +112,28 @@ export class WalletService {
     });
   }
 
+  /**
+   * Get wallet transaction history with pagination
+   */
+  async getWalletTransactionsWithPagination(
+    userId: number,
+    skip: number = 0,
+    limit: number = 20,
+  ): Promise<[WalletTransaction[], number]> {
+    const wallet = await this.walletRepo.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!wallet) return [[], 0];
+
+    return await this.walletTransactionRepo.findAndCount({
+      where: { wallet_id: wallet.id },
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+  }
+
   async deductCommissionFromWallet(
     userId: number, 
     amount: number, 

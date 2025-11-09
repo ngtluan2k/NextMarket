@@ -29,7 +29,7 @@ import {
   getFraudStats,
   FraudLog,
   FraudStats,
-} from '../../../../services/fraud-detection.service';
+} from '../../../../service/afiliate/fraud-detection.service';
 
 const { TextArea } = Input;
 const { Option } = Select;

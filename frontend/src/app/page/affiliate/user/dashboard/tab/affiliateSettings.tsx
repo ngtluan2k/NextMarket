@@ -1,7 +1,7 @@
 import React from 'react';
 
 const AffiliateSettings = () => {
-  return <div>affiliateSettings</div>;
+  return <div>Chức năng đang được phát triển</div>;
 };
 
 export default AffiliateSettings;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotificationSocket';
-import { NotificationType } from '../../services/notification-socket.service';
+import { NotificationType } from '../../service/notification-socket.service';
 
 /**
  * Global Notification Socket Provider

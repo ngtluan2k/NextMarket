@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getCurrentUserId } from './auth.helper';
+import { getCurrentUserId } from '../utils/auth.helper';
 
 const API_BASE_URL = 'http://localhost:3000'; // Adjust based on your backend URL
 export interface StoreLevel {
