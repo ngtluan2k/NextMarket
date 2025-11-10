@@ -123,6 +123,8 @@ export default function GroupOrderDetail() {
                 const itemsRes = await groupOrderItemsApi.list(Number(id));
                 setGroupItems(itemsRes || []);
                 setError(null);
+                console.log('Loaded group order detail:', itemsRes);
+
             } catch {
                 setError('Không tải được thông tin nhóm');
             } finally {

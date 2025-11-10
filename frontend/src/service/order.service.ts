@@ -44,7 +44,7 @@ export const orderService = {
     }
 
     const user = JSON.parse(userData);
-    const userId = user.user_id ?? user.id;
+    const userId = user.user_id;
 
     // Gọi API lấy chi tiết đơn hàng
     const res = await api.get(

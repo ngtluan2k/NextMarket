@@ -21,5 +21,5 @@ export interface CartItem {
     stock: number;
   };
   type: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
-  pricingRule?: PricingRule;
+  pricing_rule?: PricingRule;
 }

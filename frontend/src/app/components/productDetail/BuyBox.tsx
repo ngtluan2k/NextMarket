@@ -4,7 +4,7 @@ import { vnd, TIKI_RED } from '../../types/productDetail';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import LoginModal from '../LoginModal';
-import { Product } from '../../types/product';
+import { PricingRuleInfo, Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 import { API_BASE_URL } from '../../api/api';
 import { Users } from 'lucide-react';
@@ -13,6 +13,7 @@ import { log } from 'console';
 import { useAuth } from '../../hooks/useAuth';
 import { useGroupOrderItems } from '../../hooks/useGroupOrderItems';
 import { StarFilled } from '@ant-design/icons';
+import { PricingRule } from './Info';
 
 function toAbs(p?: string) {
   if (!p) return '';
@@ -42,6 +43,7 @@ export default function BuyBox({
   showMessage,
   selectedType,
   groupId,
+  selectedRuleId,
 }: {
   product?: Product;
   selectedVariantId: number | null;
@@ -60,7 +62,15 @@ export default function BuyBox({
   ) => void;
   selectedType?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   groupId?: number | null;
+  selectedRuleId?: number | null; // ✅ thêm dòng này
 }) {
+  console.log('📦 BuyBox props:', {
+    product,
+    selectedVariantId,
+    quantity,
+    selectedType,
+    selectedRuleId,
+  });
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { user } = useAuth();
@@ -79,6 +89,9 @@ export default function BuyBox({
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
+    console.log('💰 [BuyBox] nhận selectedRuleId:', selectedRuleId);
+  }, [selectedRuleId]);
+  useEffect(() => {
     console.log('BuyBox mounted/updated', {
       productId: product?.id,
       productName: product?.name,
@@ -89,90 +102,86 @@ export default function BuyBox({
     console.log(' Token:', token ? 'exists' : 'null');
   }, [location.pathname, showLoginModal, product, quantity]);
 
- const handleBuyNow = async () => {
-  if (!product?.id) {
-    console.error('Invalid product data', product);
-    alert('Thông tin sản phẩm không hợp lệ');
-    return;
-  }
+  const handleBuyNow = async () => {
+    if (!product?.id) {
+      console.error('Invalid product data', product);
+      alert('Thông tin sản phẩm không hợp lệ');
+      return;
+    }
 
-  if (!availability) {
-    console.error('Sản phẩm hiện không đủ số lượng');
-    alert('Sản phẩm hiện không đủ số lượng');
-    return;
-  }
+    if (!availability) {
+      console.error('Sản phẩm hiện không đủ số lượng');
+      alert('Sản phẩm hiện không đủ số lượng');
+      return;
+    }
 
-  const selectedVariant = product.variants?.find(
-    (v) => v.id === selectedVariantId
-  );
-
-  // 1️⃣ Tìm pricing rule trước khi log
-  const selectedRule = product.pricing_rules?.find(
-    (r) => r.variant_sku === selectedVariant?.sku && r.type === selectedType
-  );
-
-  console.log('BuyNow clicked:');
-  console.log('Product ID:', product?.id);
-  console.log('Quantity:', quantity);
-  console.log('Selected Variant ID:', selectedVariantId);
-  console.log('Selected Pricing Rule ID:', selectedRule?.id); // ✅ bây giờ hợp lệ
-  console.log('Full product object:', product);
-
-  const token = localStorage.getItem('token');
-  if (!token) {
-    console.log('No token, saving buyNowData');
-    localStorage.setItem(
-      'buyNowData',
-      JSON.stringify({ product, quantity, variantId: selectedVariantId })
+    const selectedVariant = product.variants?.find(
+      (v) => v.id === selectedVariantId
     );
-    localStorage.setItem('returnUrl', location.pathname);
-    setShowLoginModal(true);
-    return;
-  }
 
-  const checkoutState: CheckoutLocationState = {
-    items: [
-      {
-        id: product.id,
-        product_id: product.id,
-        price: calculatedPrice,
-        quantity,
-        type: selectedType,
-        pricingRuleId: selectedRule?.id,
-        product: {
+    // 1️⃣ Tìm pricing rule trước khi log
+
+    console.log('BuyNow clicked:');
+    console.log('Product ID:', product?.id);
+    console.log('Quantity:', quantity);
+    console.log('Selected Variant ID:', selectedVariantId);
+    console.log('Selected Pricing Rule ID:', selectedRuleId); // ✅ bây giờ hợp lệ
+    console.log('Full product object:', product);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('No token, saving buyNowData');
+      localStorage.setItem(
+        'buyNowData',
+        JSON.stringify({ product, quantity, variantId: selectedVariantId })
+      );
+      localStorage.setItem('returnUrl', location.pathname);
+      setShowLoginModal(true);
+      return;
+    }
+
+    const checkoutState: CheckoutLocationState = {
+      items: [
+        {
           id: product.id,
-          name: product.name,
-          media: (() => {
-            if (selectedVariantId && product.variants && product.media) {
-              const variantIndex = product.variants.findIndex(
-                (v) => v.id === selectedVariantId
-              );
-              if (variantIndex >= 0 && product.media[variantIndex]) {
-                return [product.media[variantIndex]];
+          product_id: product.id,
+          price: calculatedPrice,
+          quantity,
+          type: selectedType,
+          pricingRuleId: selectedRuleId ?? undefined,
+          product: {
+            id: product.id,
+            name: product.name,
+            media: (() => {
+              if (selectedVariantId && product.variants && product.media) {
+                const variantIndex = product.variants.findIndex(
+                  (v) => v.id === selectedVariantId
+                );
+                if (variantIndex >= 0 && product.media[variantIndex]) {
+                  return [product.media[variantIndex]];
+                }
               }
-            }
-            return product.media
-              ? product.media.filter((m) => m.is_primary).length > 0
-                ? product.media.filter((m) => m.is_primary)
-                : [product.media[0]]
-              : [];
-          })(),
-          store: product.store,
-          rating: product.rating,
-          reviewsCount: product.reviewsCount,
+              return product.media
+                ? product.media.filter((m) => m.is_primary).length > 0
+                  ? product.media.filter((m) => m.is_primary)
+                  : [product.media[0]]
+                : [];
+            })(),
+            store: product.store,
+            rating: product.rating,
+            reviewsCount: product.reviewsCount,
+          },
+          variant: selectedVariant,
         },
-        variant: selectedVariant,
-      },
-    ],
-    subtotal: calculatedPrice * quantity,
+      ],
+      subtotal: calculatedPrice * quantity,
+    };
+
+    console.log(JSON.stringify(checkoutState));
+    console.log('Navigating to /checkout with state:', checkoutState);
+    console.log('Checkout items built:', checkoutState.items);
+    navigate('/checkout', { state: checkoutState });
   };
-
-  console.log(JSON.stringify(checkoutState));
-  console.log('Navigating to /checkout with state:', checkoutState);
-  console.log('Checkout items built:', checkoutState.items);
-  navigate('/checkout', { state: checkoutState });
-};
-
 
   // --- tính giá dựa trên variant + pricing_rules ---
 
@@ -187,18 +196,35 @@ export default function BuyBox({
     quantity: number,
     type: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
-    // 1️⃣ Tìm variant đã chọn
     const selectedVariant = product.variants?.find(
       (v) => v.id === selectedVariantId
     );
 
-    // 2️⃣ Tìm pricing rule đúng variant + type
-    const selectedRule = product.pricing_rules?.find(
-      (r) => r.variant_sku === selectedVariant?.sku && r.type === type
-    );
-    console.log('Selected pricing rule:', selectedRule);
+    // Ưu tiên dùng selectedRuleId (được truyền từ Info -> ProductDetailPage -> BuyBox)
+    let selectedRule: PricingRuleInfo | undefined;
+    if (selectedRuleId != null) {
+      selectedRule = product.pricing_rules?.find(
+        (r) => r.id === selectedRuleId
+      );
+    }
 
-    // 3️⃣ Gán vào product
+    // Nếu chưa có selectedRule từ parent, fallback tìm theo sku + type (cũ)
+    if (!selectedRule) {
+      selectedRule = product.pricing_rules?.find(
+        (r) =>
+          (r.variant_sku === selectedVariant?.sku || r.variant_sku == null) &&
+          r.type === type
+      );
+    }
+
+    console.log(
+      'Selected pricing rule (final):',
+      selectedRule,
+      'selectedRuleId prop:',
+      selectedRuleId
+    );
+
+    // Gán vào product.selectedPricingRule (giữ format cũ nếu cần)
     product.selectedPricingRule =
       selectedRule?.id && selectedRule.type
         ? {

@@ -68,6 +68,7 @@ export type OrderSummary = {
   orderItem?: Array<{
     id: string;
     quantity: number;
+    pricing_rule_id?: number | null; 
     product?: {
       id: number;
       name: string;
@@ -98,7 +99,7 @@ const getUserIdFromStorage = (): number | null => {
   if (!raw) return null;
   try {
     const user = JSON.parse(raw);
-    return user.id ? Number(user.id) : null;
+    return user.user_id ? Number(user.user_id) : null;
   } catch {
     return null;
   }
@@ -177,6 +178,7 @@ export default function OrdersPage() {
         let filteredItems = items;
         if (tab !== 'all') {
           filteredItems = items.filter((o) => o.status === tab);
+          console.log(`Filtered by tab (${tab}):`, filteredItems);
         }
 
         // Filter theo search

@@ -291,17 +291,15 @@ export const CartHeader: React.FC<Props> = ({
                     </Text>
                   </div>
 
-                 {/* Số lượng */}
+                  {/* Số lượng */}
                   <div className="flex justify-center">
                     <div className="flex border rounded">
                       <button
                         className="px-2"
                         onClick={() =>
                           updateQuantity(
-                            item.product.id,
-                            Math.max(1, item.quantity - 1),
-                            item.variant?.id,
-                            item.type
+                            item.id,
+                            Math.max(1, item.quantity - 1)
                           )
                         }
                       >
@@ -316,12 +314,7 @@ export const CartHeader: React.FC<Props> = ({
                       <button
                         className="px-2"
                         onClick={() =>
-                          updateQuantity(
-                            item.product.id,
-                            item.quantity + 1,
-                            item.variant?.id,
-                            item.type
-                          )
+                          updateQuantity(item.id, item.quantity + 1)
                         }
                       >
                         +

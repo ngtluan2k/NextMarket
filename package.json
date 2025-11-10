@@ -93,6 +93,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "count-up": "^1.0.4",
+    "dayjs": "^1.11.18",
     "express-session": "^1.18.2",
     "i": "^0.3.7",
     "jsonc-parser": "^3.3.1",

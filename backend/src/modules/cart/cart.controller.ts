@@ -31,6 +31,7 @@ export class CartController {
       variantId?: number;
       type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
       isGroup?: boolean;
+      pricingRuleId?: number | undefined;
     }
   ) {
     console.log(
@@ -44,7 +45,8 @@ export class CartController {
       body.quantity,
       body.variantId,
       body.type,
-      body.isGroup
+      body.isGroup,
+      body.pricingRuleId
     );
   }
 
@@ -56,21 +58,12 @@ export class CartController {
   @Put('update')
   async updateQuantity(
     @Request() req: AuthRequest,
-    @Body()
-    body: {
-      productId: number;
-      quantity: number;
-      variantId?: number;
-      type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
-      isGroup?: boolean;
-    }
+    @Body() body: { cartItemId: number; quantity: number }
   ) {
     return this.cartService.updateQuantity(
       req.user.userId,
-      body.productId,
-      body.quantity,
-      body.variantId,
-      body.type,
+      body.cartItemId,
+      body.quantity
     );
   }
 
