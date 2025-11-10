@@ -27,7 +27,7 @@ export default function GroupOrderCreate() {
 
     const handleCreate = async () => {
         try {
-            const hostUserId = user?.id ?? null;
+            const hostUserId = user?.user_id ?? null;
 
             if (!resolvedStoreId || !hostUserId) {
                 alert("Thiếu storeId hoặc thông tin người dùng. Vui lòng kiểm tra lại.");

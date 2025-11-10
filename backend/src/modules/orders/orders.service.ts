@@ -47,7 +47,7 @@ export class OrdersService {
     private readonly vouchersService: VouchersService,
     @InjectRepository(OrderStatusHistory)
     private orderStatusHistoryRepository: Repository<OrderStatusHistory>
-  ) {}
+  ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     return this.ordersRepository.manager.transaction(async (manager) => {
@@ -255,9 +255,8 @@ export class OrdersService {
               wallet_id: wallet.id,
               type: 'subscription_purchase',
               amount: -itemPrice,
-              reference: `subscription:${itemDto.productId}:${
-                itemDto.variantId ?? '0'
-              }`,
+              reference: `subscription:${itemDto.productId}:${itemDto.variantId ?? '0'
+                }`,
               created_at: new Date(),
             });
             await manager.save(tx);
@@ -393,7 +392,7 @@ export class OrdersService {
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('product.media', 'media')
       .leftJoinAndSelect('orderItem.variant', 'variant')
-      .leftJoinAndSelect('variant.pricingRules', 'pricingRules')
+      .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule') // <--- sửa ở đây
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
       .leftJoinAndSelect('product.reviews', 'reviews')
@@ -899,6 +898,7 @@ export class OrdersService {
         'orderItem.product.reviews', // relation đúng từ entity Product
         'orderItem.product.reviews.user', // để biết reviewer là ai
         'orderItem.product.reviews.order',
+        'orderItem.pricing_rule',
       ],
       order: { id: 'DESC' },
     });

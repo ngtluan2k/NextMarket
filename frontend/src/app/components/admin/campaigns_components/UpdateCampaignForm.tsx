@@ -168,11 +168,11 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
         removedImages, // 🆕 thêm danh sách ảnh bị xoá
       });
 
-      message.success('✅ Cập nhật chiến dịch thành công!');
+      message.success('Cập nhật chiến dịch thành công!');
       onClose();
     } catch (err) {
       console.error(err);
-      message.error('❌ Cập nhật chiến dịch thất bại');
+      message.error(' Cập nhật chiến dịch thất bại');
     } finally {
       setSaving(false);
     }

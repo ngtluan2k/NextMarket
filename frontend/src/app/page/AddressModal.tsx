@@ -41,34 +41,26 @@ const AddressModal: React.FC<Props> = ({
   const [form] = Form.useForm();
 
   // Load addresses khi modal mở hoặc user thay đổi
-  useEffect(() => {
-    if (!visible || !me?.user_id) return;
+useEffect(() => {
+  if (!visible || !me?.user_id) return;
 
-    const fetchAddresses = async () => {
-      try {
-        const res = await api.get(`/users/${me.user_id}/addresses`);
-        setAddresses(res.data);
-        const defaultAddress =
-          res.data.find((a: UserAddress) => a.id === currentAddressId) ||
-          res.data.find((a: UserAddress) => a.isDefault) ||
-          res.data[0] ||
-          null;
+  const fetchAddresses = async () => {
+    try {
+      const res = await api.get(`/users/${me.user_id}/addresses`);
+      setAddresses(res.data);
 
-        if (defaultAddress) {
-          setSelectedId(defaultAddress.id);
+      const defaultAddress =
+        res.data.find((a: any) => a.isDefault) || res.data[0] || null;
 
-          if (currentAddressId) {
-            onSelect(defaultAddress);
-          }
-        }
-      } catch (err) {
-        console.error('Lỗi tải địa chỉ:', err);
-        message.error('Không thể tải địa chỉ');
-      }
-    };
+      if (defaultAddress) setSelectedId(defaultAddress.id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    fetchAddresses();
-  }, [visible, me?.id, currentAddressId]);
+  fetchAddresses();
+}, [visible, me?.user_id]); // ✅ chỉ chạy khi visible thay đổi
+
 
   // Load provinces
   useEffect(() => {
@@ -438,7 +430,7 @@ const AddressModal: React.FC<Props> = ({
       return;
     }
 
-    const userId = me?.id || Number(localStorage.getItem('userId') || 0);
+    const userId = me?.user_id || Number(localStorage.getItem('userId') || 0);
 
     if (!selected.isDefault) {
       try {

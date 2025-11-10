@@ -59,12 +59,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     fetchUserData(token);
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('cart');
-    setMe(null);
-    setToken(null);
+  const logout = async () => {
+    try {
+      if (token) {
+        await fetch(`http://localhost:3000/auth/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Logout failed', err);
+    } finally {
+      // Xóa localStorage và state frontend
+      localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('cart');
+      setMe(null);
+      setToken(null);
+    }
   };
 
   return (

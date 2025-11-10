@@ -108,6 +108,17 @@ export const groupOrdersApi = {
     );
     return res.data;
   },
+
+  // Rời nhóm
+  leave: async (groupId: number) => {
+    const token = localStorage.getItem('token');
+    const res = await api.post(
+      `/group-orders/${groupId}/leave`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  },
 };
 
 
@@ -148,6 +159,7 @@ export const groupOrderItemsApi = {
     const res = await api.post(`/group-orders/${groupId}/checkout`, payload);
     return res.data;
   },
+
 };
 
 // ==================== OTHER APIS (for checkout) ====================

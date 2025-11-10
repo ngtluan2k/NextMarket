@@ -158,18 +158,21 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               login(json.data, token);
             } else {
               localStorage.removeItem('token');
+              localStorage.removeItem('access_token');
               localStorage.removeItem('user');
               logout();
             }
           })
           .catch(() => {
             localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
             localStorage.removeItem('user');
             logout();
           });
       } catch (err) {
         console.error('Error parsing user data:', err);
         localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         logout();
       }

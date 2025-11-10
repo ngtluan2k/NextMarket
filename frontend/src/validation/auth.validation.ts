@@ -22,8 +22,25 @@ type FieldError<TField extends string> = {
 };
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
-// VN phone (9–11 digits). Điều chỉnh theo backend nếu cần.
-const PHONE_REGEX = /^(?:0|\+?84)?[1-9]\d{7,10}$/;
+
+const PHONE_REGEX = /^0\d{9}$/;
+
+const FULLNAME_WORD_REGEX = /^[A-Za-zÀ-ỹĐđ'’-]+$/;
+
+function normalizePhoneVN(input: string): string | null {
+  if (!input) return null;
+  let s = String(input).trim().replace(/\s+/g, ''); // bỏ khoảng trắng
+  s = s.replace(/^(\+?84)/, '0');                    // +84/84 -> 0
+  s = s.replace(/\D/g, '');                          // giữ lại chữ số
+  if (!/^0\d{9}$/.test(s)) return null;              // kiểm tra đúng 10 số
+  return s;
+}
+
+function isValidFullNameFE(name: string): boolean {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return false;
+  return parts.every((p) => FULLNAME_WORD_REGEX.test(p));
+}
 
 function calcAge(dob: string): number | null {
   if (!dob) return null;
@@ -36,19 +53,18 @@ function calcAge(dob: string): number | null {
   return age;
 }
 
-const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/;
 
 export function validateLogin(data: LoginPayload): {
   ok: boolean;
   errors: FieldError<keyof LoginPayload>[];
 } {
   const errors: FieldError<keyof LoginPayload>[] = [];
+  const password = (data.password || '').trim();
+
 
   if (!EMAIL_REGEX.test(data.email || '')) {
     errors.push({ field: 'email', message: 'Email không hợp lệ' });
-  }
-  if ((data.password || '').length < 6) {
-    errors.push({ field: 'password', message: 'Mật khẩu tối thiểu 6 ký tự' });
   }
 
   return { ok: errors.length === 0, errors };
@@ -70,6 +86,17 @@ export function validateRegister(data: RegisterPayload): {
     errors.push({ field: 'full_name', message: 'Vui lòng nhập Họ và tên' });
   }
 
+  if (data.full_name && data.full_name.trim().length >= 2) {
+    const full = data.full_name.trim();
+    if (!isValidFullNameFE(full)) {
+      errors.push({
+field: 'full_name',
+        message: 'Full name phải ít nhất 2 từ và không được rỗng',
+      });
+    }
+  }
+  
+
   // dob (>= 14 tuổi)
   if (!data.dob) {
     errors.push({ field: 'dob', message: 'Vui lòng chọn ngày sinh' });
@@ -82,13 +109,19 @@ export function validateRegister(data: RegisterPayload): {
     }
   }
 
-  // phone
   if (!data.phone) {
     errors.push({ field: 'phone', message: 'Vui lòng nhập SĐT' });
-  } else if (!PHONE_REGEX.test(data.phone)) {
-    errors.push({ field: 'phone', message: 'SĐT không hợp lệ' });
+  } else {
+    const normalized = normalizePhoneVN(data.phone);
+    if (!normalized) {
+      errors.push({
+        field: 'phone',
+        message: 'SĐT không hợp lệ. Yêu cầu đúng 10 số dạng 0xxxxxxxxx (có thể nhập +84/84, hệ thống sẽ chuẩn hoá).',
+      });
+    } else {
+      data.phone = normalized; // (tuỳ bạn) gán lại để gửi backend thống nhất
+    }
   }
-
   // gender
   if (
     !['male', 'female', 'other'].includes((data.gender || '').toLowerCase())
@@ -101,14 +134,13 @@ export function validateRegister(data: RegisterPayload): {
     errors.push({ field: 'email', message: 'Email không hợp lệ' });
   }
 
-  //password
-  if (!data.password) {
+  const pwd = (data.password || '').trim();
+  if (!pwd) {
     errors.push({ field: 'password', message: 'Vui lòng nhập mật khẩu' });
-  } else if (!STRONG_PASSWORD_REGEX.test(data.password)) {
+  } else if (!STRONG_PASSWORD_REGEX.test(pwd)) {
     errors.push({
       field: 'password',
-      message:
-        'Mật khẩu phải có ít nhất 6 ký tự, gồm ít nhất 1 chữ hoa và 1 ký tự đặc biệt',
+      message: 'Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt',
     });
   }
 

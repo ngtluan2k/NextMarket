@@ -233,7 +233,7 @@ const CheckoutPayment: React.FC = () => {
       return;
     }
 
-    const userId = me.id;
+    const userId = me.user_id;
 
     const fetchAllPaymentMethods = async () => {
       try {

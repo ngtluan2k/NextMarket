@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShoppingCart, CartItem } from './cart.entity';
@@ -77,35 +81,50 @@ export class CartService {
 
     const cart = await this.getOrCreateCart(userId);
 
-    // --- Tìm tất cả item giống nhau (cùng product, variant, type, isGroup, pricingRule) ---
+    // --- Tìm item trùng ---
     const where: any = {
       cart_id: cart.id,
       product_id: productId,
       variant_id: variantId ?? undefined,
-      type,
       is_group: isGroup,
     };
     if (pricingRuleId != null) where.pricing_rule_id = pricingRuleId;
 
-    const duplicateItems = await this.cartItemRepository.find({ where });
+    const duplicateItems = await this.cartItemRepository.find({
+      where: {
+        cart_id: cart.id,
+        product_id: productId,
+        variant_id: variantId ?? undefined,
+        is_group: isGroup,
+      },
+    });
+
+    const sameGroup = duplicateItems.filter((i) => {
+      if (
+        ['bulk', 'normal'].includes(i.type) &&
+        ['bulk', 'normal'].includes(type)
+      ) {
+        return true;
+      }
+      return i.type === type && i.pricing_rule_id === pricingRuleId;
+    });
 
     let totalQuantity = quantity;
     let cartItem: CartItem;
 
-    if (duplicateItems.length > 0) {
-      // --- Gộp tất cả item giống nhau ---
-      cartItem = duplicateItems[0];
-      totalQuantity += duplicateItems
-        .slice(1)
-        .reduce((sum, i) => sum + i.quantity, 0);
+    if (sameGroup.length > 0) {
+      cartItem = sameGroup[0];
 
-      // --- Xóa các item duplicate còn lại ---
-      if (duplicateItems.length > 1) {
-        const toRemove = duplicateItems.slice(1).map((i) => i.id);
+      // ✅ Cộng tất cả số lượng cũ + mới
+      totalQuantity =
+        sameGroup.reduce((sum, i) => sum + i.quantity, 0) + quantity;
+
+      if (sameGroup.length > 1) {
+        const toRemove = sameGroup.slice(1).map((i) => i.id);
         await this.cartItemRepository.delete(toRemove);
       }
     } else {
-      // --- Tạo mới nếu chưa có ---
+      // --- Tạo mới ---
       cartItem = this.cartItemRepository.create({
         uuid: uuidv4(),
         cart_id: cart.id,
@@ -115,39 +134,94 @@ export class CartService {
         is_group: isGroup,
         added_at: new Date(),
       });
+      totalQuantity = quantity;
     }
 
-    // --- Check stock variant ---
+    // --- Kiểm tra tồn kho ---
     if (variant && totalQuantity > (variant.stock ?? 0)) {
-      throw new NotFoundException('Không đủ hàng trong kho');
+      throw new BadRequestException('Không đủ hàng trong kho');
     }
 
-    // --- Subscription không đổi quantity ---
-    if (type !== 'subscription') cartItem.quantity = totalQuantity;
+    // --- Xử lý subscription ---
+    if (type === 'subscription') {
+      const subRule = (product.pricing_rules ?? []).find(
+        (r) => r.type === 'subscription'
+      );
+      if (subRule) {
+        cartItem.quantity = subRule.min_quantity ?? 1;
+        cartItem.pricing_rule_id = subRule.id;
+        cartItem.price = Number(subRule.price);
+      } else {
+        cartItem.quantity = 1;
+        cartItem.pricing_rule_id = null;
+        cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
+      }
+    }
 
-    // --- Áp dụng pricing_rule nếu bulk ---
-    if (type === 'bulk') {
-      const bulkRules =
-        product.pricing_rules?.filter((r) => r.type === 'bulk') || [];
-      const matchedRule = bulkRules
-        .filter((r) => totalQuantity >= (r.min_quantity ?? 0))
-        .sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0))[0];
+    // --- Gộp xử lý bulk và normal ---
+    else if (type === 'bulk' || type === 'normal') {
+      cartItem.quantity = totalQuantity;
+
+      const bulkRules = (product.pricing_rules ?? []).filter(
+        (r) => r.type === 'bulk'
+      );
+      let matchedRule: PricingRules | null = null;
+
+      // Nếu là bulk thì tìm rule phù hợp, còn normal thì không ép buộc
+      if (bulkRules.length > 0) {
+        matchedRule =
+          bulkRules
+            .filter((r) => totalQuantity >= (r.min_quantity ?? 0))
+            .sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0))[0] ??
+          null;
+      }
 
       if (matchedRule) {
         cartItem.pricing_rule_id = matchedRule.id;
         cartItem.price = Number(matchedRule.price);
+        cartItem.type = 'bulk';
       } else {
-        cartItem.pricing_rule_id = undefined;
+        cartItem.pricing_rule_id = null;
+        cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
+        cartItem.type = 'normal';
+      }
+    }
+
+    // --- Xử lý flash sale ---
+    else if (type === 'flash_sale') {
+      const flashRule = (product.pricing_rules ?? []).find(
+        (r) => r.type === 'flash_sale'
+      );
+      if (flashRule) {
+        if (
+          flashRule.limit_quantity &&
+          totalQuantity > flashRule.limit_quantity
+        ) {
+          cartItem.quantity = flashRule.limit_quantity;
+        } else {
+          cartItem.quantity = totalQuantity;
+        }
+        cartItem.pricing_rule_id = flashRule.id;
+        cartItem.price = Number(flashRule.price);
+      } else {
+        cartItem.quantity = totalQuantity;
+        cartItem.pricing_rule_id = null;
         cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
       }
-    } else if (pricingRuleId) {
+    }
+
+    // --- fallback nếu có pricingRuleId riêng ---
+    else if (pricingRuleId) {
       const rule = await this.pricingRuleRepository.findOne({
         where: { id: pricingRuleId },
       });
-      if (rule) cartItem.price = Number(rule.price);
-      else cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
-    } else {
-      cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
+      if (rule) {
+        cartItem.pricing_rule_id = rule.id;
+        cartItem.price = Number(rule.price);
+      } else {
+        cartItem.pricing_rule_id = null;
+        cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
+      }
     }
 
     return this.cartItemRepository.save(cartItem);
@@ -324,7 +398,7 @@ export class CartService {
 
     // Tính lại giá
     let appliedType: 'normal' | 'bulk' | 'subscription' | 'flash_sale' = type;
-    let appliedPricingRuleId: number | undefined;
+    let appliedPricingRuleId: number | null;
     let appliedPrice: number;
 
     switch (type) {
@@ -333,12 +407,18 @@ export class CartService {
           (r) => r.type === 'subscription'
         );
         appliedType = 'subscription';
-        appliedPricingRuleId = subRule?.id;
+        appliedPricingRuleId = subRule?.id ?? null;
         appliedPrice = subRule
           ? Number(subRule.price)
           : variant?.price ?? Number(product.base_price);
+
+        // Gán quantity mặc định bằng min_quantity của rule
+        if (subRule && type === 'subscription') {
+          cartItem.quantity = subRule.min_quantity ?? 1;
+        }
         break;
       }
+
       case 'bulk':
       case 'normal': {
         const bulkRules = (product.pricing_rules ?? []).filter(
@@ -350,11 +430,11 @@ export class CartService {
 
         if (matchedBulkRule) {
           appliedType = 'bulk';
-          appliedPricingRuleId = matchedBulkRule.id;
+          appliedPricingRuleId = matchedBulkRule.id ?? null;
           appliedPrice = Number(matchedBulkRule.price);
         } else {
           appliedType = 'normal';
-          appliedPricingRuleId = undefined;
+          appliedPricingRuleId = null;
           appliedPrice = variant?.price ?? Number(product.base_price);
         }
         break;
@@ -370,7 +450,7 @@ export class CartService {
           cartItem.quantity = flashRule.limit_quantity;
         }
         appliedType = 'flash_sale';
-        appliedPricingRuleId = flashRule?.id;
+        appliedPricingRuleId = flashRule?.id ?? null;
         appliedPrice = flashRule
           ? Number(flashRule.price)
           : variant?.price ?? Number(product.base_price);

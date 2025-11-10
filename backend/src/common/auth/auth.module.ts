@@ -11,6 +11,9 @@ import { RolePermission } from '../../modules/role-permission/role-permission.en
 import { Permission } from '../../modules/permission/permission.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { GoogleStrategy } from './google.strategy';
+import { JwtStrategy } from '../../common/auth/jwt.strategy';
+import { RevokedTokensModule } from '../../common/auth/revoked-tokens.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -23,10 +26,11 @@ import { GoogleStrategy } from './google.strategy';
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || '123',
-      signOptions: { expiresIn: '24h' },
+      signOptions: { expiresIn: '1d' },
     }),
+    RevokedTokensModule, // 👈 import module chứa RevokedTokensService
   ],
-  providers: [AuthService, GoogleStrategy],
+  providers: [AuthService, GoogleStrategy, JwtStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

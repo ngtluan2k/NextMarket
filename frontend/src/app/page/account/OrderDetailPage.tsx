@@ -107,6 +107,20 @@ function getProductImage(prod: any, variant?: any): string {
     ''
   );
 }
+const typeLabel = (type?: string) => {
+  switch (type) {
+    case 'bulk':
+      return 'Sỉ';
+    case 'normal':
+      return 'Bình thường';
+    case 'subscription':
+      return 'Gói subscription';
+    case 'flash_sale':
+      return 'Chương trình Flash Sale';
+    default:
+      return 'Bình thường';
+  }
+};
 
 const StatusPill: React.FC<{ s: OrderTab }> = ({ s }) => {
   const base =
@@ -176,7 +190,9 @@ export default function OrderDetailPage() {
     (async () => {
       try {
         if (order?.group_order_id) {
-          const data = await getGroupOrderWithOrders(Number(order.group_order_id));
+          const data = await getGroupOrderWithOrders(
+            Number(order.group_order_id)
+          );
           // API trả { message, data: { groupInfo, orders } } => hàm đã .data.data
           setGroupSummary(data?.groupInfo ?? null);
         } else {
@@ -343,7 +359,6 @@ export default function OrderDetailPage() {
             </div>
           </section>
 
-
           {/* Nhóm mua chung (nếu có) */}
           {groupSummary && (
             <section className="rounded-lg border border-slate-100 p-3">
@@ -370,12 +385,17 @@ export default function OrderDetailPage() {
                 <div>
                   Giảm giá nhóm:{' '}
                   <span className="font-semibold">
-                    {(Number(groupSummary.discount_percent || 0)).toLocaleString()}%
+                    {Number(
+                      groupSummary.discount_percent || 0
+                    ).toLocaleString()}
+                    %
                   </span>
                 </div>
                 <div>
                   Thành viên:{' '}
-                  <span className="font-semibold">{groupSummary.members?.length ?? 0}</span>
+                  <span className="font-semibold">
+                    {groupSummary.members?.length ?? 0}
+                  </span>
                 </div>
               </div>
             </section>
@@ -403,8 +423,16 @@ export default function OrderDetailPage() {
                       SL: {it.quantity}
                     </div>
                     <div className="text-xs text-slate-500">
-                      Loại hàng:{' '}
-                      {it.variant?.pricingRules?.[0]?.type || 'Chưa rõ'}
+                      {it.pricing_rule ? (
+                        <>
+                          <div>Tên Loại Hàng: {it.pricing_rule.name}</div>
+                          <div>
+                            Loại hàng: {typeLabel(it.pricing_rule.type)}
+                          </div>
+                        </>
+                      ) : (
+                        'Bình thường'
+                      )}
                     </div>
                   </div>
                   <div className="text-slate-900 text-sm font-medium">
