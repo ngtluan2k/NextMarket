@@ -55,7 +55,7 @@ export default function GroupOrderDetail() {
             case 'member-left':
                 if (data?.userId) {
                     setMembers((prev) =>
-                        prev.filter((m) => m?.user?.user_id !== data.userId)
+                        prev.filter((m) => m?.user?.id !== data.userId)
                     );
                 }
                 break;
@@ -100,7 +100,7 @@ export default function GroupOrderDetail() {
                 // Hiển thị notification
                 if (data?.userId && data.userId !== user?.user_id) {
                     const updatedMember = members.find(
-                        (m) => m?.user?.user_id === data.userId
+                        (m) => m?.user?.id === data.userId
                     );
                     const memberName =
                         updatedMember?.user?.profile?.full_name ||
@@ -320,7 +320,7 @@ export default function GroupOrderDetail() {
     const getDisplayName = (item: any) => {
         // Thử lấy từ members array trước
         const memberFromList = members.find(
-            (m) => m?.user?.user_id === item?.member?.user?.user_id
+            (m) => m?.user?.id === item?.member?.user?.user_id
         );
 
         if (memberFromList?.user?.profile?.full_name) {
@@ -348,8 +348,9 @@ export default function GroupOrderDetail() {
         if (group?.delivery_mode !== 'member_address') return [];
         return members.filter((m) => !m.address_id);
     }, [group?.delivery_mode, members]);
+
     const myMember = React.useMemo(() => {
-        return members.find((m: any) => m?.user?.user_id === user?.user_id);
+        return members.find((m: any) => m?.user?.id === user?.user_id);
     }, [members, user?.user_id]);
 
     console.log('🧾 Render GroupOrderDetail', {
@@ -365,6 +366,29 @@ export default function GroupOrderDetail() {
         })),
         totals,
     });
+
+
+
+    const onLeaveGroup = async () => {
+        if (!window.confirm('⚠️ Bạn có chắc muốn rời nhóm? Tất cả sản phẩm bạn đã thêm sẽ bị xóa.')) {
+            return;
+        }
+
+        try {
+            await groupOrdersApi.leave(groupId);
+            message.success('Đã rời nhóm thành công');
+
+            // Điều hướng về trang cửa hàng hoặc trang chủ
+            if (group?.store?.slug) {
+                navigate(`/stores/slug/${group.store.slug}`);
+            } else {
+                navigate('/');
+            }
+        } catch (error: any) {
+            const errorMsg = error?.response?.data?.message || 'Không thể rời nhóm';
+            message.error(errorMsg);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -419,9 +443,25 @@ export default function GroupOrderDetail() {
                             >
                                 🗑️ Xóa nhóm
                             </button>
+
+
+
+                        </div>
+
+                    )}
+
+                    {!isHost && myMember && group?.status === 'open' && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                            <button
+                                onClick={onLeaveGroup}
+                                className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                            >
+                                🚪 Rời nhóm
+                            </button>
                         </div>
                     )}
                 </div>
+
 
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
@@ -448,10 +488,10 @@ export default function GroupOrderDetail() {
                                     <span className="text-slate-600">Trạng thái:</span>
                                     <span
                                         className={`font-semibold px-2 py-1 rounded ${group?.status === 'open'
-                                                ? 'bg-green-100 text-green-700'
-                                                : group?.status === 'locked'
-                                                    ? 'bg-orange-100 text-orange-700'
-                                                    : 'bg-slate-100 text-slate-700'
+                                            ? 'bg-green-100 text-green-700'
+                                            : group?.status === 'locked'
+                                                ? 'bg-orange-100 text-orange-700'
+                                                : 'bg-slate-100 text-slate-700'
                                             }`}
                                     >
                                         {group?.status}
@@ -513,6 +553,8 @@ export default function GroupOrderDetail() {
                                                 </>
                                             )}
                                         </div>
+
+
                                     </div>
 
                                     {isHost && group?.status === 'open' && (
@@ -590,7 +632,7 @@ export default function GroupOrderDetail() {
                                                     •{' '}
                                                     {m?.user?.profile?.full_name ||
                                                         m?.user?.username ||
-                                                        `User #${m?.user?.user_id}`}
+                                                        `User #${m?.user?.id}`}
                                                 </li>
                                             ))}
                                         </ul>
@@ -613,9 +655,13 @@ export default function GroupOrderDetail() {
                                                 <div className="font-medium text-sm">
                                                     {m?.user?.profile?.full_name || m?.user?.username}
                                                 </div>
-                                                {m.is_host && (
+                                                {m.is_host === 1 ? (
                                                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                                                         👑 Host
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                                                        Thành viên
                                                     </span>
                                                 )}
                                             </div>
@@ -623,10 +669,10 @@ export default function GroupOrderDetail() {
                                         <div className="flex items-center gap-2">
                                             <span
                                                 className={`text-xs px-2 py-1 rounded ${m.status === 'joined'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : m.status === 'ordered'
-                                                            ? 'bg-blue-100 text-blue-700'
-                                                            : 'bg-slate-100 text-slate-700'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : m.status === 'ordered'
+                                                        ? 'bg-blue-100 text-blue-700'
+                                                        : 'bg-slate-100 text-slate-700'
                                                     }`}
                                             >
                                                 {m.status}
@@ -858,9 +904,9 @@ export default function GroupOrderDetail() {
                                                         membersWithoutAddress.length > 0
                                                     }
                                                     className={`px-8 py-4 text-lg font-bold rounded-xl shadow-lg transition-all ${group?.delivery_mode === 'member_address' &&
-                                                            membersWithoutAddress.length > 0
-                                                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                                            : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-xl transform hover:scale-105'
+                                                        membersWithoutAddress.length > 0
+                                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                                        : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-xl transform hover:scale-105'
                                                         }`}
                                                 >
                                                     💳 Thanh toán cho nhóm (

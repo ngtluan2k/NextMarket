@@ -15,6 +15,7 @@ export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event:
         if (!socketService['joinedOnce']) {
             socketService.joinGroup(groupId, user.id);
         }
+        
 
         // Lắng nghe các sự kiện real-time
         socketService.onGroupState((data) => onRealtimeUpdate?.('group-state', data));
