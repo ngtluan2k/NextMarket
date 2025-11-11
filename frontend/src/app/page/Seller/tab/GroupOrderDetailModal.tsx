@@ -94,15 +94,14 @@ export default function GroupOrderDetailModal({
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
 
-    // ✅ CÁCH SỬA: DI CHUYỂN TẤT CẢ LOGIC VÀO useMemo
+    
     const tableDataSource = useMemo(() => {
         if (!groupData) return [];
 
         const { groupInfo, orders = [] } = groupData;
         const groupOrderItems = groupInfo?.items || [];
-
-        // Group items theo member_id
         const memberItemsMap = new Map<number, any>();
+        
 
         groupOrderItems.forEach((item: any) => {
             const memberId = item.member?.id;
@@ -121,8 +120,8 @@ export default function GroupOrderDetailModal({
 
             const memberData = memberItemsMap.get(memberId);
             memberData.items.push(item);
-            memberData.totalAmount += Number(item.price || 0) * Number(item.quantity || 0);
-            memberData.totalQuantity += Number(item.quantity || 0);
+            memberData.totalAmount += Number(item.price || 0);
+           
         });
 
         // Convert Map to Array
@@ -173,7 +172,7 @@ export default function GroupOrderDetailModal({
     );
     const memberCount = uniqueMemberIds.size;
 
-    // Tính toán statistics
+
     const totalAmount = orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
     const totalItems = groupOrderItems.reduce(
         (sum: number, item: any) => sum + (item.quantity || 0),
@@ -256,7 +255,7 @@ export default function GroupOrderDetailModal({
         {
             title: 'Địa chỉ giao hàng',
             key: 'address',
-            render: (_: any, record: any) => {  // ← Đổi Sale thành any
+            render: (_: any, record: any) => {  
                 if (!record.userAddress) return <Tag>Chưa có địa chỉ</Tag>;
 
                 return (
@@ -317,15 +316,15 @@ export default function GroupOrderDetailModal({
             key: 'quantity',
             width: 80,
             align: 'center' as const,
-            render: (_: any, record: any) => (  // ← Đổi Sale thành any
-                <span className="font-semibold">{record.totalQuantity}</span>  // ← SỬA DÒNG NÀY
+            render: (_: any, record: any) => ( 
+                <span className="font-semibold">{record.totalQuantity}</span>  
             ),
         },
         {
             title: 'Tổng tiền',
             key: 'amount',
             width: 130,
-            render: (_: any, record: any) => (  // ← Đổi Sale thành any
+            render: (_: any, record: any) => (  
                 <div className="text-right">
                     <div className="font-semibold text-lg text-blue-600">
                         ₫{parseFloat(record.totalAmount || '0').toLocaleString('vi-VN')}
