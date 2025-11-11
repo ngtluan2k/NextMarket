@@ -84,7 +84,7 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
       useFactory: (config: ConfigService) => ({
         type: 'mysql',
         host: config.get('DB_HOST'),
-        port: +config.get('DB_PORT'),
+        port: config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
@@ -92,9 +92,9 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
-        ssl: {
-          rejectUnauthorized: false, // cho phép kết nối SSL không cần CA
-        },
+        // ssl: {
+        //   rejectUnauthorized: false, // cho phép kết nối SSL không cần CA
+        // },
       }),
     }),
 

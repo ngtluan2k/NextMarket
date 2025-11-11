@@ -170,7 +170,7 @@ export class GroupOrdersService {
         return group;
     }
 
-    async joinGroupOrder(userId: number, groupId: number) {
+    async joinGroupOrder(userId: number, groupId: number, joinCode?: string) {
         const group = await this.groupOrderRepo.findOne({ where: { id: groupId } });
         if (!group) throw new NotFoundException('Group order not found');
         if (group.status !== 'open') {
@@ -178,6 +178,9 @@ export class GroupOrdersService {
         }
         if (group.expires_at && group.expires_at.getTime() <= Date.now()) {
             throw new BadRequestException('Group is expired');
+        }
+        if (group.join_code && group.join_code !== (joinCode || '').trim().toUpperCase()) {
+            throw new BadRequestException('Mã tham gia không hợp lệ');
         }
 
         const existed = await this.memberRepo.findOne({
@@ -223,6 +226,20 @@ export class GroupOrdersService {
             code += chars[Math.floor(Math.random() * chars.length)];
         }
         return code;
+    }
+
+    async getGroupOrderByJoinCode(joinCode: string) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { join_code: joinCode.toUpperCase() },
+            relations: ['store'],
+        });
+        if (!group) throw new NotFoundException('Group order not found');
+        return group;
+    }
+
+    async joinGroupOrderByJoinCode(joinCode: string, userId: number) {
+        const group = await this.getGroupOrderByJoinCode(joinCode);
+        return this.joinGroupOrder(userId, group.id, joinCode);
     }
 
     async joinGroupOrderByUuid(userId: number, uuid: string) {
@@ -432,6 +449,19 @@ export class GroupOrdersService {
         });
         if (!items.length) {
             throw new BadRequestException('Nhóm chưa có sản phẩm');
+        }
+        const activeMembers = group.members.filter((m) => m.status === 'joined');
+        const memberIdsWithItems = new Set(items.map((it) => it.member.id));
+        const membersWithoutItems = activeMembers.filter(
+            (m) => !memberIdsWithItems.has(m.id)
+        );
+        if (membersWithoutItems.length > 0) {
+            const memberNames = membersWithoutItems
+                .map((m) => m.user?.profile?.full_name || m.user?.username || `User ${m.user?.id}`)
+                .join(', ');
+            throw new BadRequestException(
+                `Thành viên${memberNames} chưa chọn sản phẩm`
+            );
         }
 
         try {
@@ -786,7 +816,6 @@ export class GroupOrdersService {
                 .whereInIds(orderIds)
                 .execute();
 
-            // 4. Tạo OrderStatusHistory với old_status và new_status
             // 4. Tạo OrderStatusHistory bằng create()
             const historyNote = note || `Cập nhật hàng loạt từ group order #${groupOrderId}`;
 
@@ -812,6 +841,81 @@ export class GroupOrdersService {
                 status_text: this.getOrderStatusText(orderStatus),
                 updated_orders_count: orderIds.length,
             },
+        };
+    }
+
+
+
+
+    async leaveGroupOrder(groupId: number, userId: number) {
+        // 1. Kiểm tra group tồn tại và đang mở
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['user', 'members', 'members.user']
+        });
+
+        if (!group) {
+            throw new NotFoundException('Group order not found');
+        }
+
+        if (group.status !== 'open') {
+            throw new BadRequestException('Không thể rời nhóm khi nhóm đã bị khóa hoặc đã hoàn thành');
+        }
+
+        // 2. Kiểm tra user có phải host không (host không được rời)
+        if (group.user.id === userId) {
+            throw new BadRequestException('Chủ nhóm không thể rời nhóm. Vui lòng xóa nhóm nếu muốn hủy.');
+        }
+
+        // 3. Tìm member
+        const member = await this.memberRepo.findOne({
+            where: {
+                group_order: { id: groupId } as any,
+                user: { id: userId } as any,
+            },
+            relations: ['user'],
+        });
+
+        if (!member) {
+            throw new NotFoundException('Bạn chưa tham gia nhóm này');
+        }
+
+        // 4. Xóa tất cả items của member này
+        const memberItems = await this.groupOrderItemRepo.find({
+            where: {
+                group_order: { id: groupId } as any,
+                member: { id: member.id } as any,
+            },
+        });
+
+        if (memberItems.length > 0) {
+            await this.groupOrderItemRepo.delete(
+                memberItems.map(item => item.id)
+            );
+
+            // Broadcast xóa items
+            for (const item of memberItems) {
+                await this.gateway.broadcastGroupUpdate(groupId, 'item-removed', {
+                    itemId: item.id,
+                });
+            }
+        }
+
+        // 5. Xóa member khỏi group
+        await this.memberRepo.delete({ id: member.id });
+
+        // 6. Cập nhật lại discount của group (vì số member giảm)
+        await this.groupOrderItemsService.updateGroupDiscount(groupId);
+
+        // 7. Broadcast cho các thành viên khác biết
+        await this.gateway.broadcastGroupUpdate(groupId, 'member-left', {
+            userId,
+            memberId: member.id,
+        });
+
+        return {
+            success: true,
+            message: 'Đã rời nhóm thành công',
         };
     }
 }

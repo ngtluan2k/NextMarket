@@ -29,6 +29,7 @@ export type UpdateGroupOrderPayload = {
 export type JoinGroupPayload = {
   userId: number;
   addressId?: number;
+  joinCode?: string;
 };
 
 export type UpdateMemberAddressPayload = {
@@ -57,6 +58,15 @@ export const groupOrdersApi = {
     });
     return res.data;
   },
+  getByCode: async (code: string) => {
+    const res = await api.get(`/group-orders/code/${code}`);
+    return res.data;
+  },
+  getActiveByUser: async (userId: number) => {
+    const res = await api.get(`/group-orders/user/${userId}/active`);
+    return res.data as Array<{ id: number }>;
+  },
+
 
   // Update nhóm (name, expiresAt, delivery_mode, etc.)
   update: async (groupId: number, payload: UpdateGroupOrderPayload) => {
@@ -76,6 +86,10 @@ export const groupOrdersApi = {
   // Join nhóm (by groupId)
   join: async (groupId: number, payload: JoinGroupPayload) => {
     const res = await api.post(`/group-orders/${groupId}/join`, payload);
+    return res.data;
+  },
+  joinByCode: async (code: string, payload: JoinGroupPayload) => {
+    const res = await api.post(`/group-orders/join-code/${code}`, payload);
     return res.data;
   },
 

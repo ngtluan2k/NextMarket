@@ -299,7 +299,7 @@ export default function Sale() {
           quantity: Math.floor(values.quantity / values.products.length),
           subtotal: (values.totalAmount / values.products.length).toString(),
           product: {
-            id: index + 1, // Cần API để lấy product_id thực tế
+            id: index + 1, 
             name,
             base_price: '0',
             brand_id: 0,

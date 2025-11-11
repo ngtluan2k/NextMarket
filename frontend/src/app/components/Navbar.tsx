@@ -9,16 +9,18 @@ import {
   Receipt,
   BadgeDollarSign,
   MapPin,
+  Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import LoginModal, { LoginPayload } from './LoginModal';
 import AccountMenu from './AccountMenu';
-import AddressModal from '../page/AddressModal'; 
+import AddressModal from '../page/AddressModal';
 import debounce from 'lodash.debounce';
 import { userApi } from '../api/api';
 import { UserAddress } from '../types/user';
+import { JoinGroupModal } from './JoinGroupModal';
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -33,6 +35,7 @@ export type HeaderLabels = {
   qa2?: string;
   qa3?: string;
   qa4?: string;
+  qa5?: string;
 };
 
 const DEFAULT_LABELS: Required<HeaderLabels> = {
@@ -55,6 +58,7 @@ const DEFAULT_LABELS: Required<HeaderLabels> = {
   qa2: 'Đóng tiền, nạp thẻ',
   qa3: 'Mua trước trả sau',
   qa4: 'Bán hàng cùng EveryMart',
+  qa5: 'Nhập mã để tham gia mua nhóm',
 };
 
 export interface ProductSuggestion {
@@ -79,6 +83,10 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
+  const [groupJoinCode, setGroupJoinCode] = useState('');
+  const [joiningGroup, setJoiningGroup] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   // Lấy danh sách địa chỉ của người dùng
   useEffect(() => {
@@ -218,6 +226,11 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     setSuggestions([]);
   };
 
+  const handleOpenJoinModal = (e?: React.MouseEvent) => {
+    e?.preventDefault?.();
+    setShowJoinModal(true);
+  };
+  const handleCloseJoinModal = () => setShowJoinModal(false);
   const handleAddressSelect = (address: UserAddress) => {
     setSelectedAddress(address);
   };
@@ -434,8 +447,24 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               {L.qa4}
             </span>
           </a>
+          <a
+            href="#"
+            onClick={handleOpenJoinModal}
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-cyan-600 text-white">
+              <Users className="h-3.5 w-3.5" />
+            </span>
+            <span className="font-medium group-hover:text-cyan-700">
+              {L.qa5}
+            </span>
+          </a>
         </div>
       </div>
+
+      <JoinGroupModal open={showJoinModal} onClose={handleCloseJoinModal} />
+
+
 
       {/* Login Modal */}
       <LoginModal

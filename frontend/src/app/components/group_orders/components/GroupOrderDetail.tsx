@@ -55,7 +55,7 @@ export default function GroupOrderDetail() {
             case 'member-left':
                 if (data?.userId) {
                     setMembers((prev) =>
-                        prev.filter((m) => m?.user?.user_id !== data.userId)
+                        prev.filter((m) => m?.user?.id !== data.userId)
                     );
                 }
                 break;
@@ -100,7 +100,7 @@ export default function GroupOrderDetail() {
                 // Hiển thị notification
                 if (data?.userId && data.userId !== user?.user_id) {
                     const updatedMember = members.find(
-                        (m) => m?.user?.user_id === data.userId
+                        (m) => m?.user?.id === data.userId
                     );
                     const memberName =
                         updatedMember?.user?.profile?.full_name ||
@@ -350,6 +350,7 @@ export default function GroupOrderDetail() {
         if (group?.delivery_mode !== 'member_address') return [];
         return members.filter((m) => !m.address_id);
     }, [group?.delivery_mode, members]);
+
     const myMember = React.useMemo(() => {
         return members.find((m: any) => m?.user?.id === user?.user_id);
     }, [members, user?.user_id]);
@@ -633,7 +634,7 @@ export default function GroupOrderDetail() {
                                                     •{' '}
                                                     {m?.user?.profile?.full_name ||
                                                         m?.user?.username ||
-                                                        `User #${m?.user?.user_id}`}
+                                                        `User #${m?.user?.id}`}
                                                 </li>
                                             ))}
                                         </ul>
@@ -656,9 +657,13 @@ export default function GroupOrderDetail() {
                                                 <div className="font-medium text-sm">
                                                     {m?.user?.profile?.full_name || m?.user?.username}
                                                 </div>
-                                                {m.is_host && (
+                                                {m.is_host === 1 ? (
                                                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                                                         👑 Host
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
+                                                        Thành viên
                                                     </span>
                                                 )}
                                             </div>
