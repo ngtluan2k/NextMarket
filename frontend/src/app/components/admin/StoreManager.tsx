@@ -34,6 +34,7 @@ const StoreManager: React.FC = () => {
   const [detail, setDetail] = useState<any | null>(null);
   const [selected, setSelected] = useState<Store | null>(null);
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // Gọi API lấy danh sách store
   const fetchStores = async () => {
@@ -55,7 +56,7 @@ const StoreManager: React.FC = () => {
   const deleteStore = async (id: number) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/stores/${id}`, {
+      await axios.delete(`${BE_BASE_URL}/stores/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -85,7 +86,7 @@ const StoreManager: React.FC = () => {
     setDetailLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:3000/stores/${record.id}`, {
+      const res = await axios.get(`${BE_BASE_URL}/stores/${record.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Backend có thể trả về { data: {...} } hoặc trực tiếp object

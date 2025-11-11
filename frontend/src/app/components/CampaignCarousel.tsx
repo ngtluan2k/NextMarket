@@ -21,6 +21,8 @@ const CampaignCarousel: React.FC<{ id?: string; interval?: number }> = ({
 }) => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const hostRef = useRef<HTMLDivElement>(null);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 
   useEffect(() => {
     const fetchSlides = async () => {
@@ -35,7 +37,7 @@ const CampaignCarousel: React.FC<{ id?: string; interval?: number }> = ({
           return start <= now && now <= end;
         });
 
-        const BACKEND_URL = 'http://localhost:3000'; // hoặc env
+        const BACKEND_URL = import.meta.env.VITE_BE_BASE_URL; // hoặc env
         const campaignSlides = activeCampaigns.map((c) => ({
           imageUrl: c.banner_url ? BACKEND_URL + c.banner_url : FALLBACK,
           alt: c.name,

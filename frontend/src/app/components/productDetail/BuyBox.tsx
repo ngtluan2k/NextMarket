@@ -6,7 +6,7 @@ import { useCart } from '../../context/CartContext';
 import LoginModal from '../LoginModal';
 import { PricingRuleInfo, Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
-import { API_BASE_URL } from '../../api/api';
+import { BE_BASE_URL } from '../../api/api';
 import { Users } from 'lucide-react';
 import { Rate } from 'antd';
 import { log } from 'console';
@@ -26,7 +26,7 @@ function toAbs(p?: string) {
     const idx = s.toLowerCase().lastIndexOf('/uploads/');
     if (idx >= 0) s = s.slice(idx + 1);
   }
-  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+  return `${BE_BASE_URL}/${s.replace(/^\/+/, '')}`;
 }
 
 export default function BuyBox({

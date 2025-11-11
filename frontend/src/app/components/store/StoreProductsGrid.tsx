@@ -378,8 +378,9 @@ async function defaultFetchProducts({
   pageSize: number;
   sort: SortKey;
 }): Promise<StoreProductsResponse> {
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   // sử dụng API mới
-  let url = `http://localhost:3000/stores/slug/${slug}/all`;
+  let url = `${BE_BASE_URL}/stores/slug/${slug}/all`;
   if (categorySlug) url += `?category=${categorySlug}`;
 
   const res = await fetch(url);
@@ -393,7 +394,7 @@ async function defaultFetchProducts({
     const imageUrl = primaryMedia?.url
       ? primaryMedia.url.startsWith('http')
         ? primaryMedia.url
-        : `http://localhost:3000/${primaryMedia.url.replace(/^\/+/, '')}`
+        : `${BE_BASE_URL}/${primaryMedia.url.replace(/^\/+/, '')}`
       : '';
 
     return {

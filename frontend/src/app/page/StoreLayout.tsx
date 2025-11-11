@@ -22,6 +22,7 @@ export default function StoreLayout() {
   const [searchParams] = useSearchParams();
   const groupIdParam = searchParams.get('groupId');
   const groupId = groupIdParam ? Number(groupIdParam) : 0;
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     if (!slug) return;
@@ -30,7 +31,7 @@ export default function StoreLayout() {
       try {
         setLoading(true);
         const res = await axios.get(
-          `http://localhost:3000/stores/slug/${slug}`
+          `${BE_BASE_URL}/stores/slug/${slug}`
         );
         setStore(res.data.data); // store object từ backend
       } catch (err) {

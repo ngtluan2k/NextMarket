@@ -1,24 +1,24 @@
 import axios from 'axios';
 
-export const API_BASE_URL = 'http://localhost:3000';
+export const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   export const API_ENDPOINTS = {
-    products: `${API_BASE_URL}/products`,
-    categories: `${API_BASE_URL}/categories`,
-    orders: `${API_BASE_URL}/orders`,
-    cart: `${API_BASE_URL}/cart`,
-    users: `${API_BASE_URL}/users`,
-    stores: `${API_BASE_URL}/stores`,
-    admin: `${API_BASE_URL}/admin`,
-    auth: `${API_BASE_URL}/auth`,
-    provinces: `${API_BASE_URL}/provinces`,
-    adminVouchers: `${API_BASE_URL}/admin/vouchers`,
-    storeOwnerVouchers: `${API_BASE_URL}/store-owner/vouchers`,
-    userVouchers: `${API_BASE_URL}/user/vouchers`,
+    products: `${BE_BASE_URL}/products`,
+    categories: `${BE_BASE_URL}/categories`,
+    orders: `${BE_BASE_URL}/orders`,
+    cart: `${BE_BASE_URL}/cart`,
+    users: `${BE_BASE_URL}/users`,
+    stores: `${BE_BASE_URL}/stores`,
+    admin: `${BE_BASE_URL}/admin`,
+    auth: `${BE_BASE_URL}/auth`,
+    provinces: `${BE_BASE_URL}/provinces`,
+    adminVouchers: `${BE_BASE_URL}/admin/vouchers`,
+    storeOwnerVouchers: `${BE_BASE_URL}/store-owner/vouchers`,
+    userVouchers: `${BE_BASE_URL}/user/vouchers`,
   };
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: BE_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -1,7 +1,8 @@
 import { api, API_ENDPOINTS } from '../app/api/api';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/orders';
+const API_URL = `${import.meta.env.VITE_BE_BASE_URL}/orders`;
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export const orderService = {
   // ========== USER ENDPOINTS ==========
@@ -157,7 +158,7 @@ export const orderService = {
   getOrderStats: async (storeId: number) => {
     const token = localStorage.getItem('token');
     const res = await axios.get(
-      `http://localhost:3000/stores/${storeId}/orders/stats`,
+      `${BE_BASE_URL}/stores/${storeId}/orders/stats`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }

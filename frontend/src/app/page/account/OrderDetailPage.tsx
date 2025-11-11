@@ -58,7 +58,7 @@ const formatVND = (n = 0) =>
     maximumFractionDigits: 0,
   });
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL ?? 'http://localhost:3000';
 
 function toAbs(p?: string) {
   if (!p) return '';

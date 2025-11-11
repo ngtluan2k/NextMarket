@@ -24,6 +24,7 @@ export default function CategoryGrid({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +34,7 @@ export default function CategoryGrid({
         setLoading(true);
         setError(null);
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3000/categories', {
+        const res = await fetch(`${BE_BASE_URL}/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -45,7 +46,7 @@ export default function CategoryGrid({
         const toImageUrl = (url?: string) => {
           if (!url) return 'https://via.placeholder.com/43x43?text=%3F';
           if (url.startsWith('http')) return url;
-          return `http://localhost:3000${url}`;
+          return `${BE_BASE_URL}${url}`;
         };
 
         const mapped: Category[] = parents.map((it: any) => ({

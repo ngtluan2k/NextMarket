@@ -1,5 +1,5 @@
 // frontend/src/service/auth.service.ts
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_BE_BASE_URL;;
 
 export async function requestRegisterOtp(email: string) {
   const res = await fetch(`${API_BASE}/users/register/request-otp`, {

@@ -17,6 +17,7 @@ const ProductListByBrand: React.FC<Props> = ({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -26,7 +27,7 @@ const ProductListByBrand: React.FC<Props> = ({
 
         for (const id of brandIds) {
           const res = await fetch(
-            `http://localhost:3000/brands/${id}/products`
+            `${BE_BASE_URL}/brands/${id}/products`
           );
           const json = await res.json();
           allProducts.push(...(json.data || []));
@@ -68,7 +69,7 @@ const ProductListByBrand: React.FC<Props> = ({
         const imageUrl = primaryMedia?.url
           ? primaryMedia.url.startsWith('http')
             ? primaryMedia.url // đã là URL web
-            : `http://localhost:3000/${primaryMedia.url.replace(/^\/+/, '')}` // đường dẫn local
+            : `${BE_BASE_URL}/${primaryMedia.url.replace(/^\/+/, '')}` // đường dẫn local
           : '';
 
         return (

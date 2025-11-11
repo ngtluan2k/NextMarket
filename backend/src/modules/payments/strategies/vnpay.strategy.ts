@@ -200,6 +200,7 @@ export class VnpayStrategy implements PaymentStrategy {
     }
     return null;
   }
+  
 
   private async buildVnPayUrl(payment: Payment, config: any): Promise<string> {
     const vnp_TmnCode =
@@ -213,9 +214,8 @@ export class VnpayStrategy implements PaymentStrategy {
       process.env.VNPAY_BASE_URL ||
       'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
     const vnp_ReturnUrl =
-      config.returnUrl ||
-      process.env.VNPAY_RETURN_URL ||
-      'http://localhost:3000/payments/webhook/vnpay/callback';
+  config.returnUrl ||
+  `${process.env.BE_BASE_URL || 'http://localhost:3000'}/payments/webhook/vnpay/callback`;
     const vnp_TxnRef = payment.uuid.replace(/-/g, '');
     const amountInCents = Math.round(payment.amount! * 100);
 

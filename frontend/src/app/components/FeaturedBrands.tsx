@@ -5,7 +5,7 @@ const DEBUG = true;
 
 export type BrandCard = {
   id: string | number;
-  name?: string;          // hiển thị bằng name
+  name?: string; // hiển thị bằng name
   coverUrl?: string;
   logoUrl?: string;
   tagline?: string;
@@ -15,12 +15,12 @@ export type BrandCard = {
 type Props = {
   title?: string;
   items?: BrandCard[];
-  fetchBrands?: () => Promise<any>;  // có thể [] | {data:[]} | BrandCard[]
+  fetchBrands?: () => Promise<any>; // có thể [] | {data:[]} | BrandCard[]
   seeAllHref?: string;
   className?: string;
   onSelect?: (brand: BrandCard) => void;
   /** URL fallback để auto fetch khi phát hiện adapter mất "name" */
-  apiUrl?: string; // mặc định 'http://localhost:3000/brands'
+  apiUrl?: string;
 };
 
 const ph = (w = 260, h = 160) =>
@@ -36,11 +36,12 @@ const ph = (w = 260, h = 160) =>
         font-family='system-ui,Segoe UI,Roboto' font-size='12' fill='#94A3B8'>No image</text>
     </svg>`
   );
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 const toImageUrl = (url?: string) => {
   if (!url) return ph();
   if (url.startsWith('http') || url.startsWith('data:')) return url;
-  return `http://localhost:3000${url}`;
+  return `${BE_BASE_URL}${url}`;
 };
 
 const normalizeBrand = (b: any): BrandCard => {
@@ -58,7 +59,10 @@ const normalizeBrand = (b: any): BrandCard => {
     href: b?.href ?? (id ? `/brands/${id}` : undefined),
   };
   if (DEBUG && !name) {
-    console.warn('[FeaturedBrands] normalizeBrand: missing name/title in item:', b);
+    console.warn(
+      '[FeaturedBrands] normalizeBrand: missing name/title in item:',
+      b
+    );
   }
   return nb;
 };
@@ -76,7 +80,7 @@ export default function FeaturedBrands({
   seeAllHref,
   className = '',
   onSelect,
-  apiUrl = 'http://localhost:3000/brands',
+  apiUrl = `${BE_BASE_URL}/brands`,
 }: Props) {
   const [list, setList] = useState<BrandCard[]>(
     items && items.length ? items.map(normalizeBrand) : FALLBACK
@@ -124,8 +128,11 @@ export default function FeaturedBrands({
         const mapped = apply(arr, 'adapter result');
 
         // ⛑ Fallback: nếu tất cả item đều name="—" (tức adapter mất name), tự fetch từ API gốc
-        if (mapped.length && mapped.every(it => it.name === '—')) {
-          console.warn('[FeaturedBrands] All names are "—" → Adapter likely dropped `name`. Falling back to direct API:', apiUrl);
+        if (mapped.length && mapped.every((it) => it.name === '—')) {
+          console.warn(
+            '[FeaturedBrands] All names are "—" → Adapter likely dropped `name`. Falling back to direct API:',
+            apiUrl
+          );
           try {
             const res = await fetch(apiUrl);
             const json = await res.json();
@@ -143,7 +150,9 @@ export default function FeaturedBrands({
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [fetchBrands, apiUrl]);
 
   // log mỗi lần list đổi
@@ -185,11 +194,16 @@ export default function FeaturedBrands({
   };
 
   return (
-    <section className={`rounded-2xl bg-gradient-to-r from-sky-50 to-indigo-50 p-4 ring-1 ring-slate-200 shadow-xl ${className}`}>
+    <section
+      className={`rounded-2xl bg-gradient-to-r from-sky-50 to-indigo-50 p-4 ring-1 ring-slate-200 shadow-xl ${className}`}
+    >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">{title}</h3>
         {seeAllHref && (
-          <a href={seeAllHref} className="text-xs font-semibold text-sky-600 hover:underline">
+          <a
+            href={seeAllHref}
+            className="text-xs font-semibold text-sky-600 hover:underline"
+          >
             Xem tất cả
           </a>
         )}
@@ -201,21 +215,32 @@ export default function FeaturedBrands({
           aria-label="Prev"
           onClick={() => scrollByView(-1)}
           disabled={!canLeft}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600 ${!canLeft ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 ml-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600 ${
+            !canLeft ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
+          </svg>
         </button>
         <button
           aria-label="Next"
           onClick={() => scrollByView(1)}
           disabled={!canRight}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600 ${!canRight ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 mr-1 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow ring-1 ring-slate-200 hover:bg-white text-sky-600 ${
+            !canRight ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" /></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
+          </svg>
         </button>
 
         {/* scroller */}
-        <div ref={scrollerRef} className="no-scrollbar flex gap-4 overflow-x-auto scroll-smooth px-1 py-2">
+        <div
+          ref={scrollerRef}
+          className="no-scrollbar flex gap-4 overflow-x-auto scroll-smooth px-1 py-2"
+        >
           {list.map((b) => {
             const displayName = b.name || '—';
             return (
@@ -231,7 +256,10 @@ export default function FeaturedBrands({
                     className="max-h-full w-full object-contain"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = ph();
-                      if (DEBUG) console.warn('[FeaturedBrands] image load error → fallback placeholder');
+                      if (DEBUG)
+                        console.warn(
+                          '[FeaturedBrands] image load error → fallback placeholder'
+                        );
                     }}
                   />
                 </div>
@@ -265,7 +293,9 @@ export default function FeaturedBrands({
       </div>
 
       {loading && <div className="mt-2 text-xs text-slate-500">Đang tải…</div>}
-      {!loading && !list.length && <div className="mt-2 text-xs text-slate-500">Chưa có thương hiệu.</div>}
+      {!loading && !list.length && (
+        <div className="mt-2 text-xs text-slate-500">Chưa có thương hiệu.</div>
+      )}
     </section>
   );
 }

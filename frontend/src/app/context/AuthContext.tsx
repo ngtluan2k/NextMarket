@@ -7,12 +7,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // Hàm lấy thông tin người dùng và địa chỉ
   const fetchUserData = async (token: string) => {
     try {
       // Lấy thông tin người dùng từ /users/me
-      const userRes = await fetch('http://localhost:3000/users/me', {
+      const userRes = await fetch(`${BE_BASE_URL}/users/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -23,7 +24,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Lấy danh sách địa chỉ từ /users/:id/addresses
       const addressRes = await fetch(
-        `http://localhost:3000/users/${user.id}/addresses`,
+        `${BE_BASE_URL}/users/${user.id}/addresses`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`http://localhost:3000/auth/logout`, {
+        await fetch(`${BE_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,

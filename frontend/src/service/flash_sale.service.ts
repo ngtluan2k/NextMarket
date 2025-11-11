@@ -1,7 +1,7 @@
 // services/flashSaleService.ts
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/flash-sale-schedules'; // 👈 chỉnh URL cho đúng
+const API_URL = `${import.meta.env.VITE_BE_BASE_URL}/flash-sale-schedules`; // 👈 chỉnh URL cho đúng
 
 ///////////////////////////ADMIN//////////////////////////
 

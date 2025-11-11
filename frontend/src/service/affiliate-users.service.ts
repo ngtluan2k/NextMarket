@@ -6,7 +6,8 @@ import {
 } from '../app/types/affiliate-links';
 import { getAuthHeaders } from './affiliate.service';
 
-const API_BASE_URL = 'http://localhost:3000/affiliate-links';
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+const API_BASE_URL = `${BE_BASE_URL}/affiliate-links`;
 
 const handleApiError = (error: any) => {
   console.error('API Error:', error);

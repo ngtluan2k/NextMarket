@@ -9,10 +9,12 @@ export interface Category {
 
 const CategoryList: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 
   useEffect(() => {
     const token = localStorage.getItem('token'); // hoặc từ context/useAuth
-    fetch('http://localhost:3000/categories', {})
+    fetch(`${BE_BASE_URL}/categories`, {})
       .then((res) => {
         if (!res.ok) throw new Error('HTTP error ' + res.status);
         return res.json();

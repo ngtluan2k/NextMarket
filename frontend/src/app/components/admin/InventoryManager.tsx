@@ -109,6 +109,8 @@ const InventoryManager: React.FC = () => {
   const lowStockItems = inventories.filter(
     (inv) => (inv.available_quantity || 0) < 10
   ).length;
+  // ==== Initial Data Load ====
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     const loadData = async () => {
@@ -127,7 +129,7 @@ const InventoryManager: React.FC = () => {
 
   // ==== API Configuration ====
   const apiClient = axios.create({
-    baseURL: 'http://localhost:3000',
+    baseURL: `${BE_BASE_URL}`,
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',

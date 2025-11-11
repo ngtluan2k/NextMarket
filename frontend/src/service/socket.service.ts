@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 export class SocketService {
     private socket: Socket | null = null;
-    private baseURL = 'http://localhost:3000';
+    private baseURL = import.meta.env.VITE_BE_BASE_URL;;
 
     private lastJoin: { groupId: number; userId: number } | null = null;
     private joinedOnce = false;

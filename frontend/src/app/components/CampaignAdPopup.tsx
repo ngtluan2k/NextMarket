@@ -12,6 +12,8 @@ export default function CampaignAdPopup() {
   const [visible, setVisible] = useState(false);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 
   useEffect(() => {
     const checkAndShowPopup = async () => {
@@ -68,7 +70,7 @@ export default function CampaignAdPopup() {
           src={
             campaign.banner_url?.startsWith('http')
               ? campaign.banner_url
-              : `http://localhost:3000${campaign.banner_url}`
+              : `${BE_BASE_URL}${campaign.banner_url}`
           }
           alt="Promotion"
           style={{

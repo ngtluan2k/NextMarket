@@ -28,7 +28,8 @@ type Props = {
 };
 
 async function defaultFetchProfile(slug: string): Promise<StoreProfileData> {
-  const res = await fetch(`http://localhost:3000/stores/slug/${slug}/profile`);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+  const res = await fetch(`${BE_BASE_URL}/stores/slug/${slug}/profile`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
   return json.data;

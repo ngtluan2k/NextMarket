@@ -17,6 +17,7 @@ const ph = (w = 220, h = 220) =>
              font-family='system-ui,Segoe UI,Roboto' font-size='12' fill='#94A3B8'>No image</text>
      </svg>`
   );
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 const FALLBACK: LikeItem[] = Array.from({ length: 10 }).map((_, i) => ({
   id: `sk-${i}`,
@@ -48,7 +49,7 @@ export default function YouMayAlsoLikeProducts({
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:3000/products', {
+        const res = await fetch(`${BE_BASE_URL}/products`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -71,7 +72,7 @@ export default function YouMayAlsoLikeProducts({
             if (!url) return ph();
             return url.startsWith('http')
               ? url
-              : `http://localhost:3000/${url.replace(/^\/+/, '')}`;
+              : `${BE_BASE_URL}/${url.replace(/^\/+/, '')}`;
           };
 
           return {

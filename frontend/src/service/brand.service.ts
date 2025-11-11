@@ -13,10 +13,12 @@ export interface Category {
   image?: string;
 }
 
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 // Lấy brand theo id
 export const getBrandById = async (id: number): Promise<Brand> => {
   const token = localStorage.getItem('token');
-  const res = await axios.get(`http://localhost:3000/brands/${id}`, {
+  const res = await axios.get(`${BE_BASE_URL}/brands/${id}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   return res.data.data;
@@ -38,12 +40,12 @@ export const getBrandById = async (id: number): Promise<Brand> => {
 
 // Lấy toàn bộ brands
 export const fetchBrandsAPI = async (): Promise<Brand[]> => {
-  const res = await axios.get('http://localhost:3000/brands');
+  const res = await axios.get(`${BE_BASE_URL}/brands`);
   return res.data.data; // tuỳ backend trả về
 };
 export const fetchCategoriesByBrandProducts = async (brandId: number) => {
   const token = localStorage.getItem('token') ?? undefined;
-  const res = await fetch(`http://localhost:3000/brands/${brandId}/products`, {
+  const res = await fetch(`${BE_BASE_URL}/brands/${brandId}/products`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();

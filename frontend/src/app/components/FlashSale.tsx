@@ -53,11 +53,12 @@ const ph = (w = 220, h = 220) =>
         font-family='system-ui,Segoe UI,Roboto' font-size='12' fill='#94A3B8'>No image</text>
     </svg>`
   );
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 function toImageUrl(url?: string) {
   if (!url) return ph();
   if (url.startsWith('http') || url.startsWith('data:')) return url;
-  return `http://localhost:3000/${url.replace(/^\/+/, '')}`;
+  return `${BE_BASE_URL}/${url.replace(/^\/+/, '')}`;
 }
 
 function toNumber(v: unknown): number {
@@ -92,7 +93,7 @@ export default function ProductFlashSale({
       try {
         setLoading(true);
         const token = localStorage.getItem('token') || '';
-        const res = await fetch('http://localhost:3000/products/flash-sale', {
+        const res = await fetch(`${BE_BASE_URL}/products/flash-sale`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);

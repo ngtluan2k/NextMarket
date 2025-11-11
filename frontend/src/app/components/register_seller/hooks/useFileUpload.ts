@@ -4,7 +4,7 @@ export const useFileUpload = () => {
   const [selectedDocFile, setSelectedDocFile] = useState<File | null>(null);
   const [cccdFrontFile, setCccdFrontFile] = useState<File | null>(null);
   const [cccdBackFile, setCccdBackFile] = useState<File | null>(null);
-
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   // Upload Business License
   const uploadBusinessLicense = async (
     onSuccess: (fileUrl: string) => void
@@ -17,7 +17,7 @@ export const useFileUpload = () => {
     form.append('doc_type', 'BUSINESS_LICENSE');
 
     const res = await fetch(
-      'http://localhost:3000/store-documents/upload-file',
+      `${BE_BASE_URL}/store-documents/upload-file`,
       {
         method: 'POST',
         headers: {
@@ -53,7 +53,7 @@ export const useFileUpload = () => {
         const fd = new FormData();
         fd.append('file', cccdFrontFile);
         const res = await fetch(
-          `http://localhost:3000/store-identification/store/${storeId}/upload-front`,
+          `${BE_BASE_URL}/store-identification/store/${storeId}/upload-front`,
           {
             method: 'POST',
             headers: {
@@ -78,7 +78,7 @@ export const useFileUpload = () => {
         const fd = new FormData();
         fd.append('file', cccdBackFile);
         const res = await fetch(
-          `http://localhost:3000/store-identification/store/${storeId}/upload-back`,
+          `${BE_BASE_URL}/store-identification/store/${storeId}/upload-back`,
           {
             method: 'POST',
             headers: {
@@ -110,7 +110,7 @@ export const useFileUpload = () => {
       fd.append('file', cccdFrontFile);
       fd.append('side', 'front');
       const res = await fetch(
-        `http://localhost:3000/store-identification/upload-image`,
+        `${BE_BASE_URL}/store-identification/upload-image`,
         {
           method: 'POST',
           headers: {
@@ -131,7 +131,7 @@ export const useFileUpload = () => {
       fd.append('file', cccdBackFile);
       fd.append('side', 'back');
       const res = await fetch(
-        `http://localhost:3000/store-identification/upload-image`,
+        `${BE_BASE_URL}/store-identification/upload-image`,
         {
           method: 'POST',
           headers: {

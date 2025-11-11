@@ -36,6 +36,7 @@ export default function CampaignDetailPage({
     if (!storeId || !campaign) return;
     onSelectStore(storeId); // gọi callback từ parent
   };
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   if (!campaign) return <p>Không có dữ liệu</p>;
 
@@ -99,7 +100,7 @@ export default function CampaignDetailPage({
         {campaign.banner_url && (
           <div style={{ marginTop: 16 }}>
             <img
-              src={`http://localhost:3000${campaign.banner_url}`}
+              src={`${BE_BASE_URL}${campaign.banner_url}`}
               alt="Banner chiến dịch"
               style={{
                 width: '100%',

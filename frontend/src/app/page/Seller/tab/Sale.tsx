@@ -147,8 +147,10 @@ export default function Sale() {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [storeId, setStoreId] = useState<number | null>(null);
   const [form] = Form.useForm();
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const [isGroupDetailModalVisible, setIsGroupDetailModalVisible] = useState(false);
+  const [isGroupDetailModalVisible, setIsGroupDetailModalVisible] =
+    useState(false);
   const [groupOrderData, setGroupOrderData] = useState<{
     group_order_id: number;
     groupInfo: any;
@@ -341,24 +343,46 @@ export default function Sale() {
     }
   };
 
-  // Filter sales locally for searchText and paymentFilter
   const filteredSales = sales.filter((sale) => {
     const customerName =
       sale.userAddress?.recipientName || sale.user?.username || '';
+
+    // search text
     const matchesSearch =
       customerName.toLowerCase().includes(searchText.toLowerCase()) ||
       sale.orderNumber.toLowerCase().includes(searchText.toLowerCase()) ||
       sale.user?.email?.toLowerCase().includes(searchText.toLowerCase());
 
+    // payment filter
     const matchesPayment =
       paymentFilter === 'all' ||
-      (sale.payment &&
-        sale.payment[0] &&
-        sale.payment[0].status === paymentFilter);
+      (sale.payment?.[0] &&
+        Number(sale.payment[0].status) === Number(paymentFilter));
 
-    return matchesSearch && matchesPayment;
+    // status filter
+    const matchesStatus =
+      statusFilter === 'all' || Number(sale.status) === Number(statusFilter);
+
+    // type filter
+    const matchesType =
+      typeFilter === 'all' ||
+      (typeFilter === 'group' && sale.group_order) ||
+      (typeFilter === 'single' && !sale.group_order);
+
+    // date range filter
+    const matchesDate =
+      !dateRange ||
+      (dayjs(sale.createdAt).isSameOrAfter(dateRange[0], 'day') &&
+        dayjs(sale.createdAt).isSameOrBefore(dateRange[1], 'day'));
+
+    return (
+      matchesSearch &&
+      matchesPayment &&
+      matchesStatus &&
+      matchesType &&
+      matchesDate
+    );
   });
-
 
   const columns: ColumnsType<Sale> = [
     {
@@ -367,7 +391,8 @@ export default function Sale() {
       key: 'orderNumber',
       render: (text: string, record: Sale) => (
         <div>
-          <div className="font-medium text-gray-900">{text}
+          <div className="font-medium text-gray-900">
+            {text}
             {record.group_order && (
               <Tag color="purple" icon={<TeamOutlined />} className="text-xs">
                 Nhóm
@@ -405,16 +430,18 @@ export default function Sale() {
         return (
           <div className="space-y-1">
             <Tooltip title={`Tên nhóm: ${group_order.name}`}>
-              <Tag color="purple" icon={<TeamOutlined />} className="cursor-pointer">
+              <Tag
+                color="purple"
+                icon={<TeamOutlined />}
+                className="cursor-pointer"
+              >
                 {group_order.name.length > 15
                   ? `${group_order.name.substring(0, 15)}...`
                   : group_order.name}
               </Tag>
             </Tooltip>
             {group_order.delivery_mode === 'member_address' && (
-              <div className="text-xs text-gray-500">
-                Giao hàng riêng
-              </div>
+              <div className="text-xs text-gray-500">Giao hàng riêng</div>
             )}
           </div>
         );
@@ -461,9 +488,7 @@ export default function Sale() {
               <div className="font-semibold text-lg">
                 {(record as any).group_total_quantity}
               </div>
-              <div className="text-xs text-purple-600">
-                (Cả nhóm)
-              </div>
+              <div className="text-xs text-purple-600">(Cả nhóm)</div>
             </div>
           );
         }
@@ -474,21 +499,21 @@ export default function Sale() {
           0
         );
 
-        return (
-          <div className="font-medium text-center">
-            {quantity}
-          </div>
-        );
+        return <div className="font-medium text-center">{quantity}</div>;
       },
       sorter: (a, b) => {
         // Sort theo group_total_quantity nếu có, không thì theo quantity thường
-        const qtyA = (a as any).group_total_quantity ||
+        const qtyA =
+          (a as any).group_total_quantity ||
           (Array.isArray(a.orderItem) ? a.orderItem : []).reduce(
-            (sum, item) => sum + item.quantity, 0
+            (sum, item) => sum + item.quantity,
+            0
           );
-        const qtyB = (b as any).group_total_quantity ||
+        const qtyB =
+          (b as any).group_total_quantity ||
           (Array.isArray(b.orderItem) ? b.orderItem : []).reduce(
-            (sum, item) => sum + item.quantity, 0
+            (sum, item) => sum + item.quantity,
+            0
           );
         return qtyA - qtyB;
       },
@@ -499,9 +524,10 @@ export default function Sale() {
       key: 'totalAmount',
       render: (amount: string, record: Sale) => {
         // ✅ Nếu là đơn nhóm, hiển thị tổng của cả nhóm
-        const displayAmount = record.group_order_id && (record as any).group_total_amount
-          ? (record as any).group_total_amount
-          : amount;
+        const displayAmount =
+          record.group_order_id && (record as any).group_total_amount
+            ? (record as any).group_total_amount
+            : amount;
 
         return (
           <div>
@@ -509,9 +535,7 @@ export default function Sale() {
               ₫{parseFloat(displayAmount).toLocaleString('vi-VN')}
             </span>
             {record.group_order_id && (
-              <div className="text-xs text-purple-600">
-                (Cả nhóm)
-              </div>
+              <div className="text-xs text-purple-600">(Cả nhóm)</div>
             )}
           </div>
         );
@@ -694,19 +718,13 @@ export default function Sale() {
               <Select
                 placeholder="Loại đơn"
                 style={{ width: 130 }}
-                defaultValue="all"
+                value={typeFilter}
+                onChange={setTypeFilter} // cập nhật state khi chọn
               >
                 <Select.Option value="all">Tất cả đơn</Select.Option>
                 <Select.Option value="single">Đơn lẻ</Select.Option>
                 <Select.Option value="group">Đơn nhóm</Select.Option>
               </Select>
-
-              <Select
-                placeholder="Phương Thức Thanh Toán"
-                style={{ width: 140 }}
-                value={paymentFilter}
-                onChange={setPaymentFilter}
-              ></Select>
 
               <Select
                 placeholder="Phương Thức Thanh Toán"
@@ -753,7 +771,7 @@ export default function Sale() {
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={sales}
+            dataSource={filteredSales}
             rowSelection={rowSelection}
             loading={loading}
             pagination={{
@@ -930,17 +948,11 @@ export default function Sale() {
           token={token}
           onStatusChange={(orderId, newStatus, note) => {
             if (storeId) {
-              changeOrderStatus(
-                storeId,
-                orderId,
-                String(newStatus),
-                note
-              );
+              changeOrderStatus(storeId, orderId, String(newStatus), note);
               fetchSales(); // Refresh lại danh sách
             }
           }}
         />
-
 
         <OrderDetailModal
           selectedSale={selectedSale}

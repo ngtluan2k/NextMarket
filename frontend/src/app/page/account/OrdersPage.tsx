@@ -82,6 +82,8 @@ export type OrderSummary = {
   }>;
 };
 
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
   { key: 'pending', label: 'Chờ thanh toán' },
@@ -165,7 +167,7 @@ export default function OrdersPage() {
               orderItemId: String(it.id),
               productId: product?.id,
               name: product?.name ?? it.name,
-              image: image ? `http://localhost:3000${image}` : undefined,
+              image: image ? `${BE_BASE_URL}${image}` : undefined,
               qty: it.quantity,
               price: Number(it.price ?? 0),
               isReviewed,

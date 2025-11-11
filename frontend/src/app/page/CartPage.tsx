@@ -86,6 +86,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   const indeterminate =
     selectedIds.length > 0 && selectedIds.length < allIds.length;
   const [expanded, setExpanded] = useState(false);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // Load active groups
   const loadActiveGroups = async () => {
@@ -95,7 +96,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:3000/group-orders/user/${user.user_id}/active`,
+        `${BE_BASE_URL}/group-orders/user/${user.user_id}/active`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -123,90 +124,90 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   }, [user?.user_id]);
 
   const handleGoCheckout = () => {
-  if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0) return;
 
-  const items = cart
-    .filter((i) => selectedIds.includes(i.id))
-    .map((i) => ({
-      id: i.id,
-      type: i.type,
-      price: i.price,
-      quantity: i.quantity,
-      is_group: i.is_group,
-      pricingRuleId: i.pricing_rule?.id ?? null,
-      product: {
-        id: i.product.id,
-        name: i.product.name,
-        media: i.product.media,
-        store: i.product.store,
-        listPrice: i.product.basePrice,
-        url:
-          (Array.isArray(i.product.media)
-            ? i.product.media[0]?.url
-            : i.product.media?.url) || i.product.url,
-      },
-      variant: i.variant, // giữ nguyên để check sau
-    }));
+    const items = cart
+      .filter((i) => selectedIds.includes(i.id))
+      .map((i) => ({
+        id: i.id,
+        type: i.type,
+        price: i.price,
+        quantity: i.quantity,
+        is_group: i.is_group,
+        pricingRuleId: i.pricing_rule?.id ?? null,
+        product: {
+          id: i.product.id,
+          name: i.product.name,
+          media: i.product.media,
+          store: i.product.store,
+          listPrice: i.product.basePrice,
+          url:
+            (Array.isArray(i.product.media)
+              ? i.product.media[0]?.url
+              : i.product.media?.url) || i.product.url,
+        },
+        variant: i.variant, // giữ nguyên để check sau
+      }));
 
-  const groupItems = items.filter((item) => item.is_group);
-  const regularItems = items.filter((item) => !item.is_group);
+    const groupItems = items.filter((item) => item.is_group);
+    const regularItems = items.filter((item) => !item.is_group);
 
-  if (groupItems.length > 0 && regularItems.length > 0) {
-    (showMessage ?? ((_, msg) => alert(msg)))(
-      "warning",
-      "Không thể thanh toán cùng lúc sản phẩm thường và sản phẩm mua chung. Vui lòng chọn một loại.",
-    );
-    return;
-  }
-
-  // 🧩 Gộp các item theo variant (ưu tiên variant.id, nếu không có thì fallback product.id)
-  const mergedItems: typeof items = [];
-
-  for (const item of items) {
-    const key = item.variant?.id ?? item.product.id;
-    const existing = mergedItems.find(
-      (x) => (x.variant?.id ?? x.product.id) === key
-    );
-
-    if (existing) {
-      existing.quantity += item.quantity;
-    } else {
-      mergedItems.push({ ...item });
+    if (groupItems.length > 0 && regularItems.length > 0) {
+      (showMessage ?? ((_, msg) => alert(msg)))(
+        'warning',
+        'Không thể thanh toán cùng lúc sản phẩm thường và sản phẩm mua chung. Vui lòng chọn một loại.'
+      );
+      return;
     }
-  }
 
-  // 🧠 Tính lại type + price dựa theo variant.pricing_rules
-  const recalculatedItems = mergedItems.map((item) => {
-    const rules = (item.variant as any)?.pricing_rules ?? [];
-    let selectedRule = null;
+    // 🧩 Gộp các item theo variant (ưu tiên variant.id, nếu không có thì fallback product.id)
+    const mergedItems: typeof items = [];
 
-    // tìm rule phù hợp nhất theo min_quantity
-    for (const r of rules) {
-      if (item.quantity >= r.min_quantity) {
-        selectedRule = r;
+    for (const item of items) {
+      const key = item.variant?.id ?? item.product.id;
+      const existing = mergedItems.find(
+        (x) => (x.variant?.id ?? x.product.id) === key
+      );
+
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        mergedItems.push({ ...item });
       }
     }
 
-    if (selectedRule) {
-      return {
-        ...item,
-        type: "bulk",
-        price: selectedRule.bulk_price ?? item.price,
-        pricingRuleId: selectedRule.id,
-      };
-    } else {
-      return {
-        ...item,
-        type: "normal",
-        pricingRuleId: null,
-      };
-    }
-  });
+    // 🧠 Tính lại type + price dựa theo variant.pricing_rules
+    const recalculatedItems = mergedItems.map((item) => {
+      const rules = (item.variant as any)?.pricing_rules ?? [];
+      let selectedRule = null;
 
-  navigate("/checkout", {
-    state: { items: recalculatedItems, subtotal: selectedTotal },
-  });
-};
+      // tìm rule phù hợp nhất theo min_quantity
+      for (const r of rules) {
+        if (item.quantity >= r.min_quantity) {
+          selectedRule = r;
+        }
+      }
+
+      if (selectedRule) {
+        return {
+          ...item,
+          type: 'bulk',
+          price: selectedRule.bulk_price ?? item.price,
+          pricingRuleId: selectedRule.id,
+        };
+      } else {
+        return {
+          ...item,
+          type: 'normal',
+          pricingRuleId: null,
+        };
+      }
+    });
+
+    navigate('/checkout', {
+      state: { items: recalculatedItems, subtotal: selectedTotal },
+    });
+  };
 
   const toggleAll = () => {
     setSelectedIds((prev) =>
@@ -342,11 +343,13 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                         <div className="flex items-start justify-between gap-10">
                           <div>
                             <div className="flex items-center gap-2 mb-2">
-                              {group.is_host && (
+                              {group.is_host ? (
                                 <Tag color="gold" icon={<CrownOutlined />}>
                                   Chủ nhóm
                                 </Tag>
-                              )}
+                              ) : <Tag color="green" icon={<TeamOutlined />}>
+                                  Thành viên
+                                </Tag>}
                               {group.status === 'CLOSING' && (
                                 <Tag color="red">Sắp đóng</Tag>
                               )}
@@ -421,9 +424,9 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                           <div className="flex items-start gap-6">
                             <div className="flex items-center gap-2">
                               <TeamOutlined style={{ color: '#1677ff' }} />
-                              {group.is_host && (
+                              {group.is_host ? (
                                 <CrownOutlined style={{ color: '#faad14' }} />
-                              )}
+                              ) : null}
                             </div>
 
                             <div>

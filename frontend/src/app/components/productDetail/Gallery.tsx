@@ -29,9 +29,10 @@ export default function Gallery({
   useEffect(() => {
     setIdx(0);
   }, [list]);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const resolveUrl = (u: string) =>
-    u.startsWith('http') ? u : `http://localhost:3000/${u.replace(/^\/+/, '')}`;
+    u.startsWith('http') ? u : `${BE_BASE_URL}/${u.replace(/^\/+/, '')}`;
 
   const current = list[idx] ? resolveUrl(list[idx]) : undefined;
 

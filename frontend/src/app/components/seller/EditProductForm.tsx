@@ -66,6 +66,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const getErr = (path: string) => errors[path];
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   type ResultType = 'success' | 'error' | 'warning';
 
   // ⬇️ NEW: Result modal states
@@ -263,10 +264,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     (async () => {
       try {
         const [brandsRes, categoriesRes] = await Promise.all([
-          fetch('http://localhost:3000/brands', {
+          fetch(`${BE_BASE_URL}/brands`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then((r) => r.json()),
-          fetch('http://localhost:3000/categories', {
+          fetch(`${BE_BASE_URL}/categories`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then((r) => r.json()),
         ]);

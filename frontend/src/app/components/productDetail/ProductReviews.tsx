@@ -54,6 +54,7 @@ export default function ProductReviews({
   const [withPhotos, setWithPhotos] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [starFilter, setStarFilter] = useState<number | undefined>(undefined);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const filtered = useMemo(() => {
     let arr = reviews;
@@ -107,7 +108,7 @@ export default function ProductReviews({
       ? ''
       : url.startsWith('http')
       ? url
-      : `http://localhost:3000/${url.replace(/^\/+/, '')}`;
+      : `${BE_BASE_URL}/${url.replace(/^\/+/, '')}`;
   const getInitials = (name?: string) => {
     if (!name) return 'NA';
     const parts = name.trim().split(' ');

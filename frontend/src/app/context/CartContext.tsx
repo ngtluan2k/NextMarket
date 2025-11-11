@@ -24,6 +24,7 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export const useCart = () => {
   const context = useContext(CartContext);
@@ -48,7 +49,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     try {
-      const response = await fetch('http://localhost:3000/cart', {
+      const response = await fetch(`${BE_BASE_URL}/cart`, {
         headers: {
           Authorization: `Bearer ${currentToken}`,
         },
@@ -103,7 +104,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      const response = await fetch('http://localhost:3000/cart/add', {
+      const response = await fetch(`${BE_BASE_URL}/cart/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +145,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     try {
       const response = await fetch(
-        `http://localhost:3000/cart/remove/${productId}`,
+        `${BE_BASE_URL}/cart/remove/${productId}`,
         {
           method: 'DELETE',
           headers: {
@@ -173,7 +174,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   try {
-    const response = await fetch('http://localhost:3000/cart/update', {
+    const response = await fetch(`${BE_BASE_URL}/cart/update`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

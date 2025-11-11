@@ -29,6 +29,7 @@ const ProductList: React.FC<Props> = ({
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     if (initialProducts) return;
@@ -40,7 +41,7 @@ const ProductList: React.FC<Props> = ({
         setLoading(true);
         setError(null);
         const token = localStorage.getItem('token');
-        let url = `http://localhost:3000/categories/${slug}/products`;
+        let url = `${BE_BASE_URL}/categories/${slug}/products`;
         if (slug) url += `?category=${slug}`;
 
         const res = await fetch(url, {
@@ -61,7 +62,7 @@ const ProductList: React.FC<Props> = ({
             image: primaryMedia?.url
               ? primaryMedia.url.startsWith('http')
                 ? primaryMedia.url // đã là URL web
-                : `http://localhost:3000/${primaryMedia.url.replace(
+                : `${BE_BASE_URL}/${primaryMedia.url.replace(
                     /^\/+/,
                     ''
                   )}` // đường dẫn local

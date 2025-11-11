@@ -78,6 +78,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const totalItems = cart.length;
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // Lấy danh sách địa chỉ của người dùng
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     }
     try {
       const res = await fetch(
-        'http://localhost:3000/stores/my-store?includeDeleted=true',
+        `${BE_BASE_URL}/stores/my-store?includeDeleted=true`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -147,7 +148,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     if (token && user && !me) {
       try {
         const userData = JSON.parse(user);
-        fetch('http://localhost:3000/users/me', {
+        fetch(`${BE_BASE_URL}/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -187,7 +188,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     setLoadingSuggestions(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/products/search?q=${encodeURIComponent(
+        `${BE_BASE_URL}/products/search?q=${encodeURIComponent(
           q
         )}&limit=5`
       );
@@ -284,7 +285,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                           const rawUrl = p.media[0].url;
                           const imageUrl = rawUrl.startsWith('http')
                             ? rawUrl
-                            : `http://localhost:3000/${rawUrl.replace(
+                            : `${BE_BASE_URL}/${rawUrl.replace(
                                 /^\/+/,
                                 ''
                               )}`;
@@ -442,7 +443,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
         onClose={() => setOpenLogin(false)}
         onLogin={async (data: LoginPayload) => {
           try {
-            const res = await fetch('http://localhost:3000/users/login', {
+            const res = await fetch(`${BE_BASE_URL}/users/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
@@ -451,7 +452,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
             login(json.data, json.access_token);
-            const profileRes = await fetch('http://localhost:3000/users/me', {
+            const profileRes = await fetch(`${BE_BASE_URL}/users/me`, {
               headers: {
                 Authorization: `Bearer ${json.access_token}`,
               },

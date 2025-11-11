@@ -70,6 +70,7 @@ const OrderSuccess: React.FC = () => {
   const paymentUuid = searchParams.get('paymentUuid');
   const responseCode = searchParams.get('responseCode');
   const message = searchParams.get('message');
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const isSuccess =
     (location.state?.status &&
@@ -538,7 +539,7 @@ const OrderSuccess: React.FC = () => {
                           item.image
                             ? item.image.startsWith('http')
                               ? item.image
-                              : `http://localhost:3000${item.image}`
+                              : `${BE_BASE_URL}${item.image}`
                             : '/placeholder.png'
                         }
                         alt={item.name}

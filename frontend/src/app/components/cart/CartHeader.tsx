@@ -37,7 +37,7 @@ export const CartHeader: React.FC<Props> = ({
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
   const storeName = cart[0]?.product?.store?.name ?? 'Shop';
-
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   const selectedCartItems = cart.filter((item) =>
     selectedIds.includes(item.id)
   );
@@ -69,7 +69,7 @@ export const CartHeader: React.FC<Props> = ({
   const toImageUrl = (url?: string) => {
     if (!url) return '/default-product.png'; // fallback ảnh mặc định
     if (url.startsWith('http')) return url; // đã là full URL
-    return `http://localhost:3000${url}`; // nếu là path local -> thêm host
+    return `${BE_BASE_URL}{url}`; // nếu là path local -> thêm host
   };
   // 1) GIỎ TRỐNG -> render header trống + nút "Tiếp tục mua sắm"
   if (cart.length === 0) {

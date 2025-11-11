@@ -19,6 +19,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
   const [loading, setLoading] = useState(true);
   const [collectableVouchers, setCollectableVouchers] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     loadCampaignData();
@@ -108,7 +109,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
             src={
               img.imageUrl.startsWith('http')
                 ? img.imageUrl
-                : `http://localhost:3000${img.imageUrl}`
+                : `${BE_BASE_URL}${img.imageUrl}`
             }
             alt="campaign banner"
             width="100%"
@@ -215,7 +216,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
               src={
                 img.imageUrl.startsWith('http')
                   ? img.imageUrl
-                  : `http://localhost:3000${img.imageUrl}`
+                  : `${BE_BASE_URL}${img.imageUrl}`
               }
               alt="campaign banner"
               width="100%"
@@ -249,7 +250,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
                           (p as any).imageUrl
                             ? (p as any).imageUrl.startsWith('http')
                               ? (p as any).imageUrl
-                              : `http://localhost:3000${(p as any).imageUrl}`
+                              : `${BE_BASE_URL}${(p as any).imageUrl}`
                             : 'https://via.placeholder.com/150x150?text=No+Image'
                         }
                         style={{ height: 150, objectFit: 'cover' }}

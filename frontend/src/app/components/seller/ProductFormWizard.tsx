@@ -41,6 +41,7 @@ export const ProductForm: React.FC = () => {
   const [resultMessage, setResultMessage] = useState<string | undefined>(
     undefined
   );
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const showResult = (type: ResultType, title: string, message?: string) => {
     setResultType(type);
@@ -117,10 +118,10 @@ export const ProductForm: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     Promise.all([
-      fetch('http://localhost:3000/brands', {
+      fetch(`${BE_BASE_URL}/brands`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json()),
-      fetch('http://localhost:3000/categories', {
+      fetch(`${BE_BASE_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json()),
     ])
@@ -375,8 +376,8 @@ export const ProductForm: React.FC = () => {
       const token = localStorage.getItem('token');
       const url =
         status === 'active'
-          ? 'http://localhost:3000/products/publish'
-          : 'http://localhost:3000/products';
+          ? `${BE_BASE_URL}/products/publish`
+          : `${BE_BASE_URL}/products`;
 
       const fd = new FormData();
       fd.append('name', form.name);

@@ -25,6 +25,7 @@ const CategoryPage: React.FC = () => {
   const state = location.state as LocationState;
   const [title, setTitle] = useState(state?.title || '');
   const [selectedBrandIds, setSelectedBrandIds] = useState<number[]>([]);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const crumbs = useCategoryBreadcrumbs(
     title ? { slug: slug!, name: title } : undefined
@@ -80,7 +81,7 @@ const CategoryPage: React.FC = () => {
             <CategorySidebar
               fetchAllCategories={async () => {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3000/categories', {
+                const res = await fetch(`${BE_BASE_URL}/categories`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 const json = await res.json();

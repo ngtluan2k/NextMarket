@@ -1,5 +1,6 @@
 // service/wallet.service.ts
 import axios from 'axios';
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export type Wallet = {
   id: number;
@@ -11,7 +12,7 @@ export type Wallet = {
 export const fetchMyWallet = async (): Promise<Wallet> => {
   try {
     const token = localStorage.getItem('token');
-    const res = await axios.get('http://localhost:3000/wallets/me', {
+    const res = await axios.get(`${BE_BASE_URL}/wallets/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

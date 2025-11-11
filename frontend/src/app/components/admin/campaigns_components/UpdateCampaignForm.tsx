@@ -80,6 +80,7 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
     backgroundColor: '#ffffff',
     status: 'draft',
   });
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     (async () => {
@@ -117,7 +118,7 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
                 name: img.imageUrl.split('/').pop() || '',
                 url: img.imageUrl.startsWith('http')
                   ? img.imageUrl
-                  : `http://localhost:3000${img.imageUrl}`,
+                  : `${BE_BASE_URL}${img.imageUrl}`,
                 status: 'done' as const,
               })
             )

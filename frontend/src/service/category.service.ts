@@ -1,4 +1,5 @@
 // frontend/src/service/category.service.ts
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 export interface Category {
   id: number;
   name: string;
@@ -24,14 +25,14 @@ export interface Brand {
 
 // 1️⃣ Lấy tất cả categories
 export const fetchCategoriesAPI = async (): Promise<Category[]> => {
-  const res = await fetch('http://localhost:3000/categories');
+  const res = await fetch(`${BE_BASE_URL}/categories`);
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();
   return json.data || [];
 };
 // 2️⃣ Lấy category theo slug
 export const getCategoryBySlug = async (slug: string): Promise<Category> => {
-  const res = await fetch(`http://localhost:3000/categories/by-slug/${slug}`);
+  const res = await fetch(`${BE_BASE_URL}/categories/by-slug/${slug}`);
   if (!res.ok) throw new Error('Category not found');
   return res.json();
 };
@@ -40,21 +41,21 @@ export const getCategoryBySlug = async (slug: string): Promise<Category> => {
 export const fetchProductsByCategory = async (
   slug: string
 ): Promise<Product[]> => {
-  const res = await fetch(`http://localhost:3000/categories/${slug}/products`);
+  const res = await fetch(`${BE_BASE_URL}/categories/${slug}/products`);
   if (!res.ok) throw new Error('Failed to fetch products');
   return res.json(); // backend trả mảng product
 };
 
 // 4️⃣ Lấy brand duy nhất của category
 export const fetchBrandsByCategory = async (slug: string): Promise<Brand[]> => {
-  const res = await fetch(`http://localhost:3000/categories/${slug}/brands`);
+  const res = await fetch(`${BE_BASE_URL}categories/${slug}/brands`);
   if (!res.ok) throw new Error('Failed to fetch brands');
   return res.json(); // backend trả mảng brand
 };
 
 // src/service/categorySidebar.service.ts
 export const fetchRootCategoriesAPI = async () => {
-  const res = await fetch('http://localhost:3000/categories', {});
+  const res = await fetch(`${BE_BASE_URL}/categories`, {});
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();
 
@@ -69,7 +70,7 @@ export const fetchRootCategoriesAPI = async () => {
 
 export const fetchChildCategoriesAPI = async (parentId: string | number) => {
   const res = await fetch(
-    `http://localhost:3000/categories/${parentId}/children`
+    `${BE_BASE_URL}/categories/${parentId}/children`
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   const json = await res.json();

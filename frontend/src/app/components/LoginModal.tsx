@@ -68,6 +68,7 @@ const defaultSide =
       </g>
     </svg>`
   );
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export default function LoginModal({
   open,
@@ -76,7 +77,7 @@ export default function LoginModal({
   onRegister, // chưa dùng
   title = 'Xin chào,',
   sideImageUrl,
-  apiBase = 'http://localhost:3000',
+  apiBase = `${BE_BASE_URL}`,
 }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const { me, login } = useAuth();

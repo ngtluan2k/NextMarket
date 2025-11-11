@@ -1,7 +1,7 @@
 // campaign.service.ts
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/campaigns';
+const API_URL = `${import.meta.env.VITE_BE_BASE_URL}/campaigns`;
 
 export interface PublicCampaignImage {
   id: number;

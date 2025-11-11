@@ -25,6 +25,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export function MySubscriptionsPage() {
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   const { subscriptions, loading, error, reload } = useMySubscriptions();
   const { execute, loading: using } = useUseSubscription();
   const { me } = useAuth();
@@ -60,7 +61,7 @@ export function MySubscriptionsPage() {
   const getImageUrl = (path?: string) => {
     if (!path) return '';
     // Nếu đã có http thì trả nguyên, nếu không thì ghép base URL backend
-    return path.startsWith('http') ? path : `http://localhost:3000${path}`;
+    return path.startsWith('http') ? path : `${BE_BASE_URL}${path}`;
   };
 
   const handleUseClick = (sub: Subscription) => {

@@ -11,6 +11,7 @@ import { useState } from 'react';
 const { Title, Text } = Typography;
 
 export default function StoreOwnerDashboard() {
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   const [loading, setLoading] = useState(false);
 
   const handleDeleteStore = async () => {
@@ -28,7 +29,7 @@ export default function StoreOwnerDashboard() {
         try {
           setLoading(true);
           const token = localStorage.getItem('token');
-          const res = await fetch('http://localhost:3000/stores/my-store', {
+          const res = await fetch(`${BE_BASE_URL}/stores/my-store`, {
             method: 'DELETE',
             headers: {
               Authorization: `Bearer ${token}`,

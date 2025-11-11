@@ -29,6 +29,7 @@ export interface ReviewMedia {
   file: File;
   type?: 'image' | 'video'; // optional, backend tự detect
 }
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 /* ===================== API Calls ===================== */
 
@@ -39,7 +40,7 @@ export async function fetchProductReviews(
   pageSize = 5
 ) {
   const res = await fetch(
-    `http://localhost:3000/product-reviews/${productId}/reviews?page=${page}&pageSize=${pageSize}`
+    `${BE_BASE_URL}/product-reviews/${productId}/reviews?page=${page}&pageSize=${pageSize}`
   );
   if (!res.ok) throw new Error('Failed to fetch reviews');
   return res.json();
@@ -65,7 +66,7 @@ export async function createProductReview(
     });
   }
 
-  const res = await fetch('http://localhost:3000/product-reviews', {
+  const res = await fetch(`${BE_BASE_URL}/product-reviews`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -97,7 +98,7 @@ export async function updateProductReview(
     mediaFiles.forEach((file) => formData.append('media', file));
   }
 
-  const res = await fetch(`http://localhost:3000/product-reviews/${reviewId}`, {
+  const res = await fetch(`${BE_BASE_URL}/product-reviews/${reviewId}`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${token}`,

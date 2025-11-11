@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { API_BASE_URL } from '../../api/api';
+import { BE_BASE_URL } from '../../api/api';
 import { storeService } from '../../../service/store.service';
 import { StarFilled } from '@ant-design/icons';
 
@@ -307,11 +307,12 @@ function toAbs(p?: string) {
     const idx = s.toLowerCase().lastIndexOf('/uploads/');
     if (idx >= 0) s = s.slice(idx + 1);
   }
-  return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+  return `${BE_BASE_URL}/${s.replace(/^\/+/, '')}`;
 }
 
 async function defaultFetchStore(slug: string): Promise<StoreInfo> {
-  const res = await fetch(`http://localhost:3000/stores/slug/${slug}`);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+  const res = await fetch(`${BE_BASE_URL}/stores/slug/${slug}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
   return {

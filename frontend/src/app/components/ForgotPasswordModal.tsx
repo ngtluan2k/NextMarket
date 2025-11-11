@@ -7,11 +7,12 @@ type Props = {
   onClose: () => void;
   apiBase?: string;
 };
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export default function ForgotPasswordModal({
   open,
   onClose,
-  apiBase = "http://localhost:3000",
+  apiBase = `${BE_BASE_URL}`,
 }: Props) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState("");
