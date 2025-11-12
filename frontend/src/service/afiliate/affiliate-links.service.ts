@@ -187,8 +187,16 @@ export async function createLink(
     );
     return res.data;
   } catch (error: any) {
-    const status = error.response?.status || 'unknown';
-    throw new Error(`Tạo liên kết thất bại (${status})`);
+    const status = error.response?.status;
+    
+    // Handle rate limit specifically
+    if (status === 429) {
+      message.error('Bạn đã tạo quá nhiều liên kết! Vui lòng thử lại sau 1 phút.', 5);
+      throw new Error('RATE_LIMIT_EXCEEDED');
+    }
+    
+    // Handle other errors
+    throw new Error(`Tạo liên kết thất bại (${status || 'unknown'})`);
   }
 }
 

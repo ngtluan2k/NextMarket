@@ -48,6 +48,19 @@ export class AffiliateLinksService {
     if (programId) {
       program = await this.programRepo.findOne({ where: { id: programId } });
       if (!program) throw new NotFoundException('Program not found');
+
+      // 🚫 Prevent product from being associated with multiple programs
+      const conflict = await this.linkRepo
+        .createQueryBuilder('l')
+        .leftJoin('l.program_id', 'p')
+        .where('l.code LIKE :codePattern', { codePattern: `%:${productId}%` })
+        .andWhere('p.id IS NOT NULL')
+        .andWhere('p.id != :pid', { pid: programId })
+        .getCount();
+
+      if (conflict > 0) {
+        throw new ForbiddenException('This product already belongs to another affiliate program');
+      }
     }
 
     // code dạng: AFF:{userId}:{productId}:{variantId?}

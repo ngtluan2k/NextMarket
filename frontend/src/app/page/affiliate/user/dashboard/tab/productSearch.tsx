@@ -15,7 +15,10 @@ import {
   Modal,
   Select,
   Form,
-  Tooltip
+  Tooltip,
+  QRCode,
+  Alert,
+  Typography
 } from 'antd';
 import { Search, Plus, Link, Package, Store, Tag as TagIcon } from 'lucide-react';
 import { 
@@ -47,6 +50,11 @@ const ProductSearch = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductSearchResult | null>(null);
   const [programs, setPrograms] = useState<AffiliateProgram[]>([]);
   const [form] = Form.useForm();
+  
+  // QR sharing state
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [createdLink, setCreatedLink] = useState<string>('');
+  const [createdProduct, setCreatedProduct] = useState<ProductSearchResult | null>(null);
 
   useEffect(() => {
     fetchPrograms();
@@ -99,13 +107,41 @@ const ProductSearch = () => {
         programId: values.programId,
       };
 
-      await createAffiliateLink(payload);
+      const result = await createAffiliateLink(payload);
       message.success('Tạo liên kết affiliate thành công!');
+      
+      // Show QR sharing modal
+      setCreatedLink(result.affiliate_links);
+      setCreatedProduct(selectedProduct);
       setCreateLinkModal(false);
+      setShareModalVisible(true);
+      
       form.resetFields();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create affiliate link:', error);
-      message.error('Tạo liên kết thất bại');
+      
+      // Don't show additional error message if it's rate limit (already handled in service)
+      if (error.message !== 'RATE_LIMIT_EXCEEDED') {
+        message.error('Tạo liên kết thất bại');
+      }
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success('Đã sao chép liên kết!');
+    } catch (error) {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      message.success('Đã sao chép liên kết!');
     }
   };
 
@@ -401,6 +437,76 @@ const ProductSearch = () => {
           </div>
         </Card>
       )}
+
+      {/* QR Sharing Modal */}
+      <Modal
+        title="🎉 Liên kết affiliate đã tạo thành công!"
+        open={shareModalVisible}
+        onCancel={() => setShareModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setShareModalVisible(false)}>
+            Đóng
+          </Button>,
+          <Button 
+            key="copy" 
+            type="primary" 
+            onClick={() => copyToClipboard(createdLink)}
+          >
+            Sao chép liên kết
+          </Button>
+        ]}
+        width={600}
+      >
+        {createdProduct && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <Typography.Title level={4}>
+                {createdProduct.name}
+              </Typography.Title>
+              <Typography.Text type="secondary">
+                ID: {createdProduct.id} | Thương hiệu: {(createdProduct as any).brand || 'N/A'}
+              </Typography.Text>
+            </div>
+            
+            {/* QR Code */}
+            <div style={{ marginBottom: '20px' }}>
+              <QRCode
+                value={createdLink}
+                size={200}
+                style={{ margin: '0 auto' }}
+              />
+            </div>
+            
+            {/* Link Input */}
+            <div style={{ marginBottom: '10px' }}>
+              <Typography.Text strong>Liên kết affiliate của bạn:</Typography.Text>
+            </div>
+            <Input.TextArea
+              value={createdLink}
+              readOnly
+              rows={3}
+              style={{ 
+                fontFamily: 'monospace', 
+                fontSize: '12px',
+                marginBottom: '10px'
+              }}
+            />
+            
+            <Alert
+              message="Cách chia sẻ liên kết"
+              description={
+                <div>
+                  <p>• <strong>QR Code:</strong> Chụp ảnh màn hình hoặc lưu QR code để chia sẻ trực tiếp</p>
+                  <p>• <strong>Liên kết:</strong> Sao chép và chia sẻ qua tin nhắn, email, mạng xã hội</p>
+                  <p>• <strong>Hoa hồng:</strong> Bạn sẽ nhận được hoa hồng khi có người mua qua liên kết này</p>
+                </div>
+              }
+              type="success"
+              showIcon
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

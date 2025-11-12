@@ -16,6 +16,7 @@ import { BudgetTrackingService } from '../../affiliate-program/service/budget-tr
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { User } from '../../user/user.entity';
 import { AffiliateProgram } from '../../affiliate-program/affiliate-program.entity';
+import { AffiliateTreeService } from '../../affiliate-tree/affiliate-tree.service';
 
 @Injectable()
 export class CommissionCalcService {
@@ -30,6 +31,7 @@ export class CommissionCalcService {
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly budgetTrackingService: BudgetTrackingService,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly affiliateTreeService: AffiliateTreeService,
   ) {}
 
   // Hàm gọi khi đơn hàng chuyển sang PAID
@@ -144,6 +146,17 @@ export class CommissionCalcService {
         console.log(`✅ Budget check passed for program ${programId}`);
       }
 
+      // Determine maximum levels from active rule (default 1)
+      let maxLevels = 1;
+      try {
+        const ruleLevel1 = await this.rulesService.getActiveRule(programId, 1, new Date());
+        if (ruleLevel1 && (ruleLevel1 as any).rule?.num_levels) {
+          maxLevels = Number((ruleLevel1 as any).rule.num_levels) || 1;
+        }
+      } catch (err) {
+        console.warn('⚠️ Unable to fetch num_levels from rule, defaulting to 1');
+      }
+
       // Lấy các item đủ điều kiện
       const items = await this.orderItemRepo.find({
         where: { order: { id: order.id } },
@@ -167,17 +180,30 @@ export class CommissionCalcService {
 
         console.log(`💰 Processing item ${item.id} with base amount: ${baseAmount}`);
 
-        // Level 1 - wrap in try-catch for individual item error handling
+        // Allocate commission for Level 1 (người tạo link)
         try {
           await this.allocateLevel(order, item, level0UserId, 1, programId, linkId, baseAmount);
         } catch (error) {
-          console.error(`❌ Failed to allocate commission for item ${item.id}:`, error);
-          // Continue with other items even if one fails
+          console.error(`❌ Failed to allocate commission for item ${item.id} - level 1:`, error);
         }
 
-        // Có thể mở rộng cho Level 2..N:
-        // Với yêu cầu hiện tại (không MLM), bạn dừng ở Level 1.
-        // Nếu muốn đa cấp, thêm truy vấn sponsor/closure table để tìm ancestor & tăng level.
+        // === Allocate for higher levels (2..N) ===
+        if (maxLevels > 1) {
+          try {
+            const ancestors = await this.affiliateTreeService.findAncestors(level0UserId, maxLevels - 1);
+            for (let idx = 0; idx < ancestors.length && idx < maxLevels - 1; idx++) {
+              const beneficiaryId = ancestors[idx];
+              const level = idx + 2; // Level 2 bắt đầu từ ancestor đầu tiên
+              try {
+                await this.allocateLevel(order, item, beneficiaryId, level, programId, linkId, baseAmount);
+              } catch (err) {
+                console.error(`❌ Failed to allocate commission for item ${item.id} - level ${level}:`, err);
+              }
+            }
+          } catch (ancErr) {
+            console.error('❌ Error while fetching ancestors:', ancErr);
+          }
+        }
       }
       
       console.log(`✅ Commission calculation completed for order ${orderId}`);

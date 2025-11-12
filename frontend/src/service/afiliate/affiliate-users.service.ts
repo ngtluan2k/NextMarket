@@ -1,3 +1,4 @@
+import { message } from 'antd';
 import { api } from '../../config/api';
 import {
   AffiliateLink,
@@ -15,11 +16,19 @@ export const createAffiliateLink = async (
   payload: CreateAffiliateLinkPayload
 ): Promise<AffiliateLink> => {
   try {
-    const res = await api.post(`${API_BASE_URL}/create-link`, payload, {
+    const res = await api.post(`${API_BASE_URL}/affiliate-links/create-link`, payload, {
       headers: getAuthHeaders(),
     });
     return res.data;
-  } catch (error) {
+  } catch (error: any) {
+    const status = error.response?.status;
+    
+    // Handle rate limit specifically
+    if (status === 429) {
+      message.error('Bạn đã tạo quá nhiều liên kết! Vui lòng thử lại sau 1 phút.', 5);
+      throw new Error('RATE_LIMIT_EXCEEDED');
+    }
+    
     handleApiError(error);
     throw error;
   }

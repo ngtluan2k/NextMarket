@@ -60,6 +60,7 @@ import AdminCampaignStoreProductsWrapper from './components/admin/AdminCampaignS
 import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
+import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -214,6 +215,9 @@ const App: React.FC = () => {
               element={<GroupOrderDetail />}
             />
             <Route path="/group/:uuid" element={<GroupJoin />} />
+            
+            {/* Debug Routes */}
+            <Route path="/debug/affiliate-variant" element={<AffiliateVariantTest />} />
           </Routes>
           <CampaignAdPopup />
         </CartProvider>

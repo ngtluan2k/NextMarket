@@ -13,6 +13,9 @@ import {
   Divider,
   Alert,
   Select,
+  Modal,
+  QRCode,
+  Input,
 } from 'antd';
 import {
   AffiliatedProduct,
@@ -39,6 +42,11 @@ export default function AffiliateLinks() {
   const [productDetail, setProductDetail] = useState<Product | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
+
+  // sharing modal state
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [shareLink, setShareLink] = useState<string>('');
+  const [shareRecord, setShareRecord] = useState<MyLink | null>(null);
 
   // form tạo liên kết
   const [form] = Form.useForm<CreateLinkRequest>();
@@ -118,6 +126,17 @@ export default function AffiliateLinks() {
     window.open(href, '_blank', 'noopener,noreferrer');
   };
 
+  const handleShare = useCallback((record: MyLink) => {
+    const url = ensureUrl(record);
+    if (!url) {
+      msg.warning('Liên kết chưa sẵn sàng để chia sẻ');
+      return;
+    }
+    setShareLink(url);
+    setShareRecord(record);
+    setShareModalVisible(true);
+  }, [ensureUrl, msg]);
+
   const loadProducts = useCallback(async () => {
     try {
       const prods = await getAllProducts();
@@ -185,7 +204,10 @@ export default function AffiliateLinks() {
         }
         form.resetFields();
       } catch (e: any) {
-        msg.error(e?.message || 'Tạo liên kết thất bại');
+        // Don't show additional error message if it's rate limit (already handled in service)
+        if (e?.message !== 'RATE_LIMIT_EXCEEDED') {
+          msg.error(e?.message || 'Tạo liên kết thất bại');
+        }
       } finally {
         setLoading(false);
       }
@@ -260,6 +282,13 @@ export default function AffiliateLinks() {
         key: 'actions',
         render: (_: unknown, record: MyLink) => (
           <Space>
+            <Button 
+              type="default" 
+              onClick={() => handleShare(record)}
+              disabled={!ensureUrl(record)}
+            >
+              Chia sẻ QR
+            </Button>
             <Popconfirm
               title="Xóa liên kết tiếp thị này?"
               onConfirm={async () => {
@@ -278,7 +307,7 @@ export default function AffiliateLinks() {
         ),
       },
     ],
-    [copyToClipboard, deleteLink, ensureUrl, msg, refreshAll]
+    [copyToClipboard, deleteLink, ensureUrl, handleShare, msg, refreshAll]
   );
 
   const productsColumns = useMemo(
@@ -584,6 +613,78 @@ export default function AffiliateLinks() {
           },
         ]}
       />
+
+      {/* Sharing Modal with QR Code */}
+      <Modal
+        title="Chia sẻ liên kết affiliate"
+        open={shareModalVisible}
+        onCancel={() => setShareModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setShareModalVisible(false)}>
+            Đóng
+          </Button>,
+          <Button 
+            key="copy" 
+            type="primary" 
+            onClick={() => copyToClipboard(shareLink)}
+          >
+            Sao chép liên kết
+          </Button>
+        ]}
+        width={600}
+      >
+        {shareRecord && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <Text strong>Sản phẩm: </Text>
+              <Text>ID {shareRecord.productId}</Text>
+              {shareRecord.variantId && (
+                <>
+                  <Text strong> - Biến thể: </Text>
+                  <Text>{shareRecord.variantId}</Text>
+                </>
+              )}
+            </div>
+            
+            {/* QR Code */}
+            <div style={{ marginBottom: '20px' }}>
+              <QRCode
+                value={shareLink}
+                size={200}
+                style={{ margin: '0 auto' }}
+              />
+            </div>
+            
+            {/* Link Input */}
+            <div style={{ marginBottom: '10px' }}>
+              <Text strong>Liên kết affiliate:</Text>
+            </div>
+            <Input.TextArea
+              value={shareLink}
+              readOnly
+              rows={3}
+              style={{ 
+                fontFamily: 'monospace', 
+                fontSize: '12px',
+                marginBottom: '10px'
+              }}
+            />
+            
+            <Alert
+              message="Hướng dẫn chia sẻ"
+              description={
+                <div>
+                  <p>• <strong>QR Code:</strong> Chụp ảnh màn hình hoặc lưu QR code để chia sẻ trực tiếp</p>
+                  <p>• <strong>Liên kết:</strong> Sao chép và chia sẻ qua tin nhắn, email, mạng xã hội</p>
+                  <p>• Khi khách hàng mua qua liên kết này, bạn sẽ nhận được hoa hồng</p>
+                </div>
+              }
+              type="info"
+              showIcon
+            />
+          </div>
+        )}
+      </Modal>
     </>
   );
 }

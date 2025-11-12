@@ -73,10 +73,36 @@ export default function ProductDetailPage({ showMessage }: Props) {
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
+      // First check URL parameters (from affiliate links)
+      const urlParams = new URLSearchParams(location.search);
+      const variantFromUrl = urlParams.get('variant');
+      if (variantFromUrl) {
+        return Number(variantFromUrl);
+      }
+      
+      // Fallback to localStorage
       const stored = localStorage.getItem(`lastVariant_${slug}`);
       return stored ? Number(stored) : null;
     }
   );
+
+  // Effect to handle URL parameter changes (from affiliate links)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const variantFromUrl = urlParams.get('variant');
+    
+    if (variantFromUrl && product?.variants?.length) {
+      const variantId = Number(variantFromUrl);
+      const variantExists = product.variants.some(
+        (v: VariantInfo) => v.id === variantId
+      );
+      
+      if (variantExists && variantId !== selectedVariantId) {
+        setSelectedVariantId(variantId);
+        console.log('🔗 Variant selected from affiliate link:', variantId);
+      }
+    }
+  }, [location.search, product?.variants, selectedVariantId]);
 
   useEffect(() => {
     if (!product?.variants?.length) return;

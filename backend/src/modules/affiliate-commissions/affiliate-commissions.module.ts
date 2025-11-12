@@ -15,6 +15,7 @@ import { AffiliateRulesModule } from '../affiliate-rules/affiliate-rules.module'
 import { AffiliateFraudModule } from '../affiliate-fraud/affiliate-fraud.module';
 import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AffiliateTreeModule } from '../affiliate-tree/affiliate-tree.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     AffiliateFraudModule,
     AffiliateProgramsModule,
     NotificationsModule,
+    AffiliateTreeModule,
   ],
   controllers: [AffiliateCommissionsController],
   providers: [AffiliateCommissionsService, CommissionCalcService, CommissionRevesalService],

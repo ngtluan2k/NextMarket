@@ -1,6 +1,6 @@
 // modules/affiliate-links/affiliate-links.controller.ts
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Request, UseGuards } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { AffiliateLinksService } from './affiliate-links.service';
 
@@ -9,44 +9,51 @@ interface AuthRequest extends Request {
 }
 
 @Controller('affiliate-links')
-@UseGuards(JwtAuthGuard)
 export class AffiliateLinksController {
   constructor(private readonly service: AffiliateLinksService) {}
 
   @Post('create-link')
+  @UseGuards(JwtAuthGuard, ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // Limit: max 5 link creations per 60 seconds per user
   async createAffiliateLink(
     @Request() req: AuthRequest,
     @Body() body: { productId: number; variantId?: number; programId?: number },
   ) {
     const userId = req.user.userId;
+    console.log(`[THROTTLE] User ${userId} attempting to create affiliate link`);
     return this.service.createAffiliateLink(userId, body.productId, body.variantId, body.programId);
   }
 
   @Get('my-links')
+  @UseGuards(JwtAuthGuard)
   async getMyLinks(@Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.getMyLinks(userId);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   async deleteMyLink(@Param('id', ParseIntPipe) id: number, @Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.deleteMyLink(id, userId);
   }
 
   @Get('affiliated-products')
+  @UseGuards(JwtAuthGuard)
   async getAffiliatedProducts(@Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.getAffiliatedProducts(userId);
   }
 
   @Get('dashboard-stats')
+  @UseGuards(JwtAuthGuard)
   async getDashboardStats(@Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.getDashboardStats(userId);
   }
 
   @Get('commission-history')
+  @UseGuards(JwtAuthGuard)
   async getCommissionHistory(
     @Request() req: AuthRequest,
     @Query('page') page?: number,
@@ -57,6 +64,7 @@ export class AffiliateLinksController {
   }
 
   @Get('commission-summary')
+  @UseGuards(JwtAuthGuard)
   async getCommissionSummary(
     @Request() req: AuthRequest,
     @Query('period') period?: 'daily' | 'weekly' | 'monthly',
@@ -67,12 +75,14 @@ export class AffiliateLinksController {
   }
 
   @Get('balance')
+  @UseGuards(JwtAuthGuard)
   async getBalance(@Request() req: AuthRequest) {
     const userId = req.user.userId;
     return this.service.getAvailableBalance(userId);
   }
 
   @Get('search-products')
+  @UseGuards(JwtAuthGuard)
   async searchProducts(
     @Request() req: AuthRequest,
     @Query('search') search: string,
