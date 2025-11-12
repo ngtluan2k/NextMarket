@@ -13,7 +13,7 @@ export class WalletTransaction {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', unique: true })
+  @Column({ type: 'varchar', unique: true , nullable:false , default: () => 'gen_random_uuid()'})
   uuid!: string;
 
   @ManyToOne(() => Wallet, (wallet) => wallet.transactions)

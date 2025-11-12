@@ -7,8 +7,9 @@ import {
   Users,
   TrendingUp,
   Link,
+  Bell,
 } from 'lucide-react';
-import { Button, Spin } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { Card } from 'antd';
 import { WalletTransactionHistory } from '../../../../../components/affiliate/dashboard/WalletTransactionHistory';
 import { 
@@ -17,71 +18,115 @@ import {
 } from "../../../../../../service/afiliate/affiliate-links.service";
 import { fetchMyWallet } from '../../../../../../service/wallet.service';
 import { BalanceInfo, DashboardStats } from '../../../../../types/affiliate-links';
+import { useNotifications } from '../../../../../../hooks/useNotificationSocket';
+import { NotificationType } from '../../../../../../service/notification-socket.service';
+import { useAuth } from '../../../../../context/AuthContext';
 
 export function AffiliateDashboard() {
+  const { me } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [dashboardData, balanceData, wallet] = await Promise.all([
-          getDashboardStats(),
-          getBalance(),
-          fetchMyWallet()
-        ]);
+  // Setup notification handlers for real-time updates
+  useNotifications(me?.id || null, {
+    handlers: {
+      [NotificationType.COMMISSION_EARNED]: (data) => {
+        console.log('💰 Commission earned notification received:', data);
         
-        console.log('🔍 Dashboard data received:', {
-          dashboardData,
-          balanceData,
-          wallet
+        // Show success message
+        message.success({
+          content: `🎉 Bạn vừa nhận ${data.amount?.toLocaleString('vi-VN')} VND hoa hồng từ đơn hàng ${data.orderNumber}!`,
+          duration: 5,
         });
         
-        setStats(dashboardData);
-        setBalance(balanceData);
-        setWalletBalance(wallet.balance || 0);
-        setError(null);
-      } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
-        setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
-      } finally {
-        setLoading(false);
-      }
-    };
+        // Refresh dashboard data
+        refreshData();
+      },
+      
+      [NotificationType.COMMISSION_PAID]: (data) => {
+        console.log('💵 Commission paid notification received:', data);
+        
+        message.success({
+          content: `💰 ${data.amount?.toLocaleString('vi-VN')} VND đã được cộng vào ví của bạn!`,
+          duration: 4,
+        });
+        
+        // Refresh dashboard data
+        refreshData();
+      },
+      
+      [NotificationType.COMMISSION_REVERSED]: (data) => {
+        console.log('⚠️ Commission reversed notification received:', data);
+        
+        message.warning({
+          content: `⚠️ Hoa hồng ${data.amount?.toLocaleString('vi-VN')} VND từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
+          duration: 6,
+        });
+        
+        // Refresh dashboard data
+        refreshData();
+      },
+    },
+    
+    onNotification: (notification) => {
+      console.log('🔔 Dashboard received notification:', notification.type, notification);
+    },
+  });
 
+  // Function to fetch/refresh dashboard data
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [dashboardData, balanceData, wallet] = await Promise.all([
+        getDashboardStats(),
+        getBalance(),
+        fetchMyWallet()
+      ]);
+      
+      console.log('🔍 Dashboard data received:', {
+        dashboardData,
+        balanceData,
+        wallet
+      });
+      
+      setStats(dashboardData);
+      setBalance(balanceData);
+      setWalletBalance(wallet.balance || 0);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+      setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to refresh data (for notifications)
+  const refreshData = async () => {
+    try {
+      console.log('🔄 Refreshing dashboard data due to notification...');
+      const [dashboardData, balanceData, wallet] = await Promise.all([
+        getDashboardStats(),
+        getBalance(),
+        fetchMyWallet()
+      ]);
+      
+      setStats(dashboardData);
+      setBalance(balanceData);
+      setWalletBalance(wallet.balance || 0);
+      setError(null);
+      
+      console.log('✅ Dashboard data refreshed successfully');
+    } catch (error) {
+      console.error('Failed to refresh dashboard data:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-
-    // Listen for commission events to refresh dashboard
-    const handleCommissionEarned = () => {
-      console.log('💰 Commission earned - refreshing dashboard...');
-      fetchData();
-    };
-
-    const handleCommissionPaid = () => {
-      console.log('💵 Commission paid - refreshing dashboard...');
-      fetchData();
-    };
-
-    const handleCommissionReversed = () => {
-      console.log('⚠️ Commission reversed - refreshing dashboard...');
-      fetchData();
-    };
-
-    // Add event listeners
-    window.addEventListener('commission-earned', handleCommissionEarned);
-    window.addEventListener('commission-paid', handleCommissionPaid);
-    window.addEventListener('commission-reversed', handleCommissionReversed);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('commission-earned', handleCommissionEarned);
-      window.removeEventListener('commission-paid', handleCommissionPaid);
-      window.removeEventListener('commission-reversed', handleCommissionReversed);
-    };
   }, []);
 
   const displayStats = [

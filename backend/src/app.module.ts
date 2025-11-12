@@ -100,7 +100,7 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: false,
+        synchronize: true,
         logging: true,
         ssl: true,
       }),

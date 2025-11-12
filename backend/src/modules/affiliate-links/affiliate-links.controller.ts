@@ -21,7 +21,17 @@ export class AffiliateLinksController {
   ) {
     const userId = req.user.userId;
     console.log(`[THROTTLE] User ${userId} attempting to create affiliate link`);
-    return this.service.createAffiliateLink(userId, body.productId, body.variantId, body.programId);
+    console.log(`[DEBUG] Request body:`, body);
+    console.log(`[DEBUG] User from JWT:`, req.user);
+    
+    try {
+      const result = await this.service.createAffiliateLink(userId, body.productId, body.variantId, body.programId);
+      console.log(`[SUCCESS] Affiliate link created successfully for user ${userId}`);
+      return result;
+    } catch (error: any) {
+      console.log(`[ERROR] Failed to create affiliate link for user ${userId}:`, error.message);
+      throw error;
+    }
   }
 
   @Get('my-links')

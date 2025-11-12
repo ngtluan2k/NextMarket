@@ -18,6 +18,7 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { approveRegistration, getAffiliateRegistrations, rejectRegistration } from '../../../../service/afiliate/affiliate-registration.service';
+import axios from 'axios';
 
 interface AffiliateRegistration {
   createdAt: string | number | Date;
@@ -41,13 +42,13 @@ const AffiliateRegistrationManager: React.FC = () => {
     useState<AffiliateRegistration | null>(null);
   const token = localStorage.getItem('token');
 
-  const apiClient = axios.create({
-    baseURL: `${BE_BASE_URL}`, // chỉnh lại theo BE thật
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  // const apiClient = axios.create({
+  //   baseURL: `${BE_BASE_URL}`, // chỉnh lại theo BE thật
+  //   headers: {
+  //     Authorization: `Bearer ${token}`,
+  //     'Content-Type': 'application/json',
+  //   },
+  // });
 
   useEffect(() => {
     fetchRegistrations();

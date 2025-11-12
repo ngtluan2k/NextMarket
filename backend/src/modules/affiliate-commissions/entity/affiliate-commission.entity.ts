@@ -14,21 +14,25 @@ export class AffiliateCommission {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', unique: true })
+  @Column({ unique: true, nullable: false, default: () => 'gen_random_uuid()' })
   uuid!: string;
 
-  @ManyToOne(() => AffiliateLink, (link) => link.commissions, { nullable: true })
+  @ManyToOne(() => AffiliateLink, (link) => link.commissions, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'link_id' })
   link_id?: AffiliateLink;
 
-  @ManyToOne(() => OrderItem, (orderItem) => orderItem.commissions, { nullable: true })
+  @ManyToOne(() => OrderItem, (orderItem) => orderItem.commissions, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'order_item_id' })
   order_item_id?: OrderItem;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount!: number;
 
-  @Column({ type: 'enum', enum: ['PENDING', 'PAID', 'REVERSED', 'VOIDED'] })
+  @Column({ type: 'enum', enum: ['PENDING', 'PAID', 'REVERSED', 'VOIDED'], default: 'PENDING' })
   status!: string;
 
   @Column({ type: 'timestamp' })
@@ -56,19 +60,15 @@ export class AffiliateCommission {
   @Column({ type: 'int', nullable: true })
   program_id!: number | null;
 
-
-  
   @Column({ type: 'decimal', nullable: true })
   reversed_amount?: number; // Số tiền đã reverse
-  
+
   @Column({ type: 'timestamp', nullable: true })
   reversed_at?: Date;
-  
+
   @Column({ type: 'varchar', nullable: true })
   reversal_reason?: string; // REFUND, CANCEL, RETURN
-  
+
   @Column({ type: 'int', nullable: true })
   related_order_id?: number; // Order gốc
-
-
 }

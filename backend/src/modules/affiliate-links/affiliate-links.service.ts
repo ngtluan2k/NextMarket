@@ -9,7 +9,6 @@ import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity'
 import { Product } from '../product/product.entity';
 import { User } from '../user/user.entity';
 import { WalletService } from '../wallet/wallet.service';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AffiliateLinksService {
@@ -24,8 +23,15 @@ export class AffiliateLinksService {
   ) {}
 
   async createAffiliateLink(userId: number, productId: number, variantId?: number, programId?: number) {
+    console.log(`[DEBUG] Creating affiliate link for user ${userId}, product ${productId}, variant ${variantId}, program ${programId}`);
+    
     const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {
+      console.log(`[ERROR] User ${userId} not found`);
+      throw new NotFoundException('User not found');
+    }
+    
+    console.log(`[DEBUG] User found: ${user.email}, is_affiliate: ${(user as any).is_affiliate}, code: ${(user as any).code}`);
     
     // Auto-enable affiliate status and generate code if not exists
     if (!(user as any).is_affiliate || !(user as any).code) {
@@ -49,17 +55,38 @@ export class AffiliateLinksService {
       program = await this.programRepo.findOne({ where: { id: programId } });
       if (!program) throw new NotFoundException('Program not found');
 
-      // 🚫 Prevent product from being associated with multiple programs
-      const conflict = await this.linkRepo
-        .createQueryBuilder('l')
-        .leftJoin('l.program_id', 'p')
-        .where('l.code LIKE :codePattern', { codePattern: `%:${productId}%` })
-        .andWhere('p.id IS NOT NULL')
-        .andWhere('p.id != :pid', { pid: programId })
-        .getCount();
+      // 🚫 Prevent variant from being associated with multiple programs (if variantId is provided)
+      if (variantId) {
+        console.log(`[DEBUG] Checking conflict for variant ${variantId} of product ${productId} with program ${programId}`);
+        const variantConflict = await this.linkRepo
+          .createQueryBuilder('l')
+          .leftJoin('l.program_id', 'p')
+          .where('l.code LIKE :variantPattern', { variantPattern: `%:${productId}:${variantId}` })
+          .andWhere('p.id IS NOT NULL')
+          .andWhere('p.id != :pid', { pid: programId })
+          .getCount();
 
-      if (conflict > 0) {
-        throw new ForbiddenException('This product already belongs to another affiliate program');
+        console.log(`[DEBUG] Variant conflict count: ${variantConflict}`);
+        if (variantConflict > 0) {
+          console.log(`[ERROR] Variant ${variantId} of product ${productId} already belongs to another affiliate program`);
+          throw new ForbiddenException(`Biến thể này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể khác hoặc liên hệ admin.`);
+        }
+      } else {
+        // For products without variant, check if any variant of this product is already in another program
+        console.log(`[DEBUG] Checking conflict for product ${productId} (no variant) with program ${programId}`);
+        const productConflict = await this.linkRepo
+          .createQueryBuilder('l')
+          .leftJoin('l.program_id', 'p')
+          .where('l.code LIKE :productPattern', { productPattern: `%:${productId}:%` })
+          .andWhere('p.id IS NOT NULL')
+          .andWhere('p.id != :pid', { pid: programId })
+          .getCount();
+
+        console.log(`[DEBUG] Product conflict count: ${productConflict}`);
+        if (productConflict > 0) {
+          console.log(`[ERROR] Some variants of product ${productId} already belong to another affiliate program`);
+          throw new ForbiddenException(`Một số biến thể của sản phẩm này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể cụ thể hoặc liên hệ admin.`);
+        }
       }
     }
 
@@ -68,18 +95,39 @@ export class AffiliateLinksService {
     const code = `AFF:${userId}:${productId}${variantId ? `:${variantId}` : ''}`;
 
     // kiểm tra duplicate theo user + code
-    const existed = await this.linkRepo.findOne({ where: { code, user_id: { id: userId } as any } });
-    const saved =
-      existed ??
-      (await this.linkRepo.save(
-        this.linkRepo.create({
-          uuid: uuidv4(),
-          user_id: user as any,
-          program_id: program ?? null,
-          code,
-          created_at: new Date(),
-        } as any),
-      ));
+    console.log(`[DEBUG] Checking for existing link with code: ${code}`);
+    const existed = await this.linkRepo.findOne({ 
+      where: { 
+        code, 
+        user_id: { id: userId } 
+      },
+      relations: ['user_id', 'program_id']
+    });
+    
+    console.log(`[DEBUG] Existing link found: ${existed ? 'YES' : 'NO'}`);
+    
+    let saved;
+    if (existed) {
+      saved = existed;
+      console.log(`[DEBUG] Using existing link with ID: ${existed.id}`);
+      console.log(`[INFO] Link affiliate cho sản phẩm này đã tồn tại, trả về link cũ`);
+    } else {
+      console.log(`[DEBUG] Creating new affiliate link...`);
+      try {
+        saved = await this.linkRepo.save(
+          this.linkRepo.create({
+            user_id: user,
+            program_id: program || undefined,
+            code,
+            created_at: new Date(),
+          }),
+        );
+        console.log(`[DEBUG] Successfully created link with ID: ${saved.id}`);
+      } catch (error) {
+        console.log(`[ERROR] Failed to create affiliate link:`, error);
+        throw error;
+      }
+    }
 
     // Trả về URL theo origin production của bạn, frontend có thể normalize
     const affiliate_link = `https://everymart.com/product/${productId}?aff=${user.code}${
@@ -97,7 +145,7 @@ export class AffiliateLinksService {
 
   async getMyLinks(userId: number) {
     const links = await this.linkRepo.find({
-      where: { user_id: { id: userId } as any },
+      where: { user_id: { id: userId } },
       relations: ['program_id', 'user_id'],
       order: { created_at: 'DESC' },
     });
@@ -130,7 +178,7 @@ export class AffiliateLinksService {
   async deleteMyLink(linkId: number, userId: number) {
     const link = await this.linkRepo.findOne({ where: { id: linkId }, relations: ['user_id'] });
     if (!link) throw new NotFoundException('Affiliate link not found');
-    if ((link as any).user_id?.id !== userId) throw new ForbiddenException('Not allowed');
+    if ((link as any).user_id?.id !== userId) throw new ForbiddenException('Bạn không có quyền xóa link affiliate này. Chỉ có thể xóa link do chính bạn tạo.');
 
     // Xoá commissions liên quan link (nếu cần)
     await this.commRepo.delete({ link_id: { id: linkId } as any });
