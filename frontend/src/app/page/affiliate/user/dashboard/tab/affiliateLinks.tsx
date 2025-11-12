@@ -429,14 +429,20 @@ export default function AffiliateLinks() {
             rules={[{ required: true, message: 'Vui lòng chọn một chương trình' }]}
           >
             <Select
-              placeholder="Chọn chương trình"
+              placeholder={programs.length === 0 ? "Không có chương trình khả dụng" : "Chọn chương trình"}
               style={{ minWidth: 220 }}
               loading={loading && programs.length === 0}
+              disabled={programs.length === 0}
               options={programs.map((p) => ({
                 value: p.id,
                 label: p.name + (p.status ? ` (${p.status})` : ''),
               }))}
             />
+            {programs.length === 0 && !loading && (
+              <div style={{ marginTop: '8px', color: '#ff7875', fontSize: '12px' }}>
+                Hiện tại không có chương trình affiliate nào có quy tắc hoa hồng. Vui lòng liên hệ admin để thiết lập.
+              </div>
+            )}
           </Form.Item>
 
           <Form.Item

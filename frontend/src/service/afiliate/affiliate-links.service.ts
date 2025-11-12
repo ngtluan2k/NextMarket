@@ -148,7 +148,7 @@ export async function getMyAffiliatedProducts():Promise<AffiliatedProduct[]>{
 
 export async function getPrograms(): Promise<Program[]> {
   const tryEndpoints = [
-    `${API_BASE_URL}/affiliate-programs`,
+    `${API_BASE_URL}/affiliate-programs/active/with-rules`,
   ];
   
   for (const url of tryEndpoints) {

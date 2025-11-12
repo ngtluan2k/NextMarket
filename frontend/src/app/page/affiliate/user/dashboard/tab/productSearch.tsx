@@ -28,7 +28,7 @@ import {
   createAffiliateLink
 } from '../../../../../../service/afiliate/affiliate-users.service';
 import { CreateLinkRequest, ProductSearchResponse, ProductSearchResult } from '../../../../../types/affiliate-links';
-import { getAllAffiliatePrograms } from '../../../../../../service/afiliate/affiliate.service';
+import { getAffiliateProgramsWithRules } from '../../../../../../service/afiliate/affiliate.service';
 
 const { Search: SearchInput } = Input;
 const { Option } = Select;
@@ -62,7 +62,7 @@ const ProductSearch = () => {
 
   const fetchPrograms = async () => {
     try {
-      const data = await getAllAffiliatePrograms();
+      const data = await getAffiliateProgramsWithRules();
       setPrograms(data);
     } catch (error) {
       console.error('Failed to fetch programs:', error);
@@ -384,13 +384,21 @@ const ProductSearch = () => {
                 name="programId"
                 rules={[{ required: true, message: 'Vui lòng chọn chương trình' }]}
               >
-                <Select placeholder="Chọn chương trình">
+                <Select 
+                  placeholder={programs.length === 0 ? "Không có chương trình khả dụng" : "Chọn chương trình"}
+                  disabled={programs.length === 0}
+                >
                   {programs.map((program) => (
                     <Option key={program.id} value={program.id}>
                       {program.name} ({program.commission_value}%)
                     </Option>
                   ))}
                 </Select>
+                {programs.length === 0 && (
+                  <div style={{ marginTop: '8px', color: '#ff7875', fontSize: '12px' }}>
+                    Hiện tại không có chương trình affiliate nào có quy tắc hoa hồng. Vui lòng liên hệ admin để thiết lập.
+                  </div>
+                )}
               </Form.Item>
 
               {selectedProduct.variants.length > 0 && (

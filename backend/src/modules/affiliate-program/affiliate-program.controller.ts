@@ -65,6 +65,12 @@ export class AffiliateProgramsController {
     return this.service.findAllActiveWithUserCounts();
   }
 
+  @Get('active/with-rules')
+  @ApiOperation({ summary: 'Get all active affiliate programs that have commission rules' })
+  findAllActiveWithRules() {
+    return this.service.findAllActiveWithRules();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get an affiliate program by ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {

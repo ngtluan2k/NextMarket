@@ -57,6 +57,15 @@ export async function getAllAffiliateProgramsBasic() {
   }
 }
 
+export async function getAffiliateProgramsWithRules() {
+  try {
+    const res = await axios.get(`${API_BASE_URL}/affiliate-programs/active/with-rules`);
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 export async function updateAffiliateProgram(
   programId: number,
   programData: Partial<AffiliateProgram>

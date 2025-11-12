@@ -328,6 +328,7 @@ export default function AffiliateRulesManager() {
 
   const [treeUserEmail, setTreeUserEmail] = useState<string>('');
   const [treeData, setTreeData] = useState<any[]>([]);
+  const [treeExpansionKeys, setTreeExpansionKeys] = useState<React.Key[]>([]);
   const [commissionData, setCommissionData] = useState<any>(null);
   const [showCommissions, setShowCommissions] = useState<boolean>(true);
   const [treeLoading, setTreeLoading] = useState<boolean>(false);
@@ -368,6 +369,7 @@ export default function AffiliateRulesManager() {
   const loadTreeWithUserSelect = useCallback(async () => {
     if (!treeUserEmail.trim()) {
       setTreeData([]);
+      setTreeExpansionKeys([]);
       setCommissionData(null);
       return;
     }
@@ -463,33 +465,27 @@ export default function AffiliateRulesManager() {
         const buildDescendantsTree = (descendants: any[]): any[] => {
           if (!descendants || descendants.length === 0) return [];
           
-          // Group descendants by level
+          // Group descendants by level (relative to searched user)
           const byLevel: { [key: number]: any[] } = {};
           descendants.forEach(node => {
-            if (!byLevel[node.level]) byLevel[node.level] = [];
-            byLevel[node.level].push(node);
+            const relativeLevel = Math.abs(node.level); // Level relative to searched user
+            if (!byLevel[relativeLevel]) byLevel[relativeLevel] = [];
+            byLevel[relativeLevel].push(node);
           });
           
-          // Sort levels descending (deepest first)
-          const levels = Object.keys(byLevel).map(Number).sort((a, b) => b - a);
+          // Sort levels ascending (closest to searched user first)
+          const levels = Object.keys(byLevel).map(Number).sort((a, b) => a - b);
           
-          // Build tree from bottom to top
-          let currentLevelNodes: any[] = [];
-          
-          for (const level of levels) {
-            const nodesAtLevel = byLevel[level];
-            const newNodes = nodesAtLevel.map((node, idx) => ({
+          // Build direct children (level 1 descendants)
+          if (levels.length > 0 && byLevel[levels[0]]) {
+            return byLevel[levels[0]].map((node, idx) => ({
               title: renderNodeTitle(node),
-              key: `${node.userId}-level-${level}-${idx}`,
-              children: currentLevelNodes.filter(child => {
-                // This is a simplified approach - in real scenario you'd need parent-child relationship
-                return true; // For now, attach all children from deeper level
-              })
+              key: `descendant-${node.userId}-${idx}`,
+              children: [] // For now, only show direct children
             }));
-            currentLevelNodes = newNodes;
           }
           
-          return currentLevelNodes;
+          return [];
         };
 
         // Sắp xếp ancestors từ root → searched user (đảo ngược mảng)
@@ -584,7 +580,28 @@ export default function AffiliateRulesManager() {
           treeStructure = searchedUserNode;
         }
 
+        // Collect all keys for auto-expansion (show full path from root to searched user)
+        const expansionKeys: string[] = [];
+        
+        // Add all ancestor keys to expansion
+        sortedAncestors.forEach((ancestor, idx) => {
+          expansionKeys.push(`ancestor-${ancestor.userId}-${idx}`);
+        });
+        
+        // Add searched user key
+        expansionKeys.push(`searched-${data.rootUser.userId}`);
+        
+        // Add descendant keys if any
+        data.descendants.forEach((desc: any, idx: number) => {
+          if (Math.abs(desc.level) === 1) { // Only direct children
+            expansionKeys.push(`descendant-${desc.userId}-${idx}`);
+          }
+        });
+
+        console.log('🔍 Auto-expanding keys:', expansionKeys);
+
         setTreeData([treeStructure]);
+        setTreeExpansionKeys(expansionKeys);
 
         setCommissionData(data);
         if (data.rootUser) {
@@ -758,6 +775,7 @@ export default function AffiliateRulesManager() {
                       showCommissions={showCommissions}
                       commissionData={commissionData}
                       onUserSelect={handleUserSelect}
+                      expandedKeys={treeExpansionKeys}
                     />
                   </Card>
                 </div>

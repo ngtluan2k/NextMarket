@@ -110,6 +110,18 @@ export class AffiliateProgramsService {
     return programsWithCounts;
   }
 
+  async findAllActiveWithRules(): Promise<AffiliateProgram[]> {
+    // Get all active programs that have at least one commission rule
+    const programsWithRules = await this.repository
+      .createQueryBuilder('program')
+      .innerJoin('affiliate_rules', 'rule', 'rule.program_id = CAST(program.id AS VARCHAR)')
+      .where('program.status = :status', { status: 'active' })
+      .groupBy('program.id')
+      .getMany();
+    
+    return programsWithRules;
+  }
+
   async findOne(id: number): Promise<AffiliateProgram> {
     const program = await this.repository.findOneBy({ id });
     if (!program) {

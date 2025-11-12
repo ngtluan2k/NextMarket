@@ -13,13 +13,23 @@ import { AffiliateTreeNode, CommissionInfo } from '../../../types/affiliate-tree
     descendants: AffiliateTreeNode[];
   };
   onUserSelect?: (userId: number, commissionInfo?: CommissionInfo) => void;
+  expandedKeys?: React.Key[];
 }
 
-const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = false, commissionData, onUserSelect }: Props) => {
+const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = false, commissionData, onUserSelect, expandedKeys: propExpandedKeys }: Props) => {
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>(['0-0-0', '0-0-1']);
   const [checkedKeys, setCheckedKeys] = useState<React.Key[]>(['0-0-0']);
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState<boolean>(true);
+
+  // Update expanded keys when prop changes
+  React.useEffect(() => {
+    if (propExpandedKeys && propExpandedKeys.length > 0) {
+      console.log('🔍 Setting expanded keys from props:', propExpandedKeys);
+      setExpandedKeys(propExpandedKeys);
+      setAutoExpandParent(true);
+    }
+  }, [propExpandedKeys]);
 
   const onExpand: TreeProps['onExpand'] = (expandedKeysValue) => {
     console.log('onExpand', expandedKeysValue);
