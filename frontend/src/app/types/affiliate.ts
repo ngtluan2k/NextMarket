@@ -8,6 +8,8 @@ export interface AffiliateProgram {
   status: 'active' | 'inactive' | 'paused';
   created_at: string;
   user_enrolled: number;
+  avg_revenue?: number;
+  avg_commission?: number;
   
   // Budget fields
   total_budget_amount?: number;

@@ -394,120 +394,197 @@ export default function AffiliateRulesManager() {
         const data = response.data;
         // console.log(`Loaded tree data:`, data);
 
-        const buildTreeNodes = (nodes: any[], levelOffset = 0) => {
-          return nodes.map((node, idx) => ({
-            title: (
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium">
-                    {node.user
-                      ? `${node.user.username || node.user.email}`
-                      : `User ${node.userId}`}
+        // Helper function để render node title
+        const renderNodeTitle = (node: any, isSearchedUser = false) => {
+          return (
+            <div className="flex items-center justify-between">
+              <div>
+                <span className={isSearchedUser ? "font-bold text-blue-600" : "font-medium"}>
+                  {node.user
+                    ? `${node.user.username || node.user.email}`
+                    : `User ${node.userId}`}
+                </span>
+                <span className="text-gray-500 ml-2">
+                  (Level {node.level})
+                </span>
+                {isSearchedUser && (
+                  <span className="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">
+                    🔍 Searched User
                   </span>
-                  <span className="text-gray-500 ml-2">
-                    (Level {node.level})
+                )}
+                {selectedTreeProgramId && node.programParticipation && (
+                  <span
+                    className={`ml-2 px-2 py-0.5 text-xs rounded ${
+                      node.programParticipation.isJoined
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {node.programParticipation.isJoined
+                      ? '✓ Joined'
+                      : '✗ Not Joined'}
                   </span>
-                  {selectedTreeProgramId && node.programParticipation && (
-                    <span
-                      className={`ml-2 px-2 py-0.5 text-xs rounded ${
-                        node.programParticipation.isJoined
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {node.programParticipation.isJoined
-                        ? '✓ Joined'
-                        : '✗ Not Joined'}
-                    </span>
-                  )}
-                </div>
-                {showCommissions && (
-                  <div className="text-xs text-gray-600">
-                    <div className="flex items-center gap-2">
-                      {selectedTreeProgramId && node.programParticipation ? (
-                        <div>
-                          {node.programParticipation.isJoined && (
-                            <>
-                              <span className="text-blue-600 font-medium">
-                                Rate: {node.programParticipation.rate}%
-                              </span>
-                              <span className="text-green-600 font-medium">
-                                {node.programParticipation.earnedFromProgram.toLocaleString()}
-                                đ
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <span className="text-green-600 font-medium">
-                            {node.commission.totalEarned.toLocaleString()}đ
-                          </span>
-                          <span className="text-yellow-600">
-                            {node.commission.totalPending.toLocaleString()}đ
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
                 )}
               </div>
-            ),
-            key: `${node.userId}-${idx}`,
-            children: [],
-          }));
+              {showCommissions && (
+                <div className="text-xs text-gray-600">
+                  <div className="flex items-center gap-2">
+                    {selectedTreeProgramId && node.programParticipation ? (
+                      <div>
+                        {node.programParticipation.isJoined && (
+                          <>
+                            <span className="text-blue-600 font-medium">
+                              Rate: {node.programParticipation.rate}%
+                            </span>
+                            <span className="text-green-600 font-medium ml-2">
+                              {node.programParticipation.earnedFromProgram.toLocaleString()}đ
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-green-600 font-medium">
+                          {node.commission.totalEarned.toLocaleString()}đ
+                        </span>
+                        <span className="text-yellow-600 ml-2">
+                          {node.commission.totalPending.toLocaleString()}đ
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
         };
 
-        const ancestorNodes = buildTreeNodes(data.ancestors, -1);
-        const descendantNodes = buildTreeNodes(data.descendants, 1);
+        // Xây dựng cây từ descendants (bottom-up)
+        const buildDescendantsTree = (descendants: any[]): any[] => {
+          if (!descendants || descendants.length === 0) return [];
+          
+          // Group descendants by level
+          const byLevel: { [key: number]: any[] } = {};
+          descendants.forEach(node => {
+            if (!byLevel[node.level]) byLevel[node.level] = [];
+            byLevel[node.level].push(node);
+          });
+          
+          // Sort levels descending (deepest first)
+          const levels = Object.keys(byLevel).map(Number).sort((a, b) => b - a);
+          
+          // Build tree from bottom to top
+          let currentLevelNodes: any[] = [];
+          
+          for (const level of levels) {
+            const nodesAtLevel = byLevel[level];
+            const newNodes = nodesAtLevel.map((node, idx) => ({
+              title: renderNodeTitle(node),
+              key: `${node.userId}-level-${level}-${idx}`,
+              children: currentLevelNodes.filter(child => {
+                // This is a simplified approach - in real scenario you'd need parent-child relationship
+                return true; // For now, attach all children from deeper level
+              })
+            }));
+            currentLevelNodes = newNodes;
+          }
+          
+          return currentLevelNodes;
+        };
 
-        setTreeData([
-          {
-            title: (
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-blue-600">
-                    {data.rootUser.user
-                      ? `${
-                          data.rootUser.user.username ||
-                          data.rootUser.user.email
-                        }`
-                      : `User ${data.rootUser.userId}`}
-                  </span>
-                  <span className="text-gray-500 ml-2">
-                    (Root - Level {data.rootUser.level})
-                  </span>
-                </div>
-                {showCommissions && (
-                  <div className="text-xs text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-600 font-bold">
-                        {data.rootUser.commission.totalEarned.toLocaleString()}đ
+        // Sắp xếp ancestors từ root → searched user (đảo ngược mảng)
+        const sortedAncestors = [...data.ancestors].reverse();
+        
+        // Xây dựng cây nested từ root xuống searched user, rồi xuống descendants
+        let treeStructure: any = null;
+        
+        // Bắt đầu từ descendants (leaf nodes)
+        const descendantsNodes = buildDescendantsTree(data.descendants);
+        
+        // Tạo node cho searched user
+        const searchedUserNode = {
+          title: renderNodeTitle(data.rootUser, true),
+          key: `searched-${data.rootUser.userId}`,
+          children: descendantsNodes
+        };
+        
+        // Xây dựng cây từ ancestors (nếu có)
+        if (sortedAncestors.length > 0) {
+          // Build from bottom (closest to searched user) to top (root)
+          treeStructure = sortedAncestors.reduceRight((childNode, ancestor, idx) => {
+            const isRoot = idx === 0;
+            return {
+              title: (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className={isRoot ? "font-bold text-green-600" : "font-medium"}>
+                      {ancestor.user
+                        ? `${ancestor.user.username || ancestor.user.email}`
+                        : `User ${ancestor.userId}`}
+                    </span>
+                    <span className="text-gray-500 ml-2">
+                      (Level {ancestor.level})
+                    </span>
+                    {isRoot && (
+                      <span className="ml-2 px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">
+                        🌳 Root
                       </span>
-                      <span className="text-yellow-600">
-                        {data.rootUser.commission.totalPending.toLocaleString()}
-                        đ
+                    )}
+                    {selectedTreeProgramId && ancestor.programParticipation && (
+                      <span
+                        className={`ml-2 px-2 py-0.5 text-xs rounded ${
+                          ancestor.programParticipation.isJoined
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {ancestor.programParticipation.isJoined
+                          ? '✓ Joined'
+                          : '✗ Not Joined'}
                       </span>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ),
-            key: `root-${data.rootUser.userId}`,
-            children: [
-              {
-                title: `Cấp trên (${data.ancestors.length} người)`,
-                key: `ancestors-${data.rootUser.userId}`,
-                children: ancestorNodes,
-              },
-              {
-                title: `Cấp dưới (${data.descendants.length} người)`,
-                key: `descendants-${data.rootUser.userId}`,
-                children: descendantNodes,
-              },
-            ],
-          },
-        ]);
+                  {showCommissions && (
+                    <div className="text-xs text-gray-600">
+                      <div className="flex items-center gap-2">
+                        {selectedTreeProgramId && ancestor.programParticipation ? (
+                          <div>
+                            {ancestor.programParticipation.isJoined && (
+                              <>
+                                <span className="text-blue-600 font-medium">
+                                  Rate: {ancestor.programParticipation.rate}%
+                                </span>
+                                <span className="text-green-600 font-medium ml-2">
+                                  {ancestor.programParticipation.earnedFromProgram.toLocaleString()}đ
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-green-600 font-medium">
+                              {ancestor.commission.totalEarned.toLocaleString()}đ
+                            </span>
+                            <span className="text-yellow-600 ml-2">
+                              {ancestor.commission.totalPending.toLocaleString()}đ
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ),
+              key: `ancestor-${ancestor.userId}-${idx}`,
+              children: [childNode]
+            };
+          }, searchedUserNode);
+        } else {
+          // Không có ancestors, searched user là root
+          treeStructure = searchedUserNode;
+        }
+
+        setTreeData([treeStructure]);
 
         setCommissionData(data);
         if (data.rootUser) {

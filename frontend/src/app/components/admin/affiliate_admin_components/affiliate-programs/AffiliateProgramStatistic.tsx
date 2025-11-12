@@ -7,6 +7,7 @@ import { Line } from '@ant-design/plots';
 interface Props {
   totalPrograms: number;
   activePrograms: number;
+  avgRevenue: number;
   avgCommission: number;
   chartData: any[];
 }
@@ -17,7 +18,7 @@ const vnd = (value: number) =>
     currency: 'VND',
   }).format(value || 0);
 
-const AffiliateProgramStatistic = ({ totalPrograms, activePrograms, avgCommission, chartData }: Props) => {
+const AffiliateProgramStatistic = ({ totalPrograms, activePrograms, avgRevenue, avgCommission, chartData }: Props) => {
   const config = {
     data: chartData,
     xField: 'time',
@@ -51,6 +52,16 @@ const AffiliateProgramStatistic = ({ totalPrograms, activePrograms, avgCommissio
               value={activePrograms}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Doanh thu trung bình"
+              value={vnd(avgRevenue)}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>

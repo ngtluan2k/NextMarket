@@ -179,13 +179,20 @@ export class AffiliateTreeService {
         const currentUserId = item.referrer_id || item.referee_id;
         const user = userMap.get(currentUserId);
         const level = Math.abs((item.level || 0) + levelOffset); // Lấy absolute level
-        const commission = commissionSummaries.get(currentUserId) || {
+        
+        console.log(`[DEBUG] Processing user ${currentUserId}, checking commission summary...`);
+        const commissionFromMap = commissionSummaries.get(currentUserId);
+        console.log(`[DEBUG] Commission from map for user ${currentUserId}:`, commissionFromMap);
+        
+        const commission = commissionFromMap || {
           totalEarned: 0,
           totalPending: 0,
           totalPaid: 0,
           currentLevel: level,
           ratePercent: 0
         };
+        
+        console.log(`[DEBUG] Final commission for user ${currentUserId}:`, commission);
 
         // Nếu có programId: Check participation và lấy rate từ rules
         let programParticipation = null;
@@ -198,8 +205,13 @@ export class AffiliateTreeService {
             // Lấy rate từ rules của program này
             try {
               const ruleForLevel = await this.getCommissionRulesForLevel(level, programId);
+              console.log(`[DEBUG] Rule for level ${level}, program ${programId}:`, ruleForLevel);
               if (ruleForLevel && ruleForLevel.level_rate) {
+                console.log(`[DEBUG] Level rate found:`, ruleForLevel.level_rate);
                 ratePercent = parseFloat(String(ruleForLevel.level_rate.rate)) || 0;
+                console.log(`[DEBUG] Parsed ratePercent:`, ratePercent);
+              } else {
+                console.warn(`[DEBUG] No level_rate found for level ${level}, program ${programId}`);
               }
             } catch (error) {
               console.warn(`Could not fetch commission rule for level ${level}, program ${programId}:`, error);
@@ -300,29 +312,38 @@ export class AffiliateTreeService {
    * Lấy tổng kết commission cho danh sách users
    */
   async getCommissionSummaryForUsers(userIds: number[]) {
+    console.log(`[DEBUG] getCommissionSummaryForUsers called with userIds:`, userIds);
+    
     const summaries = await this.commissionRepository
       .createQueryBuilder('c')
+      .leftJoin('c.beneficiary_user_id', 'user')
       .select([
-        'c.beneficiary_user_id as userId',
+        'user.id as userId',
         "SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END) as totalPending",
         "SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END) as totalPaid",
         'SUM(c.amount) as totalEarned',
         'AVG(c.rate_percent) as avgRatePercent'
       ])
-      .where('c.beneficiary_user_id IN (:...userIds)', { userIds })
-      .groupBy('c.beneficiary_user_id')
+      .where('user.id IN (:...userIds)', { userIds })
+      .groupBy('user.id')
       .getRawMany();
+
+    console.log(`[DEBUG] Commission summaries found:`, summaries);
 
     const summaryMap = new Map();
     summaries.forEach(summary => {
-      summaryMap.set(summary.userId, {
+      const userId = parseInt(summary.userId);
+      const data = {
         totalEarned: parseFloat(summary.totalEarned) || 0,
         totalPending: parseFloat(summary.totalPending) || 0,
         totalPaid: parseFloat(summary.totalPaid) || 0,
         ratePercent: parseFloat(summary.avgRatePercent) || 0
-      });
+      };
+      console.log(`[DEBUG] Setting summary for user ${userId}:`, data);
+      summaryMap.set(userId, data);
     });
 
+    console.log(`[DEBUG] Final summaryMap:`, Array.from(summaryMap.entries()));
     return summaryMap;
   }
 

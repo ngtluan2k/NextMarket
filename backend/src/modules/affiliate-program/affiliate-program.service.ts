@@ -51,7 +51,7 @@ export class AffiliateProgramsService {
     return this.repository.find();
   }
 
-  async findAllWithUserCounts(): Promise<(AffiliateProgram & { user_enrolled: number })[]> {
+  async findAllWithUserCounts(): Promise<(AffiliateProgram & { user_enrolled: number; avg_revenue: number; avg_commission: number })[]> {
     const programs = await this.repository.find();
     
     // Get user counts for each program
@@ -63,9 +63,24 @@ export class AffiliateProgramsService {
           .where('link.program_id = :programId', { programId: program.id })
           .getRawOne();
         
+        // Calculate avg_revenue from total_budget_amount
+        // Calculate avg_commission from commission_value
+        const avg_revenue = parseFloat(program.total_budget_amount?.toString() || '0');
+        
+        let avg_commission = 0;
+        if (program.commission_type === 'percentage') {
+          // For percentage type, use the commission_value as is
+          avg_commission = parseFloat(program.commission_value?.toString() || '0');
+        } else if (program.commission_type === 'fixed') {
+          // For fixed type, use the commission_value directly
+          avg_commission = parseFloat(program.commission_value?.toString() || '0');
+        }
+        
         return {
           ...program,
           user_enrolled: parseInt(userCount?.count || '0', 10),
+          avg_revenue,
+          avg_commission,
         };
       })
     );

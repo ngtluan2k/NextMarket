@@ -118,6 +118,10 @@ const AffiliateProgramDashboard = () => {
           commission_type: values.commission_type,
           commission_value: Number(values.commission_value),
           status: values.status,
+          total_budget_amount: values.total_budget_amount,
+          monthly_budget_cap: values.monthly_budget_cap,
+          daily_budget_cap: values.daily_budget_cap,
+          auto_pause_on_budget_limit: values.auto_pause_on_budget_limit,
         };
         response = await updateAffiliateProgram(editingProgram.id, updateDto);
       } else {
@@ -127,6 +131,10 @@ const AffiliateProgramDashboard = () => {
           commission_type: values.commission_type,
           commission_value: values.commission_value,
           status: values.status,
+          total_budget_amount: values.total_budget_amount,
+          monthly_budget_cap: values.monthly_budget_cap,
+          daily_budget_cap: values.daily_budget_cap,
+          auto_pause_on_budget_limit: values.auto_pause_on_budget_limit,
         };
         response = await createAffiliateProgram(createDto);
       }
@@ -160,7 +168,15 @@ const AffiliateProgramDashboard = () => {
 
   const activePrograms = programs.filter((p) => p.status === 'active').length;
   const totalPrograms = programs.length;
-  const avgCommission = (programs.reduce((acc, p) => acc + (p.commission_value || 0), 0) / (totalPrograms || 1)) || 0;
+  
+  // Calculate average revenue and commission from actual data
+  const programsWithData = programs.filter(p => (p.avg_revenue || 0) > 0 || (p.avg_commission || 0) > 0);
+  const avgRevenue = programsWithData.length > 0
+    ? programs.reduce((acc, p) => acc + (p.avg_revenue || 0), 0) / programsWithData.length
+    : 0;
+  const avgCommission = programsWithData.length > 0
+    ? programs.reduce((acc, p) => acc + (p.avg_commission || 0), 0) / programsWithData.length
+    : 0;
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -180,6 +196,7 @@ const AffiliateProgramDashboard = () => {
         <AffiliateProgramStatistic
           totalPrograms={totalPrograms}
           activePrograms={activePrograms}
+          avgRevenue={avgRevenue}
           avgCommission={avgCommission}
           chartData={chartData}
         />
