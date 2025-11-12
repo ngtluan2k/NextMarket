@@ -35,7 +35,17 @@ export class GroupOrdersController {
 
   @Post(':id/join') //tham gia group.
   join(@Param('id', ParseIntPipe) id: number, @Body() dto: JoinGroupOrderDto) {
-    return this.service.joinGroupOrder(dto.userId, id);
+    return this.service.joinGroupOrder(dto.userId, id,dto.joinCode);
+  }
+
+  @Get('code/:code')
+  getByJoinCode(@Param('code') code: string) {
+    return this.service.getGroupOrderByJoinCode(code);
+  }
+
+  @Post('join-code/:code')
+  joinByCode(@Param('code') code: string, @Body() dto: JoinGroupOrderDto) {
+    return this.service.joinGroupOrderByJoinCode(code, dto.userId);
   }
 
   @Get(':id/orders') //lấy danh sách order của group.
@@ -141,6 +151,16 @@ export class GroupOrdersController {
     }
     const userId = req.user.userId;
     return this.service.updateOrderStatusWithOrders(id, status, userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/leave')
+  async leaveGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any
+  ) {
+    const userId = req.user.userId;
+    return this.service.leaveGroupOrder(id, userId);
   }
 }
 

@@ -1,6 +1,6 @@
 import { message } from 'antd';
 import axios from 'axios';
-import { API_BASE_URL } from '../../app/api/api';
+import { BE_BASE_URL } from '../../app/api/api';
 import {
   AffiliatedProduct,
   BalanceInfo,
@@ -36,7 +36,7 @@ const handleApiError = (error: unknown) => {
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/affiliate-links/dashboard-stats`,
+      `${BE_BASE_URL}/affiliate-links/dashboard-stats`,
       {
         headers: getAuthHeaders(),
       }
@@ -54,7 +54,7 @@ export async function getCommissionHistory(
 ): Promise<CommissionHistory> {
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/affiliate-links/commission-history`,
+      `${BE_BASE_URL}/affiliate-links/commission-history`,
       {
         params: { page, limit },
         headers: getAuthHeaders(),
@@ -73,7 +73,7 @@ export async function getCommissionSummary(
 ): Promise<CommissionSummaryPeriod[]> {
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/affiliate-links/commission-summary`,
+      `${BE_BASE_URL}/affiliate-links/commission-summary`,
       {
         params: { period, limit },
         headers: getAuthHeaders(),
@@ -88,7 +88,7 @@ export async function getCommissionSummary(
 
 export async function getBalance(): Promise<BalanceInfo> {
   try {
-    const res = await axios.get(`${API_BASE_URL}/affiliate-links/balance`, {
+    const res = await axios.get(`${BE_BASE_URL}/affiliate-links/balance`, {
       headers: getAuthHeaders(),
     });
     return res.data;
@@ -105,7 +105,7 @@ export async function searchProducts(
 ): Promise<ProductSearchResponse> {
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/affiliate-links/search-products`,
+      `${BE_BASE_URL}/affiliate-links/search-products`,
       {
         params: { search, page, limit },
         headers: getAuthHeaders(),
@@ -121,7 +121,7 @@ export async function searchProducts(
 export async function getMyLinks(): Promise<MyLink[]> {
   try {
     const res = await axios.get<MyLinksResponse>(
-      `${API_BASE_URL}/affiliate-links/my-links`,
+      `${BE_BASE_URL}/affiliate-links/my-links`,
       { headers: getAuthHeaders() }
     );
 
@@ -135,7 +135,7 @@ export async function getMyLinks(): Promise<MyLink[]> {
 export async function getMyAffiliatedProducts():Promise<AffiliatedProduct[]>{
   try {
     const res = await axios.get(
-      `${API_BASE_URL}/affiliate-links/affiliated-products`,
+      `${BE_BASE_URL}/affiliate-links/affiliated-products`,
       { headers: getAuthHeaders() }
     );
     return (res.data?.data || res.data?.products || []) as AffiliatedProduct[];
@@ -148,7 +148,7 @@ export async function getMyAffiliatedProducts():Promise<AffiliatedProduct[]>{
 
 export async function getPrograms(): Promise<Program[]> {
   const tryEndpoints = [
-    `${API_BASE_URL}/affiliate-programs/active/with-rules`,
+    `${BE_BASE_URL}/affiliate-programs/active/with-rules`,
   ];
   
   for (const url of tryEndpoints) {
@@ -181,7 +181,7 @@ export async function createLink(
 ): Promise<CreateLinkResponse> {
   try {
     const res = await axios.post<CreateLinkResponse>(
-      `${API_BASE_URL}/affiliate-links/create-link`,
+      `${BE_BASE_URL}/affiliate-links/create-link`,
       payload, 
       { headers: getAuthHeaders() }
     );
@@ -204,7 +204,7 @@ export async function createLink(
 export async function deleteLink( id: number): Promise<any> {
   try {
     const res = await axios.delete(
-      `${API_BASE_URL}/affiliate-links/${id}`,
+      `${BE_BASE_URL}/affiliate-links/${id}`,
       { headers: getAuthHeaders() }
     );
     return res.data || { success: true };

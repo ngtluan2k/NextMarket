@@ -6,7 +6,10 @@ import {
   CreateAffiliateLinkPayload,
 } from '../../app/types/affiliate-links';
 import { getAuthHeaders } from './affiliate.service';
-import { API_BASE_URL } from '../../app/api/api';
+import { BE_BASE_URL } from '../../app/api/api';
+
+// const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+// const API_BASE_URL = `${BE_BASE_URL}/affiliate-links`;
 
 const handleApiError = (error: any) => {
   console.error('API Error:', error);
@@ -16,7 +19,7 @@ export const createAffiliateLink = async (
   payload: CreateAffiliateLinkPayload
 ): Promise<AffiliateLink> => {
   try {
-    const res = await api.post(`${API_BASE_URL}/affiliate-links/create-link`, payload, {
+    const res = await api.post(`${BE_BASE_URL}/affiliate-links/create-link`, payload, {
       headers: getAuthHeaders(),
     });
     return res.data;
@@ -39,7 +42,7 @@ export const getMyAffiliateLinks = async (): Promise<{
   links: AffiliateLink[];
 }> => {
   try {
-    const res = await api.get(`${API_BASE_URL}/my-links`, {
+    const res = await api.get(`${BE_BASE_URL}/my-links`, {
       headers: getAuthHeaders(),
     });
     console.log(JSON.stringify(res.data, null, 2));
@@ -54,7 +57,7 @@ export const getMyAffiliatedProducts = async (): Promise<
   AffiliateProduct[]
 > => {
   try {
-    const res = await api.get(`${API_BASE_URL}/affiliated-products`, {
+    const res = await api.get(`${BE_BASE_URL}/affiliated-products`, {
       headers: getAuthHeaders(),
     });
     return res.data;

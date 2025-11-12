@@ -30,13 +30,14 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // ✅ Lấy danh sách platform từ API
   useEffect(() => {
     const fetchPlatforms = async () => {
       try {
         const res = await axios.get(
-          'http://localhost:3000/affiliate-platforms'
+          `${BE_BASE_URL}/affiliate-platforms`
         );
         setPlatforms(res.data);
       } catch (err) {
@@ -99,7 +100,7 @@ export function RegistrationForm() {
       };
 
       await axios.post(
-        'http://localhost:3000/affiliate-registrations',
+        `${BE_BASE_URL}/affiliate-registrations`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );

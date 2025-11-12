@@ -31,6 +31,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export const SellerRegistration: React.FC = () => {
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const step1Ref = React.useRef<Step1BasicInfoHandle>(null);
   const step2Ref = React.useRef<Step2BusinessInfoHandle>(null);
@@ -132,7 +133,7 @@ export const SellerRegistration: React.FC = () => {
           return;
         }
 
-        const res = await fetch('http://localhost:3000/stores/my-store', {
+        const res = await fetch(`${BE_BASE_URL}/stores/my-store`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -201,7 +202,7 @@ export const SellerRegistration: React.FC = () => {
       setLoading(true);
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/stores/${sid}/draft-data`, {
+      const response = await fetch(`${BE_BASE_URL}/stores/${sid}/draft-data`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) return;
@@ -423,7 +424,7 @@ export const SellerRegistration: React.FC = () => {
         stepData.store_id = storeId;
       }
 
-      const res = await fetch('http://localhost:3000/stores/register-seller', {
+      const res = await fetch(`${BE_BASE_URL}/stores/register-seller`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

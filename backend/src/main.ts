@@ -36,7 +36,7 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: ['http://localhost:4200', 'http://localhost:3000'],
+    origin: ['http://localhost:4200', 'http://localhost:3000', 'https://3492pvbd-4200.asse.devtunnels.ms','https://3492pvbd-3000.asse.devtunnels.ms'],
     credentials: true,
   });
 

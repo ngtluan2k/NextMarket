@@ -54,6 +54,7 @@ export const ShippingMethod: React.FC<Props> = ({
 }) => {
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [storeDiscount, setStoreDiscount] = useState(0);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const storeId = items[0]?.product?.store?.id ?? 0;
 
@@ -200,7 +201,7 @@ export const ShippingMethod: React.FC<Props> = ({
                       src={
                         it.image?.startsWith('http')
                           ? it.image
-                          : `http://localhost:3000${it.image}`
+                          : `${BE_BASE_URL}${it.image}`
                       }
                       alt={it.name}
                       width={56}

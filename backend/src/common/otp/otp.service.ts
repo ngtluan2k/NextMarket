@@ -19,22 +19,26 @@ export class OtpService {
     return code;
   }
 
-  verify(email: string, code: string): boolean {
-    const rec = this.store.get(email);
-    if (!rec) return false;
-    if (Date.now() > rec.expiresAt) {
-      this.store.delete(email);
-      return false;
-    }
-    if (rec.attempts >= this.maxAttempts) return false;
-    if (rec.code !== code) {
-      rec.attempts += 1;
-      this.store.set(email, rec);
-      return false;
-    }
-    this.store.delete(email);
-    return true;
+  verify(key: string, code: string): boolean {
+  const rec = this.store.get(key);
+  console.log('VERIFY:', key, rec, code);
+  if (!rec) return false;
+  if (Date.now() > rec.expiresAt) {
+    this.store.delete(key);
+    return false;
   }
+  if (rec.attempts >= this.maxAttempts) return false;
+  if (rec.code !== code) {
+    rec.attempts += 1;
+    this.store.set(key, rec);
+    return false;
+  }
+
+  // ✅ Đừng xóa ở đây nữa, để resetPasswordByOtp xóa sau
+  // this.store.delete(key);
+  return true;
+}
+
 
   clear(email: string) {
     this.store.delete(email);

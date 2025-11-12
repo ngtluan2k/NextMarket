@@ -28,10 +28,10 @@ export class FlashSaleSchedule {
   @Column({ type: 'varchar', length: 50, default: 'upcoming' })
   status!: 'upcoming' | 'active' | 'ended';
 
-  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', precision: 6 })
   created_at!: Date;
 
-  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', precision: 6 })
   updated_at!: Date;
 
   // 1 schedule có thể có nhiều pricing rules

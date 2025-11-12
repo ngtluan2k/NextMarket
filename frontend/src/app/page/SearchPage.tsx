@@ -9,6 +9,7 @@ import { Rate } from 'antd';
 import ExploreBrands from '../components/ExploreBrands';
 import ExploreCategories from '../components/ExploreCategories';
 // import { vnd } from '../components/productDetail/BuyBox';
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 // --- ProductCard riêng cho SearchPage ---
 const SearchProductCard: React.FC<{
@@ -18,7 +19,7 @@ const SearchProductCard: React.FC<{
   const toImageUrl = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url; // đã là full URL thì giữ nguyên
-    return `http://localhost:3000${url}`; // thêm host nếu là path uploads
+    return `${BE_BASE_URL}${url}`; // thêm host nếu là path uploads
   };
 
   const imageUrl =
@@ -83,7 +84,7 @@ export default function SearchPage() {
       setError(null);
       try {
         const res = await fetch(
-          `http://localhost:3000/products/search?q=${encodeURIComponent(query)}`
+          `${BE_BASE_URL}/products/search?q=${encodeURIComponent(query)}`
         );
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));

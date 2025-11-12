@@ -103,7 +103,7 @@ export const CartSidebar: React.FC<Props> = ({
         return;
       }
 
-      const userId = me?.id;
+      const userId = me?.user_id;
       if (!userId) {
         message.error('Vui lòng đăng nhập để đặt hàng');
         navigate('/login');

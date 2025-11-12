@@ -14,6 +14,7 @@ const AdminHeader = () => {
   };
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const menu = (
     <Menu>
@@ -68,7 +69,7 @@ const AdminHeader = () => {
           {/* Avatar và menu */}
           <Dropdown overlay={menu} trigger={['click']} placement="bottomRight">
             <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded-lg">
-              <Avatar size="large" src= {`http://localhost:3000${user.avatar_url}`} icon={<UserOutlined />} />
+              <Avatar size="large" src= {`${BE_BASE_URL}${user.avatar_url}`} icon={<UserOutlined />} />
               <div className="hidden md:block text-right">
                 <p className="text-sm font-medium text-gray-900">Admin User</p>
                 <p className="text-xs text-gray-500">Quản trị viên</p>

@@ -1,11 +1,12 @@
 import axios from 'axios';
-import { API_BASE_URL } from '../app/api/api';
+import { BE_BASE_URL } from '../app/api/api';
 import { Wallet, WalletTransactionsResponse } from '../app/types/wallet';
+
 
 export const fetchMyWallet = async (): Promise<Wallet> => {
   try {
     const token = localStorage.getItem('token');
-    const res = await axios.get(`${API_BASE_URL}/wallets/me`, {
+    const res = await axios.get(`${BE_BASE_URL}/wallets/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -23,7 +24,7 @@ export const fetchMyWalletTransactions = async (
 ): Promise<WalletTransactionsResponse> => {
   try {
     const token = localStorage.getItem('token');
-    const res = await axios.get(`${API_BASE_URL}/wallets/transactions`, {
+    const res = await axios.get(`${BE_BASE_URL}/wallets/transactions`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

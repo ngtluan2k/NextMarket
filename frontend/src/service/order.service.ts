@@ -1,7 +1,9 @@
 import { api, API_ENDPOINTS } from '../app/api/api';
 import axios from 'axios';
 import { getAffiliateDataForOrder } from '../utils/affiliate-tracking';
-import { API_BASE_URL } from '../config/api';
+import { BE_BASE_URL } from '../app/api/api';
+// import { API_BASE_URL } from '../config/api';
+
 
 export const orderService = {
   // ========== USER ENDPOINTS ==========
@@ -23,7 +25,7 @@ export const orderService = {
 
   async getOrderByUser(userId: number) {
     try {
-      const res = await axios.get(`${API_BASE_URL}/orders/user/${userId}`);
+      const res = await axios.get(`${BE_BASE_URL}/orders/user/${userId}`);
       return res.data;
     } catch (error: any) {
       console.error(
@@ -44,7 +46,7 @@ export const orderService = {
     }
 
     const user = JSON.parse(userData);
-    const userId = user.user_id ?? user.id;
+    const userId = user.user_id;
 
     // Gọi API lấy chi tiết đơn hàng
     const res = await api.get(
@@ -95,7 +97,7 @@ export const orderService = {
     try {
       console.log("order status: ", status)
       const res = await axios.patch(
-        `${API_BASE_URL}/orders/${orderId}/status/${status}`,
+        `${BE_BASE_URL}/orders/${orderId}/status/${status}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -177,7 +179,7 @@ export const orderService = {
   getOrderStats: async (storeId: number) => {
     const token = localStorage.getItem('token');
     const res = await axios.get(
-      `${API_BASE_URL}/stores/${storeId}/orders/stats`,
+      `${BE_BASE_URL}/stores/${storeId}/orders/stats`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }

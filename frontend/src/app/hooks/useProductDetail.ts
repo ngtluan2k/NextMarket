@@ -26,14 +26,17 @@ export function useProductDetail(slug: string) {
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<any>(null);
   const [combos, setCombos] = useState<any[]>([]);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
-    fetch(`http://localhost:3000/products/slug/${slug}`)
+    fetch(`${BE_BASE_URL}/products/slug/${slug}`)
       .then((res) => res.json())
       .then((json) => {
         setProduct(json.data);
+                console.log(json.data)
+
         // nếu có combos, giả sử api trả về luôn hoặc lọc trong json.data
         setCombos(json.data.combos ?? []);
       })

@@ -21,8 +21,14 @@ import {
   VoucherDiscountType,
   VoucherType,
   VoucherStatus,
+  VoucherCollectionType,
 } from '../../types/voucher';
 import { debounce } from 'lodash';
+
+interface ExtendedVoucher extends Voucher {
+  is_collected: boolean;
+  user_used_count: number;
+}
 
 interface Props {
   visible: boolean;
@@ -47,10 +53,12 @@ const VoucherDiscountSection: React.FC<Props> = ({
   maxSelect = Infinity,
   filterByStore = false,
 }) => {
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [expiredVouchers, setExpiredVouchers] = useState<Voucher[]>([]);
+  const [vouchers, setVouchers] = useState<ExtendedVoucher[]>([]);
+  const [expiredVouchers, setExpiredVouchers] = useState<ExtendedVoucher[]>([]);
+  const [myVouchers, setMyVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [loadingCollect, setLoadingCollect] = useState<number | null>(null);
   const [voucherCode, setVoucherCode] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<number[]>([]);
@@ -65,8 +73,8 @@ const VoucherDiscountSection: React.FC<Props> = ({
   const [searchText, setSearchText] = useState('');
   const [visibleCount, setVisibleCount] = useState(6);
   const [invalidVoucherIds, setInvalidVoucherIds] = useState<number[]>([]);
-  const [applicableVouchers, setApplicableVouchers] = useState<Voucher[]>([]);
-  const [allVouchersCache, setAllVouchersCache] = useState<Voucher[]>([]);
+  const [applicableVouchers, setApplicableVouchers] = useState<ExtendedVoucher[]>([]);
+  const [allVouchersCache, setAllVouchersCache] = useState<ExtendedVoucher[]>([]);
   const [currentTotalDiscount, setCurrentTotalDiscount] = useState(0);
   const [isDataReady, setIsDataReady] = useState(false);
 
@@ -79,6 +87,8 @@ const VoucherDiscountSection: React.FC<Props> = ({
     if (!visible) {
       setIsDataReady(false);
       setVouchers([]);
+      setExpiredVouchers([]);
+      setMyVouchers([]);
       setVoucherDiscounts({});
       setInvalidVoucherIds([]);
       setApplicableVouchers([]);
@@ -88,7 +98,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
     }
   }, [visible]);
 
-  //  Reset selected state khi modal mở
+  // Reset selected state khi modal mở
   useEffect(() => {
     if (visible) {
       console.log('🔄 [VoucherModal] Modal opened, resetting selected state');
@@ -101,7 +111,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
     }
   }, [visible, selectedVouchers, filterByStore, storeId]);
 
-  //  Load data when modal opens
+  // Load data when modal opens
   useEffect(() => {
     if (visible && me?.id) {
       const loadData = async () => {
@@ -114,19 +124,19 @@ const VoucherDiscountSection: React.FC<Props> = ({
     } 
   }, [visible, me, onClose, navigate]);
 
-  //  Calculate discounts AFTER vouchers are loaded
+  // Calculate discounts AFTER vouchers are loaded
   useEffect(() => {
     if (vouchers.length > 0 && applicableVouchers.length > 0) {
       const calculate = async () => {
         await calculateAllDiscounts();
-        setIsDataReady(true); //  Mark as ready after calculations
+        setIsDataReady(true); // Mark as ready after calculations
         console.log(' [VoucherModal] Data is ready');
       };
       calculate();
     }
   }, [applicableVouchers.length]); // Only trigger when applicableVouchers changes
 
-  //  Update current total discount when selection changes
+  // Update current total discount when selection changes
   useEffect(() => {
     if (!orderItems?.length || !storeId || !isDataReady) {
       setCurrentTotalDiscount(0);
@@ -189,47 +199,91 @@ const VoucherDiscountSection: React.FC<Props> = ({
   };
 
   const fetchAvailableVouchers = async () => {
-    setLoading(true);
-    try {
-      if (!storeId || storeId === 0) {
-        message.error('Không thể xác định cửa hàng');
-        setLoading(false);
-        return;
-      }
-
-      const allVouchers = await userVoucherApi.getAvailableVouchers(storeId, filterByStore);
-
-      console.log('📦 [VoucherModal] Loaded vouchers:', allVouchers.length);
-
-      setApplicableVouchers(allVouchers);
-
-      const mergedList = [
-        ...allVouchers,
-        ...selectedVouchers.filter(
-          (sv: Voucher) => !allVouchers.some((v: Voucher) => v.id === sv.id)
-        ),
-        ...allVouchersCache.filter(
-          (cv: Voucher) =>
-            !allVouchers.some((v: Voucher) => v.id === cv.id) &&
-            !selectedVouchers.some((sv: Voucher) => sv.id === cv.id)
-        ),
-      ];
-
-      setVouchers(mergedList);
-
-      setAllVouchersCache((prev) => {
-        const newVouchers = [...mergedList];
-        const uniqueVouchers = newVouchers.filter(
-          (nv) => !prev.some((pv) => pv.id === nv.id)
-        );
-        return [...prev, ...uniqueVouchers];
-      });
-    } catch (error: any) {
-      message.error('Không thể tải danh sách voucher');    
-    } finally {
+  setLoading(true);
+  try {
+    if (!storeId || storeId === 0) {
+      message.error('Không thể xác định cửa hàng');
       setLoading(false);
+      return;
     }
-  };
+
+    // ✅ SỬA: Chỉ fetch voucher ĐÃ THU THẬP (cho mua hàng)
+    const myCollectedVouchers = await userVoucherApi.getMyCollectedVouchers();
+    
+    console.log('📦 [VoucherModal] Loaded collected vouchers:', myCollectedVouchers.length);
+
+    // ✅ SỬA: Filter chỉ lấy voucher ACTIVE và có thể sử dụng
+    const activeCollectedVouchers = myCollectedVouchers.filter(voucher => 
+      voucher.status === VoucherStatus.ACTIVE &&
+      new Date() >= new Date(voucher.start_date) &&
+      new Date() <= new Date(voucher.end_date) &&
+      (voucher.user_used_count || 0) < voucher.per_user_limit
+    );
+
+    setMyVouchers(myCollectedVouchers);
+
+    // ✅ SỬA: Tất cả voucher ở đây đều đã được thu thập
+    const extendedAllVouchers: ExtendedVoucher[] = activeCollectedVouchers.map(v => ({
+      ...v,
+      is_collected: true, // Luôn true vì đã thu thập
+      user_used_count: v.user_used_count || 0,
+    }));
+
+    setApplicableVouchers(extendedAllVouchers);
+
+    // ✅ SỬA: Xử lý selected vouchers
+    const extendedSelected = selectedVouchers.map(v => ({
+      ...v,
+      is_collected: true, // Đã thu thập mới có thể selected
+      user_used_count: myCollectedVouchers.find(m => m.id === v.id)?.user_used_count || 0,
+    })) as ExtendedVoucher[];
+
+    const extendedCache = allVouchersCache.map(v => ({
+      ...v,
+      is_collected: true, // Cache cũng là voucher đã thu thập
+      user_used_count: myCollectedVouchers.find(m => m.id === v.id)?.user_used_count || 0,
+    }));
+
+    const mergedList = [
+      ...extendedAllVouchers,
+      ...extendedSelected.filter(
+        (sv: ExtendedVoucher) => !extendedAllVouchers.some((v: ExtendedVoucher) => v.id === sv.id)
+      ),
+      ...extendedCache.filter(
+        (cv: ExtendedVoucher) =>
+          !extendedAllVouchers.some((v: ExtendedVoucher) => v.id === cv.id) &&
+          !extendedSelected.some((sv: ExtendedVoucher) => sv.id === cv.id)
+      ),
+    ];
+
+    setVouchers(mergedList);
+
+    setAllVouchersCache((prev) => {
+      const newVouchers = [...mergedList];
+      const uniqueVouchers = newVouchers.filter(
+        (nv) => !prev.some((pv) => pv.id === nv.id)
+      );
+      return [...prev, ...uniqueVouchers];
+    });
+
+    // ✅ SỬA: Expired vouchers từ collected vouchers
+    const expired = myCollectedVouchers.filter(v => 
+      new Date() > new Date(v.end_date) || v.status === VoucherStatus.EXPIRED
+    ).map(v => ({
+      ...v,
+      is_collected: true, // Luôn true vì từ collectedVouchers
+      user_used_count: v.user_used_count || 0,
+    })) as ExtendedVoucher[];
+
+    setExpiredVouchers(expired);
+
+  } catch (error: any) {
+    console.error('Error fetching collected vouchers:', error);
+    message.error('Không thể tải danh sách voucher đã thu thập');    
+  } finally {
+    setLoading(false);
+  }
+};
   console.log('Vouchers after filtering:', vouchers);
 
   const calculateAllDiscounts = async () => {
@@ -276,7 +330,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
     setInvalidVoucherIds(invalidIds);
   };
 
-  const formatDiscount = (voucher: Voucher) => {
+  const formatDiscount = (voucher: ExtendedVoucher) => {
     if (voucher.discount_type === VoucherDiscountType.PERCENTAGE) {
       const discount = `Giảm ${voucher.discount_value}%`;
       return voucher.max_discount_amount
@@ -289,7 +343,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
     }
   };
 
- const isVoucherDisabled = (voucher: Voucher) => {
+ const isVoucherDisabled = (voucher: ExtendedVoucher) => {
   if (!isDataReady) {
     return true;
   }
@@ -298,14 +352,14 @@ const VoucherDiscountSection: React.FC<Props> = ({
   const discount = voucherDiscounts[voucher.id] || 0;
   const isInvalid = invalidVoucherIds.includes(voucher.id);
 
-  console.log(`🔍 Checking voucher ${voucher.code} (type: ${voucher.type}, store: ${voucher.store_id}, stackable: ${voucher.stackable})`, {
+  console.log(`🔍 Checking collected voucher ${voucher.code}`, {
     isSelected,
     discount,
     isInvalid,
-    selectedIds,
-    selectedTypes
+    user_used_count: voucher.user_used_count
   });
 
+  // ✅ SỬA: Đơn giản hóa - không cần kiểm tra is_collected vì luôn true
   if (isSelected) return false;
 
   if (discount === 0 || isInvalid) {
@@ -313,7 +367,12 @@ const VoucherDiscountSection: React.FC<Props> = ({
     return true;
   }
 
-  //  FIX: LUÔN chặn chọn nhiều voucher STORE cùng cửa hàng
+  // ✅ SỬA: Kiểm tra số lần sử dụng còn lại
+  if ((voucher.user_used_count || 0) >= voucher.per_user_limit) {
+    return true;
+  }
+
+  // ✅ SỬA: Logic chọn voucher STORE (giữ nguyên)
   if (voucher.type === VoucherType.STORE) {
     const selectedStoreVouchers = vouchers.filter(
       v => selectedIds.includes(v.id) && 
@@ -321,9 +380,6 @@ const VoucherDiscountSection: React.FC<Props> = ({
       v.store_id === voucher.store_id
     );
 
-
-
-    //  QUAN TRỌNG: LUÔN disable nếu đã có voucher STORE cùng cửa hàng được chọn
     if (selectedStoreVouchers.length > 0) {
       return true;
     }
@@ -343,13 +399,15 @@ const VoucherDiscountSection: React.FC<Props> = ({
   return false;
 };
 
-  const handleSelectVoucher = (voucher: Voucher) => {
+ const handleSelectVoucher = (voucher: ExtendedVoucher) => {
   if (selectedIds.includes(voucher.id)) {
     setSelectedIds(selectedIds.filter((id) => id !== voucher.id));
     setSelectedTypes(selectedTypes.filter((type) => type !== voucher.type));
     message.info(`Đã bỏ chọn voucher ${voucher.code}`);
     return;
   }
+
+  // ✅ SỬA: KHÔNG cần kiểm tra thu thập vì đã thu thập rồi
 
   const discount = voucherDiscounts[voucher.id] || 0;
 
@@ -358,12 +416,18 @@ const VoucherDiscountSection: React.FC<Props> = ({
     return;
   }
 
+  // ✅ SỬA: Kiểm tra số lần sử dụng còn lại
+  if ((voucher.user_used_count || 0) >= voucher.per_user_limit) {
+    message.warning('Bạn đã sử dụng hết số lần cho phép của voucher này');
+    return;
+  }
+
   if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
     message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
     return;
   }
 
-  //  FIX: LUÔN chặn chọn nhiều voucher STORE cùng cửa hàng
+  // Logic chọn voucher STORE (giữ nguyên)
   if (voucher.type === VoucherType.STORE) {
     const sameStoreVoucher = vouchers.find(
       (v) =>
@@ -408,54 +472,102 @@ const VoucherDiscountSection: React.FC<Props> = ({
     `Đã chọn voucher ${voucher.code} (Giảm ${discount.toLocaleString()}đ)`
   );
 };
+  const handleCollectVoucher = async (voucher: ExtendedVoucher) => {
+    setLoadingCollect(voucher.id);
+    try {
+      await userVoucherApi.collectVoucher(voucher.id);
+      message.success(`Đã thu thập voucher ${voucher.code}`);
+
+      // Update is_collected
+      const updatedVouchers = vouchers.map(v => 
+        v.id === voucher.id ? { ...v, is_collected: true } : v
+      );
+      setVouchers(updatedVouchers);
+
+      const updatedApplicable = applicableVouchers.map(v => 
+        v.id === voucher.id ? { ...v, is_collected: true } : v
+      );
+      setApplicableVouchers(updatedApplicable);
+
+      const updatedCache = allVouchersCache.map(v => 
+        v.id === voucher.id ? { ...v, is_collected: true } : v
+      );
+      setAllVouchersCache(updatedCache);
+
+      // Optional: Auto select after collect
+      handleSelectVoucher({ ...voucher, is_collected: true });
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Không thể thu thập voucher');
+    } finally {
+      setLoadingCollect(null);
+    }
+  };
+
   const handleApplyCode = async () => {
-    if (!voucherCode.trim()) {
-      message.warning('Vui lòng nhập mã voucher');
+  if (!voucherCode.trim()) {
+    message.warning('Vui lòng nhập mã voucher');
+    return;
+  }
+
+  setApplying(true);
+  try {
+    const normalizedCode = voucherCode.trim().toUpperCase();
+    const payload = {
+      code: normalizedCode,
+      storeId,
+      orderItems: orderItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    };
+    const res = await userVoucherApi.applyVoucher(payload);
+
+    const { voucher } = res;
+
+    // ✅ SỬA: Kiểm tra xem user đã thu thập voucher này chưa
+    const isCollected = myVouchers.some(m => m.id === voucher.id);
+    
+    if (!isCollected) {
+      message.warning('Bạn cần thu thập voucher này trước khi sử dụng');
+      setVoucherCode('');
+      setApplying(false);
       return;
     }
 
-    setApplying(true);
-    try {
-      const normalizedCode = voucherCode.trim().toUpperCase();
-      const payload = {
-        code: normalizedCode,
-        storeId,
-        orderItems: orderItems.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      };
-      const res = await userVoucherApi.applyVoucher(payload);
+    const extendedVoucher: ExtendedVoucher = {
+      ...voucher,
+      is_collected: true, // Đã thu thập
+      user_used_count: myVouchers.find(m => m.id === voucher.id)?.user_used_count || 0,
+    };
 
-      const { voucher } = res;
-
-      if (selectedIds.includes(voucher.id)) {
-        message.info('Voucher này đã được chọn');
-      } else if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
-        message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
-      } else if (selectedTypes.includes(voucher.type) && !voucher.stackable) {
-        message.warning('Bạn đã chọn một voucher thuộc loại này');
-      } else {
-        setSelectedIds([...selectedIds, voucher.id]);
-        setSelectedTypes([...selectedTypes, voucher.type]);
-        if (!vouchers.find((v: Voucher) => v.id === voucher.id)) {
-          setVouchers([voucher, ...vouchers]);
-        }
-        if (!allVouchersCache.find((v: Voucher) => v.id === voucher.id)) {
-          setAllVouchersCache([...allVouchersCache, voucher]);
-        }
-        message.success('Áp dụng mã voucher thành công');
-        setVoucherCode('');
+    if (selectedIds.includes(voucher.id)) {
+      message.info('Voucher này đã được chọn');
+    } else if (maxSelect !== Infinity && selectedIds.length >= maxSelect) {
+      message.warning(`Chỉ có thể chọn tối đa ${maxSelect} voucher`);
+    } else if (selectedTypes.includes(voucher.type) && !voucher.stackable) {
+      message.warning('Bạn đã chọn một voucher thuộc loại này');
+    } else {
+      setSelectedIds([...selectedIds, voucher.id]);
+      setSelectedTypes([...selectedTypes, voucher.type]);
+      if (!vouchers.find((v: ExtendedVoucher) => v.id === voucher.id)) {
+        setVouchers([extendedVoucher, ...vouchers]);
       }
-    } catch (error: any) {
-      message.error(
-        error.response?.data?.message || 'Không thể áp dụng voucher'
-      );
-    } finally {
-      setApplying(false);
+      if (!allVouchersCache.find((v: ExtendedVoucher) => v.id === voucher.id)) {
+        setAllVouchersCache([...allVouchersCache, extendedVoucher]);
+      }
+      message.success('Áp dụng mã voucher thành công');
+      setVoucherCode('');
     }
-  };
+  } catch (error: any) {
+    console.error('Error applying voucher code:', error);
+    message.error(
+      error.response?.data?.message || 'Không thể áp dụng voucher'
+    );
+  } finally {
+    setApplying(false);
+  }
+};
 
   const handleClose = () => {
     const filteredSelected = selectedVouchers.filter((v) =>
@@ -467,7 +579,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
   };
 
   const handleConfirm = async () => {
-    const selectedVouchersToApply = vouchers.filter((v: Voucher) =>
+    const selectedVouchersToApply = vouchers.filter((v: ExtendedVoucher) =>
       selectedIds.includes(v.id)
     );
 
@@ -480,7 +592,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
 
     try {
       const payload = {
-        voucherCodes: selectedVouchersToApply.map((v: Voucher) => v.code),
+        voucherCodes: selectedVouchersToApply.map((v: ExtendedVoucher) => v.code),
         orderItems: orderItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -520,28 +632,16 @@ const VoucherDiscountSection: React.FC<Props> = ({
     }
   };
 
-  const getFilteredVouchers = () => {
-    let list = [
-      ...vouchers,
-      ...selectedVouchers.filter(
-        (sv: Voucher) => !vouchers.some((v: Voucher) => v.id === sv.id)
-      ),
-      ...allVouchersCache.filter(
-        (cv: Voucher) =>
-          !vouchers.some((v: Voucher) => v.id === cv.id) &&
-          !selectedVouchers.some((sv: Voucher) => sv.id === cv.id)
-      ),
-    ];
-
+  const getFilteredVouchers = (list: ExtendedVoucher[]) => {
     if (searchText) {
       list = list.filter(
-        (v: Voucher) =>
+        (v: ExtendedVoucher) =>
           v.code.toLowerCase().includes(searchText.toLowerCase()) ||
           v.title.toLowerCase().includes(searchText.toLowerCase())
       );
     }
 
-    return list.sort((a: Voucher, b: Voucher) => {
+    return list.sort((a: ExtendedVoucher, b: ExtendedVoucher) => {
       const aSelected = selectedIds.includes(a.id) ? 1 : 0;
       const bSelected = selectedIds.includes(b.id) ? 1 : 0;
       if (aSelected !== bSelected) return bSelected - aSelected;
@@ -619,147 +719,307 @@ const VoucherDiscountSection: React.FC<Props> = ({
         spinning={loading || !isDataReady}
         tip={!isDataReady ? 'Loading...' : undefined}
       >
-        {getFilteredVouchers().length === 0 ? (
-          <Empty description="Không có voucher khả dụng" />
-        ) : (
-          <>
-            <List
-              dataSource={getFilteredVouchers().slice(0, visibleCount)}
-              renderItem={(voucher) => {
-                const isSelected = selectedIds.includes(voucher.id);
-                const discount = voucherDiscounts[voucher.id] || 0;
-                const isDisabled = isVoucherDisabled(voucher);
-                const isInvalid = invalidVoucherIds.includes(voucher.id);
+        <Tabs defaultActiveKey="available">
+          <Tabs.TabPane tab="Khả dụng" key="available">
+            {getFilteredVouchers(vouchers).length === 0 ? (
+              <Empty description="Không có voucher khả dụng" />
+            ) : (
+              <>
+                <List
+                  dataSource={getFilteredVouchers(vouchers).slice(0, visibleCount)}
+                  renderItem={(voucher) => {
+                    const isSelected = selectedIds.includes(voucher.id);
+                    const discount = voucherDiscounts[voucher.id] || 0;
+                    const isDisabled = isVoucherDisabled(voucher);
+                    const isInvalid = invalidVoucherIds.includes(voucher.id);
+                    const needsCollect = voucher.collection_type === VoucherCollectionType.MANUAL && !voucher.is_collected;
 
-                return (
-                  <List.Item
-                    style={{
-                      border: isSelected
-                        ? '2px solid #1890ff'
-                        : '1px solid #e8e8e8',
-                      borderRadius: 8,
-                      marginBottom: 12,
-                      padding: 16,
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      background: isSelected ? '#e6f7ff' : 'white',
-                      opacity: isDisabled ? 0.4 : 1,
-                      pointerEvents: isDisabled ? 'none' : 'auto',
-                      transition: 'all 0.3s ease',
-                    }}
-                    onClick={() => !isDisabled && handleSelectVoucher(voucher)}
-                  >
-                    <div style={{ display: 'flex', width: '100%', gap: 12 }}>
-                      <div
+                    return (
+                      <List.Item
                         style={{
-                          width: 60,
-                          height: 60,
+                          border: isSelected
+                            ? '2px solid #1890ff'
+                            : '1px solid #e8e8e8',
                           borderRadius: 8,
-                          background: voucher.theme_color || '#ff6b6b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: 24,
-                          flexShrink: 0,
+                          marginBottom: 12,
+                          padding: 16,
+                          cursor: isDisabled && !needsCollect ? 'not-allowed' : 'pointer',
+                          background: isSelected ? '#e6f7ff' : 'white',
+                          opacity: isDisabled && !needsCollect ? 0.4 : 1,
+                          pointerEvents: isDisabled && !needsCollect ? 'none' : 'auto',
+                          transition: 'all 0.3s ease',
                         }}
+                        onClick={() => (!isDisabled && !needsCollect) && handleSelectVoucher(voucher)}
                       >
-                        <TagOutlined />
-                      </div>
+                        <div style={{ display: 'flex', width: '100%', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 60,
+                              height: 60,
+                              borderRadius: 8,
+                              background: voucher.theme_color || '#ff6b6b',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: 24,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <TagOutlined />
+                          </div>
 
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                          }}
-                        >
-                          <div>
+                          <div style={{ flex: 1 }}>
                             <div
                               style={{
-                                fontWeight: 'bold',
-                                fontSize: 16,
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
                               }}
                             >
-                              {formatDiscount(voucher)}
+                              <div>
+                                <div
+                                  style={{
+                                    fontWeight: 'bold',
+                                    fontSize: 16,
+                                  }}
+                                >
+                                  {formatDiscount(voucher)}
+                                </div>
+                                <div style={{ color: '#666', fontSize: 12 }}>
+                                  {voucher.title}
+                                </div>
+                                <div
+                                  style={{
+                                    color: '#999',
+                                    fontSize: 12,
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  Mã: <strong>{voucher.code}</strong>
+                                </div>
+                                {voucher.min_order_amount > 0 && (
+                                  <div style={{ color: '#999', fontSize: 12 }}>
+                                    Đơn tối thiểu:{' '}
+                                    {voucher.min_order_amount.toLocaleString()}đ
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                {needsCollect ? (
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    loading={loadingCollect === voucher.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCollectVoucher(voucher);
+                                    }}
+                                  >
+                                    Thu thập
+                                  </Button>
+                                ) : isSelected ? (
+                                  <CheckCircleFilled
+                                    style={{ fontSize: 24, color: '#1890ff' }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: 24,
+                                      height: 24,
+                                      border: '2px solid #d9d9d9',
+                                      borderRadius: '50%',
+                                    }}
+                                  />
+                                )}
+                              </div>
                             </div>
-                            <div style={{ color: '#666', fontSize: 12 }}>
-                              {voucher.title}
-                            </div>
-                            <div
-                              style={{
-                                color: '#999',
-                                fontSize: 12,
-                                marginTop: 4,
-                              }}
-                            >
-                              Mã: <strong>{voucher.code}</strong>
-                            </div>
-                            {voucher.min_order_amount > 0 && (
-                              <div style={{ color: '#999', fontSize: 12 }}>
-                                Đơn tối thiểu:{' '}
-                                {voucher.min_order_amount.toLocaleString()}đ
+
+                            {voucher.description && (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: '#999',
+                                  marginTop: 8,
+                                  borderTop: '1px dashed #e8e8e8',
+                                  paddingTop: 8,
+                                }}
+                              >
+                                {voucher.description}
                               </div>
                             )}
                           </div>
+                        </div>
+                      </List.Item>
+                    );
+                  }}
+                />
+                {getFilteredVouchers(vouchers).length > visibleCount && (
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <Button
+                      type="link"
+                      onClick={() => setVisibleCount(visibleCount + 8)}
+                    >
+                      Xem thêm
+                    </Button>
+                  </div>
+                )}
 
-                          <div>
-                            {isSelected ? (
-                              <CheckCircleFilled
-                                style={{ fontSize: 24, color: '#1890ff' }}
-                              />
-                            ) : (
+                {visibleCount > 8 && (
+                  <div style={{ textAlign: 'center', marginTop: 4 }}>
+                    <Button type="link" onClick={() => setVisibleCount(8)}>
+                      Thu gọn
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </Tabs.TabPane>
+
+          <Tabs.TabPane tab="Hết hạn" key="expired">
+            {getFilteredVouchers(expiredVouchers).length === 0 ? (
+              <Empty description="Không có voucher hết hạn" />
+            ) : (
+              <>
+                <List
+                  dataSource={getFilteredVouchers(expiredVouchers).slice(0, visibleCount)}
+                  renderItem={(voucher) => {
+                    const isSelected = selectedIds.includes(voucher.id);
+                    const discount = voucherDiscounts[voucher.id] || 0;
+                    const isDisabled = true; // Expired always disabled
+                    const isInvalid = true;
+
+                    return (
+                      <List.Item
+                        style={{
+                          border: isSelected
+                            ? '2px solid #1890ff'
+                            : '1px solid #e8e8e8',
+                          borderRadius: 8,
+                          marginBottom: 12,
+                          padding: 16,
+                          cursor: 'not-allowed',
+                          background: isSelected ? '#e6f7ff' : 'white',
+                          opacity: 0.4,
+                          pointerEvents: 'none',
+                          transition: 'all 0.3s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', width: '100%', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 60,
+                              height: 60,
+                              borderRadius: 8,
+                              background: voucher.theme_color || '#ff6b6b',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: 24,
+                              flexShrink: 0,
+                            }}
+                          >
+                            <TagOutlined />
+                          </div>
+
+                          <div style={{ flex: 1 }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                              }}
+                            >
+                              <div>
+                                <div
+                                  style={{
+                                    fontWeight: 'bold',
+                                    fontSize: 16,
+                                  }}
+                                >
+                                  {formatDiscount(voucher)}
+                                </div>
+                                <div style={{ color: '#666', fontSize: 12 }}>
+                                  {voucher.title}
+                                </div>
+                                <div
+                                  style={{
+                                    color: '#999',
+                                    fontSize: 12,
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  Mã: <strong>{voucher.code}</strong>
+                                </div>
+                                {voucher.min_order_amount > 0 && (
+                                  <div style={{ color: '#999', fontSize: 12 }}>
+                                    Đơn tối thiểu:{' '}
+                                    {voucher.min_order_amount.toLocaleString()}đ
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                {isSelected ? (
+                                  <CheckCircleFilled
+                                    style={{ fontSize: 24, color: '#1890ff' }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: 24,
+                                      height: 24,
+                                      border: '2px solid #d9d9d9',
+                                      borderRadius: '50%',
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+
+                            {voucher.description && (
                               <div
                                 style={{
-                                  width: 24,
-                                  height: 24,
-                                  border: '2px solid #d9d9d9',
-                                  borderRadius: '50%',
+                                  fontSize: 12,
+                                  color: '#999',
+                                  marginTop: 8,
+                                  borderTop: '1px dashed #e8e8e8',
+                                  paddingTop: 8,
                                 }}
-                              />
+                              >
+                                {voucher.description}
+                              </div>
                             )}
                           </div>
                         </div>
+                      </List.Item>
+                    );
+                  }}
+                />
+                {getFilteredVouchers(expiredVouchers).length > visibleCount && (
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <Button
+                      type="link"
+                      onClick={() => setVisibleCount(visibleCount + 8)}
+                    >
+                      Xem thêm
+                    </Button>
+                  </div>
+                )}
 
-                        {voucher.description && (
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: '#999',
-                              marginTop: 8,
-                              borderTop: '1px dashed #e8e8e8',
-                              paddingTop: 8,
-                            }}
-                          >
-                            {voucher.description}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </List.Item>
-                );
-              }}
-            />
-            {getFilteredVouchers().length > visibleCount && (
-              <div style={{ textAlign: 'center', marginTop: 8 }}>
-                <Button
-                  type="link"
-                  onClick={() => setVisibleCount(visibleCount + 8)}
-                >
-                  Xem thêm
-                </Button>
-              </div>
+                {visibleCount > 8 && (
+                  <div style={{ textAlign: 'center', marginTop: 4 }}>
+                    <Button type="link" onClick={() => setVisibleCount(8)}>
+                      Thu gọn
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
-
-            {visibleCount > 8 && (
-              <div style={{ textAlign: 'center', marginTop: 4 }}>
-                <Button type="link" onClick={() => setVisibleCount(8)}>
-                  Thu gọn
-                </Button>
-              </div>
-            )}
-          </>
-        )}
+          </Tabs.TabPane>
+        </Tabs>
       </Spin>
     </Modal>
   );

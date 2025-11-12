@@ -1,5 +1,5 @@
 import { message } from 'antd';
-import { API_BASE_URL } from '../../config/api';
+import { BE_BASE_URL } from '../../app/api/api';
 
 export interface BudgetStatus {
   program_id: number;
@@ -31,7 +31,7 @@ export async function getBudgetStatus(programId: number): Promise<BudgetStatus> 
   try {
     const token = localStorage.getItem('token');
     const response = await fetch(
-      `${API_BASE_URL}/affiliate-programs/${programId}/budget-status`,
+      `${BE_BASE_URL}/affiliate-programs/${programId}/budget-status`,
       {
         method: 'GET',
         headers: {
@@ -58,7 +58,7 @@ export async function getBudgetAlerts(): Promise<BudgetAlert[]> {
   try {
     const token = localStorage.getItem('token');
     const response = await fetch(
-      `${API_BASE_URL}/affiliate-programs/budget/alerts`,
+      `${BE_BASE_URL}/affiliate-programs/budget/alerts`,
       {
         method: 'GET',
         headers: {
@@ -87,7 +87,7 @@ export async function getAllProgramsBudgetStatus(): Promise<BudgetStatus[]> {
     
     // First get all programs
     const programsResponse = await fetch(
-      `${API_BASE_URL}/affiliate-programs/manage`,
+      `${BE_BASE_URL}/affiliate-programs/manage`,
       {
         method: 'GET',
         headers: {

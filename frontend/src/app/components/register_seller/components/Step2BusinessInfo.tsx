@@ -41,6 +41,7 @@ interface Step2BusinessInfoProps {
   onDocFileChange: (file: File | null) => void;
 }
 
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 const baseInput =
   "w-full rounded-xl border bg-white px-3 py-1.5 outline-none transition focus:ring-4";
 const baseLabel = "text-[11px] font-medium text-slate-700";
@@ -359,14 +360,14 @@ const Step2BusinessInfo = React.forwardRef<
                 {businessLicenseUrl.startsWith("/uploads") ? (
                   /\.(png|jpe?g|webp|gif)$/i.test(businessLicenseUrl) ? (
                     <img
-                      src={`http://localhost:3000${businessLicenseUrl}`}
+                      src={`${BE_BASE_URL}${businessLicenseUrl}`}
                       alt="Business License"
                       className="max-h-52 max-w-xs rounded-lg border border-slate-100"
                     />
                   ) : (
                     <a
                       className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                      href={`http://localhost:3000${businessLicenseUrl}`}
+                      href={`${BE_BASE_URL}${businessLicenseUrl}`}
                       target="_blank"
                       rel="noreferrer"
                     >

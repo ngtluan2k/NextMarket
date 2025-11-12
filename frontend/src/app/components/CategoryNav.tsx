@@ -25,6 +25,7 @@ export default function CategoryNav({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +43,7 @@ export default function CategoryNav({
         const toImageUrl = (url?: string) => {
           if (!url) return 'https://via.placeholder.com/43x43?text=%3F';
           if (url.startsWith('http')) return url;
-          return `http://localhost:3000${url}`;
+          return `${BE_BASE_URL}${url}`;
         };
 
         const mapped: Category[] = parents.map((it: any) => ({

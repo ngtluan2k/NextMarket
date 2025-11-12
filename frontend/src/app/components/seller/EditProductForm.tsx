@@ -66,6 +66,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const getErr = (path: string) => errors[path];
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   type ResultType = 'success' | 'error' | 'warning';
 
   // ⬇️ NEW: Result modal states
@@ -263,10 +264,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
     (async () => {
       try {
         const [brandsRes, categoriesRes] = await Promise.all([
-          fetch('http://localhost:3000/brands', {
+          fetch(`${BE_BASE_URL}/brands`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then((r) => r.json()),
-          fetch('http://localhost:3000/categories', {
+          fetch(`${BE_BASE_URL}/categories`, {
             headers: { Authorization: `Bearer ${token}` },
           }).then((r) => r.json()),
         ]);
@@ -1445,184 +1446,196 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
           )}
 
           {(form.pricing_rules || [])
-          .filter((pr) => pr.type !== 'flash_sale') 
-          .map((pr, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Loại</label>
-                  <input
-                    value={pr.type}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].type = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="theo lô / theo bậc"
-                  />
-                </div>
+            .filter((pr) => pr.type !== 'flash_sale')
+            .map((pr, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      Loại
+                    </label>
+                    <select
+                      value={pr.type}
+                      onChange={(e) => {
+                        const next = [...form.pricing_rules];
+                        next[i].type = e.target.value; // vẫn lưu "bulk" hoặc "tier"
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Chọn loại</option>
+                      <option value="bulk">Sỉ</option>{' '}
+                      {/* hiển thị "Sỉ", giá trị là "bulk" */}
+                      <option value="subscription">Gói Subs</option>{' '}
+                      {/* hiển thị "Cấp bậc", giá trị là "tier" */}
+                    </select>
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    SL tối thiểu
-                  </label>
-                  <input
-                    type="number"
-                    value={pr.min_quantity}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].min_quantity = +e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="10"
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      SL tối thiểu
+                    </label>
+                    <input
+                      type="number"
+                      value={pr.min_quantity}
+                      onChange={(e) => {
+                        const next = [...form.pricing_rules];
+                        next[i].min_quantity = +e.target.value;
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                      placeholder="10"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Giá</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={
-                      priceTextMap[`r-${i}`] ?? formatVND(Number(pr.price || 0))
-                    }
-                    onChange={(e) => handleMoneyInput(e, 'rule', i)}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="99000"
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      Giá
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={
+                        priceTextMap[`r-${i}`] ??
+                        formatVND(Number(pr.price || 0))
+                      }
+                      onChange={(e) => handleMoneyInput(e, 'rule', i)}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                      placeholder="99000"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    Chu kỳ
-                  </label>
-                  <input
-                    value={pr.cycle || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].cycle = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="hàng tháng"
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      Chu kỳ
+                    </label>
+                    <input
+                      value={pr.cycle || ''}
+                      onChange={(e) => {
+                        const next = [...form.pricing_rules];
+                        next[i].cycle = e.target.value;
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                      placeholder="hàng tháng"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    Bắt đầu
-                  </label>
-                  <DatePicker
-                    showTime
-                    value={pr.starts_at ? dayjs(pr.starts_at) : null}
-                    onChange={(value) => {
-                      const next = [...form.pricing_rules];
-                      next[i].starts_at = value
-                        ? dayjs(value).tz('Asia/Ho_Chi_Minh').format() // 👉 lưu theo giờ VN
-                        : undefined;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11"
-                    placeholder="Chọn ngày bắt đầu"
-                    format="YYYY-MM-DD HH:mm"
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      Bắt đầu
+                    </label>
+                    <DatePicker
+                      showTime
+                      value={pr.starts_at ? dayjs(pr.starts_at) : null}
+                      onChange={(value) => {
+                        const next = [...form.pricing_rules];
+                        next[i].starts_at = value
+                          ? dayjs(value).tz('Asia/Ho_Chi_Minh').format() // 👉 lưu theo giờ VN
+                          : undefined;
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11"
+                      placeholder="Chọn ngày bắt đầu"
+                      format="YYYY-MM-DD HH:mm"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    Kết thúc
-                  </label>
-                  <DatePicker
-                    showTime
-                    value={pr.ends_at ? dayjs(pr.ends_at) : null}
-                    onChange={(value) => {
-                      const next = [...form.pricing_rules];
-                      next[i].ends_at = value
-                        ? dayjs(value).tz('Asia/Ho_Chi_Minh').format() // 👉 lưu theo giờ VN
-                        : undefined;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11"
-                    placeholder="Chọn ngày kết thúc"
-                    format="YYYY-MM-DD HH:mm"
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      Kết thúc
+                    </label>
+                    <DatePicker
+                      showTime
+                      value={pr.ends_at ? dayjs(pr.ends_at) : null}
+                      onChange={(value) => {
+                        const next = [...form.pricing_rules];
+                        next[i].ends_at = value
+                          ? dayjs(value).tz('Asia/Ho_Chi_Minh').format() // 👉 lưu theo giờ VN
+                          : undefined;
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11"
+                      placeholder="Chọn ngày kết thúc"
+                      format="YYYY-MM-DD HH:mm"
+                    />
+                  </div>
 
-                <div className="md:col-span-3">
-                  <label className="block text-sm font-medium mb-1">
-                    SKU biến thể
-                  </label>
-                  <input
-                    value={pr.variant_sku || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].variant_sku = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="Liên kết SKU"
-                  />
-                </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-sm font-medium mb-1">
+                      SKU biến thể
+                    </label>
+                    <input
+                      value={pr.variant_sku || ''}
+                      onChange={(e) => {
+                        const next = [...form.pricing_rules];
+                        next[i].variant_sku = e.target.value;
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                      placeholder="Liên kết SKU"
+                    />
+                  </div>
 
-                <div className="md:col-span-4">
-                  <label className="block text-sm font-medium mb-1">
-                    Tên quy tắc
-                  </label>
-                  <input
-                    value={pr.name || ''}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].name = e.target.value;
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="Tên hiển thị"
-                  />
-                </div>
+                  <div className="md:col-span-4">
+                    <label className="block text-sm font-medium mb-1">
+                      Tên quy tắc
+                    </label>
+                    <input
+                      value={pr.name || ''}
+                      onChange={(e) => {
+                        const next = [...form.pricing_rules];
+                        next[i].name = e.target.value;
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                      placeholder="Tên hiển thị"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    Trạng thái
-                  </label>
-                  <select
-                    value={pr.status || 'active'}
-                    onChange={(e) => {
-                      const next = [...form.pricing_rules];
-                      next[i].status = e.target.value as 'active' | 'inactive';
-                      setForm({ ...form, pricing_rules: next });
-                    }}
-                    className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">Đang hoạt động</option>
-                    <option value="inactive">Tạm tắt</option>
-                  </select>
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">
+                      Trạng thái
+                    </label>
+                    <select
+                      value={pr.status || 'active'}
+                      onChange={(e) => {
+                        const next = [...form.pricing_rules];
+                        next[i].status = e.target.value as
+                          | 'active'
+                          | 'inactive';
+                        setForm({ ...form, pricing_rules: next });
+                      }}
+                      className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="active">Đang hoạt động</option>
+                      <option value="inactive">Tạm tắt</option>
+                    </select>
+                  </div>
 
-                <div className="flex justify-end self-end md:col-span-1 md:col-start-12 md:justify-self-end">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        pricing_rules: prev.pricing_rules.filter(
-                          (_, idx) => idx !== i
-                        ),
-                      }))
-                    }
-                    className="h-11 w-11 inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
-                    title="Xoá quy tắc"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                  <div className="flex justify-end self-end md:col-span-1 md:col-start-12 md:justify-self-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          pricing_rules: prev.pricing_rules.filter(
+                            (_, idx) => idx !== i
+                          ),
+                        }))
+                      }
+                      className="h-11 w-11 inline-flex items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
+                      title="Xoá quy tắc"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </section>
       )}
       {/* Lỗi gửi form */}

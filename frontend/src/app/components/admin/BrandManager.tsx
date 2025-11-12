@@ -19,7 +19,7 @@ import {
  * - Tìm kiếm, modal thêm/sửa, upload + preview logo, toast thông báo
  */
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_BE_BASE_URL;;
 
 export type Brand = {
   id: number;

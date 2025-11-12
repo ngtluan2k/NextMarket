@@ -17,6 +17,7 @@ const formatVND = (n?: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
     n ?? 0
   );
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export function ProductCard({ product }: { product: ProductCardType }) {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export function ProductCard({ product }: { product: ProductCardType }) {
   const flashPrice =
     product.pricing_rules?.find((r) => r.type === 'flash_sale')?.price ?? 0;
   const mediaUrl = product.media?.[0]?.url
-    ? `http://localhost:3000${product.media[0].url}`
+    ? `${BE_BASE_URL}${product.media[0].url}`
     : '';
   return (
     <div

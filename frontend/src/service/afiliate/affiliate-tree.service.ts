@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../../app/api/api";
+import { BE_BASE_URL } from "../../app/api/api";
 
 function authHeaders() {
   const token = localStorage.getItem('token') || '';
@@ -9,7 +9,7 @@ function authHeaders() {
 }
 
 export async function fetchAncestors(userId: number, page = 1, pageSize = 20) {
-  const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/upline`);
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/upline`);
   url.searchParams.set('userId', String(userId));
   url.searchParams.set('page', String(page));
   url.searchParams.set('pageSize', String(pageSize));
@@ -19,7 +19,7 @@ export async function fetchAncestors(userId: number, page = 1, pageSize = 20) {
 }
 
 export async function fetchDescendants(userId: number, maxDepth = 10) {
-  const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/downline`);
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/downline`);
   url.searchParams.set('userId', String(userId));
   url.searchParams.set('maxDepth', String(maxDepth));
   const res = await fetch(url.toString(), { headers: authHeaders() });
@@ -29,7 +29,7 @@ export async function fetchDescendants(userId: number, maxDepth = 10) {
 
 // API mới cho affiliate tree với commission
 export async function fetchAffiliateTreeWithCommissions(userId: number, maxDepth = 10, programId?: number | string) {
-  const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/with-commissions/${userId}`);
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/with-commissions/${userId}`);
   url.searchParams.set('maxDepth', String(maxDepth));
   if (programId) {
     url.searchParams.set('programId', String(programId));
@@ -40,14 +40,14 @@ export async function fetchAffiliateTreeWithCommissions(userId: number, maxDepth
 }
 
 export async function fetchCommissionSummary(userId: number) {
-  const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/commission-summary/${userId}`);
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/commission-summary/${userId}`);
   const res = await fetch(url.toString(), { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch commission summary (${res.status})`);
   return await res.json();
 }
 
 export async function fetchCommissionRules(level: number, programId?: number) {
-  const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/commission-rules/${level}`);
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/commission-rules/${level}`);
   if (programId) {
     url.searchParams.set('programId', String(programId));
   }
@@ -58,7 +58,7 @@ export async function fetchCommissionRules(level: number, programId?: number) {
 
 // API cho admin quy định mức affiliate
 export async function setCommissionRulesForUsers(rules: any[], programId?: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/affiliate-tree/set-commission-rules`, {
+  const res = await fetch(`${BE_BASE_URL}/admin/affiliate-tree/set-commission-rules`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ rules, programId }),
@@ -68,7 +68,7 @@ export async function setCommissionRulesForUsers(rules: any[], programId?: numbe
 }
 
 export async function fetchCommissionRulesForUsers(userIds: number[], programId?: number) {
-  const url = new URL(`${API_BASE_URL}/admin/affiliate-tree/commission-rules-for-users`);
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/commission-rules-for-users`);
   url.searchParams.set('userIds', userIds.join(','));
   if (programId) {
     url.searchParams.set('programId', String(programId));

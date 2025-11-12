@@ -6,7 +6,7 @@ import {
   UseSubscriptionResponse,
 } from '../app/types/subscription';
 
-const API_BASE = 'http://localhost:3000/subscriptions';
+const API_BASE = `${import.meta.env.VITE_BE_BASE_URL}/subscriptions`;
 
 export async function fetchMySubscriptions(): Promise<Subscription[]> {
   const token = localStorage.getItem('token');

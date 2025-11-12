@@ -6,9 +6,11 @@ import { storeService } from '../../../../service/store.service';
 import { productService, Product } from '../../../../service/product.service';
 import { getPendingCampaigns, registerStoreForCampaign, Campaign } from '../../../../service/campaign.service';
 
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 // Hàm chuyển đổi URL thành URL tuyệt đối
 function toAbsoluteUrl(url: string) {
-  return `http://localhost:3000${url}`;
+  return `${BE_BASE_URL}${url}`;
 }
 
 export default function StoreCampaignManager({

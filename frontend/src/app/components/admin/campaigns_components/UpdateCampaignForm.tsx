@@ -80,6 +80,7 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
     backgroundColor: '#ffffff',
     status: 'draft',
   });
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     (async () => {
@@ -117,7 +118,7 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
                 name: img.imageUrl.split('/').pop() || '',
                 url: img.imageUrl.startsWith('http')
                   ? img.imageUrl
-                  : `http://localhost:3000${img.imageUrl}`,
+                  : `${BE_BASE_URL}${img.imageUrl}`,
                 status: 'done' as const,
               })
             )
@@ -168,11 +169,11 @@ export default function UpdateCampaignForm({ campaignId, onClose }: Props) {
         removedImages, // 🆕 thêm danh sách ảnh bị xoá
       });
 
-      message.success('✅ Cập nhật chiến dịch thành công!');
+      message.success('Cập nhật chiến dịch thành công!');
       onClose();
     } catch (err) {
       console.error(err);
-      message.error('❌ Cập nhật chiến dịch thất bại');
+      message.error(' Cập nhật chiến dịch thất bại');
     } finally {
       setSaving(false);
     }

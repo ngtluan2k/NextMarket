@@ -37,7 +37,7 @@ export const CartHeader: React.FC<Props> = ({
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
   const storeName = cart[0]?.product?.store?.name ?? 'Shop';
-
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   const selectedCartItems = cart.filter((item) =>
     selectedIds.includes(item.id)
   );
@@ -69,7 +69,7 @@ export const CartHeader: React.FC<Props> = ({
   const toImageUrl = (url?: string) => {
     if (!url) return '/default-product.png'; // fallback ảnh mặc định
     if (url.startsWith('http')) return url; // đã là full URL
-    return `http://localhost:3000${url}`; // nếu là path local -> thêm host
+    return `${BE_BASE_URL}{url}`; // nếu là path local -> thêm host
   };
   // 1) GIỎ TRỐNG -> render header trống + nút "Tiếp tục mua sắm"
   if (cart.length === 0) {
@@ -265,7 +265,7 @@ export const CartHeader: React.FC<Props> = ({
                         </Text>
                       )}
                       <Text type="secondary" className="block text-xs">
-                        Type: {item.type}
+                        Loại hàng: {item.type}
                       </Text>
                       {color && (
                         <Text type="secondary" className="block text-xs">
@@ -291,17 +291,15 @@ export const CartHeader: React.FC<Props> = ({
                     </Text>
                   </div>
 
-                 {/* Số lượng */}
+                  {/* Số lượng */}
                   <div className="flex justify-center">
                     <div className="flex border rounded">
                       <button
                         className="px-2"
                         onClick={() =>
                           updateQuantity(
-                            item.product.id,
-                            Math.max(1, item.quantity - 1),
-                            item.variant?.id,
-                            item.type
+                            item.id,
+                            Math.max(1, item.quantity - 1)
                           )
                         }
                       >
@@ -316,12 +314,7 @@ export const CartHeader: React.FC<Props> = ({
                       <button
                         className="px-2"
                         onClick={() =>
-                          updateQuantity(
-                            item.product.id,
-                            item.quantity + 1,
-                            item.variant?.id,
-                            item.type
-                          )
+                          updateQuantity(item.id, item.quantity + 1)
                         }
                       >
                         +

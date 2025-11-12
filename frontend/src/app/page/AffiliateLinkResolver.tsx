@@ -6,7 +6,8 @@ export default function AffiliateLinkResolver() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+  
   useEffect(() => {
     const run = async () => {
       const aff = searchParams.get('aff') || '';
@@ -34,7 +35,7 @@ export default function AffiliateLinkResolver() {
         return;
       }
 
-      const res = await fetch(`http://localhost:3000/products/${id}`);
+      const res = await fetch(`${BE_BASE_URL}/products/${id}`);
       if (!res.ok) {
         navigate('/', { replace: true });
         return;

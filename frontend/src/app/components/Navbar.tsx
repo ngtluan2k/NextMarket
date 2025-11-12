@@ -9,16 +9,18 @@ import {
   Receipt,
   BadgeDollarSign,
   MapPin,
+  Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import LoginModal, { LoginPayload } from './LoginModal';
 import AccountMenu from './AccountMenu';
-import AddressModal from '../page/AddressModal'; 
+import AddressModal from '../page/AddressModal';
 import debounce from 'lodash.debounce';
 import { userApi } from '../api/api';
 import { UserAddress } from '../types/user';
+import { JoinGroupModal } from './JoinGroupModal';
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -33,6 +35,7 @@ export type HeaderLabels = {
   qa2?: string;
   qa3?: string;
   qa4?: string;
+  qa5?: string;
 };
 
 const DEFAULT_LABELS: Required<HeaderLabels> = {
@@ -55,6 +58,7 @@ const DEFAULT_LABELS: Required<HeaderLabels> = {
   qa2: 'Đóng tiền, nạp thẻ',
   qa3: 'Mua trước trả sau',
   qa4: 'Bán hàng cùng EveryMart',
+  qa5: 'Nhập mã để tham gia mua nhóm',
 };
 
 export interface ProductSuggestion {
@@ -78,6 +82,11 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const totalItems = cart.length;
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
+  const [groupJoinCode, setGroupJoinCode] = useState('');
+  const [joiningGroup, setJoiningGroup] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   // Lấy danh sách địa chỉ của người dùng
   useEffect(() => {
@@ -107,7 +116,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     }
     try {
       const res = await fetch(
-        'http://localhost:3000/stores/my-store?includeDeleted=true',
+        `${BE_BASE_URL}/stores/my-store?includeDeleted=true`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -147,7 +156,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     if (token && user && !me) {
       try {
         const userData = JSON.parse(user);
-        fetch('http://localhost:3000/users/me', {
+        fetch(`${BE_BASE_URL}/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -158,18 +167,21 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               login(json.data, token);
             } else {
               localStorage.removeItem('token');
+              localStorage.removeItem('access_token');
               localStorage.removeItem('user');
               logout();
             }
           })
           .catch(() => {
             localStorage.removeItem('token');
+            localStorage.removeItem('access_token');
             localStorage.removeItem('user');
             logout();
           });
       } catch (err) {
         console.error('Error parsing user data:', err);
         localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         logout();
       }
@@ -184,7 +196,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     setLoadingSuggestions(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/products/search?q=${encodeURIComponent(
+        `${BE_BASE_URL}/products/search?q=${encodeURIComponent(
           q
         )}&limit=5`
       );
@@ -214,6 +226,11 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     setSuggestions([]);
   };
 
+  const handleOpenJoinModal = (e?: React.MouseEvent) => {
+    e?.preventDefault?.();
+    setShowJoinModal(true);
+  };
+  const handleCloseJoinModal = () => setShowJoinModal(false);
   const handleAddressSelect = (address: UserAddress) => {
     setSelectedAddress(address);
   };
@@ -281,7 +298,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                           const rawUrl = p.media[0].url;
                           const imageUrl = rawUrl.startsWith('http')
                             ? rawUrl
-                            : `http://localhost:3000/${rawUrl.replace(
+                            : `${BE_BASE_URL}/${rawUrl.replace(
                                 /^\/+/,
                                 ''
                               )}`;
@@ -430,8 +447,24 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               {L.qa4}
             </span>
           </a>
+          <a
+            href="#"
+            onClick={handleOpenJoinModal}
+            className="group flex items-center gap-2 px-3 py-2 self-stretch"
+          >
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-cyan-600 text-white">
+              <Users className="h-3.5 w-3.5" />
+            </span>
+            <span className="font-medium group-hover:text-cyan-700">
+              {L.qa5}
+            </span>
+          </a>
         </div>
       </div>
+
+      <JoinGroupModal open={showJoinModal} onClose={handleCloseJoinModal} />
+
+
 
       {/* Login Modal */}
       <LoginModal
@@ -439,7 +472,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
         onClose={() => setOpenLogin(false)}
         onLogin={async (data: LoginPayload) => {
           try {
-            const res = await fetch('http://localhost:3000/users/login', {
+            const res = await fetch(`${BE_BASE_URL}/users/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
@@ -448,7 +481,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
             login(json.data, json.access_token);
-            const profileRes = await fetch('http://localhost:3000/users/me', {
+            const profileRes = await fetch(`${BE_BASE_URL}/users/me`, {
               headers: {
                 Authorization: `Bearer ${json.access_token}`,
               },

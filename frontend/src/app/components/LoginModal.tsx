@@ -68,6 +68,7 @@ const defaultSide =
       </g>
     </svg>`
   );
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export default function LoginModal({
   open,
@@ -76,7 +77,7 @@ export default function LoginModal({
   onRegister, // chưa dùng
   title = 'Xin chào,',
   sideImageUrl,
-  apiBase = 'http://localhost:3000',
+  apiBase = `${BE_BASE_URL}`,
 }: LoginModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const { me, login } = useAuth();
@@ -172,7 +173,9 @@ export default function LoginModal({
   // ===== Helpers: register validation mapping
   function buildRegisterErrors(next: RegisterPayload, confirmPw: string) {
     const v = validateRegisterPayload(next);
-    const map: Partial<Record<keyof RegisterPayload | 'confirm_password', string>> = {};
+    const map: Partial<
+      Record<keyof RegisterPayload | 'confirm_password', string>
+    > = {};
     v.errors.forEach((e) => (map[e.field] = e.message));
     if (confirmPw && next.password !== confirmPw) {
       map.confirm_password = 'Mật khẩu và Nhập lại mật khẩu không khớp';
@@ -180,7 +183,10 @@ export default function LoginModal({
     return map;
   }
 
-  function updateField<K extends keyof RegisterPayload>(field: K, value: RegisterPayload[K]) {
+  function updateField<K extends keyof RegisterPayload>(
+    field: K,
+    value: RegisterPayload[K]
+  ) {
     const next = { ...reg, [field]: value };
     setReg(next);
     const errs = buildRegisterErrors(next, regConfirmPw);
@@ -262,9 +268,18 @@ export default function LoginModal({
     e?.preventDefault();
 
     // Touch all để hiện toàn bộ lỗi khi submit lần đầu
-    const allTouched: Partial<Record<keyof RegisterPayload | 'confirm_password', boolean>> = {
-      username: true, full_name: true, dob: true, phone: true, gender: true,
-      email: true, password: true, country: true, confirm_password: true,
+    const allTouched: Partial<
+      Record<keyof RegisterPayload | 'confirm_password', boolean>
+    > = {
+      username: true,
+      full_name: true,
+      dob: true,
+      phone: true,
+      gender: true,
+      email: true,
+      password: true,
+      country: true,
+      confirm_password: true,
     };
     setRegTouched(allTouched);
 
@@ -310,6 +325,8 @@ export default function LoginModal({
         const data = event.data;
         if (data?.access_token) {
           login(data.user, data.access_token);
+          localStorage.setItem('token', data.access_token);
+          localStorage.setItem('user', JSON.stringify(data.user));
           fetch(`${apiBase}/cart/me`, {
             headers: { Authorization: `Bearer ${data.access_token}` },
           })
@@ -320,7 +337,7 @@ export default function LoginModal({
           onClose();
           popup.close();
           window.removeEventListener('message', listener);
-          window.location.href = '/home';
+          navigate('/home');
         }
       };
       window.addEventListener('message', listener);
@@ -332,9 +349,16 @@ export default function LoginModal({
   const RightArt = sideImageUrl || defaultSide;
 
   return (
-    <div aria-modal role="dialog" className="fixed inset-0 z-[100] overflow-y-auto">
+    <div
+      aria-modal
+      role="dialog"
+      className="fixed inset-0 z-[100] overflow-y-auto"
+    >
       {/* overlay */}
-      <div className="fixed inset-0 bg-black/55 backdrop-blur-[1px]" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/55 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
 
       {/* modal */}
       <div
@@ -436,7 +460,11 @@ export default function LoginModal({
                       onClick={() => setShowPw((v) => !v)}
                       aria-label={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     >
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPw ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   }
                 />
@@ -464,7 +492,11 @@ export default function LoginModal({
                   </a>
                 </div>
 
-                <FancyButton loading={submitting} type="submit" className="mt-2 rounded-full">
+                <FancyButton
+                  loading={submitting}
+                  type="submit"
+                  className="mt-2 rounded-full"
+                >
                   Tiếp tục
                 </FancyButton>
 
@@ -481,7 +513,10 @@ export default function LoginModal({
               </form>
             ) : (
               // REGISTER FORM
-              <form onSubmit={handleRegister} className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form
+                onSubmit={handleRegister}
+                className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
                 {/* Username | Họ tên */}
                 <Field
                   name="username"
@@ -545,7 +580,11 @@ export default function LoginModal({
                       onClick={() => setShowRegPw((v) => !v)}
                       aria-label={showRegPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     >
-                      {showRegPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showRegPw ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   }
                 />
@@ -558,7 +597,10 @@ export default function LoginModal({
                     setRegConfirmPw(v);
                     if (regTouched.confirm_password) {
                       const errs = buildRegisterErrors(reg, v);
-                      setRegErrors((e) => ({ ...e, confirm_password: errs.confirm_password }));
+                      setRegErrors((e) => ({
+                        ...e,
+                        confirm_password: errs.confirm_password,
+                      }));
                     }
                   }}
                   onBlur={() => touchField('confirm_password')}
@@ -571,9 +613,15 @@ export default function LoginModal({
                       type="button"
                       className="rounded-full p-1 text-slate-500 hover:bg-slate-100"
                       onClick={() => setShowRegConfirmPw((v) => !v)}
-                      aria-label={showRegConfirmPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      aria-label={
+                        showRegConfirmPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'
+                      }
                     >
-                      {showRegConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showRegConfirmPw ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   }
                 />
@@ -619,7 +667,10 @@ export default function LoginModal({
                     error={regErrors.country}
                     options={[
                       { label: 'Vietnam', value: 'Vietnam' },
-                      ...countries.map((c) => ({ label: c.name, value: c.name })),
+                      ...countries.map((c) => ({
+                        label: c.name,
+                        value: c.name,
+                      })),
                     ]}
                     placeholder="Chọn quốc gia"
                     iconLeft={<Globe className="h-4 w-4" />}
@@ -628,7 +679,11 @@ export default function LoginModal({
 
                 {/* Submit */}
                 <div className="md:col-span-2">
-                  <FancyButton loading={submitting} type="submit" className="mt-1 rounded-full">
+                  <FancyButton
+                    loading={submitting}
+                    type="submit"
+                    className="mt-1 rounded-full"
+                  >
                     Tạo tài khoản
                   </FancyButton>
                 </div>
@@ -659,7 +714,9 @@ export default function LoginModal({
               <div className="text-base font-semibold text-slate-900">
                 Mua sắm tại EveryMart
               </div>
-              <div className="mt-1 text-sm text-slate-600">Nhiều ưu đãi mỗi ngày</div>
+              <div className="mt-1 text-sm text-slate-600">
+                Nhiều ưu đãi mỗi ngày
+              </div>
             </div>
           </div>
         </div>
@@ -679,14 +736,14 @@ type FieldProps = {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  onBlur?: () => void;                 // NEW
+  onBlur?: () => void; // NEW
   placeholder?: string;
   type?: string;
   iconLeft?: React.ReactNode;
   rightSlot?: React.ReactNode;
   autoComplete?: string;
   name?: string;
-  error?: string;                      // NEW
+  error?: string; // NEW
 };
 
 const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
@@ -741,7 +798,9 @@ const Field = React.forwardRef<HTMLInputElement, FieldProps>(function Field(
         {rightSlot && <span className="absolute right-2">{rightSlot}</span>}
       </div>
       {error && (
-        <p id={errorId} className="mt-1 text-xs text-rose-600">{error}</p>
+        <p id={errorId} className="mt-1 text-xs text-rose-600">
+          {error}
+        </p>
       )}
     </div>
   );
@@ -792,8 +851,8 @@ function SelectField({
   const [dir, setDir] = React.useState<'down' | 'up'>('down');
   const [coords, setCoords] = React.useState({
     left: 0,
-    top: 0,        // top cho menu khi mở xuống
-    bottom: 0,     // bottom cho menu khi mở lên (fixed)
+    top: 0, // top cho menu khi mở xuống
+    bottom: 0, // bottom cho menu khi mở lên (fixed)
     width: 0,
   });
 
@@ -809,7 +868,8 @@ function SelectField({
     if (!btn) return;
     const r = btn.getBoundingClientRect();
     const spaceBelow = window.innerHeight - r.bottom;
-    const openDir: 'down' | 'up' = spaceBelow < MENU_MAX_HEIGHT + 8 ? 'up' : 'down';
+    const openDir: 'down' | 'up' =
+      spaceBelow < MENU_MAX_HEIGHT + 8 ? 'up' : 'down';
     setDir(openDir);
     setCoords({
       left: r.left,
@@ -844,10 +904,16 @@ function SelectField({
   const triggerClass = cx(
     'flex w-full items-center justify-between bg-white text-left text-sm pl-3 pr-10 py-2.5 border transition',
     open
-      ? (error ? 'border-rose-400 ring-2 ring-rose-100' : 'border-sky-500 ring-2 ring-sky-100')
-      : (error ? 'border-rose-400 ring-2 ring-rose-100' : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-500'),
+      ? error
+        ? 'border-rose-400 ring-2 ring-rose-100'
+        : 'border-sky-500 ring-2 ring-sky-100'
+      : error
+      ? 'border-rose-400 ring-2 ring-rose-100'
+      : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-500',
     open
-      ? (dir === 'down' ? 'rounded-t-2xl rounded-b-none' : 'rounded-b-2xl rounded-t-none')
+      ? dir === 'down'
+        ? 'rounded-t-2xl rounded-b-none'
+        : 'rounded-b-2xl rounded-t-none'
       : 'rounded-2xl'
   );
 
@@ -859,7 +925,10 @@ function SelectField({
   }
 
   function onKey(e: React.KeyboardEvent) {
-    if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+    if (
+      !open &&
+      (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')
+    ) {
       e.preventDefault();
       setOpen(true);
       // đo vị trí ngay khi mở
@@ -867,7 +936,10 @@ function SelectField({
       return;
     }
     if (!open) return;
-    if (e.key === 'Escape') { setOpen(false); return; }
+    if (e.key === 'Escape') {
+      setOpen(false);
+      return;
+    }
   }
 
   const menu = (
@@ -887,7 +959,9 @@ function SelectField({
       className={cx(
         'z-[1100] bg-white shadow-xl',
         error ? 'border border-rose-400' : 'border border-slate-200',
-        dir === 'down' ? 'rounded-b-2xl rounded-t-none border-t-0' : 'rounded-t-2xl rounded-b-none border-b-0'
+        dir === 'down'
+          ? 'rounded-b-2xl rounded-t-none border-t-0'
+          : 'rounded-t-2xl rounded-b-none border-b-0'
       )}
     >
       {options.map((opt, idx) => {
@@ -911,7 +985,9 @@ function SelectField({
 
   return (
     <div className="group">
-      <label className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
       <div className="relative">
         <input type="hidden" name={name} value={value} />
         <button
@@ -940,11 +1016,14 @@ function SelectField({
       {/* Menu render ra body để không bị cắt bởi overflow-hidden */}
       {open && createPortal(menu, document.body)}
 
-      {error && <p id={errorId} className="mt-1 text-xs text-rose-600">{error}</p>}
+      {error && (
+        <p id={errorId} className="mt-1 text-xs text-rose-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
-
 
 function FancyButton({
   children,
@@ -963,8 +1042,18 @@ function FancyButton({
       {loading ? (
         <span className="inline-flex items-center gap-2">
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" className="fill-none stroke-white/30" strokeWidth="4" />
-            <path d="M22 12a10 10 0 0 1-10 10" className="fill-none stroke-white" strokeWidth="4" />
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              className="fill-none stroke-white/30"
+              strokeWidth="4"
+            />
+            <path
+              d="M22 12a10 10 0 0 1-10 10"
+              className="fill-none stroke-white"
+              strokeWidth="4"
+            />
           </svg>
           Đang xử lý...
         </span>

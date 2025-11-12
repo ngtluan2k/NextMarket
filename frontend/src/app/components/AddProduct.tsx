@@ -6,6 +6,8 @@ export const ProductForm: React.FC = () => {
     []
   );
   const [step, setStep] = useState(1);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 
   interface ProductFormState {
     name: string;
@@ -61,7 +63,7 @@ export const ProductForm: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://localhost:3000/brands', {
+    fetch(`${BE_BASE_URL}/brands`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -73,7 +75,7 @@ export const ProductForm: React.FC = () => {
           }))
         )
       );
-    fetch('http://localhost:3000/categories', {
+    fetch(`${BE_BASE_URL}/categories`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -186,7 +188,7 @@ export const ProductForm: React.FC = () => {
     formData.append('pricing_rules', JSON.stringify(form.pricing_rules));
     form.media.forEach((m) => m.file && formData.append('media', m.file));
 
-    const res = await fetch('http://localhost:3000/products/publish', {
+    const res = await fetch(`${BE_BASE_URL}/products/publish`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

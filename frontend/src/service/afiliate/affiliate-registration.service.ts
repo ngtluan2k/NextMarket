@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL } from '../../app/api/api';
+import { BE_BASE_URL } from '../../app/api/api';
 
 export interface AffiliateRegistration {
   id: number;
@@ -28,7 +28,7 @@ export async function getAffiliateRegistrations(): Promise<
 > {
   const res = await axios.get<
     AffiliateRegistration[] | AffiliateRegistrationsResponse
-  >(`${API_BASE_URL}/affiliate-registrations`, {
+  >(`${BE_BASE_URL}/affiliate-registrations`, {
     headers: getAuthHeaders(),
   });
 
@@ -38,7 +38,7 @@ export async function getAffiliateRegistrations(): Promise<
 
 export async function approveRegistration(id: number): Promise<void> {
   await axios.patch(
-    `${API_BASE_URL}/affiliate-registrations/${id}/approve`,
+    `${BE_BASE_URL}/affiliate-registrations/${id}/approve`,
     {},
     { headers: getAuthHeaders() }
   );
@@ -46,7 +46,7 @@ export async function approveRegistration(id: number): Promise<void> {
 
 export async function rejectRegistration(id: number): Promise<void> {
   await axios.patch(
-    `${API_BASE_URL}/affiliate-registrations/${id}/reject`,
+    `${BE_BASE_URL}/affiliate-registrations/${id}/reject`,
     {},
     { headers: getAuthHeaders() }
   );

@@ -90,10 +90,13 @@ export interface Voucher {
   applicable_category_ids?: number[];
   applicable_product_ids?: number[];
   excluded_product_ids?: number[];
+  applicable_user_ids?: number[];
   user_conditions?: UserConditions;
   time_restrictions?: TimeRestrictions;
   image_url?: string;
   theme_color?: string;
+  is_collected?: boolean;
+  user_used_count?: number;
   createdAt: string;
   updatedAt: string;
   store?: {
@@ -127,6 +130,7 @@ export interface CreateVoucherPayload {
   applicable_category_ids?: number[];
   applicable_product_ids?: number[];
   excluded_product_ids?: number[];
+  applicable_user_ids?: number[];
   user_conditions?: UserConditions;
   time_restrictions?: TimeRestrictions;
   image_url?: string;

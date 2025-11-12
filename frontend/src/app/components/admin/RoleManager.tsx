@@ -39,17 +39,8 @@ interface Role {
   permissions: Permission[];
 }
 
-const API_BASE =
-  (globalThis as any).__API_BASE__ ||
-  (globalThis as any).process?.env?.NEXT_PUBLIC_API_URL ||
-  (() => {
-    try {
-      return (import.meta as any).env?.VITE_API_URL as string | undefined;
-    } catch {
-      return undefined;
-    }
-  })() ||
-  'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const getToken = () =>
   typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 

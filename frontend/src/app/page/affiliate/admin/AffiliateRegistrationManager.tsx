@@ -30,6 +30,8 @@ interface AffiliateRegistration {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 const AffiliateRegistrationManager: React.FC = () => {
   const [registrations, setRegistrations] = useState<AffiliateRegistration[]>(
     []
@@ -37,6 +39,15 @@ const AffiliateRegistrationManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [viewingRegistration, setViewingRegistration] =
     useState<AffiliateRegistration | null>(null);
+  const token = localStorage.getItem('token');
+
+  const apiClient = axios.create({
+    baseURL: `${BE_BASE_URL}`, // chỉnh lại theo BE thật
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
   useEffect(() => {
     fetchRegistrations();

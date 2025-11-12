@@ -1,3 +1,5 @@
+import { BE_BASE_URL } from "../app/api/api";
+
 // user-helper.service.ts
 export type User = {
   id: number;
@@ -23,7 +25,6 @@ export type User = {
   };
 };
 
-const API_BASE = 'http://localhost:3000';
 
 function authHeaders() {
   const token = localStorage.getItem('token') || '';
@@ -47,7 +48,7 @@ export async function findUserIdByEmail(email: string): Promise<number> {
 
   try {
     // Gọi API tìm user theo email
-    const res = await fetch(`${API_BASE}/users/search?email=${encodeURIComponent(email.trim())}`, { 
+    const res = await fetch(`${BE_BASE_URL}/users/search?email=${encodeURIComponent(email.trim())}`, { 
       headers: authHeaders() 
     });
     
@@ -104,7 +105,7 @@ export async function findUserByEmail(email: string): Promise<User> {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/users/search?email=${encodeURIComponent(email.trim())}`, { 
+    const res = await fetch(`${BE_BASE_URL}/users/search?email=${encodeURIComponent(email.trim())}`, { 
       headers: authHeaders() 
     });
     
@@ -148,7 +149,7 @@ export async function getUserById(userId: number): Promise<User> {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/users/${userId}/profile`, { 
+    const res = await fetch(`${BE_BASE_URL}/users/${userId}/profile`, { 
       headers: authHeaders() 
     });
     

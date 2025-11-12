@@ -68,6 +68,7 @@ export type OrderSummary = {
   orderItem?: Array<{
     id: string;
     quantity: number;
+    pricing_rule_id?: number | null; 
     product?: {
       id: number;
       name: string;
@@ -80,6 +81,8 @@ export type OrderSummary = {
     };
   }>;
 };
+
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
@@ -98,7 +101,7 @@ const getUserIdFromStorage = (): number | null => {
   if (!raw) return null;
   try {
     const user = JSON.parse(raw);
-    return user.id ? Number(user.id) : null;
+    return user.user_id ? Number(user.user_id) : null;
   } catch {
     return null;
   }
@@ -164,7 +167,7 @@ export default function OrdersPage() {
               orderItemId: String(it.id),
               productId: product?.id,
               name: product?.name ?? it.name,
-              image: image ? `http://localhost:3000${image}` : undefined,
+              image: image ? `${BE_BASE_URL}${image}` : undefined,
               qty: it.quantity,
               price: Number(it.price ?? 0),
               isReviewed,
@@ -177,6 +180,7 @@ export default function OrdersPage() {
         let filteredItems = items;
         if (tab !== 'all') {
           filteredItems = items.filter((o) => o.status === tab);
+          console.log(`Filtered by tab (${tab}):`, filteredItems);
         }
 
         // Filter theo search

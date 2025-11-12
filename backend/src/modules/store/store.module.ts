@@ -25,6 +25,8 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { ProductCategory } from '../product_category/product_category.entity';
 import { ProductTag } from '../product_tag/product_tag.entity';
 import { Tag } from '../tag/tag.entity';
+import { CampaignStore } from '../campaigns/entities/campaign_stores.ts.entity';
+import { Campaign } from '../campaigns/entities/campaign.entity';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { Tag } from '../tag/tag.entity';
       ProductCategory,
       ProductTag,
       Tag,
+      CampaignStore,
+      Campaign,
     ]),
     forwardRef(() => ProductModule), // ✅ chỉ import module bằng forwardRef
   ],

@@ -19,6 +19,7 @@ export const useSaveDraft = () => {
       const token = localStorage.getItem('token');
       const defaultAddress = addresses.find((a) => a.is_default);
       const defaultEmail = emails.find((e) => e.is_default);
+      const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
       // Build step data based on current step
       let stepData: any = {
@@ -107,7 +108,7 @@ export const useSaveDraft = () => {
         }
       }
 
-      const res = await fetch('http://localhost:3000/stores/register-seller', {
+      const res = await fetch(`${BE_BASE_URL}/stores/register-seller`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

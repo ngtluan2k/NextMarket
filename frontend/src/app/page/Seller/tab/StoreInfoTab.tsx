@@ -18,7 +18,8 @@ import { EditOutlined, CameraOutlined } from '@ant-design/icons';
 import { Camera, Store } from 'lucide-react';
 import { storeService } from '../../../../service/store.service';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+;
 
 function toAbs(p?: string) {
   if (!p) return '';

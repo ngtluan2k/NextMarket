@@ -13,6 +13,7 @@ export default function StoreAllProductsTab() {
 
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [loading, setLoading] = useState(false);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     let alive = true;
@@ -20,7 +21,7 @@ export default function StoreAllProductsTab() {
       try {
         setLoading(true);
         const res = await fetch(
-          `http://localhost:3000/stores/slug/${slug}/categories`
+          `${BE_BASE_URL}/stores/slug/${slug}/categories`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();

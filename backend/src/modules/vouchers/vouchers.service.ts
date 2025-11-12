@@ -30,6 +30,12 @@ import { VoucherUsageService } from '../voucher-usage/voucher-usage.service';
 import { CreateVoucherUsageDto } from '../voucher-usage/dto/create-voucher-usage.dto';
 import { EntityManager } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
+
+export interface ExtendedVoucher extends Voucher {
+  user_used_count: number;
+  is_collected: boolean;
+}
 
 @Injectable()
 export class VouchersService {
@@ -44,98 +50,104 @@ export class VouchersService {
     private readonly ordersRepository: Repository<Order>,
     @InjectRepository(Store)
     private readonly storesRepository: Repository<Store>,
-    private readonly voucherUsageService: VoucherUsageService
+    private readonly voucherUsageService: VoucherUsageService,
+    @InjectRepository(VoucherCollection)
+    private readonly voucherCollectionRepository: Repository<VoucherCollection>
   ) {}
 
   async create(
-  createVoucherDto: CreateVoucherDto,
-  userId: number,
-  role: string | string[]
-): Promise<Voucher> {
-  console.log('=== VOUCHER CREATE START ===');
-  console.log('Role:', role);
-  console.log('User ID:', userId);
-  console.log('DTO received:', createVoucherDto);
+    createVoucherDto: CreateVoucherDto,
+    userId: number,
+    role: string | string[]
+  ): Promise<Voucher> {
+    console.log('=== VOUCHER CREATE START ===');
+    console.log('Role:', role);
+    console.log('User ID:', userId);
+    console.log('DTO received:', createVoucherDto);
 
-  const roleArray = Array.isArray(role) ? role : [role];
-  console.log('Role array:', roleArray);
+    const roleArray = Array.isArray(role) ? role : [role];
+    console.log('Role array:', roleArray);
 
-  // Kiểm tra quyền
-  if (!this.hasPermission(roleArray, 'add_voucher')) {
-    throw new ForbiddenException('Không có quyền tạo voucher');
-  }
-
-  let storeId: number | undefined;
-
-  // Xác định xem có phải Seller thuần túy không (không phải Admin)
-  const isSellerOnly = roleArray.includes('Seller') && !roleArray.includes('Admin');
-
-  if (isSellerOnly) {
-    console.log('Processing for Seller only role');
-
-    if (createVoucherDto.store) {
-      storeId = createVoucherDto.store;
-      console.log('Using store from DTO.store:', storeId);
-    } else if (
-      createVoucherDto.applicable_store_ids &&
-      createVoucherDto.applicable_store_ids.length === 1
-    ) {
-      storeId = createVoucherDto.applicable_store_ids[0];
-      console.log('Using store from applicable_store_ids:', storeId);
+    // Kiểm tra quyền
+    if (!this.hasPermission(roleArray, 'add_voucher')) {
+      throw new ForbiddenException('Không có quyền tạo voucher');
     }
 
-    if (!storeId) {
+    let storeId: number | undefined;
+
+    // Xác định xem có phải Seller thuần túy không (không phải Admin)
+    const isSellerOnly =
+      roleArray.includes('Seller') && !roleArray.includes('Admin');
+
+    if (isSellerOnly) {
+      console.log('Processing for Seller only role');
+
+      if (createVoucherDto.store) {
+        storeId = createVoucherDto.store;
+        console.log('Using store from DTO.store:', storeId);
+      } else if (
+        createVoucherDto.applicable_store_ids &&
+        createVoucherDto.applicable_store_ids.length === 1
+      ) {
+        storeId = createVoucherDto.applicable_store_ids[0];
+        console.log('Using store from applicable_store_ids:', storeId);
+      }
+
+      if (!storeId) {
+        throw new BadRequestException(
+          'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
+        );
+      }
+
+      console.log('Checking store ownership...');
+      await this.checkStoreOwnership(userId, storeId);
+      console.log('Store ownership check passed');
+    } else {
+      // Admin hoặc Admin + Seller
+      storeId = undefined;
+      console.log('User is Admin or Admin+Seller, storeId can be null');
+    }
+
+    // Kiểm tra discount logic
+    if (
+      createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
+      (createVoucherDto.min_order_amount ?? 0) <
+        (createVoucherDto.discount_value ?? 0)
+    ) {
       throw new BadRequestException(
-        'Store owner phải cung cấp store hoặc applicable_store_ids với một store duy nhất'
+        'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
       );
     }
 
-    console.log('Checking store ownership...');
-    await this.checkStoreOwnership(userId, storeId);
-    console.log('Store ownership check passed');
-  } else {
-    // Admin hoặc Admin + Seller
-    storeId = undefined;
-    console.log('User is Admin or Admin+Seller, storeId can be null');
-  }
-
-  // Kiểm tra discount logic
-  if (
-    createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
-    (createVoucherDto.min_order_amount ?? 0) < (createVoucherDto.discount_value ?? 0)
-  ) {
-    throw new BadRequestException(
-      'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
+    // Tách store ra khỏi DTO
+    const { store, ...voucherData } = createVoucherDto;
+    console.log('Voucher data after removing store:', voucherData);
+    console.log(
+      'Store relation to set:',
+      storeId ? { id: storeId } : undefined
     );
+
+    // Tạo entity voucher
+    const voucher = this.vouchersRepository.create({
+      ...voucherData,
+      uuid: uuidv4(),
+      start_date: new Date(createVoucherDto.start_date),
+      end_date: new Date(createVoucherDto.end_date),
+      store: storeId ? { id: storeId } : undefined,
+    });
+
+    console.log('Voucher entity created:', voucher);
+
+    try {
+      const savedVoucher = await this.vouchersRepository.save(voucher);
+      console.log('Voucher saved successfully:', savedVoucher);
+      console.log('Saved voucher store relation:', savedVoucher.store);
+      return savedVoucher;
+    } catch (error) {
+      console.error('Error saving voucher:', error);
+      throw error;
+    }
   }
-
-  // Tách store ra khỏi DTO
-  const { store, ...voucherData } = createVoucherDto;
-  console.log('Voucher data after removing store:', voucherData);
-  console.log('Store relation to set:', storeId ? { id: storeId } : undefined);
-
-  // Tạo entity voucher
-  const voucher = this.vouchersRepository.create({
-    ...voucherData,
-    uuid: uuidv4(),
-    start_date: new Date(createVoucherDto.start_date),
-    end_date: new Date(createVoucherDto.end_date),
-    store: storeId ? { id: storeId } : undefined,
-  });
-
-  console.log('Voucher entity created:', voucher);
-
-  try {
-    const savedVoucher = await this.vouchersRepository.save(voucher);
-    console.log('Voucher saved successfully:', savedVoucher);
-    console.log('Saved voucher store relation:', savedVoucher.store);
-    return savedVoucher;
-  } catch (error) {
-    console.error('Error saving voucher:', error);
-    throw error;
-  }
-}
-
 
   async findAll(userId: number, roles: string[] | string): Promise<Voucher[]> {
     const roleList = Array.isArray(roles) ? roles : [roles];
@@ -273,6 +285,10 @@ export class VouchersService {
         throw new BadRequestException('Voucher không áp dụng cho cửa hàng này');
       }
     }
+    const applicableUsers = voucher.applicable_user_ids || [];
+    if (applicableUsers.length > 0 && !applicableUsers.includes(userId)) {
+      throw new BadRequestException('Voucher không áp dụng cho người dùng này');
+    }
 
     const subtotal = orderItems.reduce(
       (sum, item) => sum + item.quantity * item.price,
@@ -400,12 +416,61 @@ export class VouchersService {
       .andWhere('voucher.start_date <= :now', { now })
       .andWhere('voucher.end_date >= :now', { now });
 
+    // ✅ THÊM: Filter voucher theo collection_type
+    // Chỉ hiển thị AUTO vouchers cho tất cả
+    // MANUAL/TARGETED chỉ hiển thị nếu user nằm trong applicable_user_ids
+    if (userId) {
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          // Voucher AUTO - hiển thị cho tất cả
+          qb.where('voucher.collection_type = :autoType', {
+            autoType: VoucherCollectionType.AUTO,
+          });
+
+          // Voucher MANUAL/TARGETED - chỉ hiển thị cho user được chỉ định
+          qb.orWhere(
+            new Brackets((subQb) => {
+              subQb
+                .where('voucher.collection_type IN (:...manualTypes)', {
+                  manualTypes: [
+                    VoucherCollectionType.MANUAL,
+                    VoucherCollectionType.TARGETED,
+                  ],
+                })
+                .andWhere(
+                  new Brackets((innerQb) => {
+                    innerQb
+                      .where(
+                        'voucher.applicable_user_ids IS NULL OR JSON_LENGTH(voucher.applicable_user_ids) = 0'
+                      ) // Nếu empty, hiển thị tất
+                      .orWhere(
+                        'JSON_SEARCH(voucher.applicable_user_ids, "one", :userId) IS NOT NULL',
+                        { userId: userId.toString() }
+                      );
+                  })
+                );
+            })
+          );
+
+          // Voucher EVENT - hiển thị cho tất cả (nếu muốn)
+          qb.orWhere('voucher.collection_type = :eventType', {
+            eventType: VoucherCollectionType.EVENT,
+          });
+        })
+      );
+    } else {
+      // Nếu không có userId, chỉ hiển thị AUTO và EVENT
+      queryBuilder.andWhere('voucher.collection_type IN (:...types)', {
+        types: [VoucherCollectionType.AUTO, VoucherCollectionType.EVENT],
+      });
+    }
+
+    // Store filtering logic (giữ nguyên code cũ)
     if (storeId && storeId !== 0 && filterByStoreOnly) {
       queryBuilder
         .andWhere(
           new Brackets((qb) => {
             qb.where('voucher.store_id = :storeId', { storeId });
-
             if (storeId) {
               qb.orWhere(
                 'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
@@ -418,13 +483,8 @@ export class VouchersService {
     } else if (storeId && storeId !== 0 && !filterByStoreOnly) {
       queryBuilder.andWhere(
         new Brackets((qb) => {
-          // Admin/Platform vouchers (store_id = NULL)
           qb.where('voucher.store_id IS NULL');
-
-          // Store-specific vouchers
           qb.orWhere('voucher.store_id = :storeId', { storeId });
-
-          // Multi-store vouchers
           if (storeId) {
             qb.orWhere(
               'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
@@ -433,8 +493,6 @@ export class VouchersService {
           }
         })
       );
-    } else {
-      console.log('🌐 No storeId provided, returning ALL vouchers');
     }
 
     const vouchers = await queryBuilder
@@ -443,12 +501,12 @@ export class VouchersService {
       .getMany();
 
     console.log(
-      `📦 Found ${vouchers.length} vouchers before user-specific filtering`
+      `📦 Found ${vouchers.length} vouchers after collection_type filtering`
     );
 
+    // Rest of the logic (usage limits, etc.) - giữ nguyên
     const availableVouchers = [];
     for (const voucher of vouchers) {
-      // Check total usage limit
       if (
         voucher.total_usage_limit &&
         voucher.total_used_count >= voucher.total_usage_limit
@@ -456,7 +514,6 @@ export class VouchersService {
         continue;
       }
 
-      // Check collection limit
       if (
         voucher.collection_limit &&
         voucher.collected_count >= voucher.collection_limit
@@ -465,7 +522,6 @@ export class VouchersService {
       }
 
       if (userId) {
-        // Check per-user usage limit
         const userUsageCount = await this.voucherUsageRepository.count({
           where: { voucher: { id: voucher.id }, user: { id: userId } },
         });
@@ -473,7 +529,6 @@ export class VouchersService {
           continue;
         }
 
-        // Check new user only
         if (voucher.new_user_only) {
           const userOrders = await this.ordersRepository.count({
             where: { user: { id: userId } },
@@ -487,35 +542,36 @@ export class VouchersService {
       availableVouchers.push(voucher);
     }
 
-    console.log(` Returning ${availableVouchers.length} available vouchers`);
+    console.log(`✅ Returning ${availableVouchers.length} available vouchers`);
     return availableVouchers;
   }
-
   async getAvailableVouchersForAnyStore(): Promise<Voucher[]> {
-  const now = new Date();
+    const now = new Date();
 
-  const vouchers = await this.vouchersRepository
-    .createQueryBuilder('voucher')
-    .leftJoinAndSelect('voucher.store', 'store')
-    .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
-    .andWhere('voucher.start_date <= :now', { now })
-    .andWhere('voucher.end_date >= :now', { now })
-    .orderBy('voucher.priority', 'DESC')
-    .addOrderBy('voucher.created_at', 'DESC')
-    .getMany();
+    const vouchers = await this.vouchersRepository
+      .createQueryBuilder('voucher')
+      .leftJoinAndSelect('voucher.store', 'store')
+      .where('voucher.status = :status', { status: VoucherStatus.ACTIVE })
+      .andWhere('voucher.start_date <= :now', { now })
+      .andWhere('voucher.end_date >= :now', { now })
+      .orderBy('voucher.priority', 'DESC')
+      .addOrderBy('voucher.created_at', 'DESC')
+      .getMany();
 
-  console.log(`✅ Found ${vouchers.length} vouchers (filtered only by status/date)`);
+    console.log(
+      `✅ Found ${vouchers.length} vouchers (filtered only by status/date)`
+    );
 
-  return vouchers;
-}
-
+    return vouchers;
+  }
 
   async collectVoucher(voucherId: number, userId: number): Promise<void> {
     const voucher = await this.findOne(voucherId, userId, 'user');
 
     if (
       voucher.collection_type !== VoucherCollectionType.MANUAL &&
-      voucher.collection_type !== VoucherCollectionType.TARGETED
+      voucher.collection_type !== VoucherCollectionType.TARGETED &&
+      voucher.collection_type !== VoucherCollectionType.EVENT
     ) {
       throw new BadRequestException('Voucher này không thể thu thập thủ công');
     }
@@ -526,6 +582,40 @@ export class VouchersService {
     ) {
       throw new BadRequestException('Voucher đã đạt giới hạn thu thập');
     }
+
+    // Kiểm tra applicable_user_ids
+    console.log(
+      `Attempting to collect voucher ${voucherId} for user ${userId}`
+    );
+    console.log(
+      `Voucher applicable_user_ids: ${JSON.stringify(
+        voucher.applicable_user_ids
+      )}`
+    );
+    if (
+      voucher.applicable_user_ids?.length &&
+      voucher.applicable_user_ids.length > 0 &&
+      !voucher.applicable_user_ids?.includes(userId)
+    ) {
+      throw new BadRequestException(
+        'Bạn không nằm trong danh sách được phép thu thập voucher này'
+      );
+    }
+
+    // Kiểm tra đã thu thập chưa
+    const existing = await this.voucherCollectionRepository.findOne({
+      where: { voucher: { id: voucherId }, user: { id: userId } },
+    });
+    if (existing) {
+      throw new BadRequestException('Bạn đã thu thập voucher này rồi');
+    }
+
+    // Tạo bản ghi thu thập
+    const collection = this.voucherCollectionRepository.create({
+      voucher: { id: voucherId },
+      user: { id: userId },
+    });
+    await this.voucherCollectionRepository.save(collection);
 
     voucher.collected_count += 1;
     await this.vouchersRepository.save(voucher);
@@ -542,7 +632,7 @@ export class VouchersService {
     appliedVouchers: { code: string; discount: number; type: VoucherType }[];
     invalidVouchers: { code: string; error: string }[];
   }> {
-    console.log(' CalculateDiscount called with:', {
+    console.log(' Tính toán giảm giá được gọi với:', {
       voucherCodes,
       userId,
       orderItems,
@@ -570,10 +660,10 @@ export class VouchersService {
       0
     );
 
-    console.log('💰 Order amounts:', {
-      fromFrontend: orderAmount,
-      calculated: calculatedSubtotal,
-      difference: orderAmount - calculatedSubtotal,
+    console.log('💰 Số tiền đơn hàng:', {
+      từFrontend: orderAmount,
+      tínhToán: calculatedSubtotal,
+      chênhLệch: orderAmount - calculatedSubtotal,
     });
 
     const effectiveOrderAmount = calculatedSubtotal;
@@ -793,120 +883,247 @@ export class VouchersService {
         voucher.total_used_count >= voucher.total_usage_limit)
     );
   }
-  async getUserVouchers(userId: number): Promise<any[]> {
-    console.log(`📦 Fetching platform vouchers for user ${userId}`);
 
-    // CHỈ lấy voucher platform (toàn sàn) - store_id = NULL
-    const platformVouchers = await this.vouchersRepository.find({
-      where: {
-        store: IsNull(), // Chỉ lấy voucher platform
-      },
-      relations: ['store'],
-    });
+  async getUserCollectedVouchers(userId: number): Promise<ExtendedVoucher[]> {
+    console.log(`📦 Lấy voucher ĐÃ THU THẬP cho người dùng ${userId}`);
 
-    console.log(`🏪 Found ${platformVouchers.length} platform vouchers`);
-
-    // Lấy các voucher platform mà user đã sử dụng
-    const userVoucherUsages = await this.voucherUsageRepository.find({
-      where: {
-        user: { id: userId },
-      },
+    // 1. Lấy tất cả voucher mà user đã thu thập
+    const userCollections = await this.voucherCollectionRepository.find({
+      where: { user: { id: userId } },
       relations: ['voucher', 'voucher.store'],
     });
 
-    // Chỉ lấy usage của voucher platform
-    const usedPlatformVouchers = userVoucherUsages
-      .filter((usage) => !usage.voucher.store?.id)
-      .map((usage) => usage.voucher);
+    console.log(`📦 User đã thu thập ${userCollections.length} voucher`);
 
-    console.log(
-      `📊 User has used ${usedPlatformVouchers.length} platform vouchers`
-    );
+    // 2. Lấy thông tin sử dụng
+    const userVoucherUsages = await this.voucherUsageRepository.find({
+      where: { user: { id: userId } },
+      relations: ['voucher'],
+    });
 
-    // Tạo map user usage count
     const userUsageMap = new Map<number, number>();
     userVoucherUsages.forEach((usage) => {
       const vid = usage.voucher.id;
       userUsageMap.set(vid, (userUsageMap.get(vid) || 0) + 1);
     });
 
-    // ✅ Lọc voucher platform khả dụng (dùng for...of để hỗ trợ await)
-    const availablePlatformVouchers: Voucher[] = [];
+    // 3. Xử lý từng voucher đã thu thập
+    const collectedVouchers: ExtendedVoucher[] = [];
 
-    for (const voucher of platformVouchers) {
-      // Check nếu voucher đã hết hạn hoặc không active
-      if (!this.isVoucherActive(voucher)) {
+    for (const collection of userCollections) {
+      const voucher = collection.voucher;
+
+      // Thêm voucher với metadata
+      collectedVouchers.push({
+        ...voucher,
+        user_used_count: userUsageMap.get(voucher.id) || 0,
+        is_collected: true, // Luôn là true vì user đã thu thập
+      });
+    }
+
+    // 4. Sắp xếp
+    return collectedVouchers.sort((a, b) => {
+      // Ưu tiên: chưa sử dụng > đã sử dụng một phần
+      const aUsed = a.user_used_count > 0;
+      const bUsed = b.user_used_count > 0;
+
+      if (!aUsed && bUsed) return -1;
+      if (aUsed && !bUsed) return 1;
+
+      // Sắp xếp theo end_date
+      return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+    });
+  }
+
+  async getAvailableVouchersForCollection(
+    userId: number
+  ): Promise<ExtendedVoucher[]> {
+    console.log(`📦 Lấy voucher CÓ THỂ THU THẬP cho người dùng ${userId}`);
+
+    // 1. Lấy TẤT CẢ voucher nền tảng active
+    const now = new Date();
+    const allPlatformVouchers = await this.vouchersRepository.find({
+      where: {
+        store: IsNull(), // Chỉ voucher nền tảng
+        status: VoucherStatus.ACTIVE,
+        start_date: LessThanOrEqual(now),
+        end_date: MoreThanOrEqual(now),
+      },
+      relations: ['store'],
+    });
+
+    // 2. Lấy voucher user đã thu thập
+    const userCollections = await this.voucherCollectionRepository.find({
+      where: { user: { id: userId } },
+      relations: ['voucher'],
+    });
+    const collectedVoucherIds = new Set(
+      userCollections.map((c) => c.voucher.id)
+    );
+
+    // 3. Lấy thông tin sử dụng
+    const userVoucherUsages = await this.voucherUsageRepository.find({
+      where: { user: { id: userId } },
+      relations: ['voucher'],
+    });
+
+    const userUsageMap = new Map<number, number>();
+    userVoucherUsages.forEach((usage) => {
+      const vid = usage.voucher.id;
+      userUsageMap.set(vid, (userUsageMap.get(vid) || 0) + 1);
+    });
+
+    // 4. Xử lý từng voucher - CHỈ LẤY VOUCHER CHƯA THU THẬP
+    const availableVouchers: ExtendedVoucher[] = [];
+
+    for (const voucher of allPlatformVouchers) {
+      // Bỏ qua nếu user đã thu thập voucher này
+      if (collectedVoucherIds.has(voucher.id)) {
         continue;
       }
 
-      // Check total usage limit
+      // Kiểm tra giới hạn tổng
       if (
         voucher.total_usage_limit &&
         voucher.total_used_count >= voucher.total_usage_limit
-      ) {
+      )
         continue;
-      }
 
-      // Check collection limit
+      // Kiểm tra giới hạn thu thập
       if (
         voucher.collection_limit &&
         voucher.collected_count >= voucher.collection_limit
-      ) {
+      )
         continue;
-      }
 
-      // Check per-user usage limit
       const userUsageCount = userUsageMap.get(voucher.id) || 0;
-      if (userUsageCount >= voucher.per_user_limit) {
-        continue;
-      }
 
-      // Check new user only
+      // Kiểm tra giới hạn per user
+      if (userUsageCount >= voucher.per_user_limit) continue;
+
+      // Kiểm tra new user only
       if (voucher.new_user_only) {
         const userOrdersCount = await this.ordersRepository.count({
           where: { user: { id: userId } },
         });
-        if (userOrdersCount > 0) {
-          continue;
-        }
+        if (userOrdersCount > 0) continue;
       }
 
-      availablePlatformVouchers.push(voucher);
+      // Kiểm tra applicable_user_ids
+      if (
+        voucher.applicable_user_ids?.length &&
+        !voucher.applicable_user_ids.includes(userId)
+      )
+        continue;
+
+      // Thêm voucher với metadata
+      availableVouchers.push({
+        ...voucher,
+        user_used_count: userUsageCount,
+        is_collected: false, // Luôn là false vì user chưa thu thập
+      });
     }
 
-    console.log(
-      `✅ ${availablePlatformVouchers.length} platform vouchers available`
+    // 5. Sắp xếp
+    return availableVouchers.sort((a, b) => {
+      // Sắp xếp theo end_date (sắp hết hạn lên trước)
+      return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+    });
+  }
+
+  // Giữ nguyên method getUserVouchers cũ (nếu cần cho tương thích)
+  async getUserVouchers(userId: number): Promise<ExtendedVoucher[]> {
+    console.log(`📦 Lấy TẤT CẢ voucher nền tảng cho người dùng ${userId}`);
+
+    // 1 Lấy TẤT CẢ voucher nền tảng active
+    const now = new Date();
+    const allPlatformVouchers = await this.vouchersRepository.find({
+      where: {
+        store: IsNull(), // Chỉ voucher nền tảng
+        status: VoucherStatus.ACTIVE,
+        start_date: LessThanOrEqual(now),
+        end_date: MoreThanOrEqual(now),
+      },
+      relations: ['store'],
+    });
+
+    // 2 Lấy thông tin thu thập
+    const userCollections = await this.voucherCollectionRepository.find({
+      where: { user: { id: userId } },
+      relations: ['voucher'],
+    });
+    const collectedVoucherIds = new Set(
+      userCollections.map((c) => c.voucher.id)
     );
 
-    // Kết hợp: used + available (loại bỏ trùng)
-    const allVouchers = [...usedPlatformVouchers, ...availablePlatformVouchers];
-    const uniqueVouchers = allVouchers.filter(
-      (voucher, index, self) =>
-        index === self.findIndex((v) => v.id === voucher.id)
-    );
+    // 3 Lấy thông tin sử dụng
+    const userVoucherUsages = await this.voucherUsageRepository.find({
+      where: { user: { id: userId } },
+      relations: ['voucher'],
+    });
 
-    console.log(`🎯 Final: ${uniqueVouchers.length} vouchers for user`);
+    const userUsageMap = new Map<number, number>();
+    userVoucherUsages.forEach((usage) => {
+      const vid = usage.voucher.id;
+      userUsageMap.set(vid, (userUsageMap.get(vid) || 0) + 1);
+    });
 
-    // Thêm user_used_count vào mỗi voucher
-    const vouchersWithUsage = uniqueVouchers.map((voucher) => ({
-      ...voucher,
-      user_used_count: userUsageMap.get(voucher.id) || 0,
-    }));
+    // 4 Xử lý từng voucher
+    const availableVouchers: ExtendedVoucher[] = [];
 
-    // Sắp xếp: available trước, rồi đến used, rồi đến expired
-    return vouchersWithUsage.sort((a, b) => {
-      const aActive = this.isVoucherActive(a);
-      const bActive = this.isVoucherActive(b);
+    for (const voucher of allPlatformVouchers) {
+      // Kiểm tra giới hạn tổng
+      if (
+        voucher.total_usage_limit &&
+        voucher.total_used_count >= voucher.total_usage_limit
+      )
+        continue;
+
+      // Kiểm tra giới hạn thu thập
+      if (
+        voucher.collection_limit &&
+        voucher.collected_count >= voucher.collection_limit
+      )
+        continue;
+
+      const userUsageCount = userUsageMap.get(voucher.id) || 0;
+
+      // Kiểm tra giới hạn per user
+      if (userUsageCount >= voucher.per_user_limit) continue;
+
+      // Kiểm tra new user only
+      if (voucher.new_user_only) {
+        const userOrdersCount = await this.ordersRepository.count({
+          where: { user: { id: userId } },
+        });
+        if (userOrdersCount > 0) continue;
+      }
+
+      // Kiểm tra applicable_user_ids
+      if (
+        voucher.applicable_user_ids?.length &&
+        !voucher.applicable_user_ids.includes(userId)
+      )
+        continue;
+
+      // Thêm voucher với metadata
+      availableVouchers.push({
+        ...voucher,
+        user_used_count: userUsageCount,
+        is_collected: collectedVoucherIds.has(voucher.id),
+      });
+    }
+
+    // 5 Sắp xếp
+    return availableVouchers.sort((a, b) => {
+      // Ưu tiên: chưa sử dụng > đã sử dụng một phần
       const aUsed = a.user_used_count > 0;
       const bUsed = b.user_used_count > 0;
 
-      // Ưu tiên: Active > Used > Expired
-      if (aActive && !bActive) return -1;
-      if (!aActive && bActive) return 1;
       if (!aUsed && bUsed) return -1;
       if (aUsed && !bUsed) return 1;
 
-      // Cùng trạng thái thì sort theo end_date (sắp hết hạn trước)
+      // Sắp xếp theo end_date
       return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
     });
   }

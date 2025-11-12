@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-
 export type StoreProfileData = {
   id: number;
   name: string;
@@ -12,17 +11,13 @@ export type StoreProfileData = {
   status?: string;
   created_at?: string | null;
   updated_at?: string;
-  storeInformation?: any[];
-  storeIdentification?: any[];
-  bankAccount?: any[];
-  address?: any[];
-  avg_rating?: number;
-  ratingCountText?: string;
+  avg_rating?: number | string; // backend trả string "4.78" nên có thể là string
+  review_count?: number;
+  totalProducts?: number;
+  followerCount?: number; // số lượng follower
   cancelRatePct?: number;
   returnRatePct?: number;
   memberSinceYear?: number;
-  totalProducts?: number;
-  followers?: number;
   chatResponse?: string;
 };
 
@@ -33,7 +28,8 @@ type Props = {
 };
 
 async function defaultFetchProfile(slug: string): Promise<StoreProfileData> {
-  const res = await fetch(`http://localhost:3000/stores/slug/${slug}/profile`);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+  const res = await fetch(`${BE_BASE_URL}/stores/slug/${slug}/profile`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
   return json.data;
@@ -155,7 +151,9 @@ export default function StoreProfileTab({
     (async () => {
       try {
         setLoading(true);
+        console.time('fetchProfile');
         const fetched = await (fetchProfile ?? defaultFetchProfile)(slug);
+        console.timeEnd('fetchProfile');
         if (!alive) return;
         console.log('Fetched store profile:', fetched);
         setInfo(fetched);
@@ -218,13 +216,16 @@ export default function StoreProfileTab({
                 {info?.description || '—'}
               </Row>
               <Row icon={Icon.starStroke} label="Đánh giá">
-                {typeof info?.avg_rating === 'number'
-                  ? `${info.avg_rating.toFixed(1)} / 5`
+                {info?.avg_rating != null && info?.review_count != null
+                  ? `${parseFloat(info.avg_rating.toString()).toFixed(1)} (${
+                      info.review_count
+                    })`
                   : '—'}
               </Row>
+
               <Row icon={Icon.users} label="Người theo dõi">
-                {typeof info?.followers === 'number'
-                  ? `${fmt.format(info.followers)}+`
+                {info?.followerCount != null
+                  ? `${fmt.format(info.followerCount)}+`
                   : '—'}
               </Row>
               <Row icon={Icon.chat} label="Phản hồi Chat">

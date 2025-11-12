@@ -32,6 +32,7 @@ export const UserRoleManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // state cho confirm modal
   const [confirm, setConfirm] = useState<{
@@ -48,7 +49,7 @@ export const UserRoleManager: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/users', {
+      const res = await fetch(`${BE_BASE_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -61,7 +62,7 @@ export const UserRoleManager: React.FC = () => {
 
   const fetchRoles = async () => {
     try {
-      const res = await fetch('http://localhost:3000/roles', {
+      const res = await fetch(`${BE_BASE_URL}/roles`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -74,7 +75,7 @@ export const UserRoleManager: React.FC = () => {
 
   const fetchUserRoles = async () => {
     try {
-      const res = await fetch('http://localhost:3000/user-roles', {
+      const res = await fetch(`${BE_BASE_URL}/user-roles`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -101,7 +102,7 @@ export const UserRoleManager: React.FC = () => {
     setIsAssigning(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/user-roles/users/${selectedUser}/roles/${selectedRole}`,
+        `${BE_BASE_URL}/user-roles/users/${selectedUser}/roles/${selectedRole}`,
         {
           method: 'POST',
           headers: {
@@ -147,7 +148,7 @@ export const UserRoleManager: React.FC = () => {
     try {
       setConfirm((c) => ({ ...c, submitting: true }));
       const res = await fetch(
-        `http://localhost:3000/user-roles/users/${confirm.userId}/roles/${confirm.roleId}`,
+        `${BE_BASE_URL}/user-roles/users/${confirm.userId}/roles/${confirm.roleId}`,
         {
           method: 'DELETE',
           headers: {

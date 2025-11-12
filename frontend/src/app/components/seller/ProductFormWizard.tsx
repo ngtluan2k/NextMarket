@@ -41,6 +41,7 @@ export const ProductForm: React.FC = () => {
   const [resultMessage, setResultMessage] = useState<string | undefined>(
     undefined
   );
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const showResult = (type: ResultType, title: string, message?: string) => {
     setResultType(type);
@@ -117,10 +118,10 @@ export const ProductForm: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     Promise.all([
-      fetch('http://localhost:3000/brands', {
+      fetch(`${BE_BASE_URL}/brands`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json()),
-      fetch('http://localhost:3000/categories', {
+      fetch(`${BE_BASE_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       }).then((r) => r.json()),
     ])
@@ -375,8 +376,8 @@ export const ProductForm: React.FC = () => {
       const token = localStorage.getItem('token');
       const url =
         status === 'active'
-          ? 'http://localhost:3000/products/publish'
-          : 'http://localhost:3000/products';
+          ? `${BE_BASE_URL}/products/publish`
+          : `${BE_BASE_URL}/products`;
 
       const fd = new FormData();
       fd.append('name', form.name);
@@ -1237,16 +1238,21 @@ export const ProductForm: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-start">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Loại</label>
-                  <input
+                  <select
                     value={pr.type}
                     onChange={(e) => {
                       const next = [...form.pricing_rules];
-                      next[i].type = e.target.value;
+                      next[i].type = e.target.value; // vẫn lưu "bulk" hoặc "tier"
                       setForm({ ...form, pricing_rules: next });
                     }}
                     className="w-full h-11 px-3 border rounded-lg focus:outline-none border-slate-300 focus:ring-2 focus:ring-blue-500"
-                    placeholder="bulk / tier"
-                  />
+                  >
+                    <option value="">Chọn loại</option>
+                    <option value="bulk">Sỉ</option>{' '}
+                    {/* hiển thị "Sỉ", giá trị là "bulk" */}
+                    <option value="subscription">Gói Subs</option>{' '}
+                    {/* hiển thị "Cấp bậc", giá trị là "tier" */}
+                  </select>
                 </div>
 
                 <div className="md:col-span-2">

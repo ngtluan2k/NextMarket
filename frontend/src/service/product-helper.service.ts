@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { Product } from './product.service';
-
-const API_BASE_URL = 'http://localhost:3000';
+import { BE_BASE_URL } from '../app/api/api';
 
 export interface ProductOption {
   id: number;
@@ -25,7 +24,7 @@ export const getAuthHeaders = () => {
 
 export async function getAllProducts(): Promise<ProductOption[]> {
   try {
-    const res = await axios.get<Product[]>(`${API_BASE_URL}/products`, {
+    const res = await axios.get<Product[]>(`${BE_BASE_URL}/products`, {
       headers: getAuthHeaders(),
     });
     

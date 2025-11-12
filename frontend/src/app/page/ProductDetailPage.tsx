@@ -6,7 +6,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { useParams,useLocation  } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
@@ -26,7 +26,6 @@ import { VariantInfo } from '../types/product';
 import { fetchProductReviews, Review } from '../../service/product_review';
 import GroupOrderInfoBar from '../components/group_orders/components/GroupOrderInfoBar';
 import { initializeAffiliateTracking } from '../../utils/affiliate-tracking';
-
 
 interface Props {
   showMessage?: (
@@ -55,21 +54,26 @@ const MemoizedBuyBox = React.memo(BuyBox);
 
 export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
-    const location = useLocation(); 
+  const location = useLocation();
   const slug = params.slug ?? '';
-  const groupId = location.state?.groupId ||
-    new URLSearchParams(location.search).get('groupId')
+  const groupId =
+    location.state?.groupId ||
+    new URLSearchParams(location.search).get('groupId');
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [calculatedPrice, setCalculatedPrice] = useState<number>(product?.base_price ?? 0);
-  const [selectedType, setSelectedType] = useState<'bulk' | 'subscription' | 'normal' | 'flash_sale' | undefined>(undefined);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(
+    product?.base_price ?? 0
+  );
+  const [selectedType, setSelectedType] = useState<
+    'bulk' | 'subscription' | 'normal' | 'flash_sale' | undefined
+  >(undefined);
+  const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewPage, setReviewPage] = useState(1);
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(false);
-  console.log('product in product detail page: ' + JSON.stringify(product));
 
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     () => {
@@ -103,6 +107,13 @@ export default function ProductDetailPage({ showMessage }: Props) {
       }
     }
   }, [location.search, product?.variants, selectedVariantId]);
+
+  useEffect(() => {
+    console.log(
+      '📦 [ProductDetailPage] selectedRuleId thay đổi:',
+      selectedRuleId
+    );
+  }, [selectedRuleId]);
 
   useEffect(() => {
     if (!product?.variants?.length) return;
@@ -183,34 +194,22 @@ export default function ProductDetailPage({ showMessage }: Props) {
     [calculatedPrice, quantity]
   );
 
-  const galleryData = useMemo(() => {
-    if (!product || !product.variants) {
-      return {
-        images: Array.isArray(product?.media)
-          ? product.media.map((m: { url: string }) => m.url)
-          : [],
-        variantMap: {},
-      };
-    }
+ const galleryData = useMemo(() => {
+  if (!product || !Array.isArray(product.media)) return { images: [] };
 
-    const images: string[] = [];
-    const variantMap: { [key: number]: number } = {};
-    product.variants.forEach((variant: any, index: number) => {
-      if (product.media?.[index]?.url) {
-        images.push(product.media[index].url);
-        variantMap[variant.id] = images.length - 1;
-      }
-    });
+  const images: string[] = product.media.map((m: any) => m.url);
 
-    return images.length > 0
-      ? { images, variantMap }
-      : {
-        images: Array.isArray(product.media)
-          ? product.media.map((m: { url: string }) => m.url)
-          : [],
-        variantMap: {},
-      };
-  }, [product]);
+  // Đưa ảnh cuối cùng lên đầu
+  if (images.length > 1) {
+    const last = images.pop();
+    if (last) images.unshift(last);
+  }
+
+  return { images };
+}, [product]);
+
+
+
 
   if (loading && !product) {
     return (
@@ -240,9 +239,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
           <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
             <MemoizedGallery
               images={galleryData.images}
-              variantMap={galleryData.variantMap}
-              selectedVariantId={selectedVariantId}
-              setSelectedVariantId={setSelectedVariantId}
+              // variantMap={galleryData.variantMap}
+              // selectedVariantId={selectedVariantId}
+              // setSelectedVariantId={setSelectedVariantId}
               width={L.leftWidth}
               galleryHeight={L.galleryHeight}
               thumbHeight={L.thumbHeight}
@@ -260,7 +259,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
               setCalculatedPrice={setCalculatedPrice}
               maxQuantity={stock}
               selectedType={selectedType}
-              setSelectedType={setSelectedType} 
+              setSelectedType={setSelectedType}
+              selectedRuleId={selectedRuleId} // ✅ thêm dòng này
+              setSelectedRuleId={setSelectedRuleId}
             />
             <MemoizedShipping />
             {/* Sửa cách truyền props vào ComboStrip */}
@@ -295,7 +296,8 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 minHeight={L.buyBoxMinHeight}
                 showMessage={showMessage}
                 selectedType={selectedType}
-                groupId={ groupId? Number(groupId) : null}
+                groupId={groupId ? Number(groupId) : null}
+                selectedRuleId={selectedRuleId}
               />
             </div>
           </div>

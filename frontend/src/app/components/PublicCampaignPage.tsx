@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Spin, Card, Typography, Row, Col, Image, Tag } from 'antd';
+import { Spin, Card, Typography, Row, Col, Image, Tag, Button, message } from 'antd';
 import {
   getPublicCampaignDetail,
   PublicCampaignDetail,
   RegisteredProduct,
 } from '../../service/campaign.service';
-import { TagOutlined } from '@ant-design/icons';
+import { TagOutlined, GiftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import Navbar from './Navbar'; // 👈 Thêm dòng này
+import Navbar from './Navbar';
+import { userVoucherApi, voucherCollectionApi } from '../api/voucher.api'; 
 
 interface Props {
   campaignId: number;
@@ -16,30 +17,88 @@ interface Props {
 export default function PublicCampaignPage({ campaignId }: Props) {
   const [campaign, setCampaign] = useState<PublicCampaignDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [collectableVouchers, setCollectableVouchers] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await getPublicCampaignDetail(campaignId);
-        setCampaign(data);
-        console.log(data);
-      } catch (err) {
-        console.error('Error fetching campaign:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadCampaignData();
   }, [campaignId]);
 
-  if (loading) return <Spin tip="Đang tải chiến dịch..." />;
+  const loadCampaignData = async () => {
+    try {
+      setLoading(true);
+      const data = await getPublicCampaignDetail(campaignId);
+      setCampaign(data);
+      console.log('Campaign data:', data);
 
-  if (!campaign) return <p>Không tìm thấy chiến dịch</p>;
+      // Load voucher có thể thu thập
+      await loadCollectableVouchers(data.vouchers || []);
+
+    } catch (err) {
+      console.error('Error fetching campaign:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCollectableVouchers = async (campaignVouchers: any[]) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Nếu chưa login, tất cả voucher đều có thể thu thập
+      const allVoucherIds = new Set(campaignVouchers.map(v => v.id));
+      setCollectableVouchers(allVoucherIds);
+      return;
+    }
+
+    try {
+      // Chỉ lấy voucher CÓ THỂ THU THẬP (chưa thu thập)
+      const availableVouchers = await userVoucherApi.getAvailableVouchersForCollection();
+      const availableVoucherIds = new Set(availableVouchers.map(v => v.id));
+      
+      // Filter chỉ những voucher trong campaign mà user có thể thu thập
+      const campaignVoucherIds = campaignVouchers.map(v => v.id);
+      const collectableIds = campaignVoucherIds.filter(id => availableVoucherIds.has(id));
+      
+      setCollectableVouchers(new Set(collectableIds));
+      
+      console.log('📦 Collectable vouchers:', collectableIds.length);
+    } catch (err) {
+      console.error('Error loading collectable vouchers:', err);
+      // Fallback: hiển thị tất cả voucher nếu có lỗi
+      const allVoucherIds = new Set(campaignVouchers.map(v => v.id));
+      setCollectableVouchers(allVoucherIds);
+    }
+  };
+
+  const handleCollectVoucher = async (voucherId: number) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      message.warning('Vui lòng đăng nhập để thu thập voucher!');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await userVoucherApi.collectVoucher(voucherId);
+      message.success('Thu thập voucher thành công!');
+      
+      // Cập nhật UI: xóa voucher khỏi danh sách có thể thu thập
+      setCollectableVouchers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(voucherId);
+        return newSet;
+      });
+    } catch (err: any) {
+      message.error('Lỗi khi thu thập voucher: ' + (err.message || 'Voucher không khả dụng'));
+    }
+  };
 
   // Tạo block xen kẽ: banner -> voucher -> store
   const renderBlocks = () => {
     const blocks: React.ReactNode[] = [];
+
+    if (!campaign) return blocks;
 
     // --- 1️⃣ Banner đầu tiên ---
     if (campaign.images[0]) {
@@ -50,72 +109,101 @@ export default function PublicCampaignPage({ campaignId }: Props) {
             src={
               img.imageUrl.startsWith('http')
                 ? img.imageUrl
-                : `http://localhost:3000${img.imageUrl}`
+                : `${BE_BASE_URL}${img.imageUrl}`
             }
             alt="campaign banner"
             width="100%"
+            preview={false}
           />
         </div>
       );
     }
 
-    // --- 2️⃣ Hàng voucher (tất cả voucher) ---
-    if (campaign.vouchers.length > 0) {
+    // --- 2️⃣ Hàng voucher (CHỈ voucher có thể thu thập) ---
+    const availableVouchers = campaign.vouchers?.filter(v => 
+      collectableVouchers.has(v.id)
+    ) || [];
+
+    if (availableVouchers.length > 0) {
       blocks.push(
-        <div
-          key="vouchers-row"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 16,
-            marginBottom: 24,
-            padding: 20,
-            borderRadius: 8,
-            width: '100%',
-          }}
-        >
-          {campaign.vouchers.map((v) => (
-            <Card
-              key={`voucher-${v.id}`}
-              size="default"
-              hoverable
-              style={{ minWidth: 220, flex: '0 0 auto' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 6,
-                    background: '#ff6b6b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+        <div key="vouchers-section">
+          <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 16 }}>
+            <GiftOutlined /> Voucher Có Thể Thu Thập
+          </Typography.Title>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginBottom: 24,
+              padding: 20,
+              borderRadius: 8,
+              width: '100%',
+              justifyContent: 'center',
+            }}
+          >
+            {availableVouchers.map((v) => (
+              <Card
+                key={`voucher-${v.id}`}
+                size="default"
+                hoverable
+                style={{ 
+                  minWidth: 250, 
+                  flex: '0 0 auto',
+                  border: '2px dashed #ff4d4f',
+                  background: 'linear-gradient(135deg, #ff4d4f15, #ffffff)'
+                }}
+                cover={
+                  <div style={{ 
+                    background: '#ff4d4f', 
+                    padding: '16px', 
+                    textAlign: 'center',
                     color: 'white',
-                  }}
-                >
-                  <TagOutlined />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: 16 }}>
-                    {v.title}
-                  </div>
-                  <div style={{ fontSize: 14, color: '#555' }}>
+                    fontWeight: 'bold'
+                  }}>
+                    <TagOutlined style={{ fontSize: '24px', marginRight: 8 }} />
                     {Number(v.discount_value) % 1 === 0
-                      ? `${Number(v.discount_value).toLocaleString()}₫`
-                      : `${Number(v.discount_value)}%`}
+                      ? `Giảm ${Number(v.discount_value).toLocaleString()}₫`
+                      : `Giảm ${Number(v.discount_value)}%`}
                   </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+                }
+              >
+                <Card.Meta
+                  title={v.title}
+                  description={
+                    <div style={{ textAlign: 'center' }}>
+                      <Button
+                        type="primary"
+                        block
+                        style={{ marginTop: 12 }}
+                        onClick={() => handleCollectVoucher(v.id)}
+                        icon={<GiftOutlined />}
+                      >
+                        Thu thập ngay
+                      </Button>
+                    </div>
+                  }
+                />
+              </Card>
+            ))}
+          </div>
         </div>
       );
     }
 
-    // --- 3️⃣ Các cặp Banner + Products ---
-    // Bắt đầu từ banner thứ 2 (index 1)
-    const nextBanners = campaign.images.slice(1);
+    // --- 3️⃣ Thông báo nếu không có voucher nào có thể thu thập ---
+    if (availableVouchers.length === 0 && campaign.vouchers && campaign.vouchers.length > 0) {
+      blocks.push(
+        <Card key="no-vouchers" style={{ marginBottom: 24, textAlign: 'center' }}>
+          <Typography.Text type="secondary">
+            Bạn đã thu thập tất cả voucher trong chiến dịch này! 🎉
+          </Typography.Text>
+        </Card>
+      );
+    }
+
+    // --- 4️⃣ Các cặp Banner + Products ---
+    const nextBanners = campaign.images?.slice(1) || [];
     const stores = campaign.stores || [];
 
     for (let i = 0; i < Math.max(nextBanners.length, stores.length); i++) {
@@ -128,10 +216,11 @@ export default function PublicCampaignPage({ campaignId }: Props) {
               src={
                 img.imageUrl.startsWith('http')
                   ? img.imageUrl
-                  : `http://localhost:3000${img.imageUrl}`
+                  : `${BE_BASE_URL}${img.imageUrl}`
               }
               alt="campaign banner"
               width="100%"
+              preview={false}
             />
           </div>
         );
@@ -145,6 +234,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
             key={`store-${store.id}`}
             style={{ marginBottom: 24, padding: 20 }}
           >
+            <Typography.Title level={4}>{store.name}</Typography.Title>
             <Row gutter={[12, 12]}>
               {store.products?.map((p) => (
                 <Col key={p.id} xs={24} sm={12} md={8} lg={6}>
@@ -160,9 +250,10 @@ export default function PublicCampaignPage({ campaignId }: Props) {
                           (p as any).imageUrl
                             ? (p as any).imageUrl.startsWith('http')
                               ? (p as any).imageUrl
-                              : `http://localhost:3000${(p as any).imageUrl}`
+                              : `${BE_BASE_URL}${(p as any).imageUrl}`
                             : 'https://via.placeholder.com/150x150?text=No+Image'
                         }
+                        style={{ height: 150, objectFit: 'cover' }}
                       />
                     }
                   >
@@ -187,7 +278,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
                             </p>
                           )}
                           {p.promo_price && (
-                            <p>
+                            <p style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
                               Giá KM: {Number(p.promo_price).toLocaleString()} ₫
                             </p>
                           )}
@@ -217,16 +308,21 @@ export default function PublicCampaignPage({ campaignId }: Props) {
     return blocks;
   };
 
+  if (loading) return <Spin tip="Đang tải chiến dịch..." />;
+  if (!campaign) return <p>Không tìm thấy chiến dịch</p>;
+
   return (
     <div
       style={{
-        backgroundColor: campaign.backgroundColor || '#ffffff', // 👈 dùng màu từ API
-        minHeight: '100vh', // để nền phủ toàn trang
-        transition: 'background-color 0.3s ease', // mượt hơn
+        backgroundColor: campaign.backgroundColor || '#ffffff',
+        minHeight: '100vh',
+        transition: 'background-color 0.3s ease',
       }}
     >
       <Navbar />
-      {renderBlocks()}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
+        {renderBlocks()}
+      </div>
     </div>
   );
 }

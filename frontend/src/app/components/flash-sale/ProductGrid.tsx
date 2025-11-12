@@ -4,10 +4,12 @@ import axios from "axios";
 import { ProductCard } from "./ProductCard";
 import type { Product } from "../../../service/product.service";
 
+const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+
 export function ProductGrid({
   activeCategoryId,
   title = "Sản Phẩm Hot",
-  apiUrl = "http://localhost:3000/products/flash-sale", // URL API mặc định
+  apiUrl = `${BE_BASE_URL}/products/flash-sale`, // URL API mặc định
 }: {
   activeCategoryId: string;
   title?: string;

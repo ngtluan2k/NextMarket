@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../config/api';
+import { BE_BASE_URL } from "../../app/api/api";
 
 export type CommissionRule = {
   id: string; // UUID from backend
@@ -100,7 +100,7 @@ function authHeaders() {
 }
 
 export async function listRules(): Promise<CommissionRule[]> {
-  const res = await fetch(`${API_BASE_URL}/affiliate-rules`, {
+  const res = await fetch(`${BE_BASE_URL}/affiliate-rules`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch rules (${res.status})`);
@@ -110,7 +110,7 @@ export async function listRules(): Promise<CommissionRule[]> {
 export async function createRule(
   body: Partial<CommissionRule> & { level: number; rate_percent: number }
 ) {
-  const res = await fetch(`${API_BASE_URL}/affiliate-rules`, {
+  const res = await fetch(`${BE_BASE_URL}/affiliate-rules`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -121,7 +121,7 @@ export async function createRule(
 
 // New create rule function for the updated API
 export async function createNewRule(body: any) {
-  const res = await fetch(`${API_BASE_URL}/affiliate-rules`, {
+  const res = await fetch(`${BE_BASE_URL}/affiliate-rules`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -131,7 +131,7 @@ export async function createNewRule(body: any) {
 }
 
 export async function updateRule(id: string, body: any) {
-  const res = await fetch(`${API_BASE_URL}/affiliate-rules/${id}`, {
+  const res = await fetch(`${BE_BASE_URL}/affiliate-rules/${id}`, {
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -141,7 +141,7 @@ export async function updateRule(id: string, body: any) {
 }
 
 export async function deleteRule(id: string) {
-  const res = await fetch(`${API_BASE_URL}/affiliate-rules/${id}`, {
+  const res = await fetch(`${BE_BASE_URL}/affiliate-rules/${id}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -153,7 +153,7 @@ export async function previewCommission(
   request: PreviewCommissionRequest
 ): Promise<PreviewCommissionResponse> {
   const res = await fetch(
-    `${API_BASE_URL}/affiliate-rules/preview-commission`,
+    `${BE_BASE_URL}/affiliate-rules/preview-commission`,
     {
       method: 'POST',
       headers: authHeaders(),
@@ -166,7 +166,7 @@ export async function previewCommission(
 
 export async function createDefaultRulesForProgram(programId: number) {
   const res = await fetch(
-    `${API_BASE_URL}/affiliate-rules/create-default/${programId}`,
+    `${BE_BASE_URL}/affiliate-rules/create-default/${programId}`,
     {
       method: 'POST',
       headers: authHeaders(),
@@ -178,7 +178,7 @@ export async function createDefaultRulesForProgram(programId: number) {
 }
 
 export async function getAllCalculateMethod(): Promise<CalculateMethod[]> {
-  const res = await fetch(`${API_BASE_URL}/calculation-method`, {
+  const res = await fetch(`${BE_BASE_URL}/calculation-method`, {
     method: 'GET',
     headers: authHeaders(),
   });
@@ -191,7 +191,7 @@ export async function previewRuleCalculation(
   request: PreviewRuleRequest
 ): Promise<PreviewRuleResponse> {
   console.log('Sending preview request:', request);
-  const res = await fetch(`${API_BASE_URL}/affiliate-rules/preview`, {
+  const res = await fetch(`${BE_BASE_URL}/affiliate-rules/preview`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(request),

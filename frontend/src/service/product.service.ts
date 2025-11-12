@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-import { API_BASE_URL } from '../app/api/api';
+import { BE_BASE_URL } from '../app/api/api';
+
 export interface Product {
   id: number;
   uuid: string;
@@ -171,7 +172,7 @@ class ProductService {
   async getStoreProducts(storeId: number): Promise<Product[]> {
     console.log('store id inside service: ' + storeId);
     const response = await axios.get(
-      `${API_BASE_URL}/products/store/${storeId}`,
+      `${BE_BASE_URL}/products/store/${storeId}`,
       {
         headers: this.getAuthHeaders(),
       }
@@ -180,14 +181,14 @@ class ProductService {
   }
 
   async createProduct(dto: CreateProductDto): Promise<Product> {
-    const response = await axios.post(`${API_BASE_URL}/products`, dto, {
+    const response = await axios.post(`${BE_BASE_URL}/products`, dto, {
       headers: this.getAuthHeaders(),
     });
     return response.data;
   }
 
   async softDeleteProduct(id: number): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/products/${id}`, {
+    await axios.delete(`${BE_BASE_URL}/products/${id}`, {
       headers: this.getAuthHeaders(),
     });
   }
@@ -195,7 +196,7 @@ class ProductService {
   // ✅ Mới: Cập nhật trạng thái sản phẩm (active / draft)
   async toggleProductStatus(id: number): Promise<Product> {
     const response = await axios.patch(
-      `${API_BASE_URL}/products/${id}/toggle-status`,
+      `${BE_BASE_URL}/products/${id}/toggle-status`,
       {}, // body rỗng
       { headers: this.getAuthHeaders() }
     );
@@ -204,7 +205,7 @@ class ProductService {
 
   async getSimilarProducts(productId: number): Promise<Product[]> {
     const response = await axios.get(
-      `${API_BASE_URL}/products/${productId}/similar`
+      `${BE_BASE_URL}/products/${productId}/similar`
     );
     return response.data.data; // Assuming the API returns { message: string, data: Product[] }
   }
@@ -213,7 +214,7 @@ class ProductService {
   // Cập nhật draft
   async updateProduct(id: number, dto: FormData) {
     const res = await axios.put(
-      `${API_BASE_URL}/products/${id}`,
+      `${BE_BASE_URL}/products/${id}`,
       dto,
       { headers: this.getAuthHeaders() } // KHÔNG thêm Content-Type
     );
@@ -221,14 +222,14 @@ class ProductService {
   }
 
   async updateAndPublishProduct(id: number, dto: FormData) {
-    const res = await axios.put(`${API_BASE_URL}/products/${id}/publish`, dto, {
+    const res = await axios.put(`${BE_BASE_URL}/products/${id}/publish`, dto, {
       headers: this.getAuthHeaders(),
     });
     return res.data;
   }
 
  async getProductById(id: number): Promise<Product> {
-    const response = await axios.get(`${API_BASE_URL}/products/${id}`, {
+    const response = await axios.get(`${BE_BASE_URL}/products/${id}`, {
       headers: this.getAuthHeaders(),
     });
     return response.data.data;

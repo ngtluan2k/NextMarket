@@ -64,6 +64,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
 import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
 
 @Module({
   imports: [
@@ -94,7 +95,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         host: config.get('DB_HOST'),
-        port: +config.get('DB_PORT'),
+        port: config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
@@ -161,6 +162,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AffiliateFraudModule,
     CampaignsModule,
     FlashSaleSchedulesModule,
+    RevokedTokensModule
   ],
   providers: [],
 })

@@ -13,10 +13,11 @@ export const PermissionManager: React.FC = () => {
   const [desc, setDesc] = useState('');
 
   const token = localStorage.getItem('token');
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const fetchPerms = async () => {
     try {
-      const res = await fetch('http://localhost:3000/permissions', {
+      const res = await fetch(`${BE_BASE_URL}/permissions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -34,7 +35,7 @@ export const PermissionManager: React.FC = () => {
   const handleCreatePerm = async () => {
     if (!code || !desc) return;
     try {
-      const res = await fetch('http://localhost:3000/permissions', {
+      const res = await fetch(`${BE_BASE_URL}/permissions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

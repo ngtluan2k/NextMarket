@@ -5,7 +5,7 @@ import {
   getCurrentUserId,
   UserProfile,
 } from '../../../service/user-profile.service';
-import { API_BASE_URL } from '../../api/api';
+import { BE_BASE_URL } from '../../api/api';
 
 export type ProfileFormValues = {
   fullName?: string;
@@ -121,7 +121,7 @@ export default function AccountProfileForm({
     let s = p.trim();
     if (/^data:/i.test(s) || /^https?:\/\//i.test(s)) return s;
     s = s.replace(/\\/g, '/');
-    return `${API_BASE_URL}/${s.replace(/^\/+/, '')}`;
+    return `${BE_BASE_URL}/${s.replace(/^\/+/, '')}`;
   };
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export default function AccountProfileForm({
     const form = new FormData();
     form.append('file', file);
 
-    const res = await fetch(`${API_BASE_URL}/users/${uid}/upload-avatar`, {
+    const res = await fetch(`${BE_BASE_URL}/users/${uid}/upload-avatar`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token') || ''}`,

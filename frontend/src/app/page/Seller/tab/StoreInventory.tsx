@@ -113,6 +113,7 @@ export interface Product {
 }
 
 export default function StoreInventory() {
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   const [products, setProducts] = useState<Product[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
@@ -190,7 +191,7 @@ export default function StoreInventory() {
             )?.url || '/placeholder.svg';
 
           const imageUrl = primaryImage.startsWith('/uploads')
-            ? `http://localhost:3000${primaryImage}`
+            ? `${BE_BASE_URL}${primaryImage}`
             : primaryImage;
 
           // Lấy tên category để hiển thị
@@ -247,7 +248,7 @@ export default function StoreInventory() {
               apiProduct.media?.map((m) => ({
                 media_type: m.media_type,
                 url: m.url.startsWith('/uploads')
-                  ? `http://localhost:3000${m.url}`
+                  ? `${BE_BASE_URL}${m.url}`
                   : m.url,
                 is_primary: m.is_primary || false,
                 sort_order: m.sort_order,

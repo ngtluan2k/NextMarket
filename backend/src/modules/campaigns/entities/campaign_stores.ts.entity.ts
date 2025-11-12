@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, JoinColumn, Generated } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  JoinColumn,
+  Generated,
+} from 'typeorm';
 import { Campaign } from './campaign.entity';
 import { Store } from '../../store/store.entity';
 import { CampaignStoreProduct } from './campaign_store_products.entity';
@@ -20,7 +29,11 @@ export class CampaignStore {
   @JoinColumn({ name: 'store_id' })
   store!: Store;
 
-  @Column({ type: 'enum', enum: ['pending', 'approved', 'rejected'], default: 'pending' })
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+  })
   status!: 'pending' | 'approved' | 'rejected';
 
   @CreateDateColumn({ name: 'registered_at' })
@@ -29,9 +42,13 @@ export class CampaignStore {
   @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
   approvedAt?: Date;
 
-  @Column({ name: 'rejected_reason', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'rejected_reason',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   rejectedReason?: string;
-
 
   @OneToMany(() => CampaignStoreProduct, (p) => p.campaignStore)
   products!: CampaignStoreProduct[];

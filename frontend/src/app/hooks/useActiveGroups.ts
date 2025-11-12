@@ -23,6 +23,7 @@ export const useActiveGroups = () => {
     const [activeGroups, setActiveGroups] = useState<ActiveGroup[]>([]);
     const [loading, setLoading] = useState(false);
     const { user } = useAuth();
+    const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
     const fetchActiveGroups = async () => {
         if (!user?.id) return;
@@ -30,7 +31,7 @@ export const useActiveGroups = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:3000/group-orders/user/${user.id}/active`, {
+            const response = await fetch(`${BE_BASE_URL}/group-orders/user/${user.id}/active`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },

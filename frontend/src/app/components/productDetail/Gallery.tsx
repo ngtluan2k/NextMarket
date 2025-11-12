@@ -1,53 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 
-export default function Gallery({
-  images,
-  variantMap,
-  selectedVariantId,
-  setSelectedVariantId,
-  width,
-  galleryHeight,
-  thumbHeight,
-  stickyTop,
-}: {
+interface GalleryProps {
   images?: string[];
-  variantMap?: { [key: number]: number };
-  selectedVariantId: number | null;
-  setSelectedVariantId: (id: number) => void;
   width?: number;
   galleryHeight?: number;
   thumbHeight?: number;
   stickyTop?: number;
-}) {
+}
+
+export default function Gallery({
+  images,
+  width,
+  galleryHeight,
+  thumbHeight,
+  stickyTop,
+}: GalleryProps) {
   const list = images ?? [];
+
+  // Debug log để xem số lượng và thứ tự ảnh
+  useEffect(() => {
+    console.log('Gallery images loaded:', list);
+  }, [list]);
+
   const [idx, setIdx] = useState(0);
 
+  // Reset idx khi list thay đổi
   useEffect(() => {
-    if (
-      selectedVariantId !== null &&
-      variantMap &&
-      variantMap[selectedVariantId] !== undefined
-    ) {
-      setIdx(variantMap[selectedVariantId]);
-    } else if (list.length > 0) {
-      setIdx(0);
-    }
-  }, [selectedVariantId, variantMap, list]);
+    setIdx(0);
+  }, [list]);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const resolveUrl = (u: string) =>
-    u.startsWith('http') ? u : `http://localhost:3000/${u.replace(/^\/+/, '')}`;
+    u.startsWith('http') ? u : `${BE_BASE_URL}/${u.replace(/^\/+/, '')}`;
 
-  const current =
-    list.length > 0
-      ? resolveUrl(list[Math.min(idx, list.length - 1)])
-      : undefined;
+  const current = list[idx] ? resolveUrl(list[idx]) : undefined;
 
   return (
     <section
       className="self-start rounded-2xl bg-white p-4 ring-1 ring-slate-200 lg:sticky"
       style={{ width, top: stickyTop ?? 0 }}
     >
+      {/* Ảnh lớn */}
       <div
         className="grid place-items-center overflow-hidden rounded-xl bg-slate-100"
         style={{ height: galleryHeight }}
@@ -55,7 +49,7 @@ export default function Gallery({
         {current ? (
           <img
             src={current}
-            alt=""
+            alt={`Ảnh lớn ${idx + 1}`}
             className="h-full w-full object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).src = '';
@@ -66,30 +60,23 @@ export default function Gallery({
         )}
       </div>
 
+      {/* Thumbnails */}
       <div className="mt-3 grid grid-cols-4 gap-3">
         {list.map((u, i) => {
           const imageUrl = resolveUrl(u);
-          const variantId = Object.keys(variantMap || {}).find(
-            (key) => variantMap![Number(key)] === i
-          );
           return (
             <button
               key={i}
-              onClick={() => {
-                setIdx(i);
-                if (variantId) {
-                  setSelectedVariantId(Number(variantId));
-                }
-              }}
+              onClick={() => setIdx(i)}
               className={`overflow-hidden rounded-lg ring-1 ${
                 idx === i ? 'ring-sky-500' : 'ring-slate-200'
               }`}
               style={{ height: thumbHeight }}
-              aria-label={`Ảnh ${i + 1}`}
+              aria-label={`Thumbnail ${i + 1}`}
             >
               <img
                 src={imageUrl}
-                alt=""
+                alt={`Thumbnail ${i + 1}`}
                 className="h-full w-full object-cover"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '';
@@ -99,6 +86,7 @@ export default function Gallery({
           );
         })}
 
+        {/* Placeholder nếu không có ảnh */}
         {list.length === 0 &&
           Array.from({ length: 4 }).map((_, i) => (
             <div
@@ -109,6 +97,7 @@ export default function Gallery({
           ))}
       </div>
 
+      {/* Nút xem thêm */}
       <button className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
         <ImageIcon className="h-4 w-4" />
         Xem thêm Tóm tắt nội dung sách

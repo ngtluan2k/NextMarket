@@ -1,4 +1,4 @@
-// affiliate-programs.service.ts
+import { BE_BASE_URL } from "../../app/api/api";
 export type AffiliateProgram = {
   id: number;
   uuid: string;
@@ -10,8 +10,6 @@ export type AffiliateProgram = {
   created_at: string;
 };
 
-const API_BASE = 'http://localhost:3000';
-
 function authHeaders() {
   const token = localStorage.getItem('token') || '';
   return {
@@ -22,7 +20,7 @@ function authHeaders() {
 
 export async function getAllAffiliatePrograms(): Promise<AffiliateProgram[]> {
   console.log('🔍 Fetching affiliate programs...');
-  const res = await fetch(`${API_BASE}/affiliate-programs`, { headers: authHeaders() });
+  const res = await fetch(`${BE_BASE_URL}/affiliate-programs`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch programs (${res.status})`);
   const programs = await res.json();
   console.log(`✅ Found ${programs.length} affiliate programs:`, programs);
@@ -31,7 +29,7 @@ export async function getAllAffiliatePrograms(): Promise<AffiliateProgram[]> {
 
 export async function getActiveAffiliatePrograms(): Promise<AffiliateProgram[]> {
   console.log('🔍 Fetching active affiliate programs...');
-  const res = await fetch(`${API_BASE}/affiliate-programs`, { headers: authHeaders() });
+  const res = await fetch(`${BE_BASE_URL}/affiliate-programs`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to fetch active programs (${res.status})`);
   const programs = await res.json();
   const activePrograms = programs.filter((p: AffiliateProgram) => p.status === 'active');

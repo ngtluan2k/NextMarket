@@ -36,6 +36,7 @@ export default function ProductGridToday({
   const [products, setProducts] = useState<ProductCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +45,7 @@ export default function ProductGridToday({
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch('http://localhost:3000/products');
+        const res = await fetch(`${BE_BASE_URL}/products`);
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const data: ProductRaw[] = await res.json();
 
@@ -59,7 +60,7 @@ export default function ProductGridToday({
             image: primaryMedia?.url
               ? primaryMedia.url.startsWith('http')
                 ? primaryMedia.url // đã là URL web
-                : `http://localhost:3000/${primaryMedia.url.replace(
+                : `${BE_BASE_URL}/${primaryMedia.url.replace(
                     /^\/+/,
                     ''
                   )}` // đường dẫn local

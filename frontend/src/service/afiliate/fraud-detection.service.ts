@@ -1,6 +1,5 @@
 import { message } from 'antd';
-
-const API_BASE_URL = 'http://localhost:3000';
+import { BE_BASE_URL } from '../../app/api/api';
 
 export interface FraudLog {
   id: number;
@@ -37,13 +36,13 @@ export interface FraudStats {
 
 // Get fraud logs with pagination
 export async function getFraudLogs(
-  page: number = 1,
-  limit: number = 20
+  page = 1,
+  limit = 20
 ): Promise<FraudLogsResponse> {
   try {
     const token = localStorage.getItem('token');
     const response = await fetch(
-      `${API_BASE_URL}/affiliate-fraud/logs?page=${page}&limit=${limit}`,
+      `${BE_BASE_URL}/affiliate-fraud/logs?page=${page}&limit=${limit}`,
       {
         method: 'GET',
         headers: {
@@ -74,7 +73,7 @@ export async function reviewFraudLog(
   try {
     const token = localStorage.getItem('token');
     const response = await fetch(
-      `${API_BASE_URL}/affiliate-fraud/review/${logId}`,
+      `${BE_BASE_URL}/affiliate-fraud/review/${logId}`,
       {
         method: 'POST',
         headers: {
@@ -102,7 +101,7 @@ export async function reviewFraudLog(
 export async function getFraudStats(): Promise<FraudStats> {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/affiliate-fraud/stats`, {
+    const response = await fetch(`${BE_BASE_URL}/affiliate-fraud/stats`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

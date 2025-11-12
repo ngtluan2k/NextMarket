@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getCurrentUserId } from '../utils/auth.helper';
 
-const API_BASE_URL = 'http://localhost:3000'; // Adjust based on your backend URL
+const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL;; // Adjust based on your backend URL
 export interface StoreLevel {
   id: number;
   store_id: number;

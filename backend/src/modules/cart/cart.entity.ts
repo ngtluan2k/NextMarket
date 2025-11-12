@@ -11,13 +11,14 @@ import {
 import { User } from '../user/user.entity';
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 
 @Entity('shopping_carts')
 export class ShoppingCart {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', unique: true })
+  @Column({ type: 'char', unique: true })
   @Generated('uuid')
   uuid!: string;
 
@@ -81,11 +82,15 @@ export class CartItem {
   added_at!: Date;
 
   @Column({ type: 'varchar' })
-  type!: 'bulk' | 'subscription'| 'normal' | 'flash_sale';
-  
+  type!: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
+
   @Column({ type: 'boolean', default: false })
-  is_group!: boolean
+  is_group!: boolean;
 
   @Column({ type: 'int', nullable: true })
-  pricing_rule_id?: number; // <-- thêm cột này
+  pricing_rule_id?: number | null;
+
+  @ManyToOne(() => PricingRules, { nullable: true })
+  @JoinColumn({ name: 'pricing_rule_id' })
+  pricing_rule?: PricingRules | null;
 }
