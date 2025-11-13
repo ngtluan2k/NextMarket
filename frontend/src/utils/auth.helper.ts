@@ -12,13 +12,22 @@ export function decodeJwtToken(token: string): any | null {
 export function getCurrentUserId(): number | null {
   const token = localStorage.getItem('token');
   const decoded = decodeJwtToken(token || '');
-  console.log(decoded);
+  // console.log(decoded);
   return decoded?.userId || decoded?.sub || null;
 }
 
 export function getCurrentUser() {
   const token = localStorage.getItem('token');
   const decoded = decodeJwtToken(token || '');
-  console.log(decoded);
+  // console.log(decoded);
   return decoded;
+}
+
+export function getRoles(){
+  const token = localStorage.getItem('token');
+  const decoded = decodeJwtToken(token || '')
+  // console.log(decoded);
+
+  return  decoded.roles;
+
 }
