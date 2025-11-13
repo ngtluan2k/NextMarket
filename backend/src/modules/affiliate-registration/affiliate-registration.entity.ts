@@ -26,7 +26,12 @@ export class AffiliateRegistration {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'char', unique: true })
+  @Column({
+    type: 'uuid',
+    unique: true,
+    nullable: false,
+    default: () => 'gen_random_uuid()',
+  })
   uuid!: string;
 
   @Column({ type: 'text', nullable: true })

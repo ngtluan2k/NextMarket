@@ -59,4 +59,17 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   currency?: string = 'VND';
+
+  // Affiliate tracking fields
+  @IsOptional()
+  @IsString()
+  affiliateCode?: string;
+
+  @IsOptional()
+  @IsNumber()
+  affiliateUserId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  affiliateProgramId?: number;
 }

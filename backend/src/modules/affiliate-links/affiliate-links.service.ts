@@ -1,278 +1,591 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+// modules/affiliate-links/affiliate-links.service.ts
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
-import { CreateAffiliateLinkDto } from '../affiliate-links/dto/create-affiliate-link.dto';
-import { UpdateAffiliateLinkDto } from '../affiliate-links/dto/update-affiliate-link.dto';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { Repository } from 'typeorm';
+import { AffiliateLink } from './affiliate-links.entity';
+import { AffiliateClick } from './entity/affiliate-click.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
-import { UserService } from '../user/user.service';
 import { Product } from '../product/product.entity';
-import { OrderItem } from '../order-items/order-item.entity';
-import * as crypto from 'crypto';
+import { User } from '../user/user.entity';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class AffiliateLinksService {
   constructor(
-    @InjectRepository(AffiliateLink)
-    private repository: Repository<AffiliateLink>,
-    @InjectRepository(AffiliateCommission)
-    private commissionRepository: Repository<AffiliateCommission>,
-    @InjectRepository(AffiliateProgram)
-    private programRepository: Repository<AffiliateProgram>,
-    @InjectRepository(Product)
-    private productRepository: Repository<Product>,
-    @InjectRepository(OrderItem)
-    private orderItemRepository: Repository<OrderItem>,
-    private userService: UserService
+    @InjectRepository(AffiliateLink) private readonly linkRepo: Repository<AffiliateLink>,
+    @InjectRepository(AffiliateClick) private readonly clickRepo: Repository<AffiliateClick>,
+    @InjectRepository(AffiliateCommission) private readonly commRepo: Repository<AffiliateCommission>,
+    @InjectRepository(AffiliateProgram) private readonly programRepo: Repository<AffiliateProgram>,
+    @InjectRepository(Product) private readonly productRepo: Repository<Product>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    private readonly walletService: WalletService,
   ) {}
 
-  async create(createDto: CreateAffiliateLinkDto): Promise<AffiliateLink> {
-    const user = await this.userService.findOne(createDto.userId);
-    if (!user || !user.is_affiliate) {
-      throw new NotFoundException('User is not an affiliate or does not exist');
+  async createAffiliateLink(userId: number, productId: number, variantId?: number, programId?: number) {
+    console.log(`[DEBUG] Creating affiliate link for user ${userId}, product ${productId}, variant ${variantId}, program ${programId}`);
+    
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      console.log(`[ERROR] User ${userId} not found`);
+      throw new NotFoundException('User not found');
     }
-    const entity = this.repository.create(createDto);
-    entity.uuid = crypto.randomUUID();
-    entity.created_at = new Date();
-    entity.program_id = { id: createDto.programId } as any;
-    entity.user_id = { id: createDto.userId } as any;
-    entity.code = createDto.code;
-
-    const savedLink = await this.repository.save(entity);
-    await this.userService.updateAffiliateStatus(createDto.userId, true);
-    return savedLink;
-  }
-
-  async findAll(): Promise<AffiliateLink[]> {
-    return this.repository.find({ relations: ['program_id', 'user_id'] });
-  }
-
-  async findOne(id: number): Promise<AffiliateLink> {
-    const res = await this.repository.findOne({
-      where: { id },
-      relations: ['program_id', 'user_id'],
-    });
-    if (!res) {
-      throw new NotFoundException(`Cannot find affiliate link with id ${id}`);
-    }
-    return res;
-  }
-
-  async update(
-    id: number,
-    updateDto: UpdateAffiliateLinkDto
-  ): Promise<AffiliateLink> {
-    await this.repository.update(id, updateDto);
-    return this.findOne(id);
-  }
-
-  async remove(id: number): Promise<void> {
-    await this.repository.delete(id);
-  }
-
-  async register(userId: number) {
-    const user = await this.userService.findOne(userId);
-    if (!user) throw new NotFoundException(`User with id ${userId} not found`);
-    if (user.is_affiliate) {
-      return {
-        message: 'You are already registered as an affiliate',
-        affiliate_code: user.code,
-      };
+    
+    console.log(`[DEBUG] User found: ${user.email}, is_affiliate: ${(user as any).is_affiliate}, code: ${(user as any).code}`);
+    
+    // Auto-enable affiliate status and generate code if not exists
+    if (!(user as any).is_affiliate || !(user as any).code) {
+      const affiliateCode = (user as any).code || `AFF${userId}${Date.now().toString().slice(-4)}`;
+      await this.userRepo.update(userId, {
+        is_affiliate: true,
+        code: affiliateCode,
+        updated_at: new Date(),
+      });
+      console.log(`✅ Auto-enabled affiliate status for user ${userId} with code: ${affiliateCode}`);
     }
 
-    if (!user.code) {
-      user.code = `AFF${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
-      await this.userService.update(userId, { code: user.code });
+    // Ensure user has a wallet (auto-create if not exists)
+    await this.walletService.createWalletIfNotExists(userId);
+
+    const product = await this.productRepo.findOne({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Product not found');
+
+    let program: AffiliateProgram | null = null;
+    if (programId) {
+      program = await this.programRepo.findOne({ where: { id: programId } });
+      if (!program) throw new NotFoundException('Program not found');
+
+      // 🚫 Prevent variant from being associated with multiple programs (if variantId is provided)
+      if (variantId) {
+        console.log(`[DEBUG] Checking conflict for variant ${variantId} of product ${productId} with program ${programId}`);
+        const variantConflict = await this.linkRepo
+          .createQueryBuilder('l')
+          .leftJoin('l.program_id', 'p')
+          .where('l.code LIKE :variantPattern', { variantPattern: `%:${productId}:${variantId}` })
+          .andWhere('p.id IS NOT NULL')
+          .andWhere('p.id != :pid', { pid: programId })
+          .getCount();
+
+        console.log(`[DEBUG] Variant conflict count: ${variantConflict}`);
+        if (variantConflict > 0) {
+          console.log(`[ERROR] Variant ${variantId} of product ${productId} already belongs to another affiliate program`);
+          throw new ForbiddenException(`Biến thể này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể khác hoặc liên hệ admin.`);
+        }
+      } else {
+        // For products without variant, check if any variant of this product is already in another program
+        console.log(`[DEBUG] Checking conflict for product ${productId} (no variant) with program ${programId}`);
+        const productConflict = await this.linkRepo
+          .createQueryBuilder('l')
+          .leftJoin('l.program_id', 'p')
+          .where('l.code LIKE :productPattern', { productPattern: `%:${productId}:%` })
+          .andWhere('p.id IS NOT NULL')
+          .andWhere('p.id != :pid', { pid: programId })
+          .getCount();
+
+        console.log(`[DEBUG] Product conflict count: ${productConflict}`);
+        if (productConflict > 0) {
+          console.log(`[ERROR] Some variants of product ${productId} already belong to another affiliate program`);
+          throw new ForbiddenException(`Một số biến thể của sản phẩm này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể cụ thể hoặc liên hệ admin.`);
+        }
+      }
     }
 
-    const defaultProgram = await this.programRepository.findOne({
-      where: { status: 'active' },
-      order: { id: 'ASC' },
-    });
-    if (!defaultProgram) {
-      throw new NotFoundException('No active affiliate programs available');
-    }
+    // code dạng: AFF:{userId}:{productId}:{variantId?}
+    // Thêm userId vào code để đảm bảo unique cho mỗi user
+    const code = `AFF:${userId}:${productId}${variantId ? `:${variantId}` : ''}`;
 
-    return {
-      message: 'Successfully registered as an affiliate',
-      affiliate_code: user.code,
-    };
-  }
-
-  async unregister(userId: number) {
-    const user = await this.userService.findOne(userId);
-    if (!user || !user.is_affiliate) {
-      throw new NotFoundException('User is not an affiliate or does not exist');
-    }
-
-    const affiliateLinks = await this.repository.find({
-      where: { user_id: { id: userId } },
-    });
-
-    await this.commissionRepository.update(
-      {
-        link_id: { id: In(affiliateLinks.map((link) => link.id)) },
-        status: 'pending',
+    // kiểm tra duplicate theo user + code
+    console.log(`[DEBUG] Checking for existing link with code: ${code}`);
+    const existed = await this.linkRepo.findOne({ 
+      where: { 
+        code, 
+        user_id: { id: userId } 
       },
-      { status: 'canceled' }
-    );
-    await this.repository.delete({ user_id: { id: userId } });
-    await this.userService.updateAffiliateStatus(userId, false);
-
-    return { message: 'Successfully unregistered from affiliate program' };
-  }
-
-  async createAffiliateLink(
-    userId: number,
-    productId: number,
-    variantId?: number
-  ) {
-    const user = await this.userService.findOne(userId);
-    if (!user || !user.is_affiliate) {
-      throw new NotFoundException('User is not an affiliate or does not exist');
+      relations: ['user_id', 'program_id']
+    });
+    
+    console.log(`[DEBUG] Existing link found: ${existed ? 'YES' : 'NO'}`);
+    
+    let saved;
+    if (existed) {
+      saved = existed;
+      console.log(`[DEBUG] Using existing link with ID: ${existed.id}`);
+      console.log(`[INFO] Link affiliate cho sản phẩm này đã tồn tại, trả về link cũ`);
+    } else {
+      console.log(`[DEBUG] Creating new affiliate link...`);
+      try {
+        saved = await this.linkRepo.save(
+          this.linkRepo.create({
+            user_id: user,
+            program_id: program || undefined,
+            code,
+            created_at: new Date(),
+          }),
+        );
+        console.log(`[DEBUG] Successfully created link with ID: ${saved.id}`);
+      } catch (error) {
+        console.log(`[ERROR] Failed to create affiliate link:`, error);
+        throw error;
+      }
     }
 
-    const defaultProgram = await this.programRepository.findOne({
-      where: { status: 'active' },
-      order: { id: 'ASC' },
-    });
-    if (!defaultProgram) {
-      throw new NotFoundException('No active affiliate programs available');
-    }
+    // Trả về URL theo origin production của bạn, frontend có thể normalize
+    const affiliate_link = `https://everymart.com/product/${productId}?aff=${user.code}${
+      variantId ? `&variant=${variantId}` : ''
+    }${programId ? `&program=${programId}` : ''}`;
 
-    const baseLink = `http://localhost:4200/product/${productId}?aff=${user.code}`;
-
-    const affiliateLink = this.repository.create({
-      user_id: { id: userId } as any,
-      program_id: { id: defaultProgram.id } as any,
-      code: variantId
-        ? `${user.code}:${productId}:${variantId}`
-        : `${user.code}:${productId}`,
-      created_at: new Date(),
-      uuid: crypto.randomUUID(),
-    });
-
-    const savedLink = await this.repository.save(affiliateLink);
     return {
-      message: 'Affiliate link created',
-      affiliate_link: `${baseLink}${variantId ? `&variant=${variantId}` : ''}`,
-      link_id: savedLink.id,
+      link_id: (saved as any).id,
+      affiliate_link,
+      productId,
+      variantId: variantId ?? undefined,
+      programId: programId ?? undefined,
     };
   }
 
   async getMyLinks(userId: number) {
-    console.log('userId', userId);
-
-    const user = await this.userService.findOne(userId);
-    console.log(JSON.stringify(user), null, 2);
-    if (!user || user.is_affiliate != true) {
-      console.log(
-        'User is not an affiliate or does not exist',
-        user.id,
-        user.is_affiliate
-      );
-      return {
-        message: 'User is not an affiliate or does not exist',
-        links: [],
-      };
-    }
-
-    const links = await this.repository.find({
+    const links = await this.linkRepo.find({
       where: { user_id: { id: userId } },
-      relations: ['program_id'],
+      relations: ['program_id', 'user_id'],
+      order: { created_at: 'DESC' },
     });
-    if (!links.length) {
+
+    const mapped = links.map((l) => {
+      const parts = (l.code || '').split(':');
+      // Code format: AFF:{userId}:{productId}:{variantId?}
+      // parts[0] = 'AFF', parts[1] = userId, parts[2] = productId, parts[3] = variantId (optional)
+      const pid = parts[2] ? Number(parts[2]) : undefined;
+      const vid = parts[3] ? Number(parts[3]) : undefined;
+      const affCode = ((l as any).user_id?.code as string) || '';
+      const programId = (l as any).program_id?.id;
       return {
-        message:
-          'No affiliate links created. Please create a link for a specific product first.',
-        links: [],
-      };
-    }
-
-    const affiliateLinks = links.map((link) => {
-      if (!link.code) {
-        return {
-          link_id: link.id,
-          affiliate_link: `http://localhost:4200/product/unknown?aff=${user.code}`,
-          program_name: link.program_id?.name,
-          created_at: link.created_at,
-        };
-      }
-
-      const codeParts = link.code.split(':');
-      const linkProductId = codeParts[1] || 'unknown';
-      const linkVariantId = codeParts[2]
-        ? parseInt(codeParts[2], 10)
-        : undefined;
-      const baseLink = `http://localhost:4200/product/${linkProductId}?aff=${user.code}`;
-
-      return {
-        link_id: link.id,
-        productId: parseInt(linkProductId, 10),
-        variantId: linkVariantId,
-        affiliate_link: `${baseLink}${
-          linkVariantId ? `&variant=${linkVariantId}` : ''
-        }`,
-        program_name: link.program_id?.name,
-        created_at: link.created_at,
+        link_id: l.id,
+        productId: pid,
+        variantId: vid,
+        programId: programId,
+        program_name: (l as any).program_id?.name,
+        affiliate_link:
+          pid && affCode
+            ? `https://everymart.com/product/${pid}?aff=${affCode}${vid ? `&variant=${vid}` : ''}${programId ? `&program=${programId}` : ''}`
+            : null,
+        created_at: l.created_at,
       };
     });
 
-    return { message: 'Affiliate links retrieved', links: affiliateLinks };
-  }
-
-  async getAffiliatedProducts(userId: number) {
-    const user = await this.userService.findOne(userId);
-    if (!user || !user.is_affiliate) {
-      throw new NotFoundException('User is not an affiliate or does not exist');
-    }
-
-    const commissions = await this.commissionRepository
-      .createQueryBuilder('commission')
-      .leftJoin('commission.link_id', 'link')
-      .leftJoin('link.user_id', 'user')
-      .leftJoinAndSelect('commission.order_item_id', 'orderItem')
-      .leftJoinAndSelect('orderItem.product', 'product')
-      .where('user.id = :userId', { userId })
-      .getMany();
-
-    const products = commissions
-      .map((comm) => comm.order_item_id?.product)
-      .filter((p): p is Product => p !== null && p !== undefined);
-
-    const uniqueProducts = [
-      ...new Map(products.map((p) => [p.id, p])).values(),
-    ];
-
-    return {
-      message: uniqueProducts.length
-        ? 'Affiliated products retrieved'
-        : 'No affiliated products found',
-      products: uniqueProducts,
-    };
+    return { message: 'OK', links: mapped };
   }
 
   async deleteMyLink(linkId: number, userId: number) {
-    const link = await this.repository.findOne({
-      where: { id: linkId },
-      relations: ['user_id'],
+    const link = await this.linkRepo.findOne({ where: { id: linkId }, relations: ['user_id'] });
+    if (!link) throw new NotFoundException('Affiliate link not found');
+    if ((link as any).user_id?.id !== userId) throw new ForbiddenException('Bạn không có quyền xóa link affiliate này. Chỉ có thể xóa link do chính bạn tạo.');
+
+    // Xoá commissions liên quan link (nếu cần)
+    await this.commRepo.delete({ link_id: { id: linkId } as any });
+    await this.linkRepo.remove(link);
+    return { success: true, link_id: linkId };
+  }
+
+  async getAffiliatedProducts(userId: number) {
+    // Lấy theo link đã tạo
+    const links = await this.linkRepo.find({ where: { user_id: { id: userId } as any } });
+    const productIds = new Set<number>();
+    links.forEach((l) => {
+      const parts = (l.code || '').split(':');
+      // Code format: AFF:{userId}:{productId}:{variantId?}
+      // parts[0] = 'AFF', parts[1] = userId, parts[2] = productId, parts[3] = variantId (optional)
+      const pid = parts[2] ? Number(parts[2]) : undefined;
+      if (pid) productIds.add(pid);
     });
-    if (!link) {
-      throw new NotFoundException('Affiliate link not found');
+
+    if (productIds.size === 0) return { message: 'OK', products: [] };
+
+    // Lấy products kèm relations
+    const products = await this.productRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.media', 'media')
+      .leftJoinAndSelect('p.store', 'store')
+      .leftJoinAndSelect('p.variants', 'variants')
+      .leftJoinAndSelect('p.brand', 'brand')
+      .where('p.id IN (:...ids)', { ids: Array.from(productIds) })
+      .getMany();
+
+    return { message: 'OK', products };
+  }
+
+  async getDashboardStats(userId: number) {
+    try {
+      // Get total number of affiliate links created
+      const totalLinks = await this.linkRepo.count({
+        where: { user_id: { id: userId } as any },
+      });
+
+      // Get commission statistics - query directly by beneficiary_user_id
+      const commissionStats = await this.commRepo
+        .createQueryBuilder('c')
+        .leftJoin('c.beneficiary_user_id', 'user')
+        .where('user.id = :userId', { userId })
+        .select([
+          "COALESCE(SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END), 0) as totalPending",
+          "COALESCE(SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END), 0) as totalPaid",
+          'COALESCE(SUM(c.amount), 0) as totalEarned',
+          'COUNT(DISTINCT c.order_item_id) as totalOrders',
+        ])
+        .getRawOne();
+
+      // Count unique buyers per link
+      // Logic: 1 user buying multiple times through same link = 1 buyer
+      //        1 user buying through different links = counted separately per link
+      const buyersStats = await this.commRepo
+        .createQueryBuilder('c')
+        .leftJoin('c.beneficiary_user_id', 'beneficiary')
+        .leftJoin('c.order_item_id', 'orderItem')
+        .leftJoin('orderItem.order', 'order')
+        .leftJoin('c.link_id', 'link')
+        .where('beneficiary.id = :userId', { userId })
+        .andWhere('c.level = :level', { level: 1 }) // Only count direct purchases (level 1)
+        .select([
+          'COUNT(DISTINCT CONCAT(link.id, \'-\', order.user_id)) as totalBuyers'
+        ])
+        .getRawOne();
+
+      const totalRevenue = parseFloat(commissionStats?.totalEarned || '0');
+      const totalPending = parseFloat(commissionStats?.totalPending || '0');
+      const totalPaid = parseFloat(commissionStats?.totalPaid || '0');
+      const totalBuyers = parseInt(buyersStats?.totalBuyers || '0', 10);
+
+      return {
+        totalRevenue: totalRevenue.toFixed(2),
+        totalPending: totalPending.toFixed(2),
+        totalPaid: totalPaid.toFixed(2),
+        totalLinks,
+        totalBuyers,
+      };
+    } catch (error) {
+      console.error('Error in getDashboardStats:', error);
+      // Return default values if query fails
+      return {
+        totalRevenue: '0.00',
+        totalPending: '0.00',
+        totalPaid: '0.00',
+        totalLinks: 0,
+        totalBuyers: 0,
+      };
     }
-    if (!link.user_id || link.user_id.id !== userId) {
-      throw new ForbiddenException('You are not allowed to delete this link');
+  }
+
+  /**
+   * Get detailed commission history for a user
+   */
+  async getCommissionHistory(userId: number, page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
+
+    const [commissions, total] = await this.commRepo
+      .createQueryBuilder('c')
+      .leftJoinAndSelect('c.beneficiary_user_id', 'user')
+      .leftJoinAndSelect('c.order_item_id', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('orderItem.order', 'order')
+      .leftJoinAndSelect('product.media', 'media')
+      .where('user.id = :userId', { userId })
+      .orderBy('c.created_at', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
+
+    const formattedCommissions = commissions.map(commission => ({
+      id: commission.id,
+      amount: parseFloat(commission.amount.toString()),
+      rate_percent: commission.rate_percent,
+      status: commission.status,
+      level: commission.level,
+      created_at: commission.created_at,
+      product: {
+        id: (commission as any).order_item_id?.product?.id,
+        name: (commission as any).order_item_id?.product?.name,
+        image: (commission as any).order_item_id?.product?.media?.find((m: any) => m.is_primary)?.url || 
+               (commission as any).order_item_id?.product?.media?.[0]?.url,
+      },
+      order: {
+        id: (commission as any).order_item_id?.order?.id,
+        order_number: (commission as any).order_item_id?.order?.order_number || `ORD-${(commission as any).order_item_id?.order?.id}`,
+        total_amount: (commission as any).order_item_id?.order?.total_amount,
+        created_at: (commission as any).order_item_id?.order?.created_at,
+      },
+      affiliate_link: {
+        id: null, // No longer using affiliate links
+        code: null,
+      }
+    }));
+
+    return {
+      commissions: formattedCommissions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
+  }
+
+  /**
+   * Get commission summary by time periods
+   */
+  async getCommissionSummaryByPeriod(userId: number, period: 'daily' | 'weekly' | 'monthly' = 'monthly', limit: number = 12) {
+    try {
+      let dateFormat: string;
+
+      switch (period) {
+        case 'daily':
+          dateFormat = 'YYYY-MM-DD';
+          break;
+        case 'weekly':
+          dateFormat = 'IYYY-IW'; // ISO week format for PostgreSQL
+          break;
+        case 'monthly':
+        default:
+          dateFormat = 'YYYY-MM';
+          break;
+      }
+
+      const summaries = await this.commRepo
+        .createQueryBuilder('c')
+        .leftJoin('c.beneficiary_user_id', 'user')
+        .where('user.id = :userId', { userId })
+        .select([
+          `TO_CHAR(c.created_at, '${dateFormat}') as period`,
+          "COALESCE(SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END), 0) as totalPending",
+          "COALESCE(SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END), 0) as totalPaid",
+          'COALESCE(SUM(c.amount), 0) as totalEarned',
+          'COUNT(c.id) as totalCommissions',
+          'COUNT(DISTINCT c.order_item_id) as totalOrders',
+        ])
+        .groupBy('period')
+        .orderBy('period', 'DESC')
+        .limit(limit)
+        .getRawMany();
+
+      return summaries.map(summary => ({
+        period: summary.period,
+        totalEarned: parseFloat(summary.totalEarned || '0'),
+        totalPending: parseFloat(summary.totalPending || '0'),
+        totalPaid: parseFloat(summary.totalPaid || '0'),
+        totalCommissions: parseInt(summary.totalCommissions || '0', 10),
+        totalOrders: parseInt(summary.totalOrders || '0', 10),
+      }));
+    } catch (error) {
+      console.error('Error in getCommissionSummaryByPeriod:', error);
+      // Return empty array if query fails
+      return [];
+    }
+  }
+
+  /**
+   * Get available balance for withdrawal
+   */
+  async getAvailableBalance(userId: number) {
+    try {
+      const balanceStats = await this.commRepo
+        .createQueryBuilder('c')
+        .leftJoin('c.beneficiary_user_id', 'user')
+        .where('user.id = :userId', { userId })
+        .select([
+          "COALESCE(SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END), 0) as availableBalance",
+          "COALESCE(SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END), 0) as pendingBalance",
+          'COALESCE(SUM(c.amount), 0) as totalEarned',
+        ])
+        .getRawOne();
+
+      return {
+        availableBalance: parseFloat(balanceStats?.availableBalance || '0'),
+        pendingBalance: parseFloat(balanceStats?.pendingBalance || '0'),
+        totalEarned: parseFloat(balanceStats?.totalEarned || '0'),
+      };
+    } catch (error) {
+      console.error('Error in getAvailableBalance:', error);
+      // Return default values if query fails
+      return {
+        availableBalance: 0,
+        pendingBalance: 0,
+        totalEarned: 0,
+      };
+    }
+  }
+
+  /**
+   * Search products for affiliate link creation
+   */
+  async searchProductsForAffiliate(userId: number, query: string, page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
+
+    // Auto-enable affiliate status if not exists
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    
+    if (!(user as any).is_affiliate || !(user as any).code) {
+      const affiliateCode = (user as any).code || `AFF${userId}${Date.now().toString().slice(-4)}`;
+      await this.userRepo.update(userId, {
+        is_affiliate: true,
+        code: affiliateCode,
+        updated_at: new Date(),
+      });
+      console.log(`✅ Auto-enabled affiliate status for user ${userId} with code: ${affiliateCode}`);
     }
 
-    await this.commissionRepository.delete({ link_id: { id: linkId } });
+    const [products, total] = await this.productRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.media', 'media')
+      .leftJoinAndSelect('p.store', 'store')
+      .leftJoinAndSelect('p.variants', 'variants')
+      .leftJoinAndSelect('p.brand', 'brand')
+      .leftJoinAndSelect('p.categories', 'categories')
+      .leftJoinAndSelect('categories.category', 'category')
+      .where('p.name LIKE :query OR p.description LIKE :query', { query: `%${query}%` })
+      .andWhere('p.status = :status', { status: 'active' })
+      .orderBy('p.created_at', 'DESC')
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
 
-    await this.repository.remove(link);
+    const formattedProducts = products.map(product => {
+      // Get primary image or first available image
+      const primaryImage = product.media?.find(m => m.is_primary)?.url;
+      const firstImage = product.media?.[0]?.url;
+      const productImage = primaryImage || firstImage;
 
-    return { message: 'Affiliate link deleted', link_id: linkId };
+      return {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        base_price: product.base_price,
+        image: productImage,
+        media: product.media?.map(m => ({
+          id: m.id,
+          url: m.url,
+          media_type: m.media_type,
+          is_primary: m.is_primary,
+          sort_order: m.sort_order,
+        })) || [],
+        store: {
+          id: product.store?.id,
+          name: product.store?.name,
+        },
+        brand: {
+          id: product.brand?.id,
+          name: product.brand?.name,
+        },
+        categories: product.categories?.map(pc => ({
+          id: pc.id,
+          name: pc.category?.name,
+        })) || [],
+        variants: product.variants?.map(variant => ({
+          id: variant.id,
+          name: variant.variant_name,
+          sku: variant.sku,
+          price: variant.price,
+          stock: variant.stock,
+        })) || [],
+      };
+    });
+
+    return {
+      products: formattedProducts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
+  }
+
+  // Track affiliate click
+  async trackClick(data: {
+    affiliateCode: string;
+    clickId: string;
+    productId?: number;
+    variantId?: number;
+    programId?: number;
+    source?: string;
+    timestamp: number;
+    ipAddress?: string;
+    userAgent?: string;
+    referrer?: string;
+  }) {
+    try {
+      // Find affiliate link by code
+      const link = await this.linkRepo.findOne({
+        where: { code: data.affiliateCode },
+      });
+
+      if (!link) {
+        console.warn(`⚠️ Affiliate link not found for code: ${data.affiliateCode}`);
+        // Still track the click even if link not found for analytics
+      }
+
+      // Parse UTM parameters from referrer if available
+      let utmParams = null;
+      if (data.source) {
+        utmParams = { utm_source: data.source };
+      }
+
+      // Create click record
+      const click = this.clickRepo.create({
+        click_id: data.clickId,
+        affiliate_code: data.affiliateCode,
+        affiliate_link_id: link?.id,
+        product_id: data.productId,
+        variant_id: data.variantId,
+        ip_address: data.ipAddress,
+        user_agent: data.userAgent,
+        referrer: data.referrer,
+        utm_params: utmParams,
+        clicked_at: new Date(data.timestamp),
+        converted: false,
+      });
+
+      await this.clickRepo.save(click);
+
+      // Increment click count on the link
+      if (link) {
+        await this.linkRepo.increment({ id: link.id }, 'clicks', 1);
+      }
+
+      console.log(`📊 Click tracked: ${data.clickId} for affiliate ${data.affiliateCode}`);
+      
+      return {
+        success: true,
+        clickId: data.clickId,
+      };
+    } catch (error) {
+      console.error('❌ Failed to track click:', error);
+      throw error;
+    }
+  }
+
+  // Mark click as converted (called when order is created)
+  async markClickAsConverted(affiliateCode: string, orderId: number) {
+    try {
+      // Find the most recent unconverted click for this affiliate code
+      const click = await this.clickRepo.findOne({
+        where: {
+          affiliate_code: affiliateCode,
+          converted: false,
+        },
+        order: { clicked_at: 'DESC' },
+      });
+
+      if (click) {
+        click.converted = true;
+        click.order_id = orderId;
+        click.converted_at = new Date();
+        await this.clickRepo.save(click);
+        
+        console.log(`✅ Click ${click.click_id} marked as converted for order ${orderId}`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to mark click as converted:', error);
+    }
   }
 }

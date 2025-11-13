@@ -16,6 +16,10 @@ import { Inventory } from '../inventory/inventory.entity';
 import { Product } from '../product/product.entity';
 import { Payment } from '../payments/payment.entity';
 import { VouchersService } from '../vouchers/vouchers.service';
+import { AffiliateResolutionService } from '../affiliate-links/affiliate-resolution.service';
+import { CommissionCalcService } from '../affiliate-commissions/service/commission-calc.service';
+import { ReferralsService } from '../referral/referrals.service';
+import { Referral } from '../referral/referrals.entity';
 import { Subscription } from '../subscription/subscription.entity';
 import {
   OrderStatusHistory,
@@ -27,17 +31,12 @@ import { Wallet } from '../wallet/wallet.entity';
 import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
 import { OrderStatuses } from './types/orders';
 import { OrderFilters } from './types/orders';
+import { randomUUID } from 'crypto';
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private readonly ordersRepository: Repository<Order>,
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
-    @InjectRepository(Store)
-    private readonly storesRepository: Repository<Store>,
-    @InjectRepository(UserAddress)
-    private readonly addressesRepository: Repository<UserAddress>,
     @InjectRepository(OrderItem)
     private readonly orderItemsRepository: Repository<OrderItem>,
     @InjectRepository(Inventory)
@@ -45,12 +44,18 @@ export class OrdersService {
     @InjectRepository(Payment)
     private readonly paymentsRepository: Repository<Payment>,
     private readonly vouchersService: VouchersService,
+    private readonly affiliateResolutionService: AffiliateResolutionService,
+    private readonly commissionCalcService: CommissionCalcService,
+    private readonly referralsService: ReferralsService,
     @InjectRepository(OrderStatusHistory)
     private orderStatusHistoryRepository: Repository<OrderStatusHistory>
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
+    console.log('🚀 Starting order creation with data:', JSON.stringify(createOrderDto, null, 2));
+    
     return this.ordersRepository.manager.transaction(async (manager) => {
+      console.log('📝 Starting database transaction for order creation');
       const user = await manager.findOneBy(User, { id: createOrderDto.userId });
       const store = await manager.findOneBy(Store, {
         id: createOrderDto.storeId,
@@ -123,6 +128,55 @@ export class OrdersService {
         totalAmount,
       });
 
+      // === Resolve affiliate information ===
+      let affiliateInfo = null;
+      if (createOrderDto.affiliateCode) {
+        try {
+          console.log('🔍 Resolving affiliate code:', createOrderDto.affiliateCode);
+          
+          // Validate affiliate code format
+          if (!createOrderDto.affiliateCode.trim()) {
+            throw new BadRequestException('Affiliate code cannot be empty');
+          }
+          
+          // Get the first product ID for affiliate link resolution
+          const firstProductId = createOrderDto.items.length > 0 ? createOrderDto.items[0].productId : undefined;
+          const firstVariantId = createOrderDto.items.length > 0 ? createOrderDto.items[0].variantId : undefined;
+          
+          console.log('📦 Product info for affiliate resolution:', { firstProductId, firstVariantId });
+          
+          affiliateInfo = await this.affiliateResolutionService.resolveAffiliateCode(
+            createOrderDto.affiliateCode.trim(),
+            firstProductId,
+            firstVariantId
+          );
+          
+          if (affiliateInfo && affiliateInfo.isValid) {
+            console.log('✅ Affiliate resolved:', affiliateInfo);
+          } else {
+            console.warn('⚠️ Invalid affiliate code - user not found or not active:', createOrderDto.affiliateCode);
+            // For better user experience, continue with order but log the issue
+            // In production, you might want to throw an error instead:
+            // throw new BadRequestException(`Invalid affiliate code: ${createOrderDto.affiliateCode}`);
+          }
+        } catch (error) {
+          console.error('❌ Affiliate resolution error:', error);
+          
+          if (error instanceof BadRequestException) {
+            // Re-throw validation errors
+            throw error;
+          }
+          
+          console.error('Error details:', error instanceof Error ? error.message : String(error));
+          console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+          
+          // For database/network errors, continue without affiliate tracking
+          // but log the issue for monitoring
+          affiliateInfo = null;
+          console.warn('⚠️ Continuing order creation without affiliate tracking due to resolution error');
+        }
+      }
+
       // Tạo order với các giá trị BE đã tính
       const order = manager.create(Order, {
         status: OrderStatuses.pending,
@@ -134,9 +188,83 @@ export class OrdersService {
         user,
         store,
         userAddress: address,
+        // Affiliate tracking - use resolved info if available, otherwise use provided values
+        affiliate_code: createOrderDto.affiliateCode?.trim() || null,
+        affiliate_user_id: affiliateInfo?.userId || createOrderDto.affiliateUserId || null,
+        affiliate_program_id: createOrderDto.affiliateProgramId || null,
+      } as any);
+
+      // 🐛 DEBUG: Log affiliate data being saved
+      console.log('🔍 DEBUG - Saving order with affiliate data:', {
+        affiliate_code: createOrderDto.affiliateCode,
+        affiliate_user_id: affiliateInfo?.userId || createOrderDto.affiliateUserId,
+        affiliate_program_id: createOrderDto.affiliateProgramId,
       });
 
       const savedOrder = await manager.save(order);
+      console.log('✅ Order saved successfully with ID:', savedOrder.id);
+
+      // === Tạo Referral Relationship nếu có affiliate ===
+      // Single-Parent Model: User chỉ có 1 referrer duy nhất (first come first serve)
+      if (affiliateInfo && affiliateInfo.isValid && affiliateInfo.userId) {
+        try {
+          console.log('🔗 Attempting to create referral relationship:', {
+            referrer_id: affiliateInfo.userId,
+            referee_id: createOrderDto.userId,
+            code: createOrderDto.affiliateCode
+          });
+
+          // CHECK 1: User đã là child của ai chưa? (Single-Parent Rule)
+          const existingAsReferee = await manager.findOne(Referral, {
+            where: {
+              referee: { id: createOrderDto.userId }
+            },
+            relations: ['referrer']
+          });
+
+          if (existingAsReferee) {
+            console.log('ℹ️ User already has a referrer (Single-Parent Rule):', {
+              existing_referrer_id: existingAsReferee.referrer.id,
+              current_affiliate_id: affiliateInfo.userId
+            });
+            console.log('⚠️ Skipping referral creation - First referrer wins!');
+            console.log('💰 Note: Current affiliate will still receive commission for this order');
+          } else {
+            // CHECK 2: Tránh duplicate với cùng 1 affiliate (không cần thiết nhưng để chắc chắn)
+            const existingReferral = await manager.findOne(Referral, {
+              where: {
+                referrer: { id: affiliateInfo.userId },
+                referee: { id: createOrderDto.userId }
+              }
+            });
+
+            if (!existingReferral) {
+              // Tạo referral mới - User này chưa có referrer
+              const referral = manager.create(Referral, {
+                referrer: { id: affiliateInfo.userId } as any,
+                referee: { id: createOrderDto.userId } as any,
+                code: createOrderDto.affiliateCode,
+                status: 'active',
+                uuid: randomUUID(),
+                created_at: new Date(),
+              });
+
+              await manager.save(referral);
+              console.log('✅ Referral relationship created - First referrer wins!');
+              console.log('🌳 User is now part of affiliate tree:', {
+                parent: affiliateInfo.userId,
+                child: createOrderDto.userId
+              });
+            } else {
+              console.log('ℹ️ Referral relationship already exists with this affiliate');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error creating referral relationship:', error);
+          // Don't fail the order if referral creation fails
+          console.warn('⚠️ Continuing order creation despite referral error');
+        }
+      }
 
       // === Tạo OrderItems và cập nhật Inventory / Variant ===
       for (const itemDto of createOrderDto.items) {
@@ -243,7 +371,7 @@ export class OrdersService {
 
             // Tạo giao dịch ví
             const tx = manager.create(WalletTransaction, {
-              uuid: crypto.randomUUID(),
+              uuid: randomUUID(),
               wallet,
               wallet_id: wallet.id,
               type: 'subscription_purchase',
@@ -398,12 +526,6 @@ export class OrdersService {
       throw new NotFoundException(`Không tìm thấy đơn hàng #${id}`);
     }
     return order;
-  }
-
-  async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
-    const order = await this.findOne(id);
-    Object.assign(order, updateOrderDto);
-    return await this.ordersRepository.save(order);
   }
 
   async remove(id: number): Promise<void> {
@@ -947,5 +1069,60 @@ export class OrdersService {
       completed,
       pending,
     };
+  }
+
+  /**
+   * Update order status and trigger commission calculation if order is paid
+   */
+  async updateOrderStatus(orderId: number, status: OrderStatuses): Promise<Order> {
+    const order = await this.ordersRepository.findOne({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException(`Order with id ${orderId} not found`);
+    }
+
+    // Update order status
+    order.status = status;
+    const updatedOrder = await this.ordersRepository.save(order);
+
+    // Trigger commission calculation if order is completed
+    if (status === OrderStatuses.completed) {
+      try {
+        console.log(`🎯 Triggering commission calculation for order ${orderId}`);
+        await this.commissionCalcService.handleOrderPaid(orderId);
+        console.log(`✅ Commission calculation completed for order ${orderId}`);
+      } catch (error) {
+        console.error(`❌ Commission calculation failed for order ${orderId}:`, error);
+        // Don't throw error to prevent order update failure
+      }
+    }
+
+    return updatedOrder;
+  }
+
+  /**
+   * Update order with DTO
+   */
+  async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
+    const order = await this.ordersRepository.findOne({ where: { id } });
+    if (!order) {
+      throw new NotFoundException(`Order with id ${id} not found`);
+    }
+
+    // Update order fields
+    Object.assign(order, updateOrderDto);
+    const updatedOrder = await this.ordersRepository.save(order);
+
+    // If status is being updated to completed, trigger commission calculation
+    if (updateOrderDto.status && updateOrderDto.status === OrderStatuses.completed) {
+      try {
+        console.log(`🎯 Triggering commission calculation for order ${id}`);
+        await this.commissionCalcService.handleOrderPaid(id);
+        console.log(`✅ Commission calculation completed for order ${id}`);
+      } catch (error) {
+        console.error(`❌ Commission calculation failed for order ${id}:`, error);
+      }
+    }
+
+    return updatedOrder;
   }
 }

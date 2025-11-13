@@ -1,6 +1,6 @@
 import axios from 'axios';
+import { BE_BASE_URL } from '../app/api/api';
 
-const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 export interface Product {
   id: number;
@@ -190,7 +190,7 @@ class ProductService {
     if (end) params.end = end;
 
     const response = await axios.get(
-      `${API_BASE_URL}/products/store/${storeId}`,
+      `${BE_BASE_URL}/products/store/${storeId}`,
       {
         headers: this.getAuthHeaders(),
         params, // truyền query params start/end
@@ -200,14 +200,14 @@ class ProductService {
   }
 
   async createProduct(dto: CreateProductDto): Promise<Product> {
-    const response = await axios.post(`${API_BASE_URL}/products`, dto, {
+    const response = await axios.post(`${BE_BASE_URL}/products`, dto, {
       headers: this.getAuthHeaders(),
     });
     return response.data;
   }
 
   async softDeleteProduct(id: number): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/products/${id}`, {
+    await axios.delete(`${BE_BASE_URL}/products/${id}`, {
       headers: this.getAuthHeaders(),
     });
   }
@@ -215,7 +215,7 @@ class ProductService {
   // ✅ Mới: Cập nhật trạng thái sản phẩm (active / draft)
   async toggleProductStatus(id: number): Promise<Product> {
     const response = await axios.patch(
-      `${API_BASE_URL}/products/${id}/toggle-status`,
+      `${BE_BASE_URL}/products/${id}/toggle-status`,
       {}, // body rỗng
       { headers: this.getAuthHeaders() }
     );
@@ -224,7 +224,7 @@ class ProductService {
 
   async getSimilarProducts(productId: number): Promise<Product[]> {
     const response = await axios.get(
-      `${API_BASE_URL}/products/${productId}/similar`
+      `${BE_BASE_URL}/products/${productId}/similar`
     );
     return response.data.data; // Assuming the API returns { message: string, data: Product[] }
   }
@@ -233,7 +233,7 @@ class ProductService {
   // Cập nhật draft
   async updateProduct(id: number, dto: FormData) {
     const res = await axios.put(
-      `${API_BASE_URL}/products/${id}`,
+      `${BE_BASE_URL}/products/${id}`,
       dto,
       { headers: this.getAuthHeaders() } // KHÔNG thêm Content-Type
     );
@@ -241,16 +241,23 @@ class ProductService {
   }
 
   async updateAndPublishProduct(id: number, dto: FormData) {
-    const res = await axios.put(`${API_BASE_URL}/products/${id}/publish`, dto, {
+    const res = await axios.put(`${BE_BASE_URL}/products/${id}/publish`, dto, {
       headers: this.getAuthHeaders(),
     });
     return res.data;
   }
 
-  async getDailyRevenue(
+
+ async getProductById(id: number): Promise<Product> {
+    const response = await axios.get(`${BE_BASE_URL}/products/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.data.data;
+  }
+   async getDailyRevenue(
     storeId: number,
     days = 7
-  ): Promise<DailyRevenueResponse> {
+  ): Promise<any> {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(
@@ -265,7 +272,7 @@ class ProductService {
       const data = res.data.dailyRevenue;
 
       // Chuyển đổi revenue sang number nếu cần
-      const formatData: DailyRevenueResponse = {
+      const formatData: any = {
         thisPeriod: data.thisPeriod.map((d: any) => ({
           date: d.date,
           revenue: Number(d.revenue),
@@ -283,7 +290,7 @@ class ProductService {
         error?.response?.data?.message || 'Không thể lấy doanh thu'
       );
     }
-  }
+    }
 }
 
 export const productService = new ProductService();

@@ -12,6 +12,7 @@ import { Voucher } from '../../types/voucher';
 import VoucherDiscountSection from '../checkout/VoucherDiscountSection';
 import AddressModal from '../../page/AddressModal';
 import { fetchMyWallet, Wallet } from '../../../service/wallet.service';
+import { orderService } from '../../../service/order.service';
 
 const { Text } = Typography;
 
@@ -52,7 +53,7 @@ export const CartSidebar: React.FC<Props> = ({
   onApplyVoucher,
   onRemoveVoucher,
 }) => {
-  const { cart } = useCart() as { cart: CartItem[] };
+  const { } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
   const { me } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -134,12 +135,19 @@ export const CartSidebar: React.FC<Props> = ({
         })),
       };
       console.log(
-        '📦 Order payload (BE will calculate):',
+        '📦 Order payload with affiliate tracking (BE will calculate):',
         JSON.stringify(orderPayload, null, 2)
       );
-      const orderRes = await api.post(`/users/${userId}/orders`, orderPayload);
-      const order = orderRes.data;
+      
+      // Use orderService.createOrder which includes affiliate tracking
+      const order = await orderService.createOrder(userId, orderPayload);
       console.log('Đơn hàng đã được tạo:', order);
+      
+      if (!order || !order.id) {
+        console.error('❌ Order creation failed - no order returned or missing ID');
+        message.error('Không thể tạo đơn hàng. Vui lòng thử lại.');
+        return;
+      }
       console.log('✅ Order created by BE:', {
         id: order.id,
         subtotal: order.subtotal,
