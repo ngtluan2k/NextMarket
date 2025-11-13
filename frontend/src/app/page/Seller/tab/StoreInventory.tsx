@@ -62,8 +62,8 @@ export interface Product {
   base_price: number;
   brandId: number;
   brandName?: string;
-  stock: number;
-  sold: number;
+  stock?: number;
+  sold?: number;
   revenue: number;
   status: 'Còn Hàng' | 'Sắp Hết Hàng' | 'Hết Hàng';
   statusApi: 'active' | 'draft';
@@ -209,9 +209,8 @@ export default function StoreInventory() {
           const finalPrice = isNaN(price) ? 0 : price;
 
           // Tính sold & revenue
-          const sold = Math.floor(Math.random() * 50);
-          const revenue = finalPrice * sold;
-
+          const sold = apiProduct.sold ?? 0;
+          const revenue = apiProduct.revenue ?? 0;
           // Trạng thái
           const status = getStockStatus(stock);
 
@@ -500,20 +499,20 @@ export default function StoreInventory() {
           )}
         </div>
       ),
-      sorter: (a, b) => a.stock - b.stock,
+      sorter: (a, b) => (a.stock ?? 0) - (b.stock ?? 0),
     },
     {
       title: 'Đã Bán',
       dataIndex: 'sold',
       key: 'sold',
-      sorter: (a, b) => a.sold - b.sold,
+      sorter: (a, b) => (a.sold ?? 0) - (b.sold ?? 0),
     },
     {
       title: 'Doanh Thu',
       dataIndex: 'revenue',
       key: 'revenue',
       render: (revenue: number) => `₫${revenue.toLocaleString('vi-VN')}`,
-      sorter: (a, b) => a.revenue - b.revenue,
+      sorter: (a, b) => (a.revenue ?? 0) - (b.revenue ?? 0),
     },
     {
       title: 'Trạng Thái',

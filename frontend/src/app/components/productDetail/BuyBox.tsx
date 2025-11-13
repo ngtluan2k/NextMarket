@@ -148,7 +148,7 @@ export default function BuyBox({
           price: calculatedPrice,
           quantity,
           type: selectedType,
-          pricingRuleId: selectedRuleId ?? undefined,
+          pricing_rule: selectedRuleId ? { id: selectedRuleId } : undefined,
           product: {
             id: product.id,
             name: product.name,

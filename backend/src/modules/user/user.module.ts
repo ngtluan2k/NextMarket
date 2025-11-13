@@ -18,6 +18,7 @@ import { OtpService } from '../../common/otp/otp.service';
 import { MailService } from '../../common/mail/mail.service';
 import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
 import { RevokedTokensModule } from '../../common/auth/revoked-tokens.module';
+import { Wallet } from '../wallet/wallet.entity';
 
 @Module({
   imports: [
@@ -30,11 +31,12 @@ import { RevokedTokensModule } from '../../common/auth/revoked-tokens.module';
       UserRole,
       ShoppingCart,
       VoucherCollection,
+      Wallet
     ]),
     RevokedTokensModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || '123', // nên đưa vào .env
-      signOptions: { expiresIn: '1h' },
+      signOptions: { expiresIn: '1d' },
     }),
   ],
   providers: [UserService, JwtStrategy, OtpService, MailService],

@@ -436,7 +436,7 @@ export default function OrderDetailPage() {
                     </div>
                   </div>
                   <div className="text-slate-900 text-sm font-medium">
-                    {formatVND((it.price || 0) * (it.quantity ?? 1))}
+                    {formatVND((it.price || 0))}
                   </div>
                 </li>
               ))}

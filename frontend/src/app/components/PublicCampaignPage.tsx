@@ -320,7 +320,7 @@ export default function PublicCampaignPage({ campaignId }: Props) {
       }}
     >
       <Navbar />
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
+      <div style={{margin: '0 auto', padding: '0' }}>
         {renderBlocks()}
       </div>
     </div>

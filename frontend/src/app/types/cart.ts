@@ -7,6 +7,7 @@ export interface CartItem {
   is_group?: boolean;
   product: {
     id: number;
+    slug: string;
     name: string;
     basePrice: number;
     url: string;

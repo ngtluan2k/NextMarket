@@ -193,13 +193,6 @@ export class OrdersService {
             );
           }
 
-          // Kiểm tra loại rule có khớp với type mà client gửi không
-          if (appliedRule.type !== itemDto.type) {
-            throw new Error(
-              `Loại rule (${appliedRule.type}) không khớp với loại mua hàng (${itemDto.type})`
-            );
-          }
-
           // ⚡ Flash Sale: kiểm tra giới hạn số lượng còn lại
           if (
             appliedRule.type === 'flash_sale' &&
