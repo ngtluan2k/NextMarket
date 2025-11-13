@@ -114,14 +114,12 @@ export default function GroupOrderDetailModal({
                     user: item.member?.user,
                     items: [],
                     totalAmount: 0,
-                    totalQuantity: 0,
                 });
             }
 
             const memberData = memberItemsMap.get(memberId);
             memberData.items.push(item);
             memberData.totalAmount += Number(item.price || 0);
-           
         });
 
         // Convert Map to Array

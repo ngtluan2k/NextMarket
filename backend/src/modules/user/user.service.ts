@@ -30,6 +30,7 @@ import {
   RequestPasswordResetDto,
   ResetPasswordByOtpDto,
 } from './dto/password-reset.dto';
+import { Wallet } from '../wallet/wallet.entity';
 
 @Injectable()
 export class UserService {
@@ -40,6 +41,8 @@ export class UserService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Wallet)
+    private readonly walletRepository: Repository<Wallet>,
     @InjectRepository(UserProfile)
     private readonly userProfileRepository: Repository<UserProfile>,
     private readonly jwtService: JwtService,
@@ -129,6 +132,16 @@ export class UserService {
       role: role,
     });
     await this.userRoleRepository.save(userRole);
+
+    // Tạo ví mặc định cho user mới
+    const wallet = this.walletRepository.create({
+      uuid: uuidv4(),
+      user_id: savedUser.id,
+      balance: 0,
+      currency: 'VND',
+      updated_at: new Date(),
+    });
+    await this.walletRepository.save(wallet);
 
     return savedUser;
   }

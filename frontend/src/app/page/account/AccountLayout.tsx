@@ -22,10 +22,6 @@ export default function AccountLayout() {
 
           {/* Nội dung động theo route con */}
           <section className="col-span-12 md:col-span-9">
-            {/* Chuyển /account -> /account/profile */}
-            {pathname === '/account' ? (
-              <Navigate to="/account/profile" replace />
-            ) : null}
             <Outlet />
           </section>
         </div>

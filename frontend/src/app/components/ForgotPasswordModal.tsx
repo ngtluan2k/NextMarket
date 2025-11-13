@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { verifyPasswordOtp, requestPasswordOtp } from "../../service/auth.service";
 import { Eye, EyeOff, RotateCcw } from "lucide-react";
+import { CheckCircleOutlined } from "@ant-design/icons";
 
 type Props = {
   open: boolean;
@@ -20,7 +21,7 @@ export default function ForgotPasswordModal({
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<React.ReactNode>(null);
   const [err, setErr] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
@@ -97,7 +98,12 @@ export default function ForgotPasswordModal({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setMsg("✅ OTP hợp lệ. Mời bạn đặt lại mật khẩu.");
+        setMsg(
+          <>
+          <CheckCircleOutlined style={{ color: "green", marginRight: 8 }} />
+          OTP hợp lệ. Mời bạn đặt lại mật khẩu.
+          </>
+          );
         setStep(3);
       } else {
         throw new Error(data.message || "OTP không đúng.");

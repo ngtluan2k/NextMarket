@@ -36,11 +36,11 @@ export const CartHeader: React.FC<Props> = ({
   // console.log("selected id : " + selectedIds)
   const GRID = '40px 1fr 200px 160px 200px 80px';
   const navigate = useNavigate();
-  const storeName = cart[0]?.product?.store?.name ?? 'Shop';
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
-  const selectedCartItems = cart.filter((item) =>
-    selectedIds.includes(item.id)
-  );
+  const handleGoToStore = (slug: string) => {
+    navigate(`/stores/slug/${slug}`);
+  };
+
   const cartByStore = cart.reduce((acc: Record<string, typeof cart>, item) => {
     const storeId = item.product?.store?.id ?? 'unknown';
     if (!acc[storeId]) acc[storeId] = [];
@@ -69,7 +69,7 @@ export const CartHeader: React.FC<Props> = ({
   const toImageUrl = (url?: string) => {
     if (!url) return '/default-product.png'; // fallback ảnh mặc định
     if (url.startsWith('http')) return url; // đã là full URL
-    return `${BE_BASE_URL}{url}`; // nếu là path local -> thêm host
+    return `${BE_BASE_URL}${url}`; // nếu là path local -> thêm host
   };
   // 1) GIỎ TRỐNG -> render header trống + nút "Tiếp tục mua sắm"
   if (cart.length === 0) {
@@ -183,8 +183,17 @@ export const CartHeader: React.FC<Props> = ({
                   });
                 }}
               />
-
-              <Text strong>{storeName}</Text>
+              <div
+                className="flex gap-3 items-start cursor-pointer"
+                onClick={() => {
+                  const storeSlug = items[0].product?.store?.slug; // lấy slug store từ item đầu tiên
+                  if (storeSlug) {
+                    handleGoToStore(storeSlug); // navigate tới store
+                  }
+                }}
+              >
+                <Text strong>{storeName}</Text>
+              </div>
             </div>
 
             {/* Danh sách sản phẩm trong shop */}
@@ -218,6 +227,10 @@ export const CartHeader: React.FC<Props> = ({
 
               const checkboxDisabled = isDisabled || disableSubscription;
 
+              const handleGoToProduct = (slug: string) => {
+                navigate(`/products/slug/${slug}`);
+              };
+
               return (
                 <div
                   key={item.id}
@@ -234,49 +247,50 @@ export const CartHeader: React.FC<Props> = ({
                   />
 
                   {/* Thông tin sản phẩm */}
-                  <div
-                    className={`flex gap-3 items-start ${
-                      checkboxDisabled ? 'opacity-60' : ''
-                    }`}
-                  >
-                    <Image
-                      src={imageUrl}
-                      alt={item.product?.name}
-                      width={80}
-                      height={80}
-                      className="rounded-md object-cover"
-                      preview={false}
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Text className="block font-medium">
-                          {item.product?.name}
+                  <div className={`  ${checkboxDisabled ? 'opacity-60' : ''}`}>
+                    <div
+                      className=" flex gap-3 items-start cursor-pointer"
+                      onClick={() => handleGoToProduct(item.product?.slug)}
+                    >
+                      <Image
+                        src={imageUrl}
+                        alt={item.product?.name}
+                        width={120}
+                        height={80}
+                        className="rounded-md object-cover"
+                        preview={false}
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Text className="block font-medium">
+                            {item.product?.name}
+                          </Text>
+                          {item.is_group && (
+                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                              🛒 Mua chung
+                            </span>
+                          )}
+                        </div>
+
+                        {item.variant && (
+                          <Text type="secondary" className="block text-xs">
+                            Variant: {item.variant.variant_name}
+                          </Text>
+                        )}
+                        <Text type="secondary" className="block text-xs">
+                          Loại hàng: {item.type}
                         </Text>
-                        {item.is_group && (
-                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                            🛒 Mua chung
-                          </span>
+                        {color && (
+                          <Text type="secondary" className="block text-xs">
+                            {color}
+                          </Text>
+                        )}
+                        {deliveryDate && (
+                          <Text type="secondary" className="block text-xs">
+                            🚚 {deliveryDate}
+                          </Text>
                         )}
                       </div>
-
-                      {item.variant && (
-                        <Text type="secondary" className="block text-xs">
-                          Variant: {item.variant.variant_name}
-                        </Text>
-                      )}
-                      <Text type="secondary" className="block text-xs">
-                        Loại hàng: {item.type}
-                      </Text>
-                      {color && (
-                        <Text type="secondary" className="block text-xs">
-                          {color}
-                        </Text>
-                      )}
-                      {deliveryDate && (
-                        <Text type="secondary" className="block text-xs">
-                          🚚 {deliveryDate}
-                        </Text>
-                      )}
                     </div>
                   </div>
                   {/* Đơn giá */}
