@@ -76,19 +76,51 @@ const AffiliateRuleList = ({
   
   // Transform rules to flat structure for table display
   const flattenedRules = useMemo(() => {
+    console.log('🔍 [AffiliateRuleList] Processing rules for flattening:', rules.length);
     const flattened: any[] = [];
-    rules.forEach(rule => {
-      rule.calculated_rates.forEach(rate => {
+    
+    rules.forEach((rule, ruleIndex) => {
+      console.log(`📋 [Rule ${ruleIndex}] Processing rule:`, {
+        id: rule.id,
+        name: rule.name,
+        calculated_rates: rule.calculated_rates,
+        calculated_rates_length: rule.calculated_rates?.length || 0
+      });
+      
+      // Check if calculated_rates exists and is an array
+      if (!rule.calculated_rates || !Array.isArray(rule.calculated_rates)) {
+        console.warn(`⚠️ [Rule ${ruleIndex}] No calculated_rates or not an array:`, rule.calculated_rates);
+        // Create a fallback entry for rules without calculated_rates
         flattened.push({
+          ...rule,
+          level: 'N/A',
+          rate_percent: 'N/A',
+          weight: 'N/A',
+          unique_key: `${rule.id}-fallback`,
+          _hasError: true
+        });
+        return;
+      }
+      
+      // Process each calculated rate
+      rule.calculated_rates.forEach((rate, rateIndex) => {
+        console.log(`  📊 [Rate ${rateIndex}] Processing rate:`, rate);
+        
+        const flattenedItem = {
           ...rule,
           level: rate.level,
           rate_percent: rate.rate,
           weight: rate.weight,
-          // Create unique key for each level
-          unique_key: `${rule.id}-${rate.level}`
-        });
+          unique_key: `${rule.id}-${rate.level}`,
+          _rateIndex: rateIndex
+        };
+        
+        console.log(`  ✅ [Rate ${rateIndex}] Flattened item:`, flattenedItem);
+        flattened.push(flattenedItem);
       });
     });
+    
+    console.log('📊 [AffiliateRuleList] Final flattened rules:', flattened.length, flattened);
     return flattened;
   }, [rules]);
 
@@ -159,10 +191,31 @@ const AffiliateRuleList = ({
         sorter: (a: any, b: any) => {
           const aRate = typeof a.rate_percent === 'string' ? parseFloat(a.rate_percent) : a.rate_percent;
           const bRate = typeof b.rate_percent === 'string' ? parseFloat(b.rate_percent) : b.rate_percent;
-          return aRate - bRate;
+          return (isNaN(aRate) ? 0 : aRate) - (isNaN(bRate) ? 0 : bRate);
         },
-        render: (rate: string | number) => {
+        render: (rate: string | number, record: any) => {
+          console.log('📊 [Rate Column] Rendering rate:', { rate, record_id: record.id, record_level: record.level });
+          
+          // Handle error cases
+          if (record._hasError || rate === 'N/A') {
+            return (
+              <Tag color="red">
+                Lỗi dữ liệu
+              </Tag>
+            );
+          }
+          
+          // Handle normal cases
           const numRate = typeof rate === 'string' ? parseFloat(rate) : rate;
+          if (isNaN(numRate)) {
+            console.warn('⚠️ [Rate Column] Invalid rate value:', rate);
+            return (
+              <Tag color="orange">
+                Không hợp lệ
+              </Tag>
+            );
+          }
+          
           return (
             <Text strong style={{ color: numRate > 0 ? '#52c41a' : '#999' }}>
               {numRate.toFixed(2)}%

@@ -2,25 +2,23 @@
 
 import { useEffect, useState } from 'react';
 
-import {
-  Wallet,
-  Users,
-  TrendingUp,
-  Link,
-  Bell,
-} from 'lucide-react';
+import { Wallet, Users, TrendingUp, Link, Bell } from 'lucide-react';
 import { Button, Spin, message } from 'antd';
 import { Card } from 'antd';
 import { WalletTransactionHistory } from '../../../../../components/affiliate/dashboard/WalletTransactionHistory';
-import { 
-  getDashboardStats, 
-  getBalance, 
-} from "../../../../../../service/afiliate/affiliate-links.service";
+import {
+  getDashboardStats,
+  getBalance,
+} from '../../../../../../service/afiliate/affiliate-links.service';
 import { fetchMyWallet } from '../../../../../../service/wallet.service';
-import { BalanceInfo, DashboardStats } from '../../../../../types/affiliate-links';
+import {
+  BalanceInfo,
+  DashboardStats,
+} from '../../../../../types/affiliate-links';
 import { useNotifications } from '../../../../../../hooks/useNotificationSocket';
 import { NotificationType } from '../../../../../../service/notification-socket.service';
 import { useAuth } from '../../../../../context/AuthContext';
+import TransactionStatistic from '../../../../../components/affiliate/dashboard/TransactionStatistic';
 
 export function AffiliateDashboard() {
   const { me } = useAuth();
@@ -34,45 +32,55 @@ export function AffiliateDashboard() {
   useNotifications(me?.id || null, {
     handlers: {
       [NotificationType.COMMISSION_EARNED]: (data) => {
-        console.log('💰 Commission earned notification received:', data);
-        
+        console.log(' Commission earned notification received:', data);
+
         // Show success message
         message.success({
-          content: `🎉 Bạn vừa nhận ${data.amount?.toLocaleString('vi-VN')} VND hoa hồng từ đơn hàng ${data.orderNumber}!`,
+          content: `🎉 Bạn vừa nhận ${data.amount?.toLocaleString(
+            'vi-VN'
+          )} VND hoa hồng từ đơn hàng ${data.orderNumber}!`,
           duration: 5,
         });
-        
+
         // Refresh dashboard data
         refreshData();
       },
-      
+
       [NotificationType.COMMISSION_PAID]: (data) => {
-        console.log('💵 Commission paid notification received:', data);
-        
+        console.log(' Commission paid notification received:', data);
+
         message.success({
-          content: `💰 ${data.amount?.toLocaleString('vi-VN')} VND đã được cộng vào ví của bạn!`,
+          content: `💰 ${data.amount?.toLocaleString(
+            'vi-VN'
+          )} VND đã được cộng vào ví của bạn!`,
           duration: 4,
         });
-        
+
         // Refresh dashboard data
         refreshData();
       },
-      
+
       [NotificationType.COMMISSION_REVERSED]: (data) => {
         console.log('⚠️ Commission reversed notification received:', data);
-        
+
         message.warning({
-          content: `⚠️ Hoa hồng ${data.amount?.toLocaleString('vi-VN')} VND từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
+          content: `⚠️ Hoa hồng ${data.amount?.toLocaleString(
+            'vi-VN'
+          )} VND từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
           duration: 6,
         });
-        
+
         // Refresh dashboard data
         refreshData();
       },
     },
-    
+
     onNotification: (notification) => {
-      console.log('🔔 Dashboard received notification:', notification.type, notification);
+      console.log(
+        ' Dashboard received notification:',
+        notification.type,
+        notification
+      );
     },
   });
 
@@ -83,15 +91,15 @@ export function AffiliateDashboard() {
       const [dashboardData, balanceData, wallet] = await Promise.all([
         getDashboardStats(),
         getBalance(),
-        fetchMyWallet()
+        fetchMyWallet(),
       ]);
-      
-      console.log('🔍 Dashboard data received:', {
+
+      console.log(' Dashboard data received:', {
         dashboardData,
         balanceData,
-        wallet
+        wallet,
       });
-      
+
       setStats(dashboardData);
       setBalance(balanceData);
       setWalletBalance(wallet.balance || 0);
@@ -107,19 +115,19 @@ export function AffiliateDashboard() {
   // Function to refresh data (for notifications)
   const refreshData = async () => {
     try {
-      console.log('🔄 Refreshing dashboard data due to notification...');
+      console.log(' Refreshing dashboard data due to notification...');
       const [dashboardData, balanceData, wallet] = await Promise.all([
         getDashboardStats(),
         getBalance(),
-        fetchMyWallet()
+        fetchMyWallet(),
       ]);
-      
+
       setStats(dashboardData);
       setBalance(balanceData);
       setWalletBalance(wallet.balance || 0);
       setError(null);
-      
-      console.log('✅ Dashboard data refreshed successfully');
+
+      console.log(' Dashboard data refreshed successfully');
     } catch (error) {
       console.error('Failed to refresh dashboard data:', error);
     }
@@ -165,9 +173,7 @@ export function AffiliateDashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
         <div className="text-red-500 mb-4">⚠️ {error}</div>
-        <Button onClick={() => window.location.reload()}>
-          Thử lại
-        </Button>
+        <Button onClick={() => window.location.reload()}>Thử lại</Button>
       </div>
     );
   }
@@ -193,8 +199,12 @@ export function AffiliateDashboard() {
           </Card>
         ))}
       </div>
-      <WalletTransactionHistory className="border-gray-200 shadow-sm" />
+      <div className='grid grid-cols-3 gap-4 w-full'>
+        <WalletTransactionHistory className="border-gray-200 shadow-sm" />
+        <Card className='col-span-2 bg-white rounded-lg shadow p-2'>
+        <TransactionStatistic />
+        </Card>
+      </div>
     </div>
   );
 }
-

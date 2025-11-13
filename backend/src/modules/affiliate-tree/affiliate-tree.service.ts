@@ -312,34 +312,54 @@ export class AffiliateTreeService {
    * Lấy tổng kết commission cho danh sách users
    */
   async getCommissionSummaryForUsers(userIds: number[]) {
-    console.log(`[DEBUG] getCommissionSummaryForUsers called with userIds:`, userIds);
+    console.log(`🔍 [getCommissionSummaryForUsers] Called with userIds:`, userIds);
+    
+    // First, let's check if there are any commissions at all
+    const allCommissions = await this.commissionRepository
+      .createQueryBuilder('c')
+      .select(['c.id', 'c.amount', 'c.status', 'c.beneficiary_user_id'])
+      .getRawMany();
+    
+    console.log(`📊 [getCommissionSummaryForUsers] Total commissions in DB:`, allCommissions.length);
+    console.log(`📋 [getCommissionSummaryForUsers] Sample commissions:`, allCommissions.slice(0, 3));
+    
+    // Check commissions for specific users
+    const userCommissions = await this.commissionRepository
+      .createQueryBuilder('c')
+      .select(['c.id', 'c.amount', 'c.status', 'c.beneficiary_user_id'])
+      .where('c.beneficiary_user_id IN (:...userIds)', { userIds })
+      .getRawMany();
+    
+    console.log(`🎯 [getCommissionSummaryForUsers] Commissions for target users:`, userCommissions.length);
+    console.log(`📋 [getCommissionSummaryForUsers] Target user commissions:`, userCommissions);
     
     const summaries = await this.commissionRepository
       .createQueryBuilder('c')
-      .leftJoin('c.beneficiary_user_id', 'user')
       .select([
-        'user.id as userId',
+        'c.beneficiary_user_id as userId',
         "SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END) as totalPending",
         "SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END) as totalPaid",
         'SUM(c.amount) as totalEarned',
         'AVG(c.rate_percent) as avgRatePercent'
       ])
-      .where('user.id IN (:...userIds)', { userIds })
-      .groupBy('user.id')
+      .where('c.beneficiary_user_id IN (:...userIds)', { userIds })
+      .groupBy('c.beneficiary_user_id')
       .getRawMany();
 
-    console.log(`[DEBUG] Commission summaries found:`, summaries);
+    console.log(`📊 [getCommissionSummaryForUsers] Commission summaries found:`, summaries);
 
     const summaryMap = new Map();
     summaries.forEach(summary => {
-      const userId = parseInt(summary.userId);
+      // Fix case sensitivity - PostgreSQL returns lowercase column names
+      const userId = parseInt(summary.userid || summary.userId);
       const data = {
-        totalEarned: parseFloat(summary.totalEarned) || 0,
-        totalPending: parseFloat(summary.totalPending) || 0,
-        totalPaid: parseFloat(summary.totalPaid) || 0,
-        ratePercent: parseFloat(summary.avgRatePercent) || 0
+        totalEarned: parseFloat(summary.totalearned || summary.totalEarned) || 0,
+        totalPending: parseFloat(summary.totalpending || summary.totalPending) || 0,
+        totalPaid: parseFloat(summary.totalpaid || summary.totalPaid) || 0,
+        ratePercent: parseFloat(summary.avgratepercent || summary.avgRatePercent) || 0
       };
       console.log(`[DEBUG] Setting summary for user ${userId}:`, data);
+      console.log(`[DEBUG] Raw summary object:`, summary);
       summaryMap.set(userId, data);
     });
 
@@ -524,6 +544,8 @@ export class AffiliateTreeService {
    * Get commission earned from a specific program for a user
    */
   async getCommissionFromProgram(userId: number, programId: number) {
+    console.log(`🔍 [getCommissionFromProgram] Called for userId: ${userId}, programId: ${programId}`);
+    
     const result = await this.commissionRepository
       .createQueryBuilder('c')
       .select([
@@ -535,10 +557,15 @@ export class AffiliateTreeService {
       .andWhere('c.program_id = :programId', { programId })
       .getRawOne();
 
-    return {
-      totalEarned: parseFloat(result?.totalEarned) || 0,
-      totalPending: parseFloat(result?.totalPending) || 0,
-      totalPaid: parseFloat(result?.totalPaid) || 0
+    console.log(`📊 [getCommissionFromProgram] Result for user ${userId}, program ${programId}:`, result);
+
+    const summary = {
+      totalEarned: parseFloat(result?.totalearned || result?.totalEarned) || 0,
+      totalPending: parseFloat(result?.totalpending || result?.totalPending) || 0,
+      totalPaid: parseFloat(result?.totalpaid || result?.totalPaid) || 0
     };
+    
+    console.log(`✅ [getCommissionFromProgram] Final summary:`, summary);
+    return summary;
   }
 }

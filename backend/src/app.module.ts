@@ -65,6 +65,7 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
 import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
+import { DebugModule } from './modules/debug/debug.module';
 
 @Module({
   imports: [
@@ -162,7 +163,8 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
     AffiliateFraudModule,
     CampaignsModule,
     FlashSaleSchedulesModule,
-    RevokedTokensModule
+    RevokedTokensModule,
+    DebugModule
   ],
   providers: [],
 })

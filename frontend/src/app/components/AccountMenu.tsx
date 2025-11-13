@@ -91,7 +91,7 @@ export default function AccountMenu({ className = '' }) {
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
             >
               <SignatureOutlined className="h-4 w-4 text-slate-500" />
-              Trang chủ cho tiếp thị liên kết
+              Tiếp thị liên kết
             </a>
           )}
 

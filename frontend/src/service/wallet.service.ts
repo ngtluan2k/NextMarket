@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { BE_BASE_URL } from '../app/api/api';
-import { Wallet, WalletTransactionsResponse } from '../app/types/wallet';
+import { ApiResponse, Wallet, WalletTransactionsResponse } from '../app/types/wallet';
 
 
 export const fetchMyWallet = async (): Promise<Wallet> => {
@@ -35,4 +35,20 @@ export const fetchMyWalletTransactions = async (
     console.error('Failed to fetch wallet transactions:', err);
     throw err;
   }
+  
 };
+
+export const getTransactionById = async (id: number): Promise<ApiResponse> =>{
+    try {
+      const response = await fetch(`${BE_BASE_URL}/wallets/transactions/${id}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching transaction:', error);
+      throw error;
+    }
+  }
