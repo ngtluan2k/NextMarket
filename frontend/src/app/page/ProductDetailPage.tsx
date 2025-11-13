@@ -6,7 +6,7 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { useParams,useLocation  } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import EveryMartHeader from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useProductDetail } from '../hooks/useProductDetail';
@@ -25,7 +25,6 @@ import {
 import { VariantInfo } from '../types/product';
 import { fetchProductReviews, Review } from '../../service/product_review';
 import GroupOrderInfoBar from '../components/group_orders/components/GroupOrderInfoBar';
-
 
 interface Props {
   showMessage?: (
@@ -54,10 +53,10 @@ const MemoizedBuyBox = React.memo(BuyBox);
 
 export default function ProductDetailPage({ showMessage }: Props) {
   const params = useParams();
-    const location = useLocation(); 
+  const location = useLocation();
   const slug = params.slug ?? '';
   const groupId = location.state?.groupId ||
-    new URLSearchParams(location.search).get('groupId')
+    new URLSearchParams(location.search).get('groupId');
   const { loading, product, combos } = useProductDetail(slug);
   const { cart } = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -182,8 +181,10 @@ export default function ProductDetailPage({ showMessage }: Props) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <EveryMartHeader />
-        <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
-          <Spin>Loading product details...</Spin>
+        <main className="mx-auto w-full max-w-[1500px] px-3 sm:px-4 lg:px-6 py-4 sm:py-6 flex-1">
+          <div className="flex justify-center items-center py-12">
+            <Spin size="large" />
+          </div>
         </main>
         <Footer />
       </div>
@@ -193,11 +194,93 @@ export default function ProductDetailPage({ showMessage }: Props) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <EveryMartHeader />
-      {/* Thêm GroupOrderInfoBar khi có groupId */}
       {groupId && <GroupOrderInfoBar groupId={Number(groupId)} />}
-      <main className="mx-auto w-full max-w-[1500px] px-4 lg:px-6 py-6 flex-1">
-        <div
-          className="grid gap-4 lg:grid-cols-[var(--left)_minmax(0,1fr)_var(--right)] items-start"
+      
+      <main className="mx-auto w-full max-w-[1500px] px-3 sm:px-4 lg:px-6 py-4 sm:py-6 flex-1">
+        {/* Mobile Layout - Single Column */}
+        <div className="lg:hidden space-y-4">
+          {/* Gallery - Full width on mobile */}
+          <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 ring-1 ring-slate-200">
+            <MemoizedGallery
+              images={galleryData.images}
+              variantMap={galleryData.variantMap}
+              selectedVariantId={selectedVariantId}
+              setSelectedVariantId={setSelectedVariantId}
+              galleryHeight={300}
+              thumbHeight={60}
+            />
+          </div>
+
+          {/* Buy Box - Sticky on mobile */}
+          <div className="sticky bottom-0 z-40 bg-white border-t border-slate-200 p-4 shadow-lg lg:hidden">
+            <MemoizedBuyBox
+              product={product}
+              selectedVariantId={selectedVariantId}
+              quantity={quantity}
+              maxQuantity={stock}
+              setQuantity={setQuantity}
+              calculatedPrice={calculatedPrice}
+              totalPrice={totalPrice}
+              showMessage={showMessage}
+              selectedType={selectedType}
+              groupId={groupId ? Number(groupId) : null}
+            />
+          </div>
+
+          {/* Product Info */}
+          <section className="space-y-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 ring-1 ring-slate-200">
+              <MemoizedInfo
+                product={product}
+                selectedVariantId={selectedVariantId}
+                setSelectedVariantId={setSelectedVariantId}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                calculatedPrice={calculatedPrice}
+                setCalculatedPrice={setCalculatedPrice}
+                maxQuantity={stock}
+                selectedType={selectedType}
+                setSelectedType={setSelectedType}
+              />
+            </div>
+
+            <MemoizedShipping />
+            
+            <MemoizedComboStrip
+              storeId={product?.store?.id}
+              productId={product?.id}
+            />
+
+            <Suspense fallback={<div className="text-center py-4">Loading similar products...</div>}>
+              <LazySimilarProducts productId={product.id} />
+            </Suspense>
+
+            <Suspense fallback={<div className="text-center py-4">Loading specs...</div>}>
+              <MemoizedProductSpecs product={product} loading={loading} />
+            </Suspense>
+
+            <Suspense fallback={<div className="text-center py-4">Loading description...</div>}>
+              <MemoizedProductDescription
+                html={product?.short_description}
+                loading={!product}
+              />
+            </Suspense>
+          </section>
+
+          {/* Reviews and Explore More */}
+          <div className="space-y-4">
+            <Suspense fallback={<div className="text-center py-4">Loading reviews...</div>}>
+              <LazyProductReviews productId={product.id} />
+            </Suspense>
+
+            <Suspense fallback={<div className="text-center py-4">Loading more products...</div>}>
+              <LazyExploreMore />
+            </Suspense>
+          </div>
+        </div>
+
+        {/* Desktop Layout - Grid */}
+        <div className="hidden lg:grid gap-4 lg:grid-cols-[var(--left)_minmax(0,1fr)_var(--right)] items-start"
           style={{
             ['--left' as any]: `${L.leftWidth}px`,
             ['--right' as any]: `${L.rightWidth}px`,
@@ -215,6 +298,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               stickyTop={L.buyBoxStickyTop}
             />
           </div>
+
           <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
             <MemoizedInfo
               product={product}
@@ -226,10 +310,9 @@ export default function ProductDetailPage({ showMessage }: Props) {
               setCalculatedPrice={setCalculatedPrice}
               maxQuantity={stock}
               selectedType={selectedType}
-              setSelectedType={setSelectedType} 
+              setSelectedType={setSelectedType}
             />
             <MemoizedShipping />
-            {/* Sửa cách truyền props vào ComboStrip */}
             <MemoizedComboStrip
               storeId={product?.store?.id}
               productId={product?.id}
@@ -247,6 +330,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               />
             </Suspense>
           </section>
+
           <div className="lg:col-start-3 lg:row-span-2 lg:self-stretch">
             <div className="lg:sticky" style={{ top: L.buyBoxStickyTop }}>
               <MemoizedBuyBox
@@ -261,10 +345,11 @@ export default function ProductDetailPage({ showMessage }: Props) {
                 minHeight={L.buyBoxMinHeight}
                 showMessage={showMessage}
                 selectedType={selectedType}
-                groupId={ groupId? Number(groupId) : null}
+                groupId={groupId ? Number(groupId) : null}
               />
             </div>
           </div>
+
           <div className="lg:col-start-1 lg:col-span-2 lg:row-start-2 space-y-4 self-start">
             <Suspense fallback={<div>Loading reviews...</div>}>
               <LazyProductReviews productId={product.id} />

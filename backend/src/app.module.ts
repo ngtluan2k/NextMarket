@@ -57,7 +57,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
-import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
 
 @Module({
   imports: [
@@ -81,7 +80,7 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'postgres',
+        type: 'mysql',
         host: config.get('DB_HOST'),
         port: +config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
@@ -91,9 +90,6 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
-        ssl: {
-          rejectUnauthorized: false, // cho phép kết nối SSL không cần CA
-        },
       }),
     }),
 
@@ -148,7 +144,6 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
     GroupOrdersModule,
     AdminModule,
     CampaignsModule,
-    FlashSaleSchedulesModule,
   ],
   providers: [],
 })

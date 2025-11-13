@@ -8,8 +8,6 @@ import { Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 import { API_BASE_URL } from '../../api/api';
 import { Users } from 'lucide-react';
-import { Rate } from 'antd';
-import { log } from 'console';
 import { useAuth } from '../../hooks/useAuth';
 import { useGroupOrderItems } from '../../hooks/useGroupOrderItems';
 import { StarFilled } from '@ant-design/icons';
@@ -173,13 +171,11 @@ export default function BuyBox({
   navigate('/checkout', { state: checkoutState });
 };
 
-
-  // --- tính giá dựa trên variant + pricing_rules ---
-
   const totalPrice = useMemo(
     () => calculatedPrice * quantity,
     [calculatedPrice, quantity]
   );
+  
   if (!product) return null;
 
   const handleAddToCart = async (
@@ -187,18 +183,15 @@ export default function BuyBox({
     quantity: number,
     type: 'bulk' | 'subscription' | 'normal' | 'flash_sale'
   ) => {
-    // 1️⃣ Tìm variant đã chọn
     const selectedVariant = product.variants?.find(
       (v) => v.id === selectedVariantId
     );
 
-    // 2️⃣ Tìm pricing rule đúng variant + type
     const selectedRule = product.pricing_rules?.find(
       (r) => r.variant_sku === selectedVariant?.sku && r.type === type
     );
     console.log('Selected pricing rule:', selectedRule);
 
-    // 3️⃣ Gán vào product
     product.selectedPricingRule =
       selectedRule?.id && selectedRule.type
         ? {
@@ -250,20 +243,17 @@ export default function BuyBox({
     try {
       if (!groupId) return;
 
-      // bắt đăng nhập nếu chưa có user
       if (!user?.id) {
         showMessage?.('warning', 'Vui lòng đăng nhập để mua chung');
         setShowLoginModal(true);
         return;
       }
 
-      // validate product
       if (!product?.id) {
         showMessage?.('error', 'Sản phẩm không hợp lệ');
         return;
       }
 
-      // chuẩn hoá quantity
       const qty =
         Number.isFinite(Number(quantity)) && Number(quantity) > 0
           ? Number(quantity)
@@ -276,17 +266,13 @@ export default function BuyBox({
         productId: product.id,
         variantId: selectedVariantId,
         quantity: qty,
-        // BE sẽ tự tính price theo logic mới
       });
 
-      // ✅ KHÔNG gửi userId và price - BE tự xử lý
       await addGroupItem({
         productId: Number(product.id),
         variantId: selectedVariantId ?? undefined,
         quantity: qty,
-        // ❌ BỎ userId - BE lấy từ JWT token
-        // ❌ BỎ price - BE tự tính theo calculateItemPrice()
-        note: undefined, // có thể thêm nếu cần
+        note: undefined,
       });
 
       showMessage?.('success', 'Đã thêm vào đơn hàng nhóm');
@@ -299,7 +285,6 @@ export default function BuyBox({
         msg = e.message;
       }
 
-      // ✅ Xử lý các lỗi pricing cụ thể
       if (msg.includes('pricing') || msg.includes('giá')) {
         msg = 'Không thể xác định giá sản phẩm. Vui lòng thử lại.';
       }
@@ -319,8 +304,9 @@ export default function BuyBox({
 
   return (
     <>
+      {/* Desktop Version */}
       <aside
-        className="self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
+        className="hidden lg:block self-start h-fit rounded-2xl bg-white p-5 ring-1 ring-slate-200 lg:sticky"
         style={{ width, minHeight, top: stickyTop }}
       >
         {/* Nút tạo mua chung (chỉ hiện khi không ở group mode) */}
@@ -501,6 +487,135 @@ export default function BuyBox({
           )}
         </div>
       </aside>
+
+      {/* Mobile Version */}
+      <aside className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
+        <div className="p-4">
+          {/* Banner group mode mobile */}
+          {groupId && (
+            <div className="mb-3 p-2 bg-sky-50 border border-sky-200 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-sky-700">
+                <Users size={14} />
+                <span className="font-medium">Đang mua chung</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            {/* Price section */}
+            <div className="flex-1">
+              <div className="text-xs text-slate-500 mb-1">Tạm tính</div>
+              <div className="flex items-center gap-2">
+                <div className="text-lg font-bold">{vnd(totalPrice)}</div>
+                {p.listPrice && p.listPrice > (p.price ?? 0) && (
+                  <div className="text-xs text-slate-400 line-through">
+                    {vnd(p.listPrice * quantity)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quantity selector - mobile */}
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-slate-500 hidden sm:block">SL:</div>
+              <div className="flex items-center rounded-lg border border-slate-200">
+                <button
+                  className="px-2 py-1 hover:bg-slate-50 text-sm"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                >
+                  -
+                </button>
+                <div className="w-8 text-center text-sm">{quantity}</div>
+                <button
+                  className="px-2 py-1 hover:bg-slate-50 text-sm"
+                  onClick={() => setQuantity(quantity + 1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              {groupId ? (
+                <>
+                  <button
+                    className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-semibold text-white transition-opacity ${
+                      !availability || loading
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:opacity-90'
+                    }`}
+                    style={{ background: TIKI_RED }}
+                    onClick={handleAddToGroup}
+                    disabled={!availability || loading}
+                  >
+                    {loading ? '...' : 'Thêm nhóm'}
+                  </button>
+                  <button
+                    className="flex-1 min-w-[80px] py-2 px-3 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    onClick={() =>
+                      handleAddToCart(
+                        product as any,
+                        quantity,
+                        selectedType ?? 'normal'
+                      )
+                    }
+                    disabled={loading}
+                  >
+                    Thêm giỏ
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-semibold text-white transition-opacity ${
+                      !availability || loading
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:opacity-90'
+                    }`}
+                    style={{ background: TIKI_RED }}
+                    onClick={handleBuyNow}
+                    disabled={!availability || loading}
+                  >
+                    {loading ? '...' : 'Mua ngay'}
+                  </button>
+                  <button
+                    className="flex-1 min-w-[80px] py-2 px-3 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    onClick={() =>
+                      handleAddToCart(
+                        product as any,
+                        quantity,
+                        selectedType ?? 'normal'
+                      )
+                    }
+                    disabled={loading}
+                  >
+                    Thêm giỏ
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Group order create button for mobile */}
+          {!groupId && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <button
+                onClick={() =>
+                  navigate(`/group-orders/store/${product?.store?.id}/create`)
+                }
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition-all"
+              >
+                <Users size={16} />
+                Tạo đơn mua chung
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Add padding to bottom of page for mobile buy box */}
+      <div className="lg:hidden h-24" />
 
       <LoginModal
         open={showLoginModal}

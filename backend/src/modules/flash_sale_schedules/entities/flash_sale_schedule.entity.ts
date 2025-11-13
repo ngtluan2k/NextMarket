@@ -22,18 +22,17 @@ export class FlashSaleSchedule {
   @Column({ type: 'timestamp' })
   starts_at!: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', nullable: true })  // Nullable because it doesn't need a default value
   ends_at!: Date;
 
   @Column({ type: 'varchar', length: 50, default: 'upcoming' })
   status!: 'upcoming' | 'active' | 'ended';
 
-@CreateDateColumn({ type: 'timestamp', precision: 6 })
-created_at!: Date;
+  @CreateDateColumn({ type: 'timestamp', precision: 6 })
+  created_at!: Date;
 
-@UpdateDateColumn({ type: 'timestamp', precision: 6 })
-updated_at!: Date;
-
+  @UpdateDateColumn({ type: 'timestamp', precision: 6 })
+  updated_at!: Date;
 
   // 1 schedule có thể có nhiều pricing rules
   @OneToMany(() => PricingRules, (rule) => rule.schedule)

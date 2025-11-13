@@ -27,9 +27,8 @@ export class Campaign {
 
   @Column({ type: 'timestamp' })
   starts_at!: Date;
-
-  @Column({ type: 'timestamp' })
-  ends_at!: Date;
+  @Column({ type: 'timestamp', nullable: true })  // Cho phép null hoặc không có giá trị mặc định
+  ends_at!: Date
 
   @Column({ default: 'draft' })
   status!: string; // draft | pending | active | ended

@@ -9,6 +9,8 @@ import {
   Receipt,
   BadgeDollarSign,
   MapPin,
+  Menu,
+  ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -19,6 +21,9 @@ import AddressModal from '../page/AddressModal';
 import debounce from 'lodash.debounce';
 import { userApi } from '../api/api';
 import { UserAddress } from '../types/user';
+import { Drawer, Dropdown } from 'antd';
+import { fetchCategoriesAPI } from '../../service/category.service';
+
 export type HeaderLabels = {
   logoSrc?: string;
   brandTagline?: string;
@@ -26,7 +31,6 @@ export type HeaderLabels = {
   searchButton?: string;
   home?: string;
   cart?: string;
-  categories?: string[];
   deliveryPrefix?: string;
   address?: string;
   qa1?: string;
@@ -42,13 +46,6 @@ const DEFAULT_LABELS: Required<HeaderLabels> = {
   searchButton: 'Tìm kiếm',
   home: 'Trang chủ',
   cart: 'Giỏ hàng',
-  categories: [
-    'Điện gia dụng',
-    'Mẹ và bé',
-    'Điện thoại',
-    'Thể thao',
-    'Làm đẹp',
-  ],
   deliveryPrefix: 'Giao đến:',
   address: 'Thêm địa chỉ',
   qa1: 'Ưu đãi thẻ, ví',
@@ -65,6 +62,13 @@ export interface ProductSuggestion {
   media?: { url: string; is_primary: boolean }[];
 }
 
+export interface Category {
+  id: string | number;
+  name: string;
+  slug?: string;
+  iconUrl: string;
+}
+
 export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const L = { ...DEFAULT_LABELS, ...(labels || {}) };
   const [query, setQuery] = useState('');
@@ -74,10 +78,59 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
   const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  
   const { cart } = useCart();
   const totalItems = cart.length;
   const navigate = useNavigate();
   const { me, login, logout } = useAuth();
+  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
+  // Lấy danh sách categories từ API
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        setCategoriesError(null);
+        const rawData = await fetchCategoriesAPI();
+
+        if (!Array.isArray(rawData)) {
+          throw new Error('Dữ liệu danh mục không hợp lệ');
+        }
+
+        // Lọc danh mục cha (không có parent_id)
+        const parents = rawData.filter((it: any) => !it.parent_id);
+        
+        const toImageUrl = (url?: string) => {
+          if (!url) return 'https://via.placeholder.com/43x43?text=%3F';
+          if (url.startsWith('http')) return url;
+          return `http://localhost:3000${url}`;
+        };
+
+        const mapped: Category[] = parents.map((it: any) => ({
+          id: it.id,
+          name: it.name,
+          slug: it.slug || String(it.id),
+          iconUrl: toImageUrl(it.image),
+        }));
+
+        if (!cancelled) setCategories(mapped);
+      } catch (e: any) {
+        if (!cancelled) setCategoriesError(e.message || 'Không tải được danh mục');
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Lấy danh sách địa chỉ của người dùng
   useEffect(() => {
@@ -218,40 +271,271 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
     setSelectedAddress(address);
   };
 
-  return (
-    <header className="w-full bg-white">
-      <div className="mx-auto max-w-screen-2xl px-4">
-        {/* Row 1 */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 py-3">
-          {/* Brand */}
-          <a
-            href="/"
-            className="flex flex-col items-center gap-1 shrink-0"
-            aria-label="EveryMart home"
-          >
-            {L.logoSrc ? (
-              <img
-                src={L.logoSrc}
-                alt="EveryMart"
-                className="h-12 md:h-14 lg:h-16 w-auto object-contain select-none"
-                decoding="async"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-600 text-white">
-                <Store className="h-7 w-7" />
-              </div>
-            )}
-            <div className="text-xs md:text-sm font-semibold text-cyan-800">
-              {L.brandTagline}
-            </div>
-          </a>
+  const handleCategoryClick = (category: Category) => {
+    navigate(`/category/${category.slug}`, {
+      state: { title: category.name },
+    });
+    setMobileMenuOpen(false);
+  };
 
-          {/* Search */}
+  // Mobile menu content
+  const mobileMenuContent = (
+    <div className="p-4">
+      <div className="mb-6">
+  {/* Header bấm để mở/đóng */}
+  <button
+    type="button"
+    onClick={() => setMobileCategoriesOpen((prev) => !prev)}
+    className="flex w-full items-center justify-between py-2"
+  >
+    <h3 className="font-bold text-lg">Danh mục</h3>
+    <ChevronDown
+      className={`h-4 w-4 transition-transform ${
+        mobileCategoriesOpen ? 'rotate-180' : ''
+      }`}
+    />
+  </button>
+
+  {/* Nội dung chỉ hiện khi open */}
+  {mobileCategoriesOpen && (
+    <>
+      {categoriesLoading ? (
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="p-2 bg-gray-50 rounded text-sm animate-pulse"
+            >
+              <div className="h-4 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      ) : categoriesError ? (
+        <div className="text-red-500 text-sm mt-2">{categoriesError}</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryClick(category)}
+              className="p-2 bg-gray-50 rounded text-sm hover:bg-cyan-50 hover:text-cyan-700 text-left"
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  )}
+</div>
+
+      
+      <div className="border-t pt-4">
+        <h3 className="font-bold text-lg mb-3">Tiện ích</h3>
+        <div className="space-y-2">
+          <a href="#" className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+            <CreditCard className="h-4 w-4 text-amber-500" />
+            <span>{L.qa1}</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+            <Receipt className="h-4 w-4 text-green-500" />
+            <span>{L.qa2}</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+            <BadgeDollarSign className="h-4 w-4 text-indigo-500" />
+            <span>{L.qa3}</span>
+          </a>
+          <a 
+            href="myStores" 
+            onClick={handleGoSeller}
+            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded"
+          >
+            <Store className="h-4 w-4 text-rose-500" />
+            <span>{L.qa4}</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Address section for mobile */}
+      <div className="border-t pt-4 mt-4">
+        <div className="flex items-center gap-2 text-sm">
+          <MapPin className="h-4 w-4 text-slate-500" />
+          <span>{L.deliveryPrefix}</span>
+        </div>
+        <button
+          onClick={() => {
+            setIsAddressModalVisible(true);
+            setMobileMenuOpen(false);
+          }}
+          className="text-sm text-left mt-2 text-cyan-600 font-medium truncate w-full"
+        >
+          {selectedAddress
+            ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}`
+            : L.address}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <header className="w-full bg-white shadow-sm">
+      <div className="mx-auto max-w-screen-2xl px-3 sm:px-4">
+        {/* Row 1 - Main Header */}
+        <div className="flex items-center justify-between gap-3 py-2 sm:py-3">
+          {/* Logo and Mobile Menu */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            {/* Mobile Menu Button - Hidden on desktop */}
+            <button 
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            {/* Brand Logo */}
+            <a
+              href="/"
+              className="flex items-center gap-2 shrink-0"
+              aria-label="EveryMart home"
+            >
+              {L.logoSrc ? (
+                <img
+                  src={L.logoSrc}
+                  alt="EveryMart"
+                  className="h-8 sm:h-10 md:h-12 lg:h-14 w-auto object-contain select-none"
+                  decoding="async"
+                />
+              ) : (
+                <div className="flex h-8 sm:h-10 md:h-12 items-center justify-center rounded-lg bg-cyan-600 text-white">
+                  <Store className="h-5 sm:h-6 w-5 sm:w-6" />
+                </div>
+              )}
+              <div className="hidden xs:block text-xs sm:text-sm font-semibold text-cyan-800">
+                {L.brandTagline}
+              </div>
+            </a>
+          </div>
+
+          {/* Search Bar - Hidden on mobile, visible on tablet and up */}
+          <div className="hidden sm:block flex-1 max-w-2xl mx-4">
+            <form onSubmit={onSubmit} className="w-full relative">
+              <div className="relative flex h-10 sm:h-12 w-full items-center rounded-xl sm:rounded-2xl border border-slate-300 bg-white focus-within:border-cyan-600">
+                <Search className="pointer-events-none absolute left-3 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
+                <input
+                  className="flex-1 bg-transparent pl-9 sm:pl-10 pr-3 text-sm sm:text-[15px] outline-none placeholder:text-slate-400"
+                  placeholder={L.searchPlaceholder}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search"
+                />
+                <button
+                  type="submit"
+                  className="h-full shrink-0 rounded-r-xl sm:rounded-r-2xl border-l border-slate-300 px-3 sm:px-4 text-sm font-medium text-cyan-700 hover:bg-cyan-50 active:bg-cyan-100"
+                >
+                  {L.searchButton}
+                </button>
+
+                {suggestions.length > 0 && (
+                  <ul className="absolute top-full left-0 right-0 bg-white border border-slate-300 shadow-lg rounded-b-md z-50 max-h-60 overflow-auto">
+                    {suggestions.map((p) => (
+                      <li
+                        key={p.id}
+                        className="px-3 py-2 cursor-pointer hover:bg-slate-100 flex items-center gap-2"
+                        onClick={() => {
+                          navigate(`/products/slug/${p.slug}`);
+                          setQuery('');
+                          setSuggestions([]);
+                        }}
+                      >
+                        {p.media?.[0]?.url &&
+                          (() => {
+                            const rawUrl = p.media[0].url;
+                            const imageUrl = rawUrl.startsWith('http')
+                              ? rawUrl
+                              : `http://localhost:3000/${rawUrl.replace(
+                                  /^\/+/,
+                                  ''
+                                )}`;
+                            return (
+                              <img
+                                src={imageUrl}
+                                alt={p.name}
+                                className="h-6 w-6 object-cover rounded"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    'https://via.placeholder.com/40x40?text=No+Img';
+                                }}
+                              />
+                            );
+                          })()}
+                        <span className="text-sm">{p.name}</span>
+                        {p.brand?.name && (
+                          <span className="text-xs text-slate-500">
+                            ({p.brand.name})
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Actions */}
+          <nav className="flex items-center gap-1 sm:gap-2 text-slate-700 flex-shrink-0">
+            {/* Home - Hidden on mobile */}
+            <a href="/" className="hidden sm:flex items-center gap-1 sm:gap-2 px-2 sm:px-3 group">
+              <span className="rounded-lg p-1 sm:p-2 transition group-hover:text-cyan-700">
+                <Home className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+              <span className="hidden md:inline text-sm">{L.home}</span>
+            </a>
+
+            {/* Account */}
+            {me ? (
+              <div className="px-1 sm:px-2">
+                <AccountMenu />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOpenLogin(true)}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 text-slate-700 group"
+              >
+                <span className="rounded-lg p-1 sm:p-2 transition group-hover:text-cyan-700">
+                  <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
+                </span>
+                <span className="hidden md:inline text-sm">Đăng nhập</span>
+              </button>
+            )}
+
+            {/* Cart */}
+            <button
+              type="button"
+              onClick={() => navigate('/cart')}
+              className="relative flex items-center gap-1 sm:gap-2 px-2 sm:px-3 group"
+            >
+              <span className="rounded-lg border border-slate-200 p-1 sm:p-2 transition group-hover:border-cyan-600 group-hover:text-cyan-700">
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+              </span>
+              <span className="hidden md:inline text-sm">{L.cart}</span>
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 sm:right-1.5 sm:-top-1.5 inline-flex h-4 w-4 sm:h-5 sm:min-w-[20px] items-center justify-center rounded-full bg-rose-500 text-[10px] sm:text-[11px] font-semibold leading-none text-white shadow-sm">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+          </nav>
+        </div>
+
+        {/* Mobile Search - Visible only on mobile */}
+        <div className="sm:hidden pb-2">
           <form onSubmit={onSubmit} className="w-full relative">
-            <div className="relative flex h-12 w-full items-center rounded-2xl border border-slate-300 bg-white focus-within:border-cyan-600">
-              <Search className="pointer-events-none absolute left-3 h-5 w-5 text-slate-400" />
+            <div className="relative flex h-10 w-full items-center rounded-xl border border-slate-300 bg-white focus-within:border-cyan-600">
+              <Search className="pointer-events-none absolute left-3 h-4 w-4 text-slate-400" />
               <input
-                className="flex-1 bg-transparent pl-10 pr-3 text-[15px] outline-none placeholder:text-slate-400"
+                className="flex-1 bg-transparent pl-10 pr-3 text-sm outline-none placeholder:text-slate-400"
                 placeholder={L.searchPlaceholder}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -259,7 +543,7 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
               />
               <button
                 type="submit"
-                className="h-full shrink-0 rounded-r-2xl border-l border-slate-300 px-4 text-sm font-medium text-cyan-700 hover:bg-cyan-50 active:bg-cyan-100"
+                className="h-full shrink-0 rounded-r-xl border-l border-slate-300 px-3 text-sm font-medium text-cyan-700 hover:bg-cyan-50"
               >
                 {L.searchButton}
               </button>
@@ -297,93 +581,18 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                             />
                           );
                         })()}
-                      <span>{p.name}</span>
-                      {p.brand?.name && (
-                        <span className="text-xs text-slate-500">
-                          ({p.brand.name})
-                        </span>
-                      )}
+                      <span className="text-sm">{p.name}</span>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
           </form>
-
-          {/* Actions */}
-          <nav className="flex items-center gap-0 divide-x divide-slate-200 text-sm text-slate-700">
-            <a href="/" className="group flex items-center gap-2 px-3">
-              <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
-                <Home className="h-5 w-5" />
-              </span>
-              <span className="hidden md:inline">{L.home}</span>
-            </a>
-
-            {me ? (
-              <AccountMenu className="px-0" />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setOpenLogin(true)}
-                className="group flex items-center gap-2 px-3 text-slate-700"
-              >
-                <span className="rounded-lg p-2 transition group-hover:text-cyan-700">
-                  <Smile className="h-5 w-5" />
-                </span>
-                <span className="hidden md:inline">Đăng nhập</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate('/cart')}
-              className="group relative flex items-center gap-2 px-3"
-            >
-              <span className="rounded-lg border border-slate-200 p-2 transition group-hover:border-cyan-600 group-hover:text-cyan-700">
-                <ShoppingCart className="h-5 w-5" />
-              </span>
-              <span className="hidden md:inline">{L.cart}</span>
-              {totalItems > 0 && (
-                <span className="absolute right-1.5 -top-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold leading-none text-white shadow-sm">
-                  {totalItems}
-                </span>
-              )}
-            </button>
-          </nav>
         </div>
-
-        {/* Row 2: Categories and Address */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center mt-[-20px] gap-4 pb-2">
-          <div />
-          <div className="w-full px-20 ml-8">
-            <ul className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-normal text-slate-500 pl-20">
-              {L.categories.map((item) => (
-                <li key={item}>
-                  <a href="#" className="no-underline hover:text-cyan-700">
-                    {item}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
-            <MapPin className="h-4 w-4 text-slate-500" />
-            <span>{L.deliveryPrefix}</span>
-            <button
-              onClick={() => setIsAddressModalVisible(true)}
-              className="truncate max-w-[320px] font-medium underline"
-            >
-              {selectedAddress
-                ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district} ${selectedAddress.province}`
-                : L.address}
-            </button>
-          </div>
-        </div>
-
-        <div className="border-b border-slate-200" />
       </div>
 
-      {/* Quick features */}
-      <div className="mx-auto max-w-screen-2xl px-4">
+      {/* Quick features - Hidden on mobile */}
+      <div className="hidden md:block mx-auto max-w-screen-2xl px-4">
         <div className="flex flex-wrap items-stretch gap-0 border-t border-slate-200 pt-2 text-sm text-slate-700 divide-x divide-slate-200">
           <a
             href="#"
@@ -432,6 +641,17 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
           </a>
         </div>
       </div>
+
+      {/* Mobile Menu Drawer */}
+      <Drawer
+        title="Menu"
+        placement="left"
+        onClose={() => setMobileMenuOpen(false)}
+        open={mobileMenuOpen}
+        width={300}
+      >
+        {mobileMenuContent}
+      </Drawer>
 
       {/* Login Modal */}
       <LoginModal

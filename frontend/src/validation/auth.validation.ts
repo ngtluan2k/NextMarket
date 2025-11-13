@@ -22,10 +22,19 @@ type FieldError<TField extends string> = {
 };
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
-// VN phone (9–11 digits). Điều chỉnh theo backend nếu cần.
-const PHONE_REGEX = /^(?:0|\+?84)?[1-9]\d{7,10}$/;
+
+const PHONE_REGEX = /^0\d{9}$/;
 
 const FULLNAME_WORD_REGEX = /^[A-Za-zÀ-ỹĐđ'’-]+$/;
+
+function normalizePhoneVN(input: string): string | null {
+  if (!input) return null;
+  let s = String(input).trim().replace(/\s+/g, ''); // bỏ khoảng trắng
+  s = s.replace(/^(\+?84)/, '0');                    // +84/84 -> 0
+  s = s.replace(/\D/g, '');                          // giữ lại chữ số
+  if (!/^0\d{9}$/.test(s)) return null;              // kiểm tra đúng 10 số
+  return s;
+}
 
 function isValidFullNameFE(name: string): boolean {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -44,7 +53,7 @@ function calcAge(dob: string): number | null {
   return age;
 }
 
-const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$/;
+const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{6,}$/;
 
 export function validateLogin(data: LoginPayload): {
   ok: boolean;
@@ -57,11 +66,8 @@ export function validateLogin(data: LoginPayload): {
   if (!EMAIL_REGEX.test(data.email || '')) {
     errors.push({ field: 'email', message: 'Email không hợp lệ' });
   }
-  if (!STRONG_PASSWORD_REGEX.test(password)) {
-    errors.push({
-      field: 'password',
-      message: 'Mật khẩu phải ≥8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt',
-    });
+  if ((password || '').length < 6) {
+    errors.push({ field: 'password', message: 'Sai mật Khẩu' });
   }
 
   return { ok: errors.length === 0, errors };
@@ -106,13 +112,19 @@ export function validateRegister(data: RegisterPayload): {
     }
   }
 
-  // phone
   if (!data.phone) {
     errors.push({ field: 'phone', message: 'Vui lòng nhập SĐT' });
-  } else if (!PHONE_REGEX.test(data.phone)) {
-    errors.push({ field: 'phone', message: 'SĐT không hợp lệ' });
+  } else {
+    const normalized = normalizePhoneVN(data.phone);
+    if (!normalized) {
+      errors.push({
+        field: 'phone',
+        message: 'SĐT không hợp lệ. Yêu cầu đúng 10 số dạng 0xxxxxxxxx (có thể nhập +84/84, hệ thống sẽ chuẩn hoá).',
+      });
+    } else {
+      data.phone = normalized; // (tuỳ bạn) gán lại để gửi backend thống nhất
+    }
   }
-
   // gender
   if (
     !['male', 'female', 'other'].includes((data.gender || '').toLowerCase())

@@ -26,7 +26,7 @@ interface ToastMessage {
 function BootstrapTwoUpCarousel({
   id = 'hero2up',
   slides,
-  interval = 1000,
+  interval = 3000,
 }: {
   id?: string;
   slides?: Slide[];
@@ -67,18 +67,17 @@ function BootstrapTwoUpCarousel({
 
   // Bootstrap init
   useEffect(() => {
-  let instance: any;
-  if (hostRef.current) {
-    instance = Carousel.getOrCreateInstance(hostRef.current, {
-      interval, // ⬅ sẽ dùng 3000ms
-      pause: 'hover',
-      touch: true,
-      wrap: true,
-    });
-  }
-  return () => instance?.dispose?.();
-}, [interval, pages.length]);
-
+    let instance: any;
+    if (hostRef.current) {
+      instance = Carousel.getOrCreateInstance(hostRef.current, {
+        interval,
+        pause: 'hover',
+        touch: true,
+        wrap: true,
+      });
+    }
+    return () => instance?.dispose?.();
+  }, [interval, pages.length]);
 
   return (
     <div
@@ -90,14 +89,14 @@ function BootstrapTwoUpCarousel({
       data-bs-pause="hover"
     >
       {pages.length > 1 && (
-        <div className="carousel-indicators mb-2">
+        <div className="carousel-indicators mb-1 sm:mb-2">
           {pages.map((_, i) => (
             <button
               key={i}
               type="button"
               data-bs-target={`#${id}`}
               data-bs-slide-to={i}
-              className={i === 0 ? 'active' : ''}
+              className={`${i === 0 ? 'active' : ''} w-2 h-2 sm:w-3 sm:h-3 rounded-full`}
               aria-current={i === 0 ? true : undefined}
               aria-label={`Trang ${i + 1}`}
             />
@@ -111,20 +110,21 @@ function BootstrapTwoUpCarousel({
             key={idx}
             className={`carousel-item ${idx === 0 ? 'active' : ''}`}
           >
-            <div className="container py-2">
-              <div className="row g-3">
+            <div className="container px-0 sm:px-2 py-1 sm:py-2">
+              <div className="row g-2 sm:g-3">
                 {group.map((s, j) => (
-                  <div key={j} className="col-12 col-lg-6">
+                  <div key={j} className="col-12 col-md-6">
                     <a
                       href={s.href || '#'}
                       aria-label={s.alt || `banner ${idx * 2 + j + 1}`}
+                      className="block"
                     >
                       <img
                         className="w-100"
                         style={{
                           aspectRatio: '16 / 9',
                           objectFit: 'cover',
-                          borderRadius: 12,
+                          borderRadius: '8px',
                           display: 'block',
                         }}
                         src={s.imageUrl}
@@ -143,9 +143,9 @@ function BootstrapTwoUpCarousel({
         ))}
       </div>
 
-      {/* arrows */}
+      {/* arrows - hidden on mobile, show on tablet and up */}
       <button
-        className="carousel-control-prev"
+        className="carousel-control-prev d-none d-md-flex"
         type="button"
         data-bs-target={`#${id}`}
         data-bs-slide="prev"
@@ -154,7 +154,7 @@ function BootstrapTwoUpCarousel({
         <span className="visually-hidden">Previous</span>
       </button>
       <button
-        className="carousel-control-next"
+        className="carousel-control-next d-none d-md-flex"
         type="button"
         data-bs-target={`#${id}`}
         data-bs-slide="next"
@@ -187,39 +187,53 @@ const Home: React.FC<ToastMessage> = ({ showMessage }) => {
     <div className="min-h-screen bg-slate-100">
       <EveryMartHeader />
 
-      <main className="mx-auto max-w-screen-2xl px-4 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-6 mt-4">
-          {/* Danh mục bên trái */}
-          <aside className="lg:sticky lg:top-4 self-start">
+      <main className="mx-auto max-w-screen-2xl px-3 sm:px-4 pb-8 sm:pb-10">
+
+        <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-4 lg:gap-6 mt-4">
+          {/* Danh mục bên trái - Hidden on mobile, visible on desktop */}
+          <aside className="hidden lg:block lg:sticky lg:top-4 self-start">
+            {/* Desktop CategoryNav không cần prop mobile */}
             <CategoryNav />
           </aside>
 
-          {/* Carousel bên phải */}
-          <section>
-            <div className="rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 p-4">
-              <CampaignCarousel interval={2000} />
+          {/* Main Content Area */}
+          <section className="min-w-0">
+            {/* Carousel Section */}
+            <div className="rounded-xl sm:rounded-2xl bg-white shadow-lg sm:shadow-xl ring-1 ring-slate-200 p-3 sm:p-4">
+              <CampaignCarousel interval={3000} />
             </div>
-            <PromoShortcuts className="mt-4" />
+
+            {/* Promo Shortcuts */}
+            <PromoShortcuts className="mt-3 sm:mt-4" />
+
+            {/* Featured Brands */}
             <FeaturedBrands
-              className="mt-4"
+              className="mt-3 sm:mt-4"
               fetchBrands={async () => {
                 const brands = await fetchBrandsAPI();
                 return brands.map((b) => ({
                   id: b.id,
-                  coverUrl: b.logo_url, // ưu tiên cover, nếu không có thì dùng logo
+                  coverUrl: b.logo_url,
                 }));
               }}
-            />{' '}
-            <YouMayAlsoLike className="mt-6" />
-            <FlashSale className="mt-4" />
+            />
+
+            {/* You May Also Like */}
+            <YouMayAlsoLike className="mt-4 sm:mt-6" />
+
+            {/* Flash Sale */}
+            <FlashSale className="mt-3 sm:mt-4" />
+
+            {/* Product Grid Today */}
             <ProductGridToday
-              containerClassName="my-6"
+              containerClassName="my-4 sm:my-6"
               cardClassName="hover:bg-gray-50"
             />
           </section>
         </div>
       </main>
-      <Footer className="mt-12" />
+      
+      <Footer className="mt-8 sm:mt-12" />
     </div>
   );
 };

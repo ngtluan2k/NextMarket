@@ -101,16 +101,16 @@ export default function Footer({ className = '', data, fetchFooter }: Props) {
   const bottomLinks = store.bottomLinks ?? [];
 
   return (
-    <footer className={`mt-10 bg-white/90 ring-1 ring-slate-200`}>
-      <div className="mx-auto max-w-screen-2xl px-4">
+    <footer className={`bg-white/90 ring-1 ring-slate-200 ${className}`}>
+      <div className="mx-auto max-w-screen-2xl px-3 sm:px-4">
         {/* Top columns */}
-        <div className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 py-6 sm:gap-8 sm:py-8 md:grid-cols-2 lg:grid-cols-4">
           {columns.map((col, i) => (
-            <div key={i}>
-              <h4 className="mb-3 text-sm font-bold text-slate-900">
+            <div key={i} className="text-center sm:text-left">
+              <h4 className="mb-2 sm:mb-3 text-sm font-bold text-slate-900">
                 {col.title}
               </h4>
-              <ul className="space-y-2">
+              <ul className="space-y-1 sm:space-y-2">
                 {col.links.map((l, idx) => (
                   <li key={idx}>
                     <a
@@ -126,33 +126,33 @@ export default function Footer({ className = '', data, fetchFooter }: Props) {
           ))}
 
           {/* Socials + App badges gộp thành 1 cột */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <h4 className="mb-3 text-sm font-bold text-slate-900">
+          <div className="md:col-span-2 lg:col-span-1 text-center sm:text-left">
+            <h4 className="mb-2 sm:mb-3 text-sm font-bold text-slate-900">
               Kết nối với chúng tôi
             </h4>
-            <div className="flex items-center gap-3">
+            <div className="flex justify-center sm:justify-start items-center gap-2 sm:gap-3 mb-4 sm:mb-0">
               {socials.map((s, i) => (
                 <a
                   key={i}
                   href={s.href}
                   aria-label={s.name}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200 hover:bg-slate-200"
+                  className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-slate-100 ring-1 ring-slate-200 hover:bg-slate-200 transition-colors"
                 >
                   <SocialIcon name={s.name} />
                 </a>
               ))}
             </div>
 
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <h5 className="mb-2 text-xs font-semibold text-slate-900">
                 Tải ứng dụng
               </h5>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
                 {badges.map((b, i) => (
                   <a
                     key={i}
                     href={b.href}
-                    className="inline-flex items-center rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-medium text-white hover:opacity-90"
+                    className="inline-flex items-center rounded-lg bg-slate-900 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-[11px] font-medium text-white hover:opacity-90 transition-opacity"
                   >
                     <span className="block">{b.label}</span>
                   </a>
@@ -163,36 +163,36 @@ export default function Footer({ className = '', data, fetchFooter }: Props) {
         </div>
 
         {/* Payments & Shippings */}
-        <div className="grid gap-6 border-t border-slate-200 py-8 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <h5 className="mb-3 text-xs font-semibold text-slate-900">
+        <div className="grid gap-4 sm:gap-6 border-t border-slate-200 py-6 sm:py-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="text-center sm:text-left">
+            <h5 className="mb-2 sm:mb-3 text-xs font-semibold text-slate-900">
               Phương thức thanh toán
             </h5>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 sm:gap-2">
               {payments.map((p, i) => (
                 <Tag key={i} label={p} />
               ))}
             </div>
           </div>
 
-          <div>
-            <h5 className="mb-3 text-xs font-semibold text-slate-900">
+          <div className="text-center sm:text-left">
+            <h5 className="mb-2 sm:mb-3 text-xs font-semibold text-slate-900">
               Đối tác vận chuyển
             </h5>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 sm:gap-2">
               {shippings.map((s, i) => (
                 <Tag key={i} label={s} />
               ))}
             </div>
           </div>
 
-          <div className="lg:text-right">
-            <h5 className="mb-3 text-xs font-semibold text-slate-900">
+          <div className="md:col-span-2 lg:col-span-1 text-center sm:text-left lg:text-right">
+            <h5 className="mb-2 sm:mb-3 text-xs font-semibold text-slate-900">
               Chăm sóc khách hàng
             </h5>
             <p className="text-xs text-slate-700">
               Hotline:{' '}
-              <a href="tel:19001234" className="font-semibold text-sky-600">
+              <a href="tel:19001234" className="font-semibold text-sky-600 hover:text-sky-700">
                 1900 1234
               </a>{' '}
               (8:00 - 21:00)
@@ -201,7 +201,7 @@ export default function Footer({ className = '', data, fetchFooter }: Props) {
               Email:{' '}
               <a
                 href="mailto:cs@everymart.vn"
-                className="font-semibold text-sky-600"
+                className="font-semibold text-sky-600 hover:text-sky-700"
               >
                 cs@everymart.vn
               </a>
@@ -210,20 +210,22 @@ export default function Footer({ className = '', data, fetchFooter }: Props) {
         </div>
 
         {/* Bottom */}
-        <div className="border-t border-slate-200 py-4 text-center sm:text-left">
+        <div className="border-t border-slate-200 py-4">
           <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-2 order-2 sm:order-1">
               {bottomLinks.map((b, i) => (
                 <a
                   key={i}
                   href={b.href}
-                  className="text-[11px] text-slate-600 hover:text-slate-900 hover:underline"
+                  className="text-[10px] sm:text-[11px] text-slate-600 hover:text-slate-900 hover:underline transition-colors"
                 >
                   {b.label}
                 </a>
               ))}
             </div>
-            <div className="text-[11px] text-slate-500">{store.copyright}</div>
+            <div className="text-[10px] sm:text-[11px] text-slate-500 order-1 sm:order-2 text-center sm:text-left">
+              {store.copyright}
+            </div>
           </div>
         </div>
       </div>
@@ -234,14 +236,14 @@ export default function Footer({ className = '', data, fetchFooter }: Props) {
 /* ====== small UI helpers ====== */
 function Tag({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+    <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-slate-700">
       {label}
     </span>
   );
 }
 
 function SocialIcon({ name }: { name: Social['name'] }) {
-  const common = 'h-4 w-4';
+  const common = 'h-3 w-3 sm:h-4 sm:w-4';
   switch (name) {
     case 'facebook':
       return (

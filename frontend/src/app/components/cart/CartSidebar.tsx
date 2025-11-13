@@ -137,16 +137,17 @@ export const CartSidebar: React.FC<Props> = ({
         '📦 Order payload (BE will calculate):',
         JSON.stringify(orderPayload, null, 2)
       );
-      const orderRes = await api.post(`/users/${userId}/orders`, orderPayload);
-      const order = orderRes.data;
-      console.log('Đơn hàng đã được tạo:', order);
-      console.log('✅ Order created by BE:', {
-        id: order.id,
-        subtotal: order.subtotal,
-        shippingFee: order.shippingFee,
-        discountTotal: order.discountTotal,
-        totalAmount: order.totalAmount,
-      });
+      const orderRes = await api.post('/orders', orderPayload);
+        const order = orderRes.data;
+
+        console.log('Đơn hàng đã được tạo:', order);
+        console.log('✅ Order created by BE:', {
+          id: order.id,
+          subtotal: order.subtotal,
+          shippingFee: order.shippingFee,
+          discountTotal: order.discountTotal,
+          totalAmount: order.totalAmount,
+        });
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
       );

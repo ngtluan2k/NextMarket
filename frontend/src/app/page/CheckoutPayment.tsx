@@ -221,8 +221,19 @@ const CheckoutPayment: React.FC = () => {
       }))
     );
   }, [selectedVouchers]);
+
   useEffect(() => {
-    if (!me) {
+    const token = localStorage.getItem('token');
+    console.log('[Checkout] auth state:', { me, token });
+    if (items.length === 0) {
+      message.warning('Giỏ hàng trống! Vui lòng thêm sản phẩm.');
+      navigate('/cart');
+      return;
+    }
+    if (!me && token) {
+      return;
+    }
+    if (!me && !token) {
       localStorage.setItem(
         'checkoutData',
         JSON.stringify({ items, subtotal: subtotalNum })
@@ -232,6 +243,8 @@ const CheckoutPayment: React.FC = () => {
       setLoading(false);
       return;
     }
+
+    if (!me) return;
 
     const userId = me.id;
 

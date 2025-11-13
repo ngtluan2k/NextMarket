@@ -114,3 +114,14 @@ export async function updateStoreRegistration(
   });
   return res.data;
 }
+
+
+export async function getAllFlashSalesForPublic() {
+  const res = await axios.get(`${API_URL}/public/active`);
+  return res.data;
+}
+
+export async function getProductsForPublic(scheduleId: number) {
+  const res = await axios.get(`${API_URL}/${scheduleId}/products/public`);
+  return res.data;
+}
