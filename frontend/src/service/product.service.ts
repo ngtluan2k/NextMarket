@@ -234,6 +234,44 @@ class ProductService {
     });
     return response.data.data;
   }
+
+  async getDailyRevenue(
+    storeId: number,
+    days = 7
+  ): Promise<any> {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(
+        `${BE_BASE_URL}/products/store/${storeId}/daily-revenue?days=${days}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = res.data.dailyRevenue;
+
+      // Chuyển đổi revenue sang number nếu cần
+      const formatData: any = {
+        thisPeriod: data.thisPeriod.map((d: any) => ({
+          date: d.date,
+          revenue: Number(d.revenue),
+        })),
+        prevPeriod: data.prevPeriod.map((d: any) => ({
+          date: d.date,
+          revenue: Number(d.revenue),
+        })),
+      };
+
+      return formatData;
+    } catch (error: any) {
+      console.error('Lỗi khi lấy doanh thu:', error);
+      throw new Error(
+        error?.response?.data?.message || 'Không thể lấy doanh thu'
+      );
+    }
+  }
 }
 
 export const productService = new ProductService();
