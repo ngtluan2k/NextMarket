@@ -1,6 +1,6 @@
 import axios from 'axios';
-
 import { BE_BASE_URL } from '../app/api/api';
+
 
 export interface Product {
   id: number;
@@ -16,7 +16,9 @@ export interface Product {
   store_id?: number;
   brand_id?: number;
   avg_rating?: number;
-  review_count?:number;
+  review_count?: number;
+  sold?: number;
+  revenue?: number;
   store?: {
     id: number;
     uuid: string;
@@ -95,7 +97,7 @@ export interface Product {
     variant_sku?: string;
     name?: string;
     status?: 'active' | 'inactive';
-    limit_quantity?:number;
+    limit_quantity?: number;
   }>;
 }
 
@@ -109,15 +111,14 @@ export interface ProductCardType {
   avg_rating?: number;
   review_count?: number;
   base_price?: number | string;
-   pricing_rules?: Array<{
+  pricing_rules?: Array<{
     price: number | bigint;
-    type:string;
+    type: string;
   }>;
   salePrice?: number | string;
   originalPrice?: number | string;
   discount?: number;
 }
-
 
 export interface CreateProductDto {
   name: string;
@@ -154,9 +155,18 @@ export interface CreateProductDto {
     ends_at?: string;
     variant_sku?: string; // <-- thêm
     name?: string; // <-- thêm
-    status?: 'active' | 'inactive'; 
-    limit_quantity?:number;// <-- thêm
+    status?: 'active' | 'inactive';
+    limit_quantity?: number; // <-- thêm
   }>;
+}
+export interface DailyRevenueItem {
+  date: string;
+  revenue: number;
+}
+
+export interface DailyRevenueResponse {
+  thisPeriod: DailyRevenueItem[];
+  prevPeriod: DailyRevenueItem[];
 }
 
 export type UpdateProductDto = Partial<CreateProductDto>;
@@ -169,12 +179,21 @@ class ProductService {
     };
   }
 
-  async getStoreProducts(storeId: number): Promise<Product[]> {
+  async getStoreProducts(
+    storeId: number,
+    start?: string,
+    end?: string
+  ): Promise<Product[]> {
     console.log('store id inside service: ' + storeId);
+    const params: any = {};
+    if (start) params.start = start;
+    if (end) params.end = end;
+
     const response = await axios.get(
       `${BE_BASE_URL}/products/store/${storeId}`,
       {
         headers: this.getAuthHeaders(),
+        params, // truyền query params start/end
       }
     );
     return response.data.data;
@@ -228,6 +247,7 @@ class ProductService {
     return res.data;
   }
 
+
  async getProductById(id: number): Promise<Product> {
     const response = await axios.get(`${BE_BASE_URL}/products/${id}`, {
       headers: this.getAuthHeaders(),
@@ -271,7 +291,8 @@ class ProductService {
         error?.response?.data?.message || 'Không thể lấy doanh thu'
       );
     }
-  }
+
+    }
 }
 
 export const productService = new ProductService();

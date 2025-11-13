@@ -11,7 +11,7 @@ export type CheckoutItem = {
   store?: StoreInfo;
   variant?: { id: number; variant_name: string; price: number };
   type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
-  pricingRuleId?: number; 
+  pricing_rule?: { id: number } | undefined;
 };
 
 export type ShippingMethodType = 'economy' | 'fast';

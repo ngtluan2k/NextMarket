@@ -131,7 +131,7 @@ export const CartSidebar: React.FC<Props> = ({
           quantity: Number(item.quantity),
           price: Number(item.price),
           type: item.type || 'bulk',
-          pricingRuleId: item.pricingRuleId,
+          pricingRuleId: item.pricing_rule?.id ?? undefined,
         })),
       };
       console.log(
