@@ -254,14 +254,15 @@ class ProductService {
     });
     return response.data.data;
   }
-   async getDailyRevenue(
+
+  async getDailyRevenue(
     storeId: number,
     days = 7
   ): Promise<any> {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(
-        `${API_BASE_URL}/products/store/${storeId}/daily-revenue?days=${days}`,
+        `${BE_BASE_URL}/products/store/${storeId}/daily-revenue?days=${days}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -290,6 +291,7 @@ class ProductService {
         error?.response?.data?.message || 'Không thể lấy doanh thu'
       );
     }
+
     }
 }
 
