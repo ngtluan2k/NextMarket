@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getCurrentUserId } from './auth.helper';
 
-const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL;; // Adjust based on your backend URL
+const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL; // Adjust based on your backend URL
 export interface StoreLevel {
   id: number;
   store_id: number;
@@ -55,6 +55,24 @@ export type RegisterSellerPayload = {
     account_number?: string;
   };
 };
+
+export interface UserInfo {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
+export interface DailyRevenueWithUsersItem {
+  date: string;
+  revenue: number;
+  users: UserInfo[];
+}
+
+export interface DailyRevenueWithUsersResponse {
+  thisPeriod: DailyRevenueWithUsersItem[];
+  prevPeriod: DailyRevenueWithUsersItem[];
+}
 
 export class StoreService {
   private getAuthHeaders() {

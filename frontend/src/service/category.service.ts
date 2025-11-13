@@ -48,7 +48,7 @@ export const fetchProductsByCategory = async (
 
 // 4️⃣ Lấy brand duy nhất của category
 export const fetchBrandsByCategory = async (slug: string): Promise<Brand[]> => {
-  const res = await fetch(`${BE_BASE_URL}categories/${slug}/brands`);
+  const res = await fetch(`${BE_BASE_URL}/categories/${slug}/brands`);
   if (!res.ok) throw new Error('Failed to fetch brands');
   return res.json(); // backend trả mảng brand
 };

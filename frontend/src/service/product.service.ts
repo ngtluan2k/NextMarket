@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { BestSellerProduct } from '../app/components/store/StoreBestSellers';
 
 const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
@@ -168,6 +169,8 @@ export interface DailyRevenueResponse {
   thisPeriod: DailyRevenueItem[];
   prevPeriod: DailyRevenueItem[];
 }
+
+
 
 export type UpdateProductDto = Partial<CreateProductDto>;
 

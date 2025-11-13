@@ -9,11 +9,13 @@ import {
   UseGuards,
   Query,
   ForbiddenException,
-  BadRequestException
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { OrdersService } from '../orders/orders.service';
 import { Order } from '../orders/order.entity';
+import { CustomerFromOrderDto } from './dto/get-order-customer.dto';
+import { ApiQuery } from '@nestjs/swagger';
 
 @Controller('stores/:storeId/orders')
 export class StoreOrdersController {
@@ -24,17 +26,32 @@ export class StoreOrdersController {
    * → Lấy danh sách đơn hàng của store, hỗ trợ filter server-side.
    */
 
+  @Get('customers')
+  @UseGuards(JwtAuthGuard)
+  async getCustomers(@Param('storeId') storeId: string) {
+    const storeIdNumber = parseInt(storeId, 10);
+    console.log('storeId number:', storeIdNumber);
+
+    const customers = await this.ordersService.getCustomersFromOrders(
+      storeIdNumber
+    );
+    return {
+      data: customers,
+      total: customers.length,
+    };
+  }
+
   @Get('ping')
-ping(@Param('storeId') storeId: string) {
-  console.log('ping storeId:', storeId);
-  return { storeId };
-}
-@Get('stats')
-@UseGuards(JwtAuthGuard)
-getOrderStats(@Param('storeId') storeId: number) {
-  console.log('storeId param:', storeId);
-  return this.ordersService.getOrderStats(storeId);
-}
+  ping(@Param('storeId') storeId: string) {
+    console.log('ping storeId:', storeId);
+    return { storeId };
+  }
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  getOrderStats(@Param('storeId') storeId: number) {
+    console.log('storeId param:', storeId);
+    return this.ordersService.getOrderStats(storeId);
+  }
   @Get()
   @UseGuards(JwtAuthGuard)
   async findByStore(
@@ -148,5 +165,5 @@ getOrderStats(@Param('storeId') storeId: number) {
     return this.ordersService.getStoreStats(storeId);
   }
 
-}
 
+}

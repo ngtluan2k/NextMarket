@@ -36,12 +36,12 @@ const items: MenuItem[] = [
   getItem('Trang chủ', 'Dashboard', <DashboardOutlined />),
   getItem('Quản lý bán hàng', 'SalesManagement', <BarChartOutlined />),
   getItem('Quản lí kho hàng', 'StoreInventory', <AppstoreAddOutlined />),
-  getItem('Đơn mua hàng', 'Customers', <UserOutlined />),
-  getItem('Gói Đăng ký ', 'Invoices', <FileTextOutlined />),
+  getItem('Khách hàng', 'Customers', <UserOutlined />),
+  getItem('Gói đăng ký ', 'Invoices', <FileTextOutlined />),
   getItem('Thông tin cửa hàng', 'StoreInfo', <InfoCircleOutlined />),
   getItem('Quản lý marketing', 'VoucherManagement', <GiftOutlined />),
   getItem('Quản lý sự kiện', 'StoreCampaignManager', <ContactsOutlined  />),
-  getItem('Flash Sale', 'FlashSaleManager', <FireOutlined />),
+  getItem('Flash sale', 'FlashSaleManager', <FireOutlined />),
   getItem('Trở về trang chủ', 'HomePage', <HomeOutlined />),
 ];
 

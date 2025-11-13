@@ -24,6 +24,7 @@ import { ProductReviewsModule } from '../product_reviews/product_reviews.module'
 import { OrderItem } from '../order-items/order-item.entity';
 import { FlashSaleSchedule } from '../flash_sale_schedules/entities/flash_sale_schedule.entity';
 import { FlashSaleSchedulesModule } from '../flash_sale_schedules/flash_sale_schedules.module';
+import { Order } from '../orders/order.entity';
 
 @Module({
   imports: [
@@ -40,7 +41,8 @@ import { FlashSaleSchedulesModule } from '../flash_sale_schedules/flash_sale_sch
       Tag,
       ProductReview,
       OrderItem,
-      FlashSaleSchedule
+      FlashSaleSchedule,
+      Order
     ]),
     forwardRef(() => ProductMediaModule),
     forwardRef(() => VariantModule),

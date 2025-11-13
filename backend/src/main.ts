@@ -32,11 +32,21 @@ async function bootstrap() {
   }
 
   // serve static files
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+    setHeaders: (res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*'); // mở CORS
+    },
+  });
 
   // CORS
   app.enableCors({
-    origin: ['http://localhost:4200', 'http://localhost:3000', 'https://3492pvbd-4200.asse.devtunnels.ms','https://3492pvbd-3000.asse.devtunnels.ms'],
+    origin: [
+      'http://localhost:4200',
+      'http://localhost:3000',
+      'https://3492pvbd-4200.asse.devtunnels.ms',
+      'https://3492pvbd-3000.asse.devtunnels.ms',
+    ],
     credentials: true,
   });
 
