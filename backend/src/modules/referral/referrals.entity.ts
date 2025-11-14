@@ -11,7 +11,7 @@ export class Referral {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column({ type: 'char', unique: true })
+  @Column({type:'varchar', nullable:false , default: () => 'gen_random_uuid()'})
   uuid?: string;
 
   @ManyToOne(() => User, (user) => user.id)

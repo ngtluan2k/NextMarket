@@ -1,13 +1,7 @@
-// service/wallet.service.ts
 import axios from 'axios';
-const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+import { BE_BASE_URL } from '../app/api/api';
+import { Wallet, WalletTransactionsResponse } from '../app/types/wallet';
 
-export type Wallet = {
-  id: number;
-  balance: number;
-  currency: string;
-  updated_at: string;
-};
 
 export const fetchMyWallet = async (): Promise<Wallet> => {
   try {
@@ -20,6 +14,25 @@ export const fetchMyWallet = async (): Promise<Wallet> => {
     return res.data;
   } catch (err) {
     console.error('Failed to fetch wallet:', err);
+    throw err;
+  }
+};
+
+export const fetchMyWalletTransactions = async (
+  page = 1,
+  limit = 20
+): Promise<WalletTransactionsResponse> => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(`${BE_BASE_URL}/wallets/transactions`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: { page, limit },
+    });
+    return res.data;
+  } catch (err) {
+    console.error('Failed to fetch wallet transactions:', err);
     throw err;
   }
 };

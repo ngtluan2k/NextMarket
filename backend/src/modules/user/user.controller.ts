@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
@@ -38,6 +39,25 @@ export class UserController {
   @ApiOperation({ summary: 'Get all users' })
   getAllUsers() {
     return this.userService.findAllUsers();
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search user by email' })
+  @UseGuards(AuthGuard('jwt'))
+  async searchUserByEmail(@Query('email') email: string) {
+    console.log(`🔍 Searching user by email: ${email}`);
+    if (!email || !email.trim()) {
+      throw new Error('Email parameter is required');
+    }
+    
+    const user = await this.userService.findByEmail(email.trim());
+    if (!user) {
+      console.log(`❌ User not found with email: ${email}`);
+      throw new Error('User not found');
+    }
+    
+    console.log(`✅ Found user:`, { id: user.id, email: user.email, username: user.username });
+    return user;
   }
 
   @Post('register')

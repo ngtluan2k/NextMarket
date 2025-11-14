@@ -12,6 +12,7 @@ import { User } from '../user/user.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { PricingRulesService } from '../pricing-rule/pricing-rule.service';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Injectable()
 export class CartService {
@@ -26,6 +27,8 @@ export class CartService {
     private pricingRuleRepository: Repository<PricingRules>,
     @InjectRepository(Variant)
     private variantRepository: Repository<Variant>,
+    @InjectRepository(OrderItem)
+    private orderItemRepo: Repository<OrderItem>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private pricingRulesService: PricingRulesService
@@ -443,17 +446,35 @@ export class CartService {
         const flashRule = (product.pricing_rules ?? []).find(
           (r) => r.type === 'flash_sale'
         );
-        if (
-          flashRule?.limit_quantity &&
-          cartItem.quantity > flashRule.limit_quantity
-        ) {
-          cartItem.quantity = flashRule.limit_quantity;
+
+        if (flashRule) {
+          // Tính số đã bán cho rule này
+          const soldQtyResult = await this.orderItemRepo
+            .createQueryBuilder('oi')
+            .select('SUM(oi.quantity)', 'total')
+            .where('oi.pricing_rule_id = :ruleId', { ruleId: flashRule.id })
+            .getRawOne();
+
+          const totalSold = Number(soldQtyResult?.total ?? 0);
+          const remainingQty = Math.max(
+            0,
+            (flashRule.limit_quantity ?? 0) - totalSold
+          );
+
+          // Nếu số lượng user muốn > số còn lại, giới hạn lại
+          if (cartItem.quantity > remainingQty) {
+            cartItem.quantity = remainingQty;
+          }
+
+          appliedType = 'flash_sale';
+          appliedPricingRuleId = flashRule.id;
+          appliedPrice = Number(flashRule.price);
+        } else {
+          appliedType = 'normal';
+          appliedPricingRuleId = null;
+          appliedPrice = variant?.price ?? Number(product.base_price);
         }
-        appliedType = 'flash_sale';
-        appliedPricingRuleId = flashRule?.id ?? null;
-        appliedPrice = flashRule
-          ? Number(flashRule.price)
-          : variant?.price ?? Number(product.base_price);
+
         break;
       }
     }

@@ -9,5 +9,6 @@ import { UserModule } from '../user/user.module';
   imports: [TypeOrmModule.forFeature([Referral]), UserModule],
   controllers: [ReferralsController],
   providers: [ReferralsService],
+  exports: [ReferralsService],
 })
 export class ReferralsModule {}

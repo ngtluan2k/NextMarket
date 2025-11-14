@@ -7,13 +7,23 @@ import {
   LogOut,
   ChevronDown,
 } from 'lucide-react';
-import { ShopOutlined, SignatureOutlined } from '@ant-design/icons';
+import {
+  CrownOutlined,
+  KeyOutlined,
+  ShopOutlined,
+  SignatureOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
+import { getRoles } from '../../utils/auth.helper';
 
 export default function AccountMenu({ className = '' }) {
   const { me, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [role, setRole] = useState<string[]>(getRoles);
+
+  // const role = getRoles();
+  console.log(role);
 
   // Click ngoài để đóng menu
   useEffect(() => {
@@ -65,20 +75,36 @@ export default function AccountMenu({ className = '' }) {
             <LifeBuoy className="h-4 w-4 text-slate-500" />
             Trung tâm hỗ trợ
           </a>
-          <a
-            href="/myStores"
-            className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
-          >
-            <ShopOutlined className="h-4 w-4 text-slate-500" />
-            Cửa hàng của tôi
-          </a>
-          <a
-            href="/affiliate "
-            className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
-          >
-            <SignatureOutlined className="h-4 w-4 text-slate-500" />
-            Đăng ký làm Affiliate
-          </a>
+
+          {role?.includes('Seller') && (
+            <a
+              href="/myStores"
+              className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
+            >
+              <ShopOutlined className="h-4 w-4 text-slate-500" />
+              Cửa hàng của tôi
+            </a>
+          )}
+
+          {role?.some(r => r.toLowerCase() === 'user') && (
+            <a
+              href="/affiliate "
+              className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
+            >
+              <SignatureOutlined className="h-4 w-4 text-slate-500" />
+              Trang chủ cho tiếp thị liên kết
+            </a>
+          )}
+
+          {role?.includes('Admin') && (
+            <a
+              href="/admin"
+              className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
+            >
+              <CrownOutlined />
+              Quản trị
+            </a>
+          )}
           <button
             onClick={logout}
             className="flex w-full items-center gap-3 px-3 py-2 hover:bg-slate-50"

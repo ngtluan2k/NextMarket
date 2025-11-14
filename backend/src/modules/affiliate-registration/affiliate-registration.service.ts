@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, IsNull } from 'typeorm';
 import { AffiliateRegistration } from './affiliate-registration.entity';
 import { AffiliatePlatform } from '../affiliate-platform/affiliate-platform.entity';
 import { User } from '../user/user.entity'; // ⚠️ import entity User
@@ -68,7 +68,16 @@ export class AffiliateRegistrationService {
     await this.registrationRepo.save(registration);
 
     if (registration.userId) {
-      await this.userRepo.update(registration.userId, { is_affiliate: true });
+      // Generate unique affiliate code
+      const affiliateCode = `AFF${registration.userId}${Date.now().toString().slice(-4)}`;
+      
+      await this.userRepo.update(registration.userId, { 
+        is_affiliate: true,
+        code: affiliateCode,
+        updated_at: new Date()
+      });
+      
+      console.log(`✅ Approved affiliate registration for user ${registration.userId} with code: ${affiliateCode}`);
     }
 
     return registration;
@@ -87,5 +96,31 @@ export class AffiliateRegistrationService {
     }
 
     return registration;
+  }
+
+  /**
+   * Fix existing affiliate users who don't have codes
+   * This is a utility method to fix data inconsistency
+   */
+  async fixAffiliateUsersWithoutCodes(): Promise<void> {
+    const usersWithoutCodes = await this.userRepo.find({
+      where: {
+        is_affiliate: true,
+        code: IsNull()
+      }
+    });
+
+    console.log(`🔧 Found ${usersWithoutCodes.length} affiliate users without codes`);
+
+    for (const user of usersWithoutCodes) {
+      const affiliateCode = `AFF${user.id}${Date.now().toString().slice(-4)}`;
+      
+      await this.userRepo.update(user.id, {
+        code: affiliateCode,
+        updated_at: new Date()
+      });
+      
+      console.log(`✅ Generated code ${affiliateCode} for user ${user.id} (${user.email})`);
+    }
   }
 }

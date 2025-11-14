@@ -11,8 +11,16 @@ import {
   Select,
   Tag,
   Avatar,
+  Row,
+  Col,
 } from 'antd';
-import { UserOutlined, PlusOutlined, SearchOutlined, PhoneOutlined, MailOutlined } from '@ant-design/icons';
+import {
+  UserOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  PhoneOutlined,
+  MailOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { orderService } from '../../../../service/order.service';
 import { storeService } from '../../../../service/store.service';
@@ -27,7 +35,7 @@ export default function CustomerFromOrders() {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   const BASE_URL = import.meta.env.VITE_BE_BASE_URL || 'http://localhost:3000';
 
   // Lấy storeId khi mount
@@ -45,38 +53,38 @@ export default function CustomerFromOrders() {
   }, []);
 
   // Lấy sales khi có storeId
-useEffect(() => {
-  if (!storeId) return;
-  setLoading(true);
-  orderService.getCustomersFromOrders(storeId)
-    .then(res => {
-      setCustomers(Array.isArray(res.data) ? res.data : []);
-    })
-    .catch(err => {
-      console.error(err);
-      setCustomers([]);
-    })
-    .finally(() => setLoading(false));
-}, [storeId]);
-
+  useEffect(() => {
+    if (!storeId) return;
+    setLoading(true);
+    orderService
+      .getCustomersFromOrders(storeId)
+      .then((res) => {
+        setCustomers(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        console.error(err);
+        setCustomers([]);
+      })
+      .finally(() => setLoading(false));
+  }, [storeId]);
 
   // Map sales -> khách hàng duy nhất
-  
 
   // Filter theo status và search
-const filteredCustomers = useMemo(() => {
-  return customers.filter(c => {
-    const matchesStatus = statusFilter === 'all' || (c.status || '').toLowerCase() === statusFilter;
-    const matchesSearch =
-      !searchText ||
-      (c.name || '').toLowerCase().includes(searchText.toLowerCase()) ||
-      (c.email || '').toLowerCase().includes(searchText.toLowerCase()) ||
-      (c.phone || '').includes(searchText) ||
-      String(c.id).includes(searchText);
-    return matchesStatus && matchesSearch;
-  });
-}, [customers, statusFilter, searchText]);
-
+  const filteredCustomers = useMemo(() => {
+    return customers.filter((c) => {
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (c.status || '').toLowerCase() === statusFilter;
+      const matchesSearch =
+        !searchText ||
+        (c.name || '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (c.email || '').toLowerCase().includes(searchText.toLowerCase()) ||
+        (c.phone || '').includes(searchText) ||
+        String(c.id).includes(searchText);
+      return matchesStatus && matchesSearch;
+    });
+  }, [customers, statusFilter, searchText]);
 
   // Table columns
   const columns = [
@@ -103,8 +111,12 @@ const filteredCustomers = useMemo(() => {
       key: 'contact',
       render: (_: any, record: any) => (
         <div className="flex flex-col">
-          <span><MailOutlined />{' '}{record.email}</span>
-          <span><PhoneOutlined />{' '}{record.phone}</span>
+          <span>
+            <MailOutlined /> {record.email}
+          </span>
+          <span>
+            <PhoneOutlined /> {record.phone}
+          </span>
         </div>
       ),
     },
@@ -125,6 +137,10 @@ const filteredCustomers = useMemo(() => {
         if (normalized === 'vip') color = 'gold';
         else if (normalized === 'hoạt động' || normalized === 'active')
           color = 'green';
+        else if (normalized === 'không hoạt động' || normalized === 'inactive')
+          color = 'yellow';
+        else if (normalized === 'bị chặn' || normalized === 'blocked')
+          color = 'red';
         const label = normalized === 'active' ? 'Hoạt Động' : status;
         return <Tag color={color}>{label}</Tag>;
       },
@@ -156,6 +172,146 @@ const filteredCustomers = useMemo(() => {
             <Button icon={<PlusOutlined />}>Thêm Khách Hàng</Button>
           </Space>
         </div>
+        {/* --- Thống kê nhanh --- */}
+        <Card className="mb-6 bg-gray-50">
+          <Row gutter={[16, 16]}>
+            {/* Tổng khách hàng */}
+            <Col xs={24} sm={12} md={6}>
+              <Card
+                className="shadow-md flex items-center gap-4"
+                style={{
+                  borderLeft: '5px solid #3b82f6', // xanh dương
+                  borderRadius: '10px',
+                }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: '#dbeafe',
+                    width: 50,
+                    height: 50,
+                  }}
+                >
+                  <UserOutlined style={{ fontSize: 24, color: '#3b82f6' }} />
+                </div>
+                <div>
+                  <Text type="secondary">Tổng Khách Hàng</Text>
+                  <Title level={3} className="!mb-0">
+                    {customers.length}
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+
+            {/* Hoạt động */}
+            <Col xs={24} sm={12} md={6}>
+              <Card
+                className="shadow-md flex items-center gap-4"
+                style={{
+                  borderLeft: '5px solid #22c55e', // xanh lá
+                  borderRadius: '10px',
+                }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: '#dcfce7',
+                    width: 50,
+                    height: 50,
+                  }}
+                >
+                  <UserOutlined style={{ fontSize: 24, color: '#22c55e' }} />
+                </div>
+                <div>
+                  <Text type="secondary">Hoạt Động</Text>
+                  <Title
+                    level={3}
+                    className="!mb-0"
+                    style={{ color: '#22c55e' }}
+                  >
+                    {
+                      customers.filter(
+                        (c) => (c.status || '').toLowerCase() === 'active'
+                      ).length
+                    }
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+
+            {/* Không hoạt động */}
+            <Col xs={24} sm={12} md={6}>
+              <Card
+                className="shadow-md flex items-center gap-4"
+                style={{
+                  borderLeft: '5px solid #f59e0b', // vàng cam
+                  borderRadius: '10px',
+                }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: '#fef3c7',
+                    width: 50,
+                    height: 50,
+                  }}
+                >
+                  <UserOutlined style={{ fontSize: 24, color: '#f59e0b' }} />
+                </div>
+                <div>
+                  <Text type="secondary">Không Hoạt Động</Text>
+                  <Title
+                    level={3}
+                    className="!mb-0"
+                    style={{ color: '#f59e0b' }}
+                  >
+                    {
+                      customers.filter(
+                        (c) => (c.status || '').toLowerCase() === 'inactive'
+                      ).length
+                    }
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+
+            {/* Bị chặn */}
+            <Col xs={24} sm={12} md={6}>
+              <Card
+                className="shadow-md flex items-center gap-4"
+                style={{
+                  borderLeft: '5px solid #ef4444', // đỏ
+                  borderRadius: '10px',
+                }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: '#fee2e2',
+                    width: 50,
+                    height: 50,
+                  }}
+                >
+                  <UserOutlined style={{ fontSize: 24, color: '#ef4444' }} />
+                </div>
+                <div>
+                  <Text type="secondary">Bị Chặn</Text>
+                  <Title
+                    level={3}
+                    className="!mb-0"
+                    style={{ color: '#ef4444' }}
+                  >
+                    {
+                      customers.filter(
+                        (c) => (c.status || '').toLowerCase() === 'blocked'
+                      ).length
+                    }
+                  </Title>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </Card>
 
         <Card className="mb-6">
           <Space wrap>
@@ -167,7 +323,8 @@ const filteredCustomers = useMemo(() => {
             >
               <Select.Option value="all">Tất Cả</Select.Option>
               <Select.Option value="active">Hoạt Động</Select.Option>
-              <Select.Option value="inactive">Ngừng Hoạt Động</Select.Option>
+              <Select.Option value="inactive">Không Hoạt Động</Select.Option>
+              <Select.Option value="inactive">Bị Chặn</Select.Option>
             </Select>
             <Input
               placeholder="Tìm kiếm..."

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getCurrentUserId } from './auth.helper';
+import { getCurrentUserId } from '../utils/auth.helper';
 
 const API_BASE_URL = import.meta.env.VITE_BE_BASE_URL; // Adjust based on your backend URL
 export interface StoreLevel {

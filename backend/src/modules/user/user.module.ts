@@ -16,6 +16,7 @@ import { JwtStrategy } from '../../common/auth/jwt.strategy';
 import { ShoppingCart } from '../cart/cart.entity';
 import { OtpService } from '../../common/otp/otp.service';
 import { MailService } from '../../common/mail/mail.service';
+import { AffiliateTreeService } from '../affiliate-tree/affiliate-tree.service';
 import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
 import { RevokedTokensModule } from '../../common/auth/revoked-tokens.module';
 import { Wallet } from '../wallet/wallet.entity';
@@ -30,6 +31,7 @@ import { Wallet } from '../wallet/wallet.entity';
       RolePermission,
       UserRole,
       ShoppingCart,
+      AffiliateTreeService,
       VoucherCollection,
       Wallet
     ]),

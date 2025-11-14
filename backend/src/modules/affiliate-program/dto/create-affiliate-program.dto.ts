@@ -1,5 +1,5 @@
-import { IsString, IsInt, IsEnum, IsDecimal, Min } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsInt, IsEnum, Min, IsOptional, IsNumber, IsBoolean } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAffiliateProgramDto {
   @ApiProperty()
@@ -19,7 +19,28 @@ export class CreateAffiliateProgramDto {
   @IsInt()
   commission_value?: number;
 
-  @ApiProperty({ enum: ['active', 'inactive'] })
-  @IsEnum(['active', 'inactive'])
-  status?: 'active' | 'inactive';
+  @ApiProperty({ enum: ['active', 'inactive', 'paused'] })
+  @IsEnum(['active', 'inactive', 'paused'])
+  status?: 'active' | 'inactive' | 'paused';
+
+  // Budget fields
+  @ApiPropertyOptional({ description: 'Total budget amount in VND' })
+  @IsOptional()
+  @IsNumber()
+  total_budget_amount?: number;
+
+  @ApiPropertyOptional({ description: 'Monthly budget cap in VND' })
+  @IsOptional()
+  @IsNumber()
+  monthly_budget_cap?: number;
+
+  @ApiPropertyOptional({ description: 'Daily budget cap in VND' })
+  @IsOptional()
+  @IsNumber()
+  daily_budget_cap?: number;
+
+  @ApiPropertyOptional({ description: 'Auto pause when budget limit reached' })
+  @IsOptional()
+  @IsBoolean()
+  auto_pause_on_budget_limit?: boolean;
 }

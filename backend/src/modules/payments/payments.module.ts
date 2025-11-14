@@ -16,6 +16,7 @@ import { Variant } from '../variant/variant.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { EveryCoinStrategy } from './strategies/everycoin.strategy';
+import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -29,6 +30,7 @@ import { EveryCoinStrategy } from './strategies/everycoin.strategy';
       Inventory,
       OrderStatusHistory,
     ]),
+    AffiliateCommissionsModule,
   ],
   providers: [
     PaymentsService,
