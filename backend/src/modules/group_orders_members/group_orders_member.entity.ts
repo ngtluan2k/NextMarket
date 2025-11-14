@@ -23,7 +23,7 @@ export class GroupOrderMember {
   @JoinColumn({ name: 'group_order_id' })
   group_order!: GroupOrder;
 
-  @Column({ type: 'integer', width: 1, default: () => '0' })
+  @Column({ type: 'boolean', default: false })
   is_host!: boolean;
 
   @CreateDateColumn({ type: 'timestamp' })

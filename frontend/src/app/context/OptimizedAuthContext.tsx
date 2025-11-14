@@ -4,29 +4,33 @@ import { Me } from '../types/user';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const OptimizedAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [addressesLoaded, setAddressesLoaded] = useState(false);
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   // Lazy load addresses only when needed
   const loadAddresses = async (userId: number, token: string) => {
+    if (addressesLoaded) return; // Already loaded
+    
     try {
-      console.time('📍 [Auth] Load Addresses');
+      // console.time('📍 [Auth] Load Addresses');
       const addressRes = await fetch(`${BE_BASE_URL}/users/${userId}/addresses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const addresses = (await addressRes.json()) || [];
-      console.timeEnd('📍 [Auth] Load Addresses');
+      // console.timeEnd('📍 [Auth] Load Addresses');
       
       setMe(prev => prev ? { ...prev, addresses } : null);
+      setAddressesLoaded(true);
       localStorage.setItem('user', JSON.stringify({ ...me, addresses }));
     } catch (err) {
       console.warn('Load addresses error:', err);
     }
   };
 
-  // Optimized token validation - no additional API calls on startup
+  // Optimized token validation - no additional API calls
   const validateToken = async (token: string) => {
     try {
       // Chỉ verify token, không fetch user data
@@ -48,7 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Kiểm tra token khi app khởi động
+  // Check token on app startup
   useEffect(() => {
     const tokenStr = localStorage.getItem('token');
     const cachedUser = localStorage.getItem('user');
@@ -68,6 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('token', token);
     setMe(user);
     setToken(token);
+    setAddressesLoaded(false); // Reset addresses flag
     
     console.timeEnd('💾 [Auth] Login State Update');
     
@@ -78,28 +83,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${BE_BASE_URL}/auth/logout`, {
+        // Background logout call, don't wait
+        fetch(`${BE_BASE_URL}/auth/logout`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(console.error);
       }
-    } catch (err) {
-      console.error('Logout failed', err);
     } finally {
-      // Xóa localStorage và state frontend
+      // Immediate cleanup
       localStorage.removeItem('user');
       localStorage.removeItem('access_token');
       localStorage.removeItem('token');
       localStorage.removeItem('cart');
       setMe(null);
       setToken(null);
+      setAddressesLoaded(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ me, token, login, logout }}>
+    <AuthContext.Provider value={{ 
+      me, 
+      token, 
+      login, 
+      logout,
+      loadAddresses: () => me && token ? loadAddresses(me.id, token) : Promise.resolve()
+    }}>
       {children}
     </AuthContext.Provider>
   );

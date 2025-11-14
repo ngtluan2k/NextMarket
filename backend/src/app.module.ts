@@ -65,15 +65,14 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
 import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
-import { DebugModule } from './modules/debug/debug.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    // Rate limiting configuration
+  
     ThrottlerModule.forRoot([{
-      ttl: 60000, // 60 seconds
-      limit: 10, // 10 requests per TTL
+      ttl: 60000,
+      limit: 10,
     }]),
     // Đọc file .env
     ConfigModule.forRoot({
@@ -164,7 +163,6 @@ import { DebugModule } from './modules/debug/debug.module';
     CampaignsModule,
     FlashSaleSchedulesModule,
     RevokedTokensModule,
-    DebugModule
   ],
   providers: [],
 })

@@ -64,6 +64,7 @@ import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
 import AffiliateRulesDebug from './components/debug/AffiliateRulesDebug';
 import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
 import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
+import LoginPerformanceDebug from './components/debug/LoginPerformanceDebug';
 import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
 
 interface CartProps {
@@ -240,6 +241,10 @@ const App: React.FC = () => {
             <Route
               path="/debug/commission-database"
               element={<CommissionDatabaseDebug />}
+            />
+            <Route
+              path="/debug/login-performance"
+              element={<LoginPerformanceDebug />}
             />
           </Routes>
           <CampaignAdPopup />

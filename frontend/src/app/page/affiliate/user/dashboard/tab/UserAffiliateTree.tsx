@@ -4,8 +4,6 @@ import { fetchAffiliateTreeWithCommissions } from '../../../../../../service/afi
 
 const UserAffiliateTree = () => {
 
-
-
   return (
     <>
       <div>hello world</div>
@@ -13,3 +11,4 @@ const UserAffiliateTree = () => {
   );
 };
 export default UserAffiliateTree;
+  

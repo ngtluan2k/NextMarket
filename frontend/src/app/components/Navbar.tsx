@@ -471,25 +471,30 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
         open={openLogin}
         onClose={() => setOpenLogin(false)}
         onLogin={async (data: LoginPayload) => {
+          console.time('🚀 [Frontend] Login Total Time');
           try {
+            console.time('📡 [Frontend] Login API Call');
+            
+            // Chỉ 1 API call duy nhất - backend đã trả về đầy đủ thông tin
             const res = await fetch(`${BE_BASE_URL}/users/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
             });
+            
+            console.timeEnd('📡 [Frontend] Login API Call');
+            
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
+            console.time('💾 [Frontend] Set Auth State');
+            
+            // Login response đã chứa đầy đủ thông tin user
+            // Không cần gọi thêm /users/me
             login(json.data, json.access_token);
-            const profileRes = await fetch(`${BE_BASE_URL}/users/me`, {
-              headers: {
-                Authorization: `Bearer ${json.access_token}`,
-              },
-            });
-            const profileJson = await profileRes.json();
-            if (profileRes.ok) {
-              login(profileJson.data, json.access_token);
-            }
+            
+            console.timeEnd('💾 [Frontend] Set Auth State');
+            console.timeEnd('🚀 [Frontend] Login Total Time');
 
             setOpenLogin(false);
           } catch (err: any) {
