@@ -100,11 +100,29 @@ function authHeaders() {
 }
 
 export async function listRules(): Promise<CommissionRule[]> {
+  console.log('🔍 [listRules] Fetching rules from API...');
   const res = await fetch(`${BE_BASE_URL}/affiliate-rules`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to fetch rules (${res.status})`);
-  return await res.json();
+  
+  const data = await res.json();
+  console.log('📊 [listRules] Raw API response:', data);
+  console.log('📊 [listRules] Number of rules:', data.length);
+  
+  // Log each rule's structure
+  data.forEach((rule: any, index: number) => {
+    console.log(`📋 [Rule ${index}] Structure:`, {
+      id: rule.id,
+      name: rule.name,
+      calculated_rates: rule.calculated_rates,
+      calculated_rates_type: typeof rule.calculated_rates,
+      calculated_rates_isArray: Array.isArray(rule.calculated_rates),
+      calculated_rates_length: rule.calculated_rates?.length
+    });
+  });
+  
+  return data;
 }
 
 export async function createRule(

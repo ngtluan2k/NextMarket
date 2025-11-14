@@ -53,10 +53,27 @@ export class AffiliateRulesService {
     return await this.repo.save(rule);
   }
   async findAll(): Promise<AffiliateCommissionRule[]> {
-    return await this.repo.find({
+    console.log('🔍 [AffiliateRulesService] Finding all active rules...');
+    const rules = await this.repo.find({
       where: { is_active: true },
       order: { created_at: 'DESC' },
     });
+    
+    console.log(`📊 [AffiliateRulesService] Found ${rules.length} active rules`);
+    
+    // Log each rule's structure
+    rules.forEach((rule, index) => {
+      console.log(`📋 [Rule ${index}] Backend structure:`, {
+        id: rule.id,
+        name: rule.name,
+        calculated_rates: rule.calculated_rates,
+        calculated_rates_type: typeof rule.calculated_rates,
+        calculated_rates_isArray: Array.isArray(rule.calculated_rates),
+        calculated_rates_length: rule.calculated_rates?.length
+      });
+    });
+    
+    return rules;
   }
 
   /**
