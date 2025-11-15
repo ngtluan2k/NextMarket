@@ -19,6 +19,7 @@ export interface Store {
   created_at: Date;
   updated_at: Date;
   storeLevels?: StoreLevel[];
+  logo_url?: string;
   // Add other fields as needed
 }
 

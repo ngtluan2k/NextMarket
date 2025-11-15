@@ -33,6 +33,10 @@ export interface User {
   email: string;
   roles: string[];
   permissions: string[];
+  profile:{
+    full_name?: string;
+    avatar_url?: string;
+  }
 }
 
 // Context cho user

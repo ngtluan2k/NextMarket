@@ -119,3 +119,25 @@ export interface Sale {
   group_order?: GroupOrder | null;
   group_order_id?: number | null;
 }
+
+export interface Order {
+  id: number;
+  uuid: string;
+  user_id?: number;
+  store_id?: number;
+  address_id?: number;
+  status?: string;
+  payment_status?: string;
+  shipping_fee?: number;
+  discount_total?: number;
+  total_amount?: number;
+  currency?: string;
+  sub_total?: number;
+  group_order_id?: number;
+  affiliate_user_id?: number;
+  affiliate_code?: string;
+  affiliate_program_id?: number;
+  affiliate_link_id?: number;
+  created_at: string;
+  updated_at: string;
+}

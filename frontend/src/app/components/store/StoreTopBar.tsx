@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { BE_BASE_URL } from '../../api/api';
 import { storeService } from '../../../service/store.service';
 import { StarFilled } from '@ant-design/icons';
+import { useChat } from '../../hooks/useChat';
+import { useNavigate } from 'react-router-dom';
 
 export type StoreInfo = {
   id: string | number;
@@ -83,6 +85,19 @@ export default function StoreTopBar({
       },
     ];
   }, [tabs, computedBase]);
+  const { startConversation } = useChat();
+  const navigate = useNavigate();
+
+  const handleChatClick = async () => {
+    if (!info?.id) return;
+    try {
+      const conv = await startConversation(Number(info.id));
+      // chuyển hướng tới ChatPage với conversation mới
+      navigate(`/chat/${conv.id}`);
+    } catch (err) {
+      console.error('Cannot start chat', err);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -225,18 +240,29 @@ export default function StoreTopBar({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleToggleFollow}
-                className={[
-                  'hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block',
-                  following
-                    ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
-                    : 'bg-blue-600 text-white hover:bg-blue-700',
-                ].join(' ')}
-              >
-                {following ? 'Đang Theo Dõi' : '+ Theo Dõi'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleToggleFollow}
+                  className={[
+                    'hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block',
+                    following
+                      ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
+                      : 'bg-blue-600 text-white hover:bg-blue-700',
+                  ].join(' ')}
+                >
+                  {following ? 'Đang Theo Dõi' : '+ Theo Dõi'}
+                </button>
+
+                {/* Button Chat */}
+                <button
+                  type="button"
+                  onClick={handleChatClick}
+                  className="hidden shrink-0 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 sm:block"
+                >
+                  Chat
+                </button>
+              </div>
 
               {showSearch && (
                 <form

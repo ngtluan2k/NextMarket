@@ -61,6 +61,7 @@ import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
 import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
+import { ChatPage } from './page/ChatPage';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -99,6 +100,10 @@ const App: React.FC = () => {
               path="/campaign/:id"
               element={<PublicCampaignPageWrapper />}
             />
+            <Route path="/chat" element={<ChatPage />}>
+            <Route path=":convId" element={<ChatPage />} />
+            
+            </Route>
 
             <Route
               path="/products/slug/:slug"
@@ -215,9 +220,12 @@ const App: React.FC = () => {
               element={<GroupOrderDetail />}
             />
             <Route path="/group/:uuid" element={<GroupJoin />} />
-            
+
             {/* Debug Routes */}
-            <Route path="/debug/affiliate-variant" element={<AffiliateVariantTest />} />
+            <Route
+              path="/debug/affiliate-variant"
+              element={<AffiliateVariantTest />}
+            />
           </Routes>
           <CampaignAdPopup />
         </CartProvider>

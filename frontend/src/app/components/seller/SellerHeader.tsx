@@ -1,15 +1,20 @@
 'use client';
-import { Layout, Input, Avatar, Badge } from 'antd';
+import { Layout, Input, Avatar, Badge, Modal } from 'antd';
 import {
   SearchOutlined,
   BellOutlined,
   SettingOutlined,
+  WechatWorkOutlined,
 } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 
 const { Header } = Layout;
 
-export default function SellerHeader() {
+interface SellerHeaderProps {
+  onOpenChatModal?: () => void;
+}
+
+export default function SellerHeader({ onOpenChatModal }: SellerHeaderProps) {
   const [full_name, setFullname] = useState<string>('');
   const [avatar, setUseravatar] = useState<string>('');
   useEffect(() => {
@@ -43,6 +48,12 @@ export default function SellerHeader() {
       </div>
       <div className="flex items-center gap-4">
         <Badge dot>
+          <WechatWorkOutlined
+            className="text-xl text-gray-600 cursor-pointer"
+            onClick={onOpenChatModal}
+          />
+        </Badge>
+        <Badge dot>
           <BellOutlined className="text-xl text-gray-600 cursor-pointer" />
         </Badge>
         <div className="flex items-center gap-2">
@@ -50,6 +61,7 @@ export default function SellerHeader() {
           <Avatar src={avatar} size={32} />
         </div>
       </div>
+      
     </Header>
   );
 }
