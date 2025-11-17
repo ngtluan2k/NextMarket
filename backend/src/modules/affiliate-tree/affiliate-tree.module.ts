@@ -7,13 +7,13 @@ import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.enti
 import { AffiliateProgramParticipant } from '../affiliate-program/affiliate-program-participant.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { AffiliateTreeService } from './affiliate-tree.service';
-import { AffiliateTreeController } from './affiliate-tree.controller';
+import { AffiliateTreeController, UserAffiliateTreeController } from './affiliate-tree.controller';
 import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Referral, User, AffiliateCommission, AffiliateCommissionRule, AffiliateProgramParticipant, AffiliateProgram]), UserModule],
   providers: [AffiliateTreeService],
-  controllers: [AffiliateTreeController],
+  controllers: [AffiliateTreeController, UserAffiliateTreeController],
   exports: [AffiliateTreeService, TypeOrmModule],
 })
 export class AffiliateTreeModule {}

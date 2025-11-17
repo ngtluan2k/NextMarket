@@ -1,9 +1,14 @@
-import { Controller, Get, Query, Param, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Query, Param, UseGuards, ParseIntPipe, DefaultValuePipe, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Roles } from '../../common/auth/roles.decorator';
 import { JwtAuthGuard} from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import { AffiliateTreeService } from './affiliate-tree.service';
+import { Request as ExpressRequest } from 'express';
+
+interface AuthRequest extends ExpressRequest {
+  user: { userId: number; roles?: string[] };
+}
 
 @ApiTags('Admin - Affiliate Tree')
 @Controller('admin/affiliate-tree')
@@ -120,6 +125,48 @@ export class AffiliateTreeController {
     return {
       message: 'Lấy commission rules cho users thành công',
       data: rules,
+    };
+  }
+}
+
+/**
+ * USER AFFILIATE TREE CONTROLLER
+ * Privacy-compliant endpoints for affiliate users to view their downline tree
+ */
+@ApiTags('User - Affiliate Tree')
+@Controller('affiliate-tree')
+@UseGuards(JwtAuthGuard)
+export class UserAffiliateTreeController {
+  constructor(private readonly affiliateTreeService: AffiliateTreeService) {}
+
+  @Get('my-downlines')
+  @ApiOperation({ summary: 'Lấy cây downline của user hiện tại (privacy-compliant)' })
+  @ApiQuery({ name: 'maxDepth', required: false, type: Number, description: 'Maximum depth (default: 5)' })
+  @ApiQuery({ name: 'programId', required: false, type: Number, description: 'Filter by program ID' })
+  async getMyDownlines(
+    @Request() req: AuthRequest,
+    @Query('maxDepth', new DefaultValuePipe(5), ParseIntPipe) maxDepth: number,
+    @Query('programId') programIdStr?: string,
+  ) {
+    const userId = req.user.userId;
+    const programId = programIdStr ? parseInt(programIdStr, 10) : undefined;
+    
+    const treeData = await this.affiliateTreeService.getUserDownlineTree(userId, maxDepth, programId);
+    return {
+      message: 'Lấy cây downline thành công',
+      data: treeData,
+    };
+  }
+
+  @Get('my-stats')
+  @ApiOperation({ summary: 'Lấy thống kê affiliate của user hiện tại' })
+  async getMyAffiliateStats(@Request() req: AuthRequest) {
+    const userId = req.user.userId;
+    
+    const stats = await this.affiliateTreeService.getUserAffiliateStats(userId);
+    return {
+      message: 'Lấy thống kê affiliate thành công',
+      data: stats,
     };
   }
 }

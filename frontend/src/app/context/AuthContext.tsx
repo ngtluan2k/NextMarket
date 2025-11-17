@@ -26,17 +26,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Optimized token validation - no additional API calls on startup
-  const validateToken = async (token: string) => {
+  // Optimized token validation - validate JWT structure without API call
+  const validateToken = (token: string) => {
     try {
-      // Chỉ verify token, không fetch user data
-      const res = await fetch(`${BE_BASE_URL}/auth/verify`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Basic JWT structure validation
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT structure');
+      }
       
-      if (!res.ok) throw new Error('Token invalid');
+      // Decode payload to check expiration
+      const payload = JSON.parse(atob(parts[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
       
-      // Token valid, use cached user data
+      // Check if token is expired
+      if (payload.exp && payload.exp < currentTime) {
+        throw new Error('Token expired');
+      }
+      
+      // Token is valid, use cached user data
       const cachedUser = localStorage.getItem('user');
       if (cachedUser) {
         setMe(JSON.parse(cachedUser));
@@ -99,7 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ me, token, login, logout }}>
+    <AuthContext.Provider value={{ me, token, login, logout, loadAddresses: () => loadAddresses(me?.id || 0, token || '') }}>
       {children}
     </AuthContext.Provider>
   );

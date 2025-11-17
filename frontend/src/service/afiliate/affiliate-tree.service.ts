@@ -78,4 +78,29 @@ export async function fetchCommissionRulesForUsers(userIds: number[], programId?
   return await res.json();
 }
 
+/**
+ * USER AFFILIATE TREE SERVICES
+ * Privacy-compliant services for affiliate users
+ */
+
+// Get user's own downline tree with privacy filters
+export async function fetchMyDownlineTree(maxDepth = 5, programId?: number) {
+  const url = new URL(`${BE_BASE_URL}/affiliate-tree/my-downlines`);
+  url.searchParams.set('maxDepth', String(maxDepth));
+  if (programId) {
+    url.searchParams.set('programId', String(programId));
+  }
+  const res = await fetch(url.toString(), { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch my downline tree (${res.status})`);
+  return await res.json();
+}
+
+// Get user's affiliate statistics
+export async function fetchMyAffiliateStats() {
+  const url = new URL(`${BE_BASE_URL}/affiliate-tree/my-stats`);
+  const res = await fetch(url.toString(), { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch my affiliate stats (${res.status})`);
+  return await res.json();
+}
+
 
