@@ -1,4 +1,5 @@
 export enum OrderStatuses {
+  waiting_group = -1,
   pending = 0,
   confirmed = 1,
   processing = 2,

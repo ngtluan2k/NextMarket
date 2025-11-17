@@ -113,7 +113,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
 
   // Load data when modal opens
   useEffect(() => {
-    if (visible && me?.id) {
+    if (visible && me?.user_id) {
       const loadData = async () => {
         setIsDataReady(false);
         await fetchProductCategories();
@@ -162,7 +162,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
         })),
         storeId,
         orderAmount: subtotal,
-        userId: me?.id ?? 0,
+        userId: me?.user_id ?? 0,
       };
 
       try {
@@ -307,7 +307,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
           })),
           storeId,
           orderAmount: subtotal,
-          userId: me?.id ?? 0,
+          userId: me?.user_id ?? 0,
         };
 
         const res = await publicVoucherApi.calculateDiscount(payload);
@@ -600,7 +600,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
         })),
         storeId,
         orderAmount: subtotal,
-        userId: me?.id ?? 0,
+        userId: me?.user_id ?? 0,
       };
 
       const res = await publicVoucherApi.calculateDiscount(payload);

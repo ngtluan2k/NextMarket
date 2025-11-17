@@ -40,6 +40,7 @@ import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 
 
 const orderStatusMap: Record<number, string> = {
+    '-1': 'Chờ Nhóm Hoàn Tất',
     0: 'Đang Chờ Xác Nhận',
     1: 'Đã Xác Nhận',
     2: 'Đang Xử Lý',
@@ -52,6 +53,7 @@ const orderStatusMap: Record<number, string> = {
 
 function getStatusColor(status: string | number): string {
     switch (Number(status)) {
+        case -1: return 'amber';
         case 0: return 'orange';
         case 1: return 'blue';
         case 2: return 'cyan';
@@ -121,6 +123,7 @@ export default function GroupOrderDetailModal({
             const memberData = memberItemsMap.get(memberId);
             memberData.items.push(item);
             memberData.totalAmount += Number(item.price || 0);
+            memberData.totalQuantity += Number(item.quantity || 0);
            
         });
 
@@ -179,7 +182,6 @@ export default function GroupOrderDetailModal({
         0
     );
 
-    // Lấy thông tin group
     const group = groupInfo;
     const host = groupInfo?.user;
 

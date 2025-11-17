@@ -12,10 +12,8 @@ export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event:
         const raw = localStorage.getItem('token');
         const token = raw ?? undefined;
         socketService.connect(token);
-        if (!socketService['joinedOnce']) {
-            socketService.joinGroup(groupId, user.id);
-        }
         
+
 
         // Lắng nghe các sự kiện real-time
         socketService.onGroupState((data) => onRealtimeUpdate?.('group-state', data));
@@ -29,11 +27,18 @@ export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event:
         socketService.onGroupDeleted(() => onRealtimeUpdate?.('group-deleted', {}));
         socketService.onDiscountUpdated((data) => onRealtimeUpdate?.('discount-updated', data));
         socketService.onMemberAddressUpdated((data) => onRealtimeUpdate?.('member-address-updated', data));
+        socketService.onMemberPaid((data) => onRealtimeUpdate?.('member-paid', data));
+        socketService.onPaymentProgress((data) => onRealtimeUpdate?.('payment-progress', data));
+        socketService.onGroupCompleted((data) => onRealtimeUpdate?.('group-completed', data));
+        socketService.onTargetReachedWarning((data) => onRealtimeUpdate?.('target-reached-warning', data));
+        socketService.onGroupAutoLocked((data) => onRealtimeUpdate?.('group-auto-locked', data));
+        socketService.onGroupManualLocked((data) => onRealtimeUpdate?.('group-manual-locked', data));
+        socketService.joinGroup(groupId, user.id);
         socketRef.current = true;
 
         return () => {
             socketService.leaveGroup(groupId, user.id);
-            socketService.removeAllListeners();
+            // socketService.removeAllListeners();
             socketRef.current = false;
         };
     }, [user?.id, groupId]);

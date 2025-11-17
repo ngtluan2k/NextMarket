@@ -392,12 +392,13 @@ export class OrdersService {
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('product.media', 'media')
       .leftJoinAndSelect('orderItem.variant', 'variant')
-      .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule') // <--- sửa ở đây
+      .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule')
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
       .leftJoinAndSelect('product.reviews', 'reviews')
       .leftJoinAndSelect('order.payment', 'payment')
       .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .leftJoinAndSelect('order.group_order', 'groupOrder')
       .where('order.id = :id', { id })
       .getOne();
 
@@ -588,7 +589,9 @@ export class OrdersService {
       .createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'sum')
       .where('order.store_id = :storeId', { storeId })
-      .andWhere('order.status = :status', { status: OrderStatuses.completed })
+      .andWhere('order.status != :waitingGroup', {
+        waitingGroup: OrderStatuses.waiting_group
+      })
       .getRawOne();
 
     return Number(sum ?? 0);
@@ -611,22 +614,26 @@ export class OrdersService {
       .leftJoinAndSelect('order.orderItem', 'orderItem')
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('orderItem.variant', 'variant')
-      // Vouchers
+
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-      // Payment
+
       .leftJoinAndSelect('order.payment', 'payment')
-      // Group Order
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+
       .leftJoinAndSelect('order.group_order', 'group_order')
       .leftJoinAndSelect('group_order.user', 'group_host')
       .leftJoinAndSelect('group_host.profile', 'group_host_profile')
-      // Product Reviews
+
       .leftJoinAndSelect(
         'product.reviews',
         'reviews',
         'reviews.order_id = order.id'
       )
-      .where('order.store_id = :storeId', { storeId });
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status != :waitingGroup', {
+        waitingGroup: OrderStatuses.waiting_group
+      });
 
     // ========== BƯỚC 2: APPLY FILTERS ==========
 
@@ -728,8 +735,7 @@ export class OrdersService {
     });
 
     console.log(
-      ` After grouping: ${groupedOrdersMap.size} items (${
-        groupOrderIds.size
+      ` After grouping: ${groupedOrdersMap.size} items (${groupOrderIds.size
       } groups, ${groupedOrdersMap.size - groupOrderIds.size} singles)`
     );
 
@@ -778,7 +784,10 @@ export class OrdersService {
       .leftJoin('order.user', 'user')
       .leftJoin('order.userAddress', 'userAddress')
       .leftJoin('order.payment', 'payment')
-      .where('order.store_id = :storeId', { storeId });
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status != :waitingGroup', {
+        waitingGroup: OrderStatuses.waiting_group
+      });
 
     // Apply filters
     if (filters.status !== undefined && filters.status !== null) {
@@ -891,6 +900,8 @@ export class OrdersService {
         'voucherUsages',
         'voucherUsages.voucher',
         'group_order',
+        'payment',
+        'payment.paymentMethod',
         'orderItem',
         'orderItem.product',
         'orderItem.product.media',

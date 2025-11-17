@@ -19,6 +19,7 @@ import { getGroupOrderWithOrders } from './../../../service/groupOrderItems.serv
 /* ===== Helpers ===== */
 type OrderTab =
   | 'all'
+  | 'waiting_group'
   | 'pending'
   | 'confirmed'
   | 'processing'
@@ -30,6 +31,8 @@ type OrderTab =
 
 const mapStatus = (status: number): OrderTab => {
   switch (status) {
+    case -1:
+      return 'waiting_group';
     case 0:
       return 'pending';
     case 1:
@@ -125,6 +128,14 @@ const typeLabel = (type?: string) => {
 const StatusPill: React.FC<{ s: OrderTab }> = ({ s }) => {
   const base =
     'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
+
+  if (s === 'waiting_group')
+    return (
+      <span className={`${base} bg-amber-50 text-amber-700`}>
+        <Clock className="h-3 w-3" />
+        Chờ nhóm hoàn tất
+      </span>
+    );
   if (s === 'pending')
     return (
       <span className={`${base} bg-amber-50 text-amber-700`}>
@@ -257,7 +268,7 @@ export default function OrderDetailPage() {
     .filter(Boolean)
     .join(', ');
 
-  const canCancel = ['pending', 'confirmed'].includes(status);
+  const canCancel = ['pending', 'confirmed', 'waiting_group'].includes(status);
   const canReview = ['delivered', 'completed'].includes(status);
 
   if (loading) {
@@ -346,10 +357,20 @@ export default function OrderDetailPage() {
                 </div>
                 <div
                   className={
-                    order?.isPaid ? 'text-emerald-600' : 'text-amber-600'
+                    order?.payment?.[0]?.status === 1
+                      ? 'text-emerald-600'
+                      : order?.payment?.[0]?.status === 2
+                        ? 'text-red-600'
+                        : 'text-amber-600'
                   }
                 >
-                  {order?.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                  {order?.payment?.[0]?.status === 1
+                    ? ' Đã thanh toán'
+                    : order?.payment?.[0]?.status === 2
+                      ? ' Thanh toán thất bại'
+                      : order?.payment?.[0]?.status === 4
+                        ? ' Đang xử lý'
+                        : ' Chưa thanh toán'}
                 </div>
               </div>
               <div>
