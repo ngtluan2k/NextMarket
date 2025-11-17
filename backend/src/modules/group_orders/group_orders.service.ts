@@ -7,13 +7,13 @@ import {
     Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, In } from 'typeorm';
+import { Repository, FindOptionsWhere ,In} from 'typeorm';
 import { GroupOrder } from './group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { Order } from '../orders/order.entity';
 import { CreateGroupOrderDto } from './dto/create-group-order.dto';
 import { ConfigService } from '@nestjs/config';
-import { Cron, CronExpression } from '@nestjs/schedule';
+// import { Cron, CronExpression } from '@nestjs/schedule'; // Commented out since @Cron is disabled
 import { Store } from '../store/store.entity';
 import { GroupOrdersGateway } from './group_orders.gateway';
 import { GroupOrderItemsService } from '../group_orders_items/group_orders_items.service';
@@ -138,7 +138,7 @@ export class GroupOrdersService {
         const hostMember = this.memberRepo.create({
             group_order: { id: saved.id } as any,
             user: { id: dto.hostUserId } as any,
-            is_host: true,
+            is_host: 1 as any, // Temporary fix: use 1 instead of true for integer column
             status: 'joined',
         });
         await this.memberRepo.save(hostMember);
@@ -198,7 +198,7 @@ export class GroupOrdersService {
         const member = this.memberRepo.create({
             group_order: { id: groupId } as any,
             user: { id: userId } as any,
-            is_host: false,
+            is_host: 0 as any, // Temporary fix: use 0 instead of false for integer column
             status: 'joined',
         });
         const savedMember = await this.memberRepo.save(member);

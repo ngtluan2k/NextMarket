@@ -13,7 +13,7 @@ export class WalletTransaction {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', unique: true })
+  @Column({ type: 'varchar', unique: true , nullable:false , default: () => 'gen_random_uuid()'})
   uuid!: string;
 
   @ManyToOne(() => Wallet, (wallet) => wallet.transactions)
@@ -31,6 +31,9 @@ export class WalletTransaction {
 
   @Column({ type: 'varchar', nullable: true })
   reference?: string; // ví dụ: 'review:123'
+
+  @Column({ type: 'varchar', nullable: true })
+  description?: string; // Additional details about the transaction
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;

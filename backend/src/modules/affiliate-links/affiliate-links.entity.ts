@@ -5,10 +5,11 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  Generated,
 } from 'typeorm';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { User } from '../user/user.entity';
-import { AffiliateCommission } from '../affiliate-commissions/affiliate-commission.entity';
+import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
 
 @Entity('affiliate_links')
 export class AffiliateLink {
@@ -16,6 +17,7 @@ export class AffiliateLink {
   id?: number;
 
   @Column({ type: 'char', unique: true })
+  @Generated('uuid')
   uuid?: string;
 
   @ManyToOne(() => AffiliateProgram, (program) => program.links)
@@ -33,5 +35,5 @@ export class AffiliateLink {
   created_at?: Date;
 
   @OneToMany(() => AffiliateCommission, (commission) => commission.link_id)
-  commissions?: AffiliateCommission[];
+  commissions?: AffiliateCommission[];  
 }

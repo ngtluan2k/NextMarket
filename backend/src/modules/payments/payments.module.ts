@@ -18,6 +18,7 @@ import { OrderStatusHistory } from '../order-status-history/order-status-history
 import { EveryCoinStrategy } from './strategies/everycoin.strategy';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { GroupOrdersModule } from '../group_orders/group_orders.module';
+import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -33,6 +34,7 @@ import { GroupOrdersModule } from '../group_orders/group_orders.module';
       GroupOrderMember, 
     ]),
      forwardRef(() => GroupOrdersModule),
+    AffiliateCommissionsModule,
   ],
   providers: [
     PaymentsService,

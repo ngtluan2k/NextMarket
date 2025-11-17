@@ -44,8 +44,6 @@ const CheckoutPayment: React.FC = () => {
       ? Number(state.subtotal)
       : state.subtotal ?? 0;
 
-      
-  
   const checkoutItems: CheckoutItem[] = useMemo(() => {
     return items.map((i) => {
       const primaryImage =
@@ -63,8 +61,10 @@ const CheckoutPayment: React.FC = () => {
           : undefined;
 
       // Chỉ lấy id nếu selectedPricingRule tồn tại, không dùng null
-         const pricingRuleId = i.pricingRuleId ?? undefined;
-
+     const pricing_rule =
+      i.pricing_rule?.id !== undefined
+        ? { id: Number(i.pricing_rule.id) }
+        : undefined;
 
       return {
         id: i.id,
@@ -75,13 +75,11 @@ const CheckoutPayment: React.FC = () => {
         type: i.type,
         product: i.product,
         variant,
-        pricingRuleId, // sẽ là undefined nếu chưa chọn rule
+        pricing_rule,
       };
     });
-    
   }, [items]);
   console.log('Checkout items built:', checkoutItems);
-
 
   // Kiểm tra có subscription hay không
   const isSubscription = useMemo(
@@ -306,7 +304,7 @@ const CheckoutPayment: React.FC = () => {
           message.warning(
             'Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ.'
           );
-          navigate('/user/address');
+          navigate('/account/addresses');
         }
       } catch (error) {
         console.error(' Lỗi tải địa chỉ:', error);

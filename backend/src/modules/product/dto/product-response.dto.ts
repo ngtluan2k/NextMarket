@@ -17,6 +17,12 @@ export class VariantDto {
 
   @ApiProperty({ description: 'Stock quantity' })
   stock?: number;
+
+  @ApiProperty({ 
+    type: [MediaDto], 
+    description: 'Media associated with this variant (currently shows all product media)' 
+  })
+  media?: MediaDto[];
 }
 
 export class InventoryDto {

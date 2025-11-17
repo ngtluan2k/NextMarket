@@ -1,6 +1,6 @@
-// frontend/src/app/page/AffiliateLinkResolver.tsx
 import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { storeAffiliateData, AffiliateTrackingData } from '../../utils/affiliate-tracking';
 
 export default function AffiliateLinkResolver() {
   const { id } = useParams();
@@ -12,12 +12,22 @@ export default function AffiliateLinkResolver() {
     const run = async () => {
       const aff = searchParams.get('aff') || '';
       const variant = searchParams.get('variant') || '';
+      const program = searchParams.get('program') || '';
 
       if (aff) {
         try {
-          localStorage.setItem('affiliate_code', aff);
+          // Use the proper affiliate tracking system
+          const trackingData: AffiliateTrackingData = {
+            affiliateCode: aff,
+            productId: id ? parseInt(id, 10) : undefined,
+            variantId: variant ? parseInt(variant, 10) : undefined,
+            programId: program ? parseInt(program, 10) : undefined,
+            timestamp: Date.now(),
+          };
+          storeAffiliateData(trackingData);
+          console.log('🔗 Affiliate data stored from resolver:', trackingData);
         } catch (error) {
-          throw new Error(`error ` + error);
+          console.error('Error storing affiliate data:', error);
         }
       }
       if (!id) {
@@ -41,6 +51,7 @@ export default function AffiliateLinkResolver() {
       const qs = new URLSearchParams();
       if (variant) qs.set('variant', variant);
       if (aff) qs.set('aff', aff);
+      if (program) qs.set('program', program);
 
       navigate(
         `/products/slug/${slug}${qs.toString() ? `?${qs.toString()}` : ''}`,

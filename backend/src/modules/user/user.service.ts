@@ -10,7 +10,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, UpdateResult } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 
-import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
 import { User } from './user.entity';
@@ -26,10 +25,12 @@ import { MailService } from '../../common/mail/mail.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { OtpService } from '../../common/otp/otp.service';
+import { BcryptPerformanceService } from './bcrypt-performance.service';
 import {
   RequestPasswordResetDto,
   ResetPasswordByOtpDto,
 } from './dto/password-reset.dto';
+import { Wallet } from '../wallet/wallet.entity';
 
 @Injectable()
 export class UserService {
@@ -40,11 +41,14 @@ export class UserService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Wallet)
+    private readonly walletRepository: Repository<Wallet>,
     @InjectRepository(UserProfile)
     private readonly userProfileRepository: Repository<UserProfile>,
     private readonly jwtService: JwtService,
     private readonly otpService: OtpService,
-    private readonly mailService: MailService
+    private readonly mailService: MailService,
+    private readonly bcryptPerformanceService: BcryptPerformanceService
   ) {}
 
   // In-memory OTP store
@@ -59,6 +63,21 @@ export class UserService {
     return this.userRepository.find();
   }
 
+  async findByEmail(email: string) {
+    console.log(`🔍 UserService: Searching for user with email: ${email}`);
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user) {
+      console.log(`✅ UserService: Found user:`, {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      });
+    } else {
+      console.log(`❌ UserService: User not found with email: ${email}`);
+    }
+    return user;
+  }
+
   async register(dto: CreateUserDto) {
     // Kiểm tra email và username đã tồn tại
     const exist = await this.userRepository.findOne({
@@ -71,7 +90,7 @@ export class UserService {
         throw new BadRequestException('Tên đăng nhập đã tồn tại');
     }
 
-    const hashed = await bcrypt.hash(dto.password, 16);
+    const hashed = await this.bcryptPerformanceService.hashPassword(dto.password, 10);
 
     const user = this.userRepository.create({
       uuid: uuidv4(),
@@ -115,45 +134,89 @@ export class UserService {
     });
     await this.userRoleRepository.save(userRole);
 
+    // Tạo ví mặc định cho user mới
+    const wallet = this.walletRepository.create({
+      uuid: uuidv4(),
+      user_id: savedUser.id,
+      balance: 0,
+      currency: 'VND',
+      updated_at: new Date(),
+    });
+    await this.walletRepository.save(wallet);
+
     return savedUser;
   }
 
   async login(dto: LoginDto) {
-    const user = await this.userRepository.findOne({
-      where: { email: dto.email },
-      relations: [
-        'roles',
-        'roles.role',
-        'roles.role.rolePermissions',
-        'roles.role.rolePermissions.permission',
-      ],
-    });
+    // console.time(' [Login] Total Time');
+    
+  
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'userRole')
+      .leftJoinAndSelect('userRole.role', 'role')
+      .leftJoinAndSelect('role.rolePermissions', 'rolePermission')
+      .leftJoinAndSelect('rolePermission.permission', 'permission')
+      .select([
+        'user.id',
+        'user.email', 
+        'user.username',
+        'user.password',
+        'user.is_affiliate',
+        'userRole.id',
+        'role.id',
+        'role.name',
+        'rolePermission.id', 
+        'permission.id',
+        'permission.code'
+      ])
+      .where('user.email = :email', { email: dto.email })
+      .getOne();
+
     if (!user) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
-    const isMatch = await bcrypt.compare(dto.password, user.password);
+
+    const isMatch = await this.bcryptPerformanceService.comparePassword(dto.password, user.password);
+
     if (!isMatch) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
-    const roles = user.roles.map((ur) => ur.role.name);
-    const permissions = user.roles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.code)
-    );
+    const saltInfo = this.bcryptPerformanceService.detectHighSaltRounds(user.password);
+    if (saltInfo.isHighSalt) {
+      console.log(` Rehashing legacy password for user ${user.id} (current salt: ${saltInfo.estimatedRounds})`);
+      const newHash = await this.bcryptPerformanceService.hashPassword(dto.password, 10);
+      await this.userRepository.update(user.id, { 
+        password: newHash,
+        updated_at: new Date()
+      });
+      console.log(` Password rehashed successfully for user ${user.id}`);
+    }
+
+
+    const roles = user.roles?.map(ur => ur.role.name) || ['User'];
+    const permissions = user.roles?.flatMap(ur => 
+      ur.role.rolePermissions?.map(rp => rp.permission.code) || []
+    ) || [];
 
     const payload = {
       sub: user.id,
       email: user.email,
+      username: user.username,
       roles,
       permissions,
+      is_affiliate: user.is_affiliate,
     };
-
     const token = await this.jwtService.signAsync(payload);
+
+    console.timeEnd('[Login] Total Time');
 
     return {
       id: user.id,
       username: user.username,
       email: user.email,
+      is_affiliate: user.is_affiliate,
       roles,
       permissions,
-      access_token: token, // đồng nhất FE
+      access_token: token,
     };
   }
 
@@ -218,7 +281,7 @@ export class UserService {
       expiresAt: Date.now() + this.otpTtlMs,
       attempts: 0,
     });
-
+    console.log('################## otp code : ' + code);
     await this.mailService.send(
       email,
       'Mã xác thực đăng ký EveryMart',
@@ -439,7 +502,7 @@ export class UserService {
       throw new BadRequestException('Không tìm thấy người dùng tương ứng.');
     }
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await this.bcryptPerformanceService.hashPassword(newPassword, 10);
     user.password = hashed;
     user.updated_at = new Date();
     await this.userRepository.save(user);

@@ -116,7 +116,6 @@ export default function GroupOrderDetailModal({
                     user: item.member?.user,
                     items: [],
                     totalAmount: 0,
-                    totalQuantity: 0,
                 });
             }
 

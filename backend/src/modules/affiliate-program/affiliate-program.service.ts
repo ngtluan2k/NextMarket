@@ -5,12 +5,17 @@ import { AffiliateProgram } from './affiliate-program.entity';
 import { UpdateAffiliateProgramDto } from './dto/update-affiliate-program.dto';
 import { CreateAffiliateProgramDto } from './dto/create-affiliate-program.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { AffiliateRulesService } from '../affiliate-rules/affiliate-rules.service';
+import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 
 @Injectable()
 export class AffiliateProgramsService {
   constructor(
     @InjectRepository(AffiliateProgram)
-    private repository: Repository<AffiliateProgram>
+    private repository: Repository<AffiliateProgram>,
+    @InjectRepository(AffiliateLink)
+    private linkRepository: Repository<AffiliateLink>,
+    private readonly rulesService: AffiliateRulesService,
   ) {}
 
   async create(
@@ -21,7 +26,21 @@ export class AffiliateProgramsService {
       uuid: uuidv4(),
       created_at: new Date(),
     });
-    return this.repository.save(entity);
+    
+    const savedProgram = await this.repository.save(entity);
+    
+    // Tự động tạo các rule mặc định cho program mới
+    try {
+      console.log(`Creating default commission rules for new program: ${savedProgram.name} (ID: ${savedProgram.id})`);
+      // await this.rulesService.createDefaultRules(savedProgram.id);
+      console.log(`Successfully created default rules for program ${savedProgram.id}`);
+    } catch (error) {
+      console.error(`Failed to create default rules for program ${savedProgram.id}:`, error);
+      // Không throw error để không làm fail việc tạo program
+      // Admin có thể tạo rules thủ công sau này
+    }
+    
+    return savedProgram;
   }
 
   async findAllActive(): Promise<AffiliateProgram[]> {
@@ -30,6 +49,77 @@ export class AffiliateProgramsService {
 
   async findAll(): Promise<AffiliateProgram[]> {
     return this.repository.find();
+  }
+
+  async findAllWithUserCounts(): Promise<(AffiliateProgram & { user_enrolled: number; avg_revenue: number; avg_commission: number })[]> {
+    const programs = await this.repository.find();
+    
+    // Get user counts for each program
+    const programsWithCounts = await Promise.all(
+      programs.map(async (program) => {
+        const userCount = await this.linkRepository
+          .createQueryBuilder('link')
+          .select('COUNT(DISTINCT link.user_id)', 'count')
+          .where('link.program_id = :programId', { programId: program.id })
+          .getRawOne();
+        
+        // Calculate avg_revenue from total_budget_amount
+        // Calculate avg_commission from commission_value
+        const avg_revenue = parseFloat(program.total_budget_amount?.toString() || '0');
+        
+        let avg_commission = 0;
+        if (program.commission_type === 'percentage') {
+          // For percentage type, use the commission_value as is
+          avg_commission = parseFloat(program.commission_value?.toString() || '0');
+        } else if (program.commission_type === 'fixed') {
+          // For fixed type, use the commission_value directly
+          avg_commission = parseFloat(program.commission_value?.toString() || '0');
+        }
+        
+        return {
+          ...program,
+          user_enrolled: parseInt(userCount?.count || '0', 10),
+          avg_revenue,
+          avg_commission,
+        };
+      })
+    );
+    
+    return programsWithCounts;
+  }
+
+  async findAllActiveWithUserCounts(): Promise<(AffiliateProgram & { user_enrolled: number })[]> {
+    const programs = await this.repository.find({ where: { status: 'active' } });
+    
+    // Get user counts for each program
+    const programsWithCounts = await Promise.all(
+      programs.map(async (program) => {
+        const userCount = await this.linkRepository
+          .createQueryBuilder('link')
+          .select('COUNT(DISTINCT link.user_id)', 'count')
+          .where('link.program_id = :programId', { programId: program.id })
+          .getRawOne();
+        
+        return {
+          ...program,
+          user_enrolled: parseInt(userCount?.count || '0', 10),
+        };
+      })
+    );
+    
+    return programsWithCounts;
+  }
+
+  async findAllActiveWithRules(): Promise<AffiliateProgram[]> {
+    // Get all active programs that have at least one commission rule
+    const programsWithRules = await this.repository
+      .createQueryBuilder('program')
+      .innerJoin('affiliate_rules', 'rule', 'rule.program_id = CAST(program.id AS VARCHAR)')
+      .where('program.status = :status', { status: 'active' })
+      .groupBy('program.id')
+      .getMany();
+    
+    return programsWithRules;
   }
 
   async findOne(id: number): Promise<AffiliateProgram> {
@@ -58,8 +148,12 @@ export class AffiliateProgramsService {
     if (action === 'delete') {
       program.status = 'inactive';
       await this.repository.save(program);
+      
+      // Soft delete all commission rules for this program
+      // await this.rulesService.softDeleteRulesByProgram(program.id);
+      
       return {
-        message: `Affiliate program "${program.name}" has been deleted successfully.`,
+        message: `Affiliate program "${program.name}" has been deleted successfully. All associated commission rules have been deactivated.`,
       };
     }
 

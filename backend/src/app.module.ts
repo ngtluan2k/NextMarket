@@ -56,13 +56,24 @@ import { InventoryTransactionModule } from './modules/inventory-transactions/inv
 import { ScheduleModule } from '@nestjs/schedule';
 import { GroupOrdersModule } from './modules/group_orders/group_orders.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AffiliateRulesModule } from './modules/affiliate-rules/affiliate-rules.module';
+import { AffiliateTreeModule } from './modules/affiliate-tree/affiliate-tree.module';
+import { AffiliateFraudModule } from './modules/affiliate-fraud/affiliate-fraud.module';
+
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_sale_schedules.module';
+import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+  
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -82,22 +93,19 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',
+        type: 'mysql',//chạy sql trên web thì sửa lại thành postgres và bỏ commemnt dòng ssl
         host: config.get('DB_HOST'),
         port: config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
-
         autoLoadEntities: true,
         synchronize: false,
         logging: true,
-        // ssl: {
-        //   rejectUnauthorized: false, // cho phép kết nối SSL không cần CA
-        // },
+        // ssl: true,
       }),
     }),
-
+    
     ProductModule,
     UserModule,
     CategoryModule,
@@ -145,12 +153,16 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
     AffiliateRegistrationModule,
     AffiliatePlatformModule,
     AffiliateRegistrationPlatformModule,
+    CalculationMethodModule,
     InventoryTransactionModule,
     GroupOrdersModule,
     AdminModule,
+    AffiliateRulesModule,
+    AffiliateTreeModule,
+    AffiliateFraudModule,
     CampaignsModule,
     FlashSaleSchedulesModule,
-    RevokedTokensModule
+    RevokedTokensModule,
   ],
   providers: [],
 })

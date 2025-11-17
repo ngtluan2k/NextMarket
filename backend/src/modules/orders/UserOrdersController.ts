@@ -79,22 +79,33 @@ export class UserOrdersController {
     @Body() createOrderDto: CreateOrderDto,
     @Req() req: any
   ): Promise<Order> {
-    if (req.user.sub !== userId) {
-      throw new ForbiddenException(
-        'Bạn không thể tạo đơn hàng thay người khác'
-      );
+    try {
+      console.log('🚀 UserOrdersController - Starting order creation');
+      console.log('📝 User ID from params:', userId);
+      console.log('👤 User from JWT:', req.user);
+      
+      if (req.user.sub !== userId) {
+        throw new ForbiddenException(
+          'Bạn không thể tạo đơn hàng thay người khác'
+        );
+      }
+
+      // Giống OrdersController: log để debug nếu cần
+      console.log('📦 Order payload (UserOrdersController):', JSON.stringify(createOrderDto, null, 2));
+
+      // Gắn userId vào DTO (đảm bảo đơn hàng thuộc user này)
+      const orderData = { ...createOrderDto, userId };
+
+      console.log('📋 Final order data:', JSON.stringify(orderData, null, 2));
+
+      const result = await this.ordersService.create(orderData);
+      console.log('✅ Order created successfully:', result.id);
+      return result;
+    } catch (error) {
+      console.error('❌ Error in UserOrdersController.create:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      throw error;
     }
-
-    // Giống OrdersController: log để debug nếu cần
-    console.log(
-      'at server (user create order):',
-      JSON.stringify(createOrderDto)
-    );
-
-    // Gắn userId vào DTO (đảm bảo đơn hàng thuộc user này)
-    const orderData = { ...createOrderDto, userId };
-
-    return this.ordersService.create(orderData);
   }
 
   // PATCH /users/:userId/orders/:id/status/:status

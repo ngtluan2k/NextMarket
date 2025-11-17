@@ -9,55 +9,70 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
-  // Hàm lấy thông tin người dùng và địa chỉ
-  const fetchUserData = async (token: string) => {
+  // Lazy load addresses only when needed
+  const loadAddresses = async (userId: number, token: string) => {
     try {
-      // Lấy thông tin người dùng từ /users/me
-      const userRes = await fetch(`${BE_BASE_URL}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      console.time('📍 [Auth] Load Addresses');
+      const addressRes = await fetch(`${BE_BASE_URL}/users/${userId}/addresses`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!userRes.ok) throw new Error('Token expired');
-      const userJson = await userRes.json();
-      const user = userJson.data;
-
-      // Lấy danh sách địa chỉ từ /users/:id/addresses
-      const addressRes = await fetch(
-        `${BE_BASE_URL}/users/${user.id}/addresses`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
       const addresses = (await addressRes.json()) || [];
-
-      // Cập nhật me với thông tin người dùng và địa chỉ
-      setMe({ ...user, addresses });
-      setToken(token);
-      localStorage.setItem('user', JSON.stringify({ ...user, addresses }));
+      console.timeEnd('📍 [Auth] Load Addresses');
+      
+      setMe(prev => prev ? { ...prev, addresses } : null);
+      localStorage.setItem('user', JSON.stringify({ ...me, addresses }));
     } catch (err) {
-      console.warn('fetchUserData error', err);
-      logout(); // Xóa nếu token hết hạn hoặc lỗi
+      console.warn('Load addresses error:', err);
+    }
+  };
+
+  // Optimized token validation - no additional API calls on startup
+  const validateToken = async (token: string) => {
+    try {
+      // Chỉ verify token, không fetch user data
+      const res = await fetch(`${BE_BASE_URL}/auth/verify`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (!res.ok) throw new Error('Token invalid');
+      
+      // Token valid, use cached user data
+      const cachedUser = localStorage.getItem('user');
+      if (cachedUser) {
+        setMe(JSON.parse(cachedUser));
+        setToken(token);
+      }
+    } catch (err) {
+      console.warn('Token validation failed:', err);
+      logout();
     }
   };
 
   // Kiểm tra token khi app khởi động
   useEffect(() => {
     const tokenStr = localStorage.getItem('token');
-    if (tokenStr) {
-      fetchUserData(tokenStr);
+    const cachedUser = localStorage.getItem('user');
+    
+    if (tokenStr && cachedUser) {
+      // Use cached data immediately, validate token in background
+      setMe(JSON.parse(cachedUser));
+      setToken(tokenStr);
+      validateToken(tokenStr); // Background validation
     }
   }, []);
 
   const login = (user: Me, token: string) => {
+    console.time('💾 [Auth] Login State Update');
+    
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('token', token);
     setMe(user);
     setToken(token);
-    // Gọi fetchUserData để đảm bảo thông tin đầy đủ (bao gồm địa chỉ)
-    fetchUserData(token);
+    
+    console.timeEnd('💾 [Auth] Login State Update');
+    
+    // Don't fetch additional data immediately
+    // Let components request addresses when needed
   };
 
   const logout = async () => {

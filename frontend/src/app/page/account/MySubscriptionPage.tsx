@@ -144,8 +144,9 @@ export function MySubscriptionsPage() {
 
             {/* Nội dung text */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Tên sản phẩm / variant */}
               <Text strong style={{ fontSize: 16 }}>
-                {sub.name}
+                Tên gói: {sub.name}
               </Text>
               <p
                 onClick={() =>
@@ -157,11 +158,24 @@ export function MySubscriptionsPage() {
                   color: sub.product?.slug ? '#1677ff' : 'inherit',
                 }}
               >
-                {sub.product?.name || '—'} ({sub.variant?.variant_name || '—'})
+                Sản phẩm: {sub.product?.name || '—'} ({sub.variant?.variant_name || '—'})
               </p>
 
+              {/* Store */}
               {sub.product?.store && (
-                <Text type="secondary">
+                <Text
+                  type="secondary"
+                  style={{
+                    cursor: sub.product.store.slug ? 'pointer' : 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                  onClick={() =>
+                    sub.product.store.slug &&
+                    navigate(`/stores/slug/${sub.product.store.slug}`)
+                  }
+                >
                   {sub.product.store.logo_url && (
                     <img
                       src={getImageUrl(sub.product.store.logo_url)}
@@ -170,13 +184,13 @@ export function MySubscriptionsPage() {
                         width: 50,
                         height: 50,
                         borderRadius: '50%',
-                        marginRight: 4,
                       }}
                     />
                   )}
                   {sub.product.store.name}
                 </Text>
               )}
+
               <p>
                 Thời hạn:{' '}
                 <Text>
@@ -189,7 +203,9 @@ export function MySubscriptionsPage() {
                     : '—'}
                 </Text>
               </p>
+
               <Divider />
+
               <p>
                 <Text>Số lượng: </Text>
                 <Tag color={sub.remainingQuantity > 0 ? 'green' : 'red'}>

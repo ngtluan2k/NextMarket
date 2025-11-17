@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
@@ -40,6 +41,25 @@ export class UserController {
     return this.userService.findAllUsers();
   }
 
+  @Get('search')
+  @ApiOperation({ summary: 'Search user by email' })
+  @UseGuards(AuthGuard('jwt'))
+  async searchUserByEmail(@Query('email') email: string) {
+    console.log(`🔍 Searching user by email: ${email}`);
+    if (!email || !email.trim()) {
+      throw new Error('Email parameter is required');
+    }
+    
+    const user = await this.userService.findByEmail(email.trim());
+    if (!user) {
+      console.log(`❌ User not found with email: ${email}`);
+      throw new Error('User not found');
+    }
+    
+    console.log(`✅ Found user:`, { id: user.id, email: user.email, username: user.username });
+    return user;
+  }
+
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({ type: CreateUserDto })
@@ -55,23 +75,21 @@ export class UserController {
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: LoginDto })
   async login(@Body() dto: LoginDto) {
+    
     const userData = await this.userService.login(dto);
-
-    // Tạo JWT
-    const payload = {
-      sub: userData.id,
-      username: userData.username,
-      email: userData.email,
-      roles: userData.roles,
-      permissions: userData.permissions,
-    };
-    const token = await this.jwtService.signAsync(payload);
-
+  
     return {
       status: 200,
       message: 'Login successful',
-      data: payload,
-      access_token: token,
+      data: {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        is_affiliate: userData.is_affiliate,
+        roles: userData.roles,
+        permissions: userData.permissions,
+      },
+      access_token: userData.access_token,
     };
   }
 

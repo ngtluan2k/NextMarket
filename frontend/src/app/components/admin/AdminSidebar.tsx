@@ -11,7 +11,6 @@ import {
   DollarOutlined,
   GiftOutlined,
   BarChartOutlined,
-  DeploymentUnitOutlined,
   SignatureOutlined,
 } from '@ant-design/icons';
 
@@ -131,6 +130,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           label: 'Danh sách đơn đăng ký Affiliate',
         },
         { key: '11-2', icon: dotIcon, label: 'Chương trình tiếp thị liên kết' },
+        { key: '11-3', icon: dotIcon, label: 'Quy tắc hoa hồng (Rules)' },
       ],
     },
   ];
