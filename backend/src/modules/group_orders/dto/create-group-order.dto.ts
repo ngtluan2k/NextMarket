@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, IsNumber,Min } from 'class-validator';
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, IsNumber, Min } from 'class-validator';
 
 export class CreateGroupOrderDto {
   @ApiProperty({ description: 'tên nhóm' })
@@ -39,4 +39,16 @@ export class CreateGroupOrderDto {
   @ApiPropertyOptional({ description: 'Link mời tham gia (nếu có)' })
   @IsOptional()
   inviteLink?: string;
+
+  @ApiPropertyOptional({
+    description: 'Số lượng thành viên mục tiêu để tự động khóa nhóm',
+    default: 2,
+    minimum: 2,
+    maximum: 100,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(100)
+  targetMemberCount?: number;
 }

@@ -93,14 +93,14 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'postgres',
+        type: 'postgres',//chạy sql trên web thì sửa lại thành postgres và bỏ commemnt dòng ssl
         host: config.get('DB_HOST'),
         port: config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: false,
+        synchronize: true,
         logging: true,
         ssl: true,
       }),

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { BE_BASE_URL } from '../../api/api';
 import { storeService } from '../../../service/store.service';
 import { StarFilled } from '@ant-design/icons';
@@ -59,8 +59,11 @@ export default function StoreTopBar({
   const formRef = useRef<HTMLFormElement>(null);
   const [following, setFollowing] = useState<boolean>(false);
   const [followers, setFollowers] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const groupId = searchParams.get('groupId');
   const computedBase = basePath ?? `/stores/slug/${storeSlug}`;
   const computedTabs = useMemo(() => {
+    const queryString = groupId ? `?groupId=${groupId}` : '';
     if (tabs?.length) {
       return tabs.map((t) => ({
         ...t,
@@ -68,21 +71,21 @@ export default function StoreTopBar({
       }));
     }
     return [
-      { key: 'home', label: 'Cửa Hàng', href: `${computedBase}` },
-      { key: 'all', label: 'Tất Cả Sản Phẩm', href: `${computedBase}/all` },
+      { key: 'home', label: 'Cửa Hàng', href: `${computedBase}${queryString}` },
+      { key: 'all', label: 'Tất Cả Sản Phẩm', href: `${computedBase}/all${queryString}` },
       {
         key: 'collections',
         label: 'Bộ Sưu Tập',
-        href: `${computedBase}/collections`,
+        href: `${computedBase}/collections${queryString}`,
       },
-      { key: 'deals', label: 'Giá Sốc Hôm Nay', href: `${computedBase}/deals` },
+      { key: 'deals', label: 'Giá Sốc Hôm Nay', href: `${computedBase}/deals${queryString}` },
       {
         key: 'profile',
         label: 'Hồ Sơ Cửa Hàng',
-        href: `${computedBase}/profile`,
+        href: `${computedBase}/profile${queryString}`,
       },
     ];
-  }, [tabs, computedBase]);
+  }, [tabs, computedBase, groupId]);
 
   useEffect(() => {
     let alive = true;
@@ -182,9 +185,8 @@ export default function StoreTopBar({
                     />
                   ) : (
                     <div
-                      className={`h-full w-full ${
-                        loading ? 'animate-pulse bg-slate-100' : ''
-                      }`}
+                      className={`h-full w-full ${loading ? 'animate-pulse bg-slate-100' : ''
+                        }`}
                     />
                   )}
                 </div>

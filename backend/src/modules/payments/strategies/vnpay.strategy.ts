@@ -1,3 +1,4 @@
+import { Order } from './../../orders/order.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -32,7 +33,8 @@ export class VnpayStrategy implements PaymentStrategy {
 
     const redirectUrl = await this.buildVnPayUrl(
       savedPayment,
-      paymentMethod.config || {}
+      paymentMethod.config || {},
+      order.id
     );
 
     return {
@@ -202,7 +204,7 @@ export class VnpayStrategy implements PaymentStrategy {
   }
   
 
-  private async buildVnPayUrl(payment: Payment, config: any): Promise<string> {
+  private async buildVnPayUrl(payment: Payment, config: any, orderId:number): Promise<string> {
     const vnp_TmnCode =
       config.terminalId || process.env.VNPAY_TERMINAL_ID || 'FXUT2OHD';
     const vnp_HashSecret =
@@ -235,7 +237,7 @@ export class VnpayStrategy implements PaymentStrategy {
       vnp_CurrCode: 'VND',
       vnp_IpAddr: config.ipAddr || '127.0.0.1',
       vnp_Locale: config.locale || 'vn',
-      vnp_OrderInfo: `Thanh toan don hang ${payment.order.id}`,
+      vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
       vnp_OrderType: 'other',
       vnp_ReturnUrl,
       vnp_TxnRef,

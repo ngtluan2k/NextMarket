@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import AddressModal from './../../../page/AddressModal';
 import { message } from 'antd';
+import { GroupPaymentBox } from './GroupPaymentBox';
 
 export default function GroupOrderDetail() {
     const { id } = useParams();
@@ -33,6 +34,7 @@ export default function GroupOrderDetail() {
     const [showCheckout, setShowCheckout] = React.useState(false);
     const [showMemberAddressModal, setShowMemberAddressModal] =
         React.useState(false);
+    const [showMemberCheckout, setShowMemberCheckout] = React.useState(false);
 
     const { socketService } = useGroupOrderSocket(Number(id), (event, data) => {
         switch (event) {
@@ -108,6 +110,57 @@ export default function GroupOrderDetail() {
                         `User #${data.userId}`;
                     message.info(` ${memberName} đã cập nhật địa chỉ giao hàng`);
                 }
+                break;
+
+            case 'target-reached-warning':
+                message.warning(data?.message || 'Đã đủ số lượng thành viên!', 5);
+                refresh();
+                break;
+
+            case 'group-auto-locked':
+                message.success(
+                    data?.message || '🔒 Nhóm đã tự động khóa!',
+                    5
+                );
+                refresh();
+                break;
+
+            case 'group-manual-locked':
+                message.success(
+                    data?.message || '🔒 Host đã khóa nhóm!',
+                    5
+                );
+                refresh();
+                break;
+
+            case 'member-paid':
+                if (data?.userId && data.userId !== user?.user_id) {
+                    message.info(`💳 ${data?.memberName} đã thanh toán!`);
+                }
+                refresh();
+                break;
+
+            case 'payment-progress':
+                
+                if (data?.paidMembers && data?.totalMembers) {
+                    message.info(
+                        `💳 Tiến độ thanh toán: ${data.paidMembers}/${data.totalMembers} (${data.progress}%)`,
+                        3
+                    );
+                }
+                refresh();
+                break;
+
+            case 'group-completed':
+                message.success(
+                    data?.message || '🎉 Tất cả đã thanh toán! Đơn hoàn thành.',
+                    5
+                );
+                refresh();
+                break;
+            case 'group-unlocked':
+                message.info(data?.message || '🔓 Nhóm đã được mở khóa');
+                refresh();
                 break;
         }
     });
@@ -190,6 +243,33 @@ export default function GroupOrderDetail() {
         message.success('Đã cập nhật thời hạn!');
     };
 
+    const onEditTargetCount = async () => {
+        if (!group) return;
+
+        const currentTarget = group.target_member_count || 2;
+        const input = prompt(
+            `Nhập số lượng thành viên mục tiêu (2-20):\n\nHiện tại: ${currentTarget} người`,
+            currentTarget.toString()
+        );
+
+        if (!input) return;
+
+        const newTarget = parseInt(input);
+        if (isNaN(newTarget) || newTarget < 2 || newTarget > 20) {
+            message.error('Số lượng phải từ 2 đến 20 người');
+            return;
+        }
+
+        try {
+            await groupOrdersApi.update(groupId, { targetMemberCount: newTarget });
+            await refresh();
+            message.success(`Đã cập nhật mục tiêu: ${newTarget} người`);
+        } catch (error: any) {
+            const errorMsg = error?.response?.data?.message || 'Không thể cập nhật';
+            message.error(errorMsg);
+        }
+    };
+
     const onAddMember = async () => {
         const userId = Number(prompt('Nhập userId muốn thêm vào nhóm:'));
         if (!userId) return;
@@ -223,6 +303,48 @@ export default function GroupOrderDetail() {
             }
         } catch (error: any) {
             const errorMsg = error?.response?.data?.message || 'Không thể thay đổi';
+            message.error(errorMsg);
+        }
+    };
+
+    const onManualLockGroup = async () => {
+        const currentMembers = members.length;
+        const target = group?.target_member_count || 0;
+
+        let confirmMsg = '🔒 Khóa nhóm thủ công?\n\n';
+
+        if (target && currentMembers < target) {
+            confirmMsg += `⚠️ Nhóm hiện có ${currentMembers}/${target} người.\n`;
+            confirmMsg += 'Bạn có muốn khóa sớm không?\n\n';
+        } else {
+            confirmMsg += `Nhóm có ${currentMembers} thành viên.\n\n`;
+        }
+
+        confirmMsg += 'Sau khi khóa, mỗi người sẽ thanh toán riêng phần của mình.';
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            await groupOrdersApi.lockGroup(groupId);
+            message.success('Đã khóa nhóm! Các thành viên có thể thanh toán.');
+            await refresh();
+        } catch (error: any) {
+            const errorMsg = error?.response?.data?.message || 'Không thể khóa nhóm';
+            message.error(errorMsg);
+        }
+    };
+
+    const onUnlockGroup = async () => {
+        if (!window.confirm('🔓 Mở khóa nhóm?\n\nThành viên có thể tiếp tục thêm/bớt sản phẩm.')) {
+            return;
+        }
+
+        try {
+            await groupOrdersApi.unlockGroup(groupId);
+            message.success('Đã mở khóa nhóm! Thành viên có thể chỉnh sửa.');
+            await refresh();
+        } catch (error: any) {
+            const errorMsg = error?.response?.data?.message || 'Không thể mở khóa nhóm';
             message.error(errorMsg);
         }
     };
@@ -306,6 +428,16 @@ export default function GroupOrderDetail() {
     }, [user?.user_id, group]);
 
     console.log('isHost:', isHost);
+
+    const myItems = React.useMemo(() => {
+        if (!user?.user_id) return [];
+        return groupItems.filter((it) => it.member?.user?.id === user.user_id);
+    }, [groupItems, user?.user_id]);
+
+    //  THÊM: Tính tổng tiền của member
+    const myTotal = React.useMemo(() => {
+        return myItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
+    }, [myItems]);
 
     // Tính tổng với logic mới
     const totals = React.useMemo(() => {
@@ -420,36 +552,84 @@ export default function GroupOrderDetail() {
 
                     {/* Action buttons cho host */}
                     {isHost && (
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={onEditName}
-                                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
-                            >
-                                ✏️ Sửa tên nhóm
-                            </button>
-                            <button
-                                onClick={onEditDeadline}
-                                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
-                            >
-                                ⏰ Sửa thời hạn
-                            </button>
-                            <button
-                                onClick={onAddMember}
-                                className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
-                            >
-                                👥 Thêm thành viên
-                            </button>
-                            <button
-                                onClick={onDeleteGroup}
-                                className="px-3 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
-                            >
-                                🗑️ Xóa nhóm
-                            </button>
+                        <div className="space-y-3">
+                            {/* ===== NÚT KHI NHÓM ĐANG MỞ ===== */}
+                            {group?.status === 'open' && (
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={onEditName}
+                                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                    >
+                                        ✏️ Sửa tên nhóm
+                                    </button>
+                                    <button
+                                        onClick={onEditDeadline}
+                                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                    >
+                                        ⏰ Sửa thời hạn
+                                    </button>
+                                    <button
+                                        onClick={onEditTargetCount}
+                                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                    >
+                                        🎯 Sửa mục tiêu
+                                    </button>
+                                    <button
+                                        onClick={onAddMember}
+                                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                    >
+                                        👥 Thêm thành viên
+                                    </button>
+                                    <button
+                                        onClick={onManualLockGroup}
+                                        className="px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition-colors"
+                                    >
+                                        🔒 Khóa nhóm ngay
+                                    </button>
+                                    <button
+                                        onClick={onDeleteGroup}
+                                        className="px-3 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                                    >
+                                        🗑️ Xóa nhóm
+                                    </button>
+                                </div>
+                            )}
 
+                            {/* ===== NÚT KHI NHÓM ĐÃ KHÓA ===== */}
+                            {group?.status === 'locked' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {/*  NÚT MỞ KHÓA - Chỉ hiện nếu chưa ai thanh toán */}
+                                    {!members.some((m) => m.has_paid) ? (
+                                        <>
+                                            <button
+                                                onClick={onUnlockGroup}
+                                                className="px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition-colors"
+                                            >
+                                                🔓 Mở khóa nhóm
+                                            </button>
+                                            <button
+                                                onClick={onDeleteGroup}
+                                                className="px-3 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+                                            >
+                                                🗑️ Xóa nhóm
+                                            </button>
+                                        </>
+                                    ) : (
+                                        /* Thông báo nếu đã có người thanh toán */
+                                        <div className="text-sm text-blue-700 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                                            Nhóm đang trong quá trình thanh toán. Chờ tất cả hoàn tất.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-
+                            {/* ===== THÔNG BÁO KHI ĐÃ HOÀN THÀNH ===== */}
+                            {group?.status === 'completed' && (
+                                <div className="text-sm text-green-700 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                                    Nhóm đã hoàn thành! Tất cả đã thanh toán.
+                                </div>
+                            )}
                         </div>
-
                     )}
 
                     {!isHost && myMember && group?.status === 'open' && (
@@ -477,9 +657,9 @@ export default function GroupOrderDetail() {
                         {error}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         {/* PANEL 1: Thông tin nhóm */}
-                        <section className="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+                        <section className="lg:col-span-4 bg-white rounded-xl shadow-sm border p-6 space-y-4">
                             <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
                                 <InfoCircleOutlined className="text-blue-600" />
                                 Thông tin nhóm
@@ -531,6 +711,43 @@ export default function GroupOrderDetail() {
                                         {group?.discount_percent || 0}%
                                     </span>
                                 </div>
+
+                                {group?.target_member_count && (
+                                    <div className="pt-3 border-t space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-600 text-sm">Mục tiêu:</span>
+                                            <span className="font-semibold text-blue-600">
+                                                {members.length} / {group.target_member_count} người
+                                            </span>
+                                        </div>
+
+                                        {/* Progress bar */}
+                                        <div className="relative w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-blue-500 transition-all duration-500"
+                                                style={{
+                                                    width: `${Math.min(
+                                                        (members.length / group.target_member_count) * 100,
+                                                        100
+                                                    )}%`,
+                                                }}
+                                            />
+                                        </div> {group?.status === 'open' && (
+                                            <>
+                                                {members.length >= group.target_member_count ? (
+                                                    <p className="text-xs text-green-600 font-medium">
+                                                        Đã đủ số lượng! Nhóm sẽ tự động khóa khi tất cả chọn sản phẩm.
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xs text-slate-500">
+                                                        Cần thêm {group.target_member_count - members.length} người nữa để tự động khóa
+                                                        {isHost && ' (hoặc host có thể khóa thủ công)'}
+                                                    </p>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* DELIVERY MODE */}
                                 <div className="pt-3 border-t">
@@ -617,7 +834,7 @@ export default function GroupOrderDetail() {
                         </section>
 
                         {/* PANEL 2: Thành viên */}
-                        <section className="bg-white rounded-xl shadow-sm border p-6">
+                        <section className="lg:col-span-4 bg-white rounded-xl shadow-sm border p-6">
                             <h2 className="font-bold text-lg mb-4">
                                 👥 Thành viên ({members.length})
                             </h2>
@@ -666,18 +883,31 @@ export default function GroupOrderDetail() {
                                                         Thành viên
                                                     </span>
                                                 )}
+
+                                                {group?.status === 'locked' && (
+                                                    <span
+                                                        className={`ml-2 text-xs px-2 py-0.5 rounded ${m.has_paid
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : 'bg-yellow-100 text-yellow-700'
+                                                            }`}
+                                                    >
+                                                        {m.has_paid ? '✅ Đã thanh toán' : '⏳ Chưa thanh toán'}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span
                                                 className={`text-xs px-2 py-1 rounded ${m.status === 'joined'
                                                     ? 'bg-green-100 text-green-700'
-                                                    : m.status === 'ordered'
+                                                    : m.status === 'paid'
                                                         ? 'bg-blue-100 text-blue-700'
-                                                        : 'bg-slate-100 text-slate-700'
+                                                        : m.status === 'ordered'
+                                                            ? 'bg-blue-100 text-blue-700'
+                                                            : 'bg-slate-100 text-slate-700'
                                                     }`}
                                             >
-                                                {m.status}
+                                                {m.status === 'paid' ? ' Đã thanh toán' : m.status}
                                             </span>
                                             {group?.delivery_mode === 'member_address' &&
                                                 (m.address_id ? (
@@ -700,9 +930,23 @@ export default function GroupOrderDetail() {
                                 ))}
                             </ul>
                         </section>
+                        {/*  PANEL 3: THANH TOÁN - HIỆN CHO CẢ 2 MODE - 4 cột (STICKY) */}
+                        <section className="lg:col-span-4 sticky top-6 self-start">
+                            <GroupPaymentBox
+                                isHost={isHost}
+                                myMember={myMember}
+                                myItems={myItems}
+                                myTotal={myTotal}
+                                group={group}
+                                groupTotal={totals.totalAfter}
+                                onCheckout={() => setShowMemberCheckout(true)}
+                                onHostCheckout={() => setShowCheckout(true)}
+                            />
+                        </section>
 
-                        {/* PANEL 3: Sản phẩm đã chọn */}
-                        <section className="bg-white rounded-xl shadow-sm border p-6 lg:col-span-2">
+                        {/* PANEL 4: Sản phẩm đã chọn */}
+                        <section className={`bg-white rounded-xl shadow-sm border p-6 ${group?.delivery_mode === 'member_address' ? 'lg:col-span-8' : 'lg:col-span-8'
+                            }`}>
                             <h2 className="font-bold text-lg mb-4">🛒 Sản phẩm đã chọn</h2>
 
                             {Array.isArray(groupItems) && groupItems.length > 0 ? (
@@ -894,45 +1138,48 @@ export default function GroupOrderDetail() {
                                         </div>
                                     </div>
 
-                                    {/* Nút thanh toán */}
-                                    {isHost &&
+
+                                    {/* ========== THÔNG BÁO CHO MEMBER - MODE host_address & OPEN ========== */}
+                                    {!isHost &&
+                                        group?.delivery_mode === 'host_address' &&
                                         group?.status === 'open' &&
-                                        groupItems.length > 0 && (
-                                            <div className="mt-6 flex justify-center">
-                                                <button
-                                                    onClick={() => setShowCheckout(true)}
-                                                    disabled={
-                                                        group?.delivery_mode === 'member_address' &&
-                                                        membersWithoutAddress.length > 0
-                                                    }
-                                                    className={`px-8 py-4 text-lg font-bold rounded-xl shadow-lg transition-all ${group?.delivery_mode === 'member_address' &&
-                                                        membersWithoutAddress.length > 0
-                                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                                        : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-xl transform hover:scale-105'
-                                                        }`}
-                                                >
-                                                    💳 Thanh toán cho nhóm (
-                                                    {totals.totalAfter.toLocaleString()} đ)
-                                                </button>
+                                        myItems.length > 0 && (
+                                            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                                                <p className="text-sm text-blue-700">
+                                                    ⏳ Chờ host khóa nhóm và thanh toán
+                                                </p>
+                                            </div>
+                                        )}
+                                    {/* ========== THÔNG BÁO CHO MEMBER - MODE host_address & LOCKED ========== */}
+                                    {!isHost &&
+                                        group?.delivery_mode === 'host_address' &&
+                                        group?.status === 'locked' &&
+                                        myItems.length > 0 && (
+                                            <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
+                                                <p className="text-sm text-orange-700 font-medium">
+                                                    ⏳ Chờ host thanh toán cho nhóm
+                                                </p>
                                             </div>
                                         )}
 
-                                    {group?.delivery_mode === 'member_address' &&
-                                        membersWithoutAddress.length > 0 &&
-                                        isHost && (
-                                            <div className="mt-2 text-center text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                                                ⚠️ Không thể thanh toán: Có{' '}
-                                                {membersWithoutAddress.length} thành viên chưa chọn địa
-                                                chỉ giao hàng
+
+                                    {/* ========== THÔNG BÁO CHO MEMBER - MODE member_address & OPEN ========== */}
+                                    {!isHost &&
+                                        group?.delivery_mode === 'member_address' &&
+                                        group?.status === 'open' &&
+                                        myItems.length > 0 && (
+                                            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                                                <p className="text-sm text-blue-700">
+                                                    ⏳ Chờ host khóa nhóm hoặc đủ {group?.target_member_count} người để
+                                                    thanh toán
+                                                </p>
                                             </div>
                                         )}
                                 </div>
                             ) : (
                                 <div className="text-center py-12">
                                     <div className="text-6xl mb-4">🛒</div>
-                                    <p className="text-slate-500 text-lg">
-                                        Chưa có sản phẩm nào được chọn
-                                    </p>
+                                    <p className="text-slate-500 text-lg">Chưa có sản phẩm nào được chọn</p>
                                     <p className="text-slate-400 text-sm mt-2">
                                         Quay lại cửa hàng để thêm sản phẩm vào nhóm
                                     </p>
@@ -956,6 +1203,21 @@ export default function GroupOrderDetail() {
                 deliveryMode={group?.delivery_mode || 'host_address'}
                 onSuccess={() => {
                     setShowCheckout(false);
+                    refresh();
+                }}
+            />
+
+            <GroupOrderCheckout
+                open={showMemberCheckout}
+                onClose={() => setShowMemberCheckout(false)}
+                groupId={groupId}
+                groupItems={myItems}
+                totalAmount={myTotal}
+                discountPercent={0}
+                deliveryMode={group?.delivery_mode || 'host_address'}
+                isMemberCheckout={true}
+                onSuccess={() => {
+                    setShowMemberCheckout(false);
                     refresh();
                 }}
             />

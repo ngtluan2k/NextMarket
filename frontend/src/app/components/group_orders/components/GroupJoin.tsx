@@ -15,7 +15,7 @@ export default function GroupJoin() {
     (async () => {
       if (!uuid || loading) return;
 
-      if (!user?.id) {
+      if (!user?.user_id) {
         navigate(`/login?next=/group/${uuid}`, { replace: true });
         return;
       }

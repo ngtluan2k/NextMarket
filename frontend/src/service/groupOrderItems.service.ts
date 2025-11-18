@@ -24,6 +24,7 @@ export type UpdateGroupOrderPayload = {
   name?: string;
   expiresAt?: string | null;
   delivery_mode?: 'host_address' | 'member_address';
+  targetMemberCount?: number;
 };
 
 export type JoinGroupPayload = {
@@ -129,6 +130,40 @@ export const groupOrdersApi = {
     const res = await api.post(
       `/group-orders/${groupId}/leave`,
       {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  },
+
+  lockGroup: async (groupId: number) => {
+    const token = localStorage.getItem('token');
+    const res = await api.patch(
+      `/group-orders/${groupId}/lock`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  },
+
+  unlockGroup: async (groupId: number) => {
+    const token = localStorage.getItem('token');
+    const res = await api.patch(
+      `/group-orders/${groupId}/unlock`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  },
+
+
+  checkoutMyItems: async (
+    groupId: number,
+    payload: GroupOrderCheckoutPayload
+  ) => {
+    const token = localStorage.getItem('token');
+    const res = await api.post(
+      `/group-orders/${groupId}/checkout-my-items`,
+      payload,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return res.data;

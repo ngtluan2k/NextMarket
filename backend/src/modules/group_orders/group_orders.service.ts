@@ -4,9 +4,10 @@ import {
     NotFoundException,
     Inject,
     forwardRef,
+    Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere ,In} from 'typeorm';
 import { GroupOrder } from './group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { Order } from '../orders/order.entity';
@@ -30,6 +31,7 @@ import { historyStatus } from '../order-status-history/order-status-history.enti
 
 @Injectable()
 export class GroupOrdersService {
+    private readonly logger = new Logger(GroupOrdersService.name);
     constructor(
         @InjectRepository(GroupOrder)
         private readonly groupOrderRepo: Repository<GroupOrder>,
@@ -44,6 +46,7 @@ export class GroupOrdersService {
         private readonly groupOrderItemsService: GroupOrderItemsService,
         @InjectRepository(GroupOrderItem)
         private readonly groupOrderItemRepo: Repository<GroupOrderItem>,
+        @Inject(forwardRef(() => PaymentsService))
         private readonly paymentsService: PaymentsService,
         @InjectRepository(OrderItem)
         private readonly orderItemsRepo: Repository<OrderItem>,
@@ -115,6 +118,7 @@ export class GroupOrdersService {
             expires_at: expiresAt,
             join_code: this.generateJoinCode(),
             invite_link: null,
+            target_member_count: dto.targetMemberCount || 2,
         });
 
         const saved = await this.groupOrderRepo.save(group);
@@ -179,9 +183,9 @@ export class GroupOrdersService {
         if (group.expires_at && group.expires_at.getTime() <= Date.now()) {
             throw new BadRequestException('Group is expired');
         }
-        if (group.join_code && group.join_code !== (joinCode || '').trim().toUpperCase()) {
-            throw new BadRequestException('Mã tham gia không hợp lệ');
-        }
+        if (joinCode !== undefined && group.join_code && group.join_code !== joinCode.trim().toUpperCase()) {
+        throw new BadRequestException('Mã tham gia không hợp lệ');
+    }
 
         const existed = await this.memberRepo.findOne({
             where: {
@@ -206,6 +210,7 @@ export class GroupOrdersService {
             userId,
             member: savedMember,
         });
+        await this.autoLockIfReachedTarget(groupId);
 
         return savedMember;
     }
@@ -254,7 +259,8 @@ export class GroupOrdersService {
         dto: {
             name?: string;
             delivery_mode?: 'host_address' | 'member_address'; // ← Thêm field này
-            expiresAt?: string | null; // ← Thêm luôn cho deadline
+            expiresAt?: string | null;
+            targetMemberCount?: number;
         }
     ) {
         const group = await this.groupOrderRepo.findOne({
@@ -292,13 +298,25 @@ export class GroupOrdersService {
                 patch.expires_at = expiresAt;
             }
         }
+        if (typeof dto.targetMemberCount === 'number') {
+            if (dto.targetMemberCount < 2 || dto.targetMemberCount > 100) {
+                throw new BadRequestException('targetMemberCount phải từ 2 đến 100');
+            }
+            // Chỉ cho phép sửa khi nhóm chưa lock
+            if (group.status !== 'open') {
+                throw new BadRequestException('Không thể sửa mục tiêu khi nhóm đã khóa');
+            }
+            patch.target_member_count = dto.targetMemberCount;
+        }
+
 
         //  Kiểm tra xem có field nào để update không
         if (Object.keys(patch).length === 0) {
             throw new BadRequestException('No fields to update');
         }
 
-        await this.groupOrderRepo.update({ id }, patch);
+
+        await this.groupOrderRepo.update({ id }, patch as any);
         const updated = await this.getGroupOrderById(id);
 
         // Broadcast cập nhật group
@@ -344,7 +362,7 @@ export class GroupOrdersService {
         return this.memberRepo.find({
             where: {
                 user: { id: userId } as any,
-                status: 'joined',
+                status: In(['joined', 'paid']),
             },
             relations: ['group_order', 'group_order.store', 'group_order.user'],
             order: { joined_at: 'DESC' },
@@ -428,18 +446,57 @@ export class GroupOrdersService {
         paymentMethodUuid: string,
         addressId?: number
     ) {
-        // 1) Validate group + quyền host + trạng thái
+        // 1) Validate group + quyền host
         const group = await this.groupOrderRepo.findOne({
             where: { id: groupId },
             relations: ['user', 'store', 'members', 'members.user', 'members.address_id'],
         });
         if (!group) throw new NotFoundException('Group order not found');
+
         if (group.user.id !== userId) {
             throw new BadRequestException('Chỉ host mới được thanh toán cho nhóm');
         }
-        if (group.status !== 'open') {
-            throw new BadRequestException('Group không ở trạng thái mở');
+
+        //  CHỈ CHO PHÉP host_address mode
+        if (group.delivery_mode === 'member_address') {
+            throw new BadRequestException(
+                'Chế độ giao hàng riêng yêu cầu mỗi thành viên tự thanh toán.'
+            );
         }
+
+        //  CHỈ CHO PHÉP khi nhóm ĐÃ LOCKED
+        if (group.status !== 'locked') {
+            throw new BadRequestException(
+                'Vui lòng khóa nhóm trước khi thanh toán!'
+            );
+        }
+
+        const activeMembers = group.members.filter(m => m.status !== 'left');
+        const memberCount = activeMembers.length;
+
+        if (memberCount > 5) {
+            // Lấy thông tin payment method
+            const paymentMethod = await this.paymentsService['methodsRepo'].findOne({
+                where: { uuid: paymentMethodUuid }
+            });
+
+            if (!paymentMethod) {
+                throw new BadRequestException('Phương thức thanh toán không hợp lệ');
+            }
+
+            // Kiểm tra nếu là COD
+            if (paymentMethod.type === 'cod') {
+                throw new BadRequestException(
+                    `Nhóm có ${memberCount} thành viên (vượt quá 5 người). ` +
+                    'Vui lòng chọn phương thức thanh toán online (VNPay, Momo, v.v.) thay vì thanh toán khi nhận hàng!'
+                );
+            }
+
+            this.logger.log(
+                ` Group #${groupId} has ${memberCount} members - online payment required and validated`
+            );
+        }
+
 
         // 2) Lấy items của group
         const items = await this.groupOrderItemRepo.find({
@@ -447,54 +504,23 @@ export class GroupOrdersService {
             relations: ['product', 'variant', 'member', 'member.user', 'member.address_id'],
             order: { id: 'ASC' },
         });
+
         if (!items.length) {
             throw new BadRequestException('Nhóm chưa có sản phẩm');
         }
-        const activeMembers = group.members.filter((m) => m.status === 'joined');
-        const memberIdsWithItems = new Set(items.map((it) => it.member.id));
-        const membersWithoutItems = activeMembers.filter(
-            (m) => !memberIdsWithItems.has(m.id)
+
+        // 3) Xử lý thanh toán (host_address mode)
+        const result = await this.checkoutHostAddress(
+            group,
+            userId,
+            addressId,
+            paymentMethodUuid,
+            items
         );
-        if (membersWithoutItems.length > 0) {
-            const memberNames = membersWithoutItems
-                .map((m) => m.user?.profile?.full_name || m.user?.username || `User ${m.user?.id}`)
-                .join(', ');
-            throw new BadRequestException(
-                `Thành viên${memberNames} chưa chọn sản phẩm`
-            );
-        }
 
-        try {
-            // 3) Lock group trong lúc thanh toán
-            await this.groupOrderRepo.update(groupId, { status: 'locked' });
-            await this.gateway.broadcastGroupUpdate(groupId, 'group-locked', { groupId });
+        console.log(` Group #${groupId} completed by host payment (host_address mode)`);
 
-            // 4) Xử lý theo delivery_mode
-            if (group.delivery_mode === 'host_address') {
-                return await this.checkoutHostAddress(
-                    group,
-                    userId,
-                    addressId,
-                    paymentMethodUuid,
-                    items
-                );
-            } else {
-                return await this.checkoutMemberAddresses(
-                    group,
-                    userId,
-                    paymentMethodUuid,
-                    items
-                );
-            }
-        } catch (err) {
-            // Rollback lock nếu lỗi
-            await this.groupOrderRepo.update(groupId, { status: 'open' });
-            await this.gateway.broadcastGroupUpdate(groupId, 'group-updated', {
-                groupId,
-                status: 'open',
-            });
-            throw err;
-        }
+        return result;
     }
 
 
@@ -533,7 +559,7 @@ export class GroupOrdersService {
             shippingFee,
             discountTotal,
             totalAmount,
-            status: 1,
+            status: 0,
         });
         const savedOrder = await this.orderRepo.save(order);
 
@@ -729,6 +755,7 @@ export class GroupOrdersService {
 
     private getOrderStatusText(status: OrderStatuses): string {
         const statusMap = {
+            [OrderStatuses.waiting_group]: 'Chờ Nhóm Hoàn Thành',
             [OrderStatuses.pending]: 'Đang Chờ Xác Nhận',
             [OrderStatuses.confirmed]: 'Đã Xác Nhận',
             [OrderStatuses.processing]: 'Đang Xử Lý',
@@ -917,6 +944,521 @@ export class GroupOrdersService {
             success: true,
             message: 'Đã rời nhóm thành công',
         };
+    }
+
+    // THÊM METHOD MỚI (private helper):
+    private async autoLockIfReachedTarget(groupId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['members', 'store'],
+        });
+
+        if (!group) return;
+
+        // Chỉ lock nếu đang ở trạng thái open
+        if (group.status !== 'open') return;
+
+        // Không có target → không auto lock
+        if (!group.target_member_count) return;
+
+        // Đếm số thành viên active
+        const activeMembers = group.members.filter(
+            (m) => m.status === 'joined' || m.status === 'ordered'
+        );
+
+        console.log(
+            `Group #${groupId}: ${activeMembers.length}/${group.target_member_count} members`
+        );
+
+        // Nếu đủ số lượng → TỰ ĐỘNG KHÓA
+        if (activeMembers.length >= group.target_member_count) {
+            // Validate: Tất cả members phải có items
+            const items = await this.groupOrderItemRepo.find({
+                where: { group_order: { id: groupId } },
+                relations: ['member'],
+            });
+
+            const memberIdsWithItems = new Set(items.map((it) => it.member.id));
+            const membersWithoutItems = activeMembers.filter(
+                (m) => !memberIdsWithItems.has(m.id)
+            );
+
+            if (membersWithoutItems.length > 0) {
+                // Có member chưa chọn SP → broadcast cảnh báo
+                await this.gateway.broadcastGroupUpdate(
+                    groupId,
+                    'target-reached-warning',
+                    {
+                        groupId,
+                        message:
+                            '⚠️ Đã đủ số lượng thành viên! Vui lòng chọn sản phẩm để nhóm có thể khóa.',
+                        membersWithoutItems: membersWithoutItems.map((m) => ({
+                            id: m.id,
+                            name: m.user?.profile?.full_name || m.user?.username,
+                        })),
+                    }
+                );
+                return;
+            }
+
+            // Validate địa chỉ nếu member_address mode
+            if (group.delivery_mode === 'member_address') {
+                const membersWithoutAddress = activeMembers.filter(
+                    (m) => !m.address_id
+                );
+                if (membersWithoutAddress.length > 0) {
+                    await this.gateway.broadcastGroupUpdate(
+                        groupId,
+                        'target-reached-warning',
+                        {
+                            groupId,
+                            message: '⚠️ Đã đủ số lượng! Vui lòng chọn địa chỉ giao hàng.',
+                            membersWithoutAddress: membersWithoutAddress.map((m) => ({
+                                id: m.id,
+                                name: m.user?.profile?.full_name || m.user?.username,
+                            })),
+                        }
+                    );
+                    return;
+                }
+            }
+
+            //  TẤT CẢ OK → KHÓA NHÓM
+            await this.groupOrderRepo.update(groupId, { status: 'locked' });
+
+            await this.gateway.broadcastGroupUpdate(groupId, 'group-auto-locked', {
+                groupId,
+                message: `🔒 Nhóm đã đủ ${group.target_member_count} người và tự động khóa! Mỗi thành viên hãy thanh toán phần của mình.`,
+                targetCount: group.target_member_count,
+            });
+
+            console.log(
+                `🔒 Group #${groupId} auto-locked (reached ${group.target_member_count} members)`
+            );
+        }
+    }
+
+    // THÊM: Member thanh toán riêng phần của mình
+    async checkoutMemberItems(
+        groupId: number,
+        userId: number,
+        paymentMethodUuid: string,
+        addressId?: number
+    ) {
+        // 1. Validate group
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['store', 'user', 'members', 'members.user', 'members.address_id'],
+        });
+
+        if (!group) throw new NotFoundException('Group order not found');
+
+        if (group.delivery_mode === 'member_address') {
+            const paymentMethod = await this.paymentsService['methodsRepo'].findOne({
+                where: { uuid: paymentMethodUuid }
+            });
+
+            if (!paymentMethod) {
+                throw new BadRequestException('Phương thức thanh toán không hợp lệ');
+            }
+
+            if (paymentMethod.type === 'cod') {
+                throw new BadRequestException(
+                    'Chế độ giao hàng riêng yêu cầu thanh toán online trước. Vui lòng chọn phương thức khác!'
+                );
+            }
+        }
+
+        //  CHỈ CHO PHÉP THANH TOÁN KHI NHÓM ĐÃ LOCKED
+        if (group.status !== 'locked') {
+            throw new BadRequestException(
+                'Nhóm chưa được khóa. Hãy đợi đủ số lượng thành viên hoặc host khóa nhóm!'
+            );
+        }
+
+        // 2. Tìm member
+        const member = group.members.find((m) => m.user.id === userId);
+        if (!member) {
+            throw new BadRequestException('Bạn không phải thành viên của nhóm này');
+        }
+
+        if (member.has_paid) {
+            throw new BadRequestException('Bạn đã thanh toán rồi!');
+        }
+
+        // 3. Lấy items của member này
+        const myItems = await this.groupOrderItemRepo.find({
+            where: {
+                group_order: { id: groupId },
+                member: { id: member.id },
+            },
+            relations: ['product', 'variant'],
+        });
+
+        if (!myItems.length) {
+            throw new BadRequestException('Bạn chưa chọn sản phẩm nào');
+        }
+
+        // 4. Xác định địa chỉ giao hàng
+        let deliveryAddress!: UserAddress;
+
+        if (group.delivery_mode === 'member_address') {
+            // Member phải có địa chỉ riêng
+            if (!member.address_id) {
+                throw new BadRequestException('Vui lòng chọn địa chỉ giao hàng của bạn');
+            }
+            deliveryAddress = member.address_id;
+        } else {
+            // host_address: dùng địa chỉ của host
+            if (!addressId) {
+                // Lấy địa chỉ default của host
+                const hostAddresses = await this.userAddressRepo.find({
+                    where: { user: { id: group.user.id } },
+                    order: { isDefault: 'DESC' },
+                });
+                if (!hostAddresses.length) {
+                    throw new BadRequestException('Host chưa có địa chỉ giao hàng');
+                }
+                deliveryAddress = hostAddresses[0];
+            } else {
+                const foundAddress = await this.userAddressRepo.findOne({
+                    where: { id: addressId, user: { id: group.user.id } },
+                });
+                if (!foundAddress) {
+                    throw new BadRequestException('Địa chỉ không hợp lệ');
+                }
+                deliveryAddress = foundAddress;
+            }
+        }
+        // 5. Tính tiền
+        const subtotal = myItems.reduce((sum, it) => sum + Number(it.price || 0), 0);
+        const shippingFee = 0;
+        const discountTotal = 0;
+        const totalAmount = subtotal + shippingFee - discountTotal;
+
+        // 6. Tạo Order cho member này
+        const order = this.orderRepo.create({
+            user: { id: userId },
+            store: { id: group.store.id },
+            userAddress: deliveryAddress,
+            subtotal,
+            shippingFee,
+            discountTotal,
+            totalAmount,
+            status: group.delivery_mode === 'member_address'
+                ? OrderStatuses.waiting_group
+                : OrderStatuses.pending,
+            group_order: { id: groupId },
+        });
+
+        const savedOrder = await this.orderRepo.save(order);
+
+        // 7. Tạo OrderItems
+        const orderItems = myItems.map((gi) =>
+            this.orderItemsRepo.create({
+                order: { id: savedOrder.id },
+                product: { id: gi.product.id },
+                variant: gi.variant ? { id: gi.variant.id } : null,
+                quantity: gi.quantity,
+                price: gi.price,
+                groupOrderItem: { id: gi.id },
+            })
+        );
+        await this.orderItemsRepo.save(orderItems);
+
+        // 8. Tạo Payment
+        const payment = await this.paymentsService.create({
+            orderUuid: savedOrder.uuid,
+            paymentMethodUuid: paymentMethodUuid,
+            amount: totalAmount,
+        });
+
+        // 9. Cập nhật member status
+        await this.memberRepo.update(member.id, {
+            order: { id: savedOrder.id },
+        });
+
+
+        console.log(`💳 Member ${userId} paid for group #${groupId}`);
+
+        return {
+            message: 'Thanh toán thành công',
+            orderUuid: savedOrder.uuid,
+            order: savedOrder,
+            redirectUrl: typeof payment === 'object' && 'redirectUrl' in payment
+                ? payment.redirectUrl
+                : null,
+        };
+    }
+
+    //  THÊM: Helper kiểm tra và hoàn thành nhóm
+    private async checkAndCompleteGroup(groupId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['members', 'orders', 'user'],
+        });
+
+        if (!group || group.status !== 'locked') return;
+
+        const activeMembers = group.members.filter((m) => m.status !== 'left');
+
+        let shouldComplete = false;
+        let completionMessage = '';
+
+        if (group.delivery_mode === 'host_address') {
+            //    HOST_ADDRESS MODE: Chỉ cần HOST thanh toán là xong
+            const hostMember = activeMembers.find(m => m.user.id === group.user.id);
+
+            if (hostMember && hostMember.has_paid) {
+                shouldComplete = true;
+                completionMessage = ' Host đã thanh toán! Đơn hàng hoàn thành.';
+                this.logger.log(` Host paid for group #${groupId} (host_address mode)`);
+            }
+        } else {
+
+            const allPaid = activeMembers.every((m) => m.has_paid);
+
+            if (allPaid) {
+
+                const orderIds = (group.orders || []).map(o => o.id);
+
+                if (orderIds.length > 0) {
+                    await this.orderRepo
+                        .createQueryBuilder()
+                        .update()
+                        .set({ status: OrderStatuses.pending })
+                        .where('id IN (:...orderIds)', { orderIds })
+                        .andWhere('status = :waitingStatus', {
+                            waitingStatus: OrderStatuses.waiting_group
+                        })
+                        .execute();
+
+                    console.log(` Updated ${orderIds.length} orders to CONFIRMED`);
+                }
+                //  Chuyển status → COMPLETED
+                await this.groupOrderRepo.update(groupId, {
+                    status: 'completed',
+                    order_status: OrderStatuses.confirmed, // Xác nhận để giao hàng
+                });
+
+                await this.gateway.broadcastGroupUpdate(groupId, 'group-completed', {
+                    groupId,
+                    message:
+                        '🎉 Tất cả đã thanh toán thành công! Đơn nhóm được xác nhận để giao hàng.',
+                });
+
+                console.log(` Group #${groupId} completed - all members paid`);
+            } else {
+                // Broadcast tiến độ thanh toán
+                const paidCount = activeMembers.filter((m) => m.has_paid).length;
+                await this.gateway.broadcastGroupUpdate(groupId, 'payment-progress', {
+                    groupId,
+                    paidCount,
+                    totalCount: activeMembers.length,
+                    message: `${paidCount}/${activeMembers.length} thành viên đã thanh toán`,
+                });
+            }
+        }
+    }
+
+    //  THÊM: Host khóa nhóm thủ công
+    async manualLockGroup(groupId: number, userId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['user', 'members', 'members.user', 'members.address_id'],
+        });
+
+        if (!group) throw new NotFoundException('Group order not found');
+
+        // Chỉ host mới được khóa
+        if (group.user.id !== userId) {
+            throw new ForbiddenException('Chỉ host mới có thể khóa nhóm');
+        }
+
+        if (group.status !== 'open') {
+            throw new BadRequestException('Nhóm không ở trạng thái mở');
+        }
+
+        // Validate: Phải có ít nhất 2 thành viên (bao gồm host)
+        const activeMembers = group.members.filter(
+            (m) => m.status === 'joined' || m.status === 'ordered'
+        );
+
+        if (activeMembers.length < 2) {
+            throw new BadRequestException('Cần ít nhất 2 thành viên để khóa nhóm');
+        }
+
+        // Validate: Tất cả members phải có items
+        const items = await this.groupOrderItemRepo.find({
+            where: { group_order: { id: groupId } },
+            relations: ['member'],
+        });
+
+        const memberIdsWithItems = new Set(items.map((it) => it.member.id));
+        const membersWithoutItems = activeMembers.filter(
+            (m) => !memberIdsWithItems.has(m.id)
+        );
+
+        if (membersWithoutItems.length > 0) {
+            const names = membersWithoutItems
+                .map(
+                    (m) =>
+                        m.user?.profile?.full_name ||
+                        m.user?.username ||
+                        `User ${m.user?.id}`
+                )
+                .join(', ');
+            throw new BadRequestException(
+                `Không thể khóa: Các thành viên sau chưa chọn sản phẩm: ${names}`
+            );
+        }
+
+        // Validate địa chỉ nếu member_address mode
+        if (group.delivery_mode === 'member_address') {
+            const membersWithoutAddress = activeMembers.filter((m) => !m.address_id);
+            if (membersWithoutAddress.length > 0) {
+                const names = membersWithoutAddress
+                    .map(
+                        (m) =>
+                            m.user?.profile?.full_name ||
+                            m.user?.username ||
+                            `User ${m.user?.id}`
+                    )
+                    .join(', ');
+                throw new BadRequestException(
+                    `Không thể khóa: Các thành viên sau chưa chọn địa chỉ giao hàng: ${names}`
+                );
+            }
+        }
+
+        await this.groupOrderRepo.update(groupId, { status: 'locked' });
+
+        await this.gateway.broadcastGroupUpdate(groupId, 'group-manual-locked', {
+            groupId,
+            message: `🔒 Host đã khóa nhóm với ${activeMembers.length} thành viên. Mỗi người hãy thanh toán phần của mình!`,
+            memberCount: activeMembers.length,
+            lockedBy: 'host',
+        });
+
+        console.log(
+            `🔒 Group #${groupId} manually locked by host (${activeMembers.length} members)`
+        );
+
+        return {
+            message: `Đã khóa nhóm với ${activeMembers.length} thành viên`,
+            memberCount: activeMembers.length,
+            targetCount: group.target_member_count,
+        };
+    }
+
+
+    async unlockGroupOrder(groupId: number, userId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['user', 'members'],
+        });
+
+        if (!group) throw new NotFoundException('Group order not found');
+
+        // Chỉ host mới được unlock
+        if (group.user.id !== userId) {
+            throw new ForbiddenException('Chỉ host mới có thể mở khóa nhóm');
+        }
+
+        if (group.status !== 'locked') {
+            throw new BadRequestException('Nhóm không ở trạng thái khóa');
+        }
+
+        // ✅ KIỂM TRA: Chỉ cho unlock nếu CHƯA AI THANH TOÁN
+        const hasPaidMember = group.members.some((m) => m.has_paid);
+        if (hasPaidMember) {
+            throw new BadRequestException(
+                'Không thể mở khóa: Đã có thành viên thanh toán!'
+            );
+        }
+
+        // Unlock
+        await this.groupOrderRepo.update(groupId, { status: 'open' });
+
+        await this.gateway.broadcastGroupUpdate(groupId, 'group-unlocked', {
+            groupId,
+            message: '🔓 Host đã mở khóa nhóm. Có thể tiếp tục chỉnh sửa.',
+        });
+
+        console.log(`🔓 Group #${groupId} unlocked by host`);
+
+        return {
+            message: 'Đã mở khóa nhóm',
+            status: 'open',
+        };
+    }
+
+    async handleMemberPaid(groupOrderId: number, userId: number) {
+        this.logger.log(
+            `🔔 Handling member paid: Group #${groupOrderId}, User #${userId}`
+        );
+
+        // 1. Load member với user info
+        const member = await this.memberRepo.findOne({
+            where: {
+                group_order: { id: groupOrderId } as any,
+                user: { id: userId } as any,
+            },
+            relations: ['user', 'user.profile'],
+        });
+
+        if (!member) {
+            this.logger.warn(
+                `⚠️ Member not found for group #${groupOrderId}, user #${userId}`
+            );
+            return;
+        }
+
+        // 2. Broadcast member-paid event
+        try {
+            await this.gateway.broadcastGroupUpdate(groupOrderId, 'member-paid', {
+                userId,
+                memberName: member.user?.profile?.full_name || member.user?.username,
+                memberId: member.id,
+            });
+            const group = await this.groupOrderRepo.findOne({
+                where: { id: groupOrderId },
+                relations: ['members'],
+            });
+            if (group) {
+                const totalMembers = group.members.length;
+                const paidMembers = group.members.filter(m => m.has_paid).length;
+
+                await this.gateway.broadcastGroupUpdate(groupOrderId, 'payment-progress', {
+                    totalMembers,
+                    paidMembers,
+                    progress: Math.round((paidMembers / totalMembers) * 100),
+                });
+            }
+
+            this.logger.log(
+                ` Broadcasted member-paid event for member #${member.id}`
+            );
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            this.logger.error(
+                `Failed to broadcast member-paid event: ${errorMessage}`
+            );
+        }
+
+        // 3. Kiểm tra và complete group nếu tất cả đã thanh toán
+        try {
+            await this.checkAndCompleteGroup(groupOrderId);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            this.logger.error(
+                `Failed to check and complete group #${groupOrderId}: ${errorMessage}`
+            );
+        }
+
+        this.logger.log(
+            ` Completed handling member paid for group #${groupOrderId}`
+        );
     }
 }
 

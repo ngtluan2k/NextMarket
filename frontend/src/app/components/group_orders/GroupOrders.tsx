@@ -24,6 +24,7 @@ export default function GroupOrderCreate() {
     const [paymentType, setPaymentType] = useState("Mọi người tự thanh toán phần của mình");
     const [extraTime, setExtraTime] = useState("Không có");
     const [discountPercent, setDiscountPercent] = useState(0);
+    const [targetMemberCount, setTargetMemberCount] = useState(2);
 
     const handleCreate = async () => {
         try {
@@ -39,6 +40,7 @@ export default function GroupOrderCreate() {
                 storeId: resolvedStoreId,
                 hostUserId,
                 // expiresAt: new Date(Date.now() + 2*60*60*1000).toISOString(),
+                targetMemberCount,
             };
 
             const group = await groupOrdersApi.create(payload);
@@ -178,6 +180,37 @@ export default function GroupOrderCreate() {
                             onClick={() => {
                                 const name = prompt("Nhập tên nhóm:", groupName);
                                 if (name) setGroupName(name);
+                            }}
+                            className="text-slate-400 hover:text-sky-600 transition"
+                        >
+                            <Pencil size={18} />
+                        </button>
+                    </div>
+                    {/* ✅ THÊM: Số lượng thành viên mục tiêu */}
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div className="flex gap-3 items-center">
+                            <div className="w-10 h-10 bg-sky-50 text-sky-600 flex items-center justify-center rounded-lg">
+                                <Users size={20} />
+                            </div>
+                            <div>
+                                <div className="font-semibold text-slate-800">Số lượng mục tiêu</div>
+                                <div className="text-sm text-slate-500">{targetMemberCount} người</div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Nhóm tự động khóa khi đủ số lượng
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const num = prompt("Nhập số lượng thành viên (2-20):", targetMemberCount.toString());
+                                if (num) {
+                                    const count = parseInt(num);
+                                    if (count >= 2 && count <= 20) {
+                                        setTargetMemberCount(count);
+                                    } else {
+                                        alert("Số lượng phải từ 2 đến 20 người");
+                                    }
+                                }
                             }}
                             className="text-slate-400 hover:text-sky-600 transition"
                         >

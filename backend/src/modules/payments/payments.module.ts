@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module,forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './payment.entity';
 import { PaymentMethod } from '../payment-methods/payment-method.entity';
@@ -16,6 +16,8 @@ import { Variant } from '../variant/variant.entity';
 import { Inventory } from '../inventory/inventory.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { EveryCoinStrategy } from './strategies/everycoin.strategy';
+import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
+import { GroupOrdersModule } from '../group_orders/group_orders.module';
 import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 @Module({
   imports: [
@@ -29,7 +31,9 @@ import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-c
       Variant,
       Inventory,
       OrderStatusHistory,
+      GroupOrderMember, 
     ]),
+     forwardRef(() => GroupOrdersModule),
     AffiliateCommissionsModule,
   ],
   providers: [

@@ -147,6 +147,10 @@ export default function OrderDetailModal({
       setLoading(false);
     }
   };
+  const getItemPreGroupPrice = (price: number, discountPercent: number) => {
+    const factor = 1 - discountPercent / 100;
+    return Math.round(price / factor);
+  };
 
   const productColumns = [
     {
@@ -169,25 +173,62 @@ export default function OrderDetailModal({
       title: 'Giá',
       dataIndex: 'price',
       key: 'price',
-      render: (price: string) =>
-        `₫${parseFloat(price).toLocaleString('vi-VN')}`,
+      render: (price: string, record: any) => {
+        const priceNum = parseFloat(price || '0');
+
+        // Nếu là đơn hàng nhóm, hiển thị giá gốc
+        if (displayOrder?.group_order_id && displayOrder?.group_order?.discount_percent) {
+          const originalPrice = getItemPreGroupPrice(
+            priceNum,
+            displayOrder.group_order.discount_percent
+          );
+          return `₫${originalPrice.toLocaleString('vi-VN')}`;
+        }
+
+        // Đơn hàng thường: hiển thị price như cũ
+        return `₫${priceNum.toLocaleString('vi-VN')}`;
+      },
     },
     {
       title: 'Giảm giá',
       dataIndex: 'discount',
       key: 'discount',
-      render: (discount: string) =>
-        discount && parseFloat(discount) > 0
-          ? `-₫${parseFloat(discount).toLocaleString('vi-VN')}`
-          : '-',
+      render: (_: string, record: any) => {
+        const discountPercent = displayOrder?.group_order?.discount_percent || 0;
+
+        if (displayOrder?.group_order_id && discountPercent > 0) {
+          const priceNum = parseFloat(record.price || '0');
+          const feedPrice = getItemPreGroupPrice(
+            priceNum,
+            discountPercent
+          );
+          const discountAmount = feedPrice - priceNum;
+
+          return discountAmount > 0
+            ? `-${discountAmount.toLocaleString('vi-VN')}đ`
+            : '-';
+        }
+
+        const discountNum = parseFloat(record.discount || '0');
+        return discountNum > 0
+          ? `-₫${discountNum.toLocaleString('vi-VN')}`
+          : '-';
+      },
     },
     {
       title: 'Tạm tính',
       dataIndex: 'subtotal',
       key: 'subtotal',
-      render: (subtotal: string) =>
-        `₫${parseFloat(subtotal).toLocaleString('vi-VN')}`,
-    },
+      render: (subtotal: string, record: any) => {
+        // Nếu là đơn hàng nhóm, hiển thị price × quantity (giá gốc)
+        if (displayOrder?.group_order_id) {
+          const originalPrice = parseFloat(record.price || '0');
+          return `₫${originalPrice.toLocaleString('vi-VN')}`;
+        }
+        // Đơn hàng thường: hiển thị subtotal như cũ
+        return `₫${parseFloat(subtotal).toLocaleString('vi-VN')}`;
+      },
+    }
   ];
 
   // Hàm đổi trạng thái (PATCH theo BE)
@@ -244,6 +285,10 @@ export default function OrderDetailModal({
         Đóng
       </Button>
     );
+
+    if (orderDetail.group_order_id) {
+      return buttons;
+    }
 
     // Trạng thái 0: Đang chờ xác nhận
     if (status === 0) {
@@ -332,9 +377,8 @@ export default function OrderDetailModal({
 
   return (
     <Modal
-      title={`Chi tiết đơn hàng #${
-        displayOrder?.orderNumber || displayOrder?.id
-      }`}
+      title={`Chi tiết đơn hàng #${displayOrder?.orderNumber || displayOrder?.id
+        }`}
       open={isDetailModalVisible}
       onCancel={() => setIsDetailModalVisible(false)}
       footer={renderFooter()}

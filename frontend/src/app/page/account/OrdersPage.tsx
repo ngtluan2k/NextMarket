@@ -14,6 +14,7 @@ import { Link } from 'react-router-dom';
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
+  | 'waiting_group'
   | 'pending'
   | 'confirmed'
   | 'processing'
@@ -25,6 +26,8 @@ type OrderTab =
 
 function mapStatus(status: number): OrderTab {
   switch (status) {
+    case -1:
+      return 'waiting_group';
     case 0:
       return 'pending'; // Pending
     case 1:
@@ -55,6 +58,17 @@ export type OrderSummary = {
   createdAt?: string | number | Date;
   totalPrice?: number;
   groupOrderId?: number | null;
+  payment?: Array<{
+    id: number;
+    status: number; // 0: Unpaid, 1: Paid, 2: Failed, 3: Refunded
+    amount?: number;
+    paidAt?: string | Date;
+    paymentMethod?: {
+      id: number;
+      name: string;
+      type: string;
+    };
+  }>;
   items: Array<{
     productId?: number;
     id: string;
@@ -68,7 +82,7 @@ export type OrderSummary = {
   orderItem?: Array<{
     id: string;
     quantity: number;
-    pricing_rule_id?: number | null; 
+    pricing_rule_id?: number | null;
     product?: {
       id: number;
       name: string;
@@ -86,6 +100,7 @@ const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
 const TABS: { key: OrderTab; label: string }[] = [
   { key: 'all', label: 'Tất cả đơn' },
+  { key: 'waiting_group', label: 'Chờ nhóm' },
   { key: 'pending', label: 'Chờ thanh toán' },
   { key: 'confirmed', label: 'Đã xác nhận' },
   { key: 'processing', label: 'Đang xử lý' },
@@ -148,6 +163,7 @@ export default function OrdersPage() {
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
           groupOrderId: o.group_order_id ?? null,
+          payment: o.payment ? (Array.isArray(o.payment) ? o.payment : [o.payment]) : undefined,
           items: (o.orderItem ?? []).map((it: any) => {
             const product = it.product;
             const image =
@@ -233,6 +249,17 @@ export default function OrdersPage() {
     const base =
       'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
     switch (s) {
+
+
+      case 'waiting_group':
+        return (
+          <span className={`${base} bg-amber-50 text-amber-700`}>
+            <Clock className="h-3 w-3" />
+            Chờ nhóm hoàn tất
+          </span>
+        );
+
+
       case 'pending':
         return (
           <span className={`${base} bg-amber-50 text-amber-700`}>
@@ -284,6 +311,55 @@ export default function OrdersPage() {
         );
       default:
         return <span className={`${base} bg-slate-100 text-slate-700`}>—</span>;
+    }
+  };
+
+  // Helper hiển thị payment status
+  const paymentStatusBadge = (payment: any) => {
+    if (!payment || !payment[0]) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-gray-50 text-gray-600">
+          Chưa có thông tin
+        </span>
+      );
+    }
+
+    const status = Number(payment[0].status);
+
+    switch (status) {
+      case 1: // Paid
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-green-50 text-green-700">
+            <CheckCircle className="h-3 w-3" />
+            Đã thanh toán
+          </span>
+        );
+      case 0: // Unpaid
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-orange-50 text-orange-700">
+            <Clock className="h-3 w-3" />
+            Chưa thanh toán
+          </span>
+        );
+      case 2: // Failed
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-red-50 text-red-700">
+            <XCircle className="h-3 w-3" />
+            Thất bại
+          </span>
+        );
+      case 3: // Refunded
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-purple-50 text-purple-700">
+            Hoàn tiền
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-gray-50 text-gray-600">
+            Không rõ
+          </span>
+        );
     }
   };
 
@@ -414,7 +490,10 @@ export default function OrdersPage() {
                           )}
                         </div>
 
-                        {statusPill(o.status)}
+                        <div className="flex items-center gap-2">
+                          {statusPill(o.status)}
+                          {paymentStatusBadge(o.payment)}
+                        </div>
                       </div>
 
 

@@ -50,4 +50,10 @@ export class UpdateGroupOrderDto {
   @Min(0)
   @Max(7)
   order_status?: OrderStatuses;
+  
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(20)
+  targetMemberCount?: number;
 }

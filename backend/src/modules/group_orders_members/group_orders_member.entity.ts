@@ -11,8 +11,9 @@ import { GroupOrder } from '../group_orders/group_orders.entity';
 import { User } from '../user/user.entity';
 import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { UserAddress } from '../user_address/user_address.entity';
+import { Order } from '../orders/order.entity';
 
-export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered';
+export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered' | 'paid';
 
 @Entity('group_order_members')
 export class GroupOrderMember {
@@ -31,7 +32,7 @@ export class GroupOrderMember {
 
   @Column({
     type: 'enum',
-    enum: ['joined', 'left', 'ordered'],
+    enum: ['joined', 'left', 'ordered', 'paid'],
     default: 'joined',
   })
   status!: GroupOrderMemberStatus;
@@ -61,5 +62,11 @@ export class GroupOrderMember {
 
   @Column({ type: 'integer', nullable: true })
   referrer_affiliate_link_id?: number;
+  @Column({ type: 'boolean', default: false })
+  has_paid!: boolean;
+
+  @ManyToOne(() => Order, { nullable: true })
+  @JoinColumn({ name: 'order_id' })
+  order?: Order;
 
 }
