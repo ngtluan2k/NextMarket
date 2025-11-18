@@ -49,7 +49,7 @@ export class UserService {
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly bcryptPerformanceService: BcryptPerformanceService
-  ) {}
+  ) { }
 
   // In-memory OTP store
   private otpStore = new Map<
@@ -149,8 +149,8 @@ export class UserService {
 
   async login(dto: LoginDto) {
     // console.time(' [Login] Total Time');
-    
-  
+
+
     const user = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.roles', 'userRole')
@@ -159,16 +159,16 @@ export class UserService {
       .leftJoinAndSelect('rolePermission.permission', 'permission')
       .select([
         'user.id',
-        'user.email', 
+        'user.email',
         'user.username',
         'user.password',
         'user.is_affiliate',
         'userRole.id',
         'role.id',
         'role.name',
-        'rolePermission.id', 
+        'rolePermission.id',
         'permission.id',
-        'permission.code'
+        'permission.code',
       ])
       .where('user.email = :email', { email: dto.email })
       .getOne();
@@ -184,7 +184,7 @@ export class UserService {
     if (saltInfo.isHighSalt) {
       console.log(` Rehashing legacy password for user ${user.id} (current salt: ${saltInfo.estimatedRounds})`);
       const newHash = await this.bcryptPerformanceService.hashPassword(dto.password, 10);
-      await this.userRepository.update(user.id, { 
+      await this.userRepository.update(user.id, {
         password: newHash,
         updated_at: new Date()
       });
@@ -193,7 +193,7 @@ export class UserService {
 
 
     const roles = user.roles?.map(ur => ur.role.name) || ['User'];
-    const permissions = user.roles?.flatMap(ur => 
+    const permissions = user.roles?.flatMap(ur =>
       ur.role.rolePermissions?.map(rp => rp.permission.code) || []
     ) || [];
 
@@ -217,6 +217,7 @@ export class UserService {
       roles,
       permissions,
       access_token: token,
+      
     };
   }
 

@@ -299,9 +299,9 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                           const imageUrl = rawUrl.startsWith('http')
                             ? rawUrl
                             : `${BE_BASE_URL}/${rawUrl.replace(
-                                /^\/+/,
-                                ''
-                              )}`;
+                              /^\/+/,
+                              ''
+                            )}`;
                           return (
                             <img
                               src={imageUrl}
@@ -474,25 +474,35 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
           console.time('🚀 [Frontend] Login Total Time');
           try {
             console.time('📡 [Frontend] Login API Call');
-            
+
             // Chỉ 1 API call duy nhất - backend đã trả về đầy đủ thông tin
             const res = await fetch(`${BE_BASE_URL}/users/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
             });
-            
+
             console.timeEnd('📡 [Frontend] Login API Call');
-            
+
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
             console.time('💾 [Frontend] Set Auth State');
-            
-            // Login response đã chứa đầy đủ thông tin user
-            // Không cần gọi thêm /users/me
-            login(json.data, json.access_token);
-            
+
+            const profileRes = await fetch(`${BE_BASE_URL}/users/me`, {
+              headers: { Authorization: `Bearer ${json.access_token}` },
+            });
+
+            if (profileRes.ok) {
+              const profileData = await profileRes.json();
+              // Lưu profile đầy đủ
+              localStorage.setItem('user', JSON.stringify(profileData.data));
+              login(profileData.data, json.access_token);
+            } else {
+              // Fallback: dùng data từ login nếu /users/me fail
+              login(json.data, json.access_token);
+            }
+
             console.timeEnd('💾 [Frontend] Set Auth State');
             console.timeEnd('🚀 [Frontend] Login Total Time');
 

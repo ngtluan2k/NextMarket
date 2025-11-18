@@ -183,9 +183,9 @@ export class GroupOrdersService {
         if (group.expires_at && group.expires_at.getTime() <= Date.now()) {
             throw new BadRequestException('Group is expired');
         }
-        if (group.join_code && group.join_code !== (joinCode || '').trim().toUpperCase()) {
-            throw new BadRequestException('Mã tham gia không hợp lệ');
-        }
+        if (joinCode !== undefined && group.join_code && group.join_code !== joinCode.trim().toUpperCase()) {
+        throw new BadRequestException('Mã tham gia không hợp lệ');
+    }
 
         const existed = await this.memberRepo.findOne({
             where: {
