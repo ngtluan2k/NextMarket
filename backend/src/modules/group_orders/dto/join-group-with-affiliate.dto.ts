@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class JoinGroupOrderDto {
+export class JoinGroupWithAffiliateDto {
   @ApiProperty({ description: 'ID user tham gia group' })
   @IsNotEmpty()
   @IsInt()
@@ -14,10 +14,11 @@ export class JoinGroupOrderDto {
   @IsString()
   joinCode?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Mã affiliate để tracking commission (ví dụ: AFF123)',
+    example: 'AFF123'
   })
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  affiliateCode?: string;
+  affiliateCode!: string;
 }

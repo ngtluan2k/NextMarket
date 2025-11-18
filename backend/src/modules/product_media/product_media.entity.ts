@@ -7,6 +7,7 @@ import {
   Generated,
 } from 'typeorm';
 import { Product } from '../product/product.entity';
+import { Variant } from '../variant/variant.entity';
 
 @Entity('product_media')
 export class ProductMedia {
@@ -20,6 +21,13 @@ export class ProductMedia {
   @ManyToOne(() => Product)
   @JoinColumn({ name: 'product_id' })
   product!: Product;
+
+  @Column({ nullable: true })
+  variant_id?: number;
+
+  @ManyToOne(() => Variant, { nullable: true })
+  @JoinColumn({ name: 'variant_id' })
+  variant?: Variant;
 
   @Column()
   media_type!: string;

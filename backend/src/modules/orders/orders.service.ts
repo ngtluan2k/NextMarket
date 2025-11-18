@@ -62,11 +62,12 @@ export class OrdersService {
       });
       const address = await manager.findOneBy(UserAddress, {
         id: createOrderDto.addressId,
+        user_id: createOrderDto.userId, // 🔥 Kiểm tra địa chỉ thuộc về user
       });
 
       if (!user || !store || !address) {
         throw new BadRequestException(
-          'Không tìm thấy User, Store hoặc Address'
+          'Không tìm thấy User, Store hoặc Address hoặc Address không thuộc về bạn'
         );
       }
 

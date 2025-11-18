@@ -441,10 +441,10 @@ export class VouchersService {
                   new Brackets((innerQb) => {
                     innerQb
                       .where(
-                        'voucher.applicable_user_ids IS NULL OR JSON_LENGTH(voucher.applicable_user_ids) = 0'
+                        'voucher.applicable_user_ids IS NULL OR jsonb_array_length(voucher.applicable_user_ids::jsonb) = 0'
                       ) // Nếu empty, hiển thị tất
                       .orWhere(
-                        'JSON_SEARCH(voucher.applicable_user_ids, "one", :userId) IS NOT NULL',
+                        'voucher.applicable_user_ids::jsonb ? :userId',
                         { userId: userId.toString() }
                       );
                   })
@@ -473,7 +473,7 @@ export class VouchersService {
             qb.where('voucher.store_id = :storeId', { storeId });
             if (storeId) {
               qb.orWhere(
-                'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
+                'voucher.applicable_store_ids::jsonb ? :storeId',
                 { storeId: storeId.toString() }
               );
             }
@@ -487,7 +487,7 @@ export class VouchersService {
           qb.orWhere('voucher.store_id = :storeId', { storeId });
           if (storeId) {
             qb.orWhere(
-              'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
+              'voucher.applicable_store_ids::jsonb ? :storeId',
               { storeId: storeId.toString() }
             );
           }

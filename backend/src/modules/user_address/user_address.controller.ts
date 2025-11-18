@@ -7,20 +7,32 @@ import {
   Param,
   Delete,
   ForbiddenException,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UserAddressService } from './user_address.service';
 import { CreateUserAddressDto } from './dto/create-user_address.dto';
 import { UpdateUserAddressDto } from './dto/update-user_address.dto';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 
 @Controller('users/:userId/addresses')
+@UseGuards(JwtAuthGuard)
 export class UserAddressController {
   constructor(private readonly userAddressService: UserAddressService) {}
 
   @Post()
   create(
     @Param('userId') userId: string,
-    @Body() createUserAddressDto: CreateUserAddressDto
+    @Body() createUserAddressDto: CreateUserAddressDto,
+    @Req() req: any
   ) {
+    const currentUserId = req.user?.userId;
+    
+    // Kiểm tra user chỉ có thể tạo địa chỉ cho chính mình
+    if (currentUserId !== +userId) {
+      throw new ForbiddenException('Bạn chỉ có thể tạo địa chỉ cho chính mình');
+    }
+    
     // Đảm bảo user_id trong DTO khớp với userId từ URL
     if (
       createUserAddressDto.user_id &&
@@ -37,7 +49,14 @@ export class UserAddressController {
   }
 
   @Get()
-  findAll(@Param('userId') userId: string) {
+  findAll(@Param('userId') userId: string, @Req() req: any) {
+    const currentUserId = req.user?.userId;
+    
+    // Kiểm tra user chỉ có thể truy cập địa chỉ của chính mình
+    if (currentUserId !== +userId) {
+      throw new ForbiddenException('Bạn chỉ có thể truy cập địa chỉ của chính mình');
+    }
+    
     return this.userAddressService.findAllByUserId(+userId);
   }
 

@@ -231,7 +231,16 @@ const CheckoutPayment: React.FC = () => {
       return;
     }
 
-    const userId = me.user_id;
+    const userId = me.user_id || me.user?.id || me.id;
+    
+    if (!userId) {
+      console.error('❌ UserId is undefined:', { me });
+      message.error('Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('✅ Using userId:', userId);
 
     const fetchAllPaymentMethods = async () => {
       try {

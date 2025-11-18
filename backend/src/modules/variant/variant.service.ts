@@ -32,4 +32,25 @@ export class VariantService {
 
     return this.repo.save(variant);
   }
+
+  /**
+   * Get variant with media
+   */
+  async findOneWithMedia(id: number): Promise<Variant | null> {
+    return this.repo.findOne({
+      where: { id },
+      relations: ['media', 'product'],
+    });
+  }
+
+  /**
+   * Get all variants for a product with their media
+   */
+  async findByProductWithMedia(productId: number): Promise<Variant[]> {
+    return this.repo.find({
+      where: { product_id: productId },
+      relations: ['media'],
+      order: { id: 'ASC' },
+    });
+  }
 }

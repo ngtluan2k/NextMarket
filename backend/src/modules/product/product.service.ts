@@ -186,6 +186,7 @@ export class ProductService {
         'categories',
         'media',
         'variants',
+        'variants.media', // 🔥 Thêm relation để load media cho từng variant
         'variants.inventories',
         'pricing_rules',
       ],
@@ -227,6 +228,7 @@ export class ProductService {
         'categories',
         'media',
         'variants',
+        'variants.media', // 🔥 Thêm relation để load media cho từng variant
         'variants.inventories',
         'pricing_rules',
       ],
