@@ -31,6 +31,7 @@ import { MomoStrategy } from './strategies/momo.strategy';
 import { EveryCoinStrategy } from './strategies/everycoin.strategy';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { GroupOrdersService } from '../group_orders/group_orders.service';
+import { OrderStatuses } from '../orders/types/orders';
 
 @Injectable()
 export class PaymentsService {
@@ -91,6 +92,14 @@ export class PaymentsService {
     this.logger.log(
       ` strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`
     );
+
+    if (strategyType === 'vnpay' || strategyType === 'momo') {
+      if (order.status === OrderStatuses.pending) {
+        order.status = OrderStatuses.draft;
+        await this.ordersRepo.save(order);
+        this.logger.log(`Order #${order.id} set to draft (payment: ${strategyType})`);
+      }
+    }
     let result;
     switch (strategyType) {
       case 'cod':
@@ -138,7 +147,7 @@ export class PaymentsService {
 
     const payments = await this.paymentsRepo.find({
       where: { order: { id: order.id } },
-      relations: ['paymentMethod', 'order','order.user'],
+      relations: ['paymentMethod', 'order', 'order.user'],
     });
 
     return payments;
@@ -164,7 +173,7 @@ export class PaymentsService {
       // 1. Tìm payment với relations cần thiết
       const payment = await manager.findOne(Payment, {
         where: { uuid: paymentUuid },
-        relations: ['order', 'order.group_order','order.user', 'paymentMethod'],
+        relations: ['order', 'order.group_order', 'order.user', 'paymentMethod'],
       });
 
       if (!payment) {
@@ -229,7 +238,11 @@ export class PaymentsService {
       // Chỉ update order status nếu KHÔNG PHẢI group order waiting_group
       // Vì group order waiting_group sẽ được update khi tất cả members paid
       if (order.status !== -1) {
-        order.status = 0; // confirmed - đã thanh toán
+        if (order.status === OrderStatuses.draft) {
+          order.status = OrderStatuses.confirmed; // 1
+        } else {
+          order.status = 0; // confirmed
+        }
         await manager.save(order);
 
         const history = manager.create(OrderStatusHistory, {

@@ -756,6 +756,7 @@ export class GroupOrdersService {
     private getOrderStatusText(status: OrderStatuses): string {
         const statusMap = {
             [OrderStatuses.waiting_group]: 'Chờ Nhóm Hoàn Thành',
+            [OrderStatuses.draft]: 'Nháp (Chưa thanh toán)',
             [OrderStatuses.pending]: 'Đang Chờ Xác Nhận',
             [OrderStatuses.confirmed]: 'Đã Xác Nhận',
             [OrderStatuses.processing]: 'Đang Xử Lý',
