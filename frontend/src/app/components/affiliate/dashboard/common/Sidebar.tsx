@@ -6,7 +6,8 @@ import {
   Settings,
   HelpCircle,
   X,
-  FolderOutputIcon
+  FolderOutputIcon,
+  Users
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import logo from '../../../../../../public/logo.jpg';
@@ -23,6 +24,11 @@ const Sidebar = () => {
       name: 'Liên kết tiếp thị',
       href: '/affiliate/dashboard/links',
       icon: Link2,
+    },
+    {
+      name: 'Nhóm Affiliate',
+      href: '/affiliate/dashboard/group-links',
+      icon: Users,
     },
     {
       name: 'Thanh toán',

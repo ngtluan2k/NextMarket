@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from '../../orders/order.entity';
 import { OrderItem } from '../../order-items/order-item.entity';
 import { AffiliateCommission } from '../entity/affiliate-commission.entity';
+import { Referral } from '../../referral/referrals.entity';
 
 // Services
 import { AffiliateRulesService } from '../../affiliate-rules/affiliate-rules.service';
@@ -26,6 +27,7 @@ export class CommissionCalcService {
     @InjectRepository(AffiliateCommission) private readonly commRepo: Repository<AffiliateCommission>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(AffiliateProgram) private readonly programRepo: Repository<AffiliateProgram>,
+    @InjectRepository(Referral) private readonly referralRepo: Repository<Referral>,
     private readonly rulesService: AffiliateRulesService,
     private readonly walletService: WalletService,
     private readonly fraudDetectionService: FraudDetectionService,
@@ -367,12 +369,14 @@ export class CommissionCalcService {
 
   /**
    * Process commission calculation for group order with multi-level support
+   * Commission is calculated based on the number of members in the group
    */
   private async processGroupOrderCommission(order: any, commissionSource: any) {
     const orderId = order.id;
     const level0UserId = commissionSource.affiliateUserId;
     const programId = commissionSource.programId;
     const linkId = commissionSource.linkId;
+    const groupOrder = (order as any).group_order;
 
     // Prevent self-commission
     const orderUserId = Number(order.user?.id || (order as any).user_id);
@@ -418,6 +422,20 @@ export class CommissionCalcService {
 
     console.log(`🎯 Processing group buying order ${orderId} with max ${maxLevels} commission levels`);
 
+    // 🎯 NEW: Calculate commission based on group member count
+    const groupMembers = groupOrder.members || [];
+    const memberCount = groupMembers.length;
+    console.log(`👥 Group ${groupOrder.id} has ${memberCount} members for commission calculation`);
+
+    if (memberCount === 0) {
+      console.warn(`⚠️ No members in group ${groupOrder.id}, skipping commission`);
+      return;
+    }
+
+    // 🎯 NEW: Enroll orphan members into affiliate tree
+    console.log(`🌳 Processing affiliate tree enrollment for orphan members in group ${groupOrder.id}`);
+    await this.enrollOrphanMembersToAffiliateTree(groupOrder, level0UserId);
+
     // Get order items for commission calculation
     const items = await this.orderItemRepo.find({
       where: { order: { id: order.id } },
@@ -432,6 +450,7 @@ export class CommissionCalcService {
     console.log(`📦 Processing ${items.length} items for group buying commission calculation`);
 
     // Process commission for each item
+    // Commission base amount = item subtotal * member count (group size multiplier)
     for (const item of items) {
       const baseAmount = Number((item as any).subtotal ?? 0);
       if (baseAmount <= 0) {
@@ -439,11 +458,13 @@ export class CommissionCalcService {
         continue;
       }
 
-      console.log(`💰 Processing group buying item ${item.id} with base amount: ${baseAmount}`);
+      // 🎯 NEW: Commission is based on group member count, not individual order amount
+      const commissionBaseAmount = baseAmount * memberCount;
+      console.log(`💰 Processing group buying item ${item.id}: base ${baseAmount} × ${memberCount} members = ${commissionBaseAmount}`);
 
       try {
         // Level 1: Direct referrer (affiliate who created the link)
-        await this.allocateLevel(order, item, level0UserId, 1, programId, linkId, baseAmount);
+        await this.allocateLevel(order, item, level0UserId, 1, programId, linkId, commissionBaseAmount);
 
         // Levels 2+: Multi-level commission through affiliate tree
         if (maxLevels > 1) {
@@ -457,7 +478,7 @@ export class CommissionCalcService {
             const level = idx + 2; // Level 2 starts from first ancestor
             
             try {
-              await this.allocateLevel(order, item, beneficiaryId, level, programId, linkId, baseAmount);
+              await this.allocateLevel(order, item, beneficiaryId, level, programId, linkId, commissionBaseAmount);
             } catch (err) {
               console.error(`❌ Failed to allocate group buying commission for item ${item.id} - level ${level}:`, err);
             }
@@ -469,6 +490,65 @@ export class CommissionCalcService {
     }
     
     console.log(`✅ Group buying commission calculation completed for order ${orderId}`);
+  }
+
+  /**
+   * Enroll orphan members (users without referrer) into affiliate tree
+   * Only users who are not already part of the affiliate tree are enrolled
+   */
+  private async enrollOrphanMembersToAffiliateTree(groupOrder: any, affiliateUserId: number) {
+    try {
+      const groupMembers = groupOrder.members || [];
+      
+      console.log(`🔍 Checking ${groupMembers.length} members for orphan status in group ${groupOrder.id}`);
+
+      for (const member of groupMembers) {
+        const memberId = member.user.id;
+        
+        // Skip the affiliate user themselves
+        if (memberId === affiliateUserId) {
+          console.log(`⏭️ Skipping affiliate user ${affiliateUserId} (cannot be their own referrer)`);
+          continue;
+        }
+
+        // Check if member already has a referrer (is not orphan)
+        // Query by referee_id column directly
+        const existingReferral = await this.referralRepo.createQueryBuilder('r')
+          .where('r.referee_id = :memberId', { memberId })
+          .getOne();
+
+        if (existingReferral) {
+          console.log(`ℹ️ Member ${memberId} already has a referrer, skipping`);
+          continue;
+        }
+
+        // Member is orphan - enroll them into affiliate tree under the affiliate user
+        try {
+          const affiliateUser = await this.userRepo.findOne({ where: { id: affiliateUserId } });
+          const memberUser = await this.userRepo.findOne({ where: { id: memberId } });
+
+          if (!affiliateUser || !memberUser) {
+            console.error(`❌ Cannot find affiliate user ${affiliateUserId} or member user ${memberId}`);
+            continue;
+          }
+
+          const newReferral = this.referralRepo.create({
+            referrer: affiliateUser,
+            referee: memberUser,
+            created_at: new Date()
+          });
+          
+          await this.referralRepo.save(newReferral);
+          console.log(`✅ Enrolled orphan member ${memberId} under affiliate user ${affiliateUserId}`);
+        } catch (err) {
+          console.error(`❌ Failed to enroll member ${memberId}:`, err);
+        }
+      }
+
+      console.log(`✅ Affiliate tree enrollment completed for group ${groupOrder.id}`);
+    } catch (error) {
+      console.error(`❌ Error during affiliate tree enrollment:`, error);
+    }
   }
 
   /**
