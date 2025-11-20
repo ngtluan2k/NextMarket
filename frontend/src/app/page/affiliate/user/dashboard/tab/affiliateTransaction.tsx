@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Table, Card, Tag, Button, Pagination, Spin, Image, Tooltip } from 'antd';
-import { Eye, Package, Calendar, DollarSign } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Table, Card, Tag, Button, Pagination, Spin, Image, Tooltip, message } from 'antd';
+import { Eye, Package, Calendar, DollarSign, RefreshCw } from 'lucide-react';
 import { 
   getCommissionHistory, 
 } from '../../../../../../service/afiliate/affiliate-links.service';
@@ -11,28 +11,69 @@ import { CommissionHistory, CommissionHistoryItem } from '../../../../../types/a
 const AffiliateTransaction = () => {
   const [commissionData, setCommissionData] = useState<CommissionHistory | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
 
-  const fetchCommissions = async (page: number) => {
+  // Optimized fetch with debouncing
+  const fetchCommissions = useCallback(async (page: number, isRefresh: boolean = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const data = await getCommissionHistory(page, pageSize);
       setCommissionData(data);
+      lastFetchTimeRef.current = Date.now();
+      
+      if (isRefresh) {
+        message.success('✅ Dữ liệu đã cập nhật');
+      }
     } catch (error) {
       console.error('Failed to fetch commission history:', error);
+      if (isRefresh) {
+        message.error('❌ Cập nhật thất bại');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [pageSize]);
+
+  // Manual refresh with optimization (prevent rapid clicks)
+  const handleRefresh = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    // Prevent refresh if last fetch was less than 2 seconds ago
+    if (timeSinceLastFetch < 2000) {
+      message.warning('⏳ Vui lòng chờ trước khi cập nhật lại');
+      return;
+    }
+    
+    fetchCommissions(currentPage, true);
+  }, [currentPage, fetchCommissions]);
 
   useEffect(() => {
+    // Initial fetch
     fetchCommissions(currentPage);
 
     // Listen for commission events to refresh transaction list
     const handleCommissionUpdate = () => {
       console.log('💰 Commission update - refreshing transaction list...');
-      fetchCommissions(currentPage);
+      
+      // Debounce rapid updates (within 1 second)
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      refreshTimeoutRef.current = setTimeout(() => {
+        fetchCommissions(currentPage, false);
+      }, 1000);
     };
 
     window.addEventListener('commission-earned', handleCommissionUpdate);
@@ -43,8 +84,12 @@ const AffiliateTransaction = () => {
       window.removeEventListener('commission-earned', handleCommissionUpdate);
       window.removeEventListener('commission-paid', handleCommissionUpdate);
       window.removeEventListener('commission-reversed', handleCommissionUpdate);
+      
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
-  }, [currentPage]);
+  }, [currentPage, fetchCommissions]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -219,11 +264,25 @@ const AffiliateTransaction = () => {
 
       {/* Commission History Table */}
       <Card className="border-gray-200 shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Lịch sử hoa hồng</h3>
-          <p className="text-sm text-gray-600">
-            Theo dõi tất cả hoa hồng từ các đơn hàng thành công
-          </p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Giao dịch gần đây</h3>
+            <p className="text-sm text-gray-600">
+              Theo dõi tất cả hoa hồng từ các đơn hàng thành công
+            </p>
+          </div>
+          <Tooltip title="Cập nhật dữ liệu mới nhất">
+            <Button
+              type="primary"
+              ghost
+              icon={<RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />}
+              onClick={handleRefresh}
+              loading={refreshing}
+              disabled={refreshing}
+            >
+              Cập nhật
+            </Button>
+          </Tooltip>
         </div>
 
         <Table

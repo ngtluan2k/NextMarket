@@ -182,22 +182,29 @@ export class CommissionCalcService {
           
           // 🔔 Send real-time notification to affiliate user
           try {
+            console.log(`🔔 Preparing to send notification to user ${beneficiaryUserId}`);
+            
             // Get program info for notification
             const program = programId ? await this.programRepo.findOne({ where: { id: programId } }) : null;
+            console.log(`📋 Program info: ${program?.name || 'No program'}`);
             
             // Get order item details for notification
             const orderItem = await this.orderItemRepo.findOne({
               where: { id: item.id },
               relations: ['product']
             });
+            console.log(`📦 Order item: ${orderItem?.product?.name || 'Unknown Product'}`);
             
+            console.log(`💬 Sending commission paid notification...`);
             await this.notificationsGateway.notifyCommissionPaid(beneficiaryUserId, {
               commissionId: savedCommission.uuid,
               amount: computed,
               newBalance: 0, // Will be updated by frontend after receiving notification
             });
+            console.log(`✅ Commission paid notification sent`);
             
             // Also send commission earned notification with details
+            console.log(`💬 Sending commission earned notification...`);
             await this.notificationsGateway.notifyCommissionEarned(beneficiaryUserId, {
               commissionId: savedCommission.uuid,
               amount: computed,
@@ -207,10 +214,11 @@ export class CommissionCalcService {
               productName: orderItem?.product?.name || 'Unknown Product',
               programName: program?.name || 'Unknown Program',
             });
+            console.log(`✅ Commission earned notification sent`);
             
-            console.log(`🔔 Notification sent to user ${beneficiaryUserId}`);
+            console.log(`🔔 All notifications sent to user ${beneficiaryUserId}`);
           } catch (notifError) {
-            console.error(`⚠️ Failed to send notification:`, notifError);
+            console.error(`⚠️ Failed to send notification to user ${beneficiaryUserId}:`, notifError);
             // Don't fail the commission if notification fails
           }
           
@@ -405,9 +413,13 @@ export class CommissionCalcService {
 
     if (fraudCheck.fraudDetected) {
       console.warn(`🚨 Fraud detected for group buying order ${orderId}:`, fraudCheck.checks);
-      return;
+      // ⚠️ IMPORTANT: We log fraud but DO NOT SKIP commission calculation
+      // Fraud review is handled by admins, but affiliate should still get commission
+      // This allows legitimate users to get their commissions while fraud is logged for review
+      console.log(`⚠️ Proceeding with commission calculation despite fraud flags - fraud logged for admin review`);
+    } else {
+      console.log(`✅ Fraud checks passed for group buying order ${orderId}`);
     }
-    console.log(`✅ Fraud checks passed for group buying order ${orderId}`);
 
     // Determine maximum levels from active rule
     let maxLevels = 1;
@@ -450,7 +462,8 @@ export class CommissionCalcService {
     console.log(`📦 Processing ${items.length} items for group buying commission calculation`);
 
     // Process commission for each item
-    // Commission base amount = item subtotal * member count (group size multiplier)
+    // Commission base amount = item subtotal (no member count multiplier)
+    // Following WeChat/Douyin model: Commission = Order Value × Rate%
     for (const item of items) {
       const baseAmount = Number((item as any).subtotal ?? 0);
       if (baseAmount <= 0) {
@@ -458,9 +471,10 @@ export class CommissionCalcService {
         continue;
       }
 
-      // 🎯 NEW: Commission is based on group member count, not individual order amount
-      const commissionBaseAmount = baseAmount * memberCount;
-      console.log(`💰 Processing group buying item ${item.id}: base ${baseAmount} × ${memberCount} members = ${commissionBaseAmount}`);
+      // 🎯 Commission is based on individual order amount (no member count multiplier)
+      // Following WeChat/Douyin model: Commission = Order Value × Rate%
+      const commissionBaseAmount = baseAmount;
+      console.log(`💰 Processing group buying item ${item.id}: base amount = ${commissionBaseAmount}`);
 
       try {
         // Level 1: Direct referrer (affiliate who created the link)
@@ -617,9 +631,13 @@ export class CommissionCalcService {
 
     if (fraudCheck.fraudDetected) {
       console.warn(`🚨 Fraud detected for order ${orderId}:`, fraudCheck.checks);
-      return;
+      // ⚠️ IMPORTANT: We log fraud but DO NOT SKIP commission calculation
+      // Fraud review is handled by admins, but affiliate should still get commission
+      // This allows legitimate users to get their commissions while fraud is logged for review
+      console.log(`⚠️ Proceeding with commission calculation despite fraud flags - fraud logged for admin review`);
+    } else {
+      console.log(`✅ Fraud checks passed for order ${orderId}`);
     }
-    console.log(`✅ Fraud checks passed for order ${orderId}`);
 
     // Determine maximum levels from active rule (default 1)
     let maxLevels = 1;
