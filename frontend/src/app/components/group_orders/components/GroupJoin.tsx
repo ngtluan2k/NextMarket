@@ -4,6 +4,7 @@ import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import { useAuth } from '../../../hooks/useAuth';
+import { getAffiliateDataForOrder } from '../../../../utils/affiliate-tracking';
 
 export default function GroupJoin() {
   const { uuid = '' } = useParams();
@@ -21,8 +22,18 @@ export default function GroupJoin() {
       }
 
       try {
-        const payload = { userId: user.user_id, addressId: undefined };
+        // 🎯 NEW: Get affiliate code from localStorage
+        const affiliateData = getAffiliateDataForOrder();
+        console.log('🔍 Joining group with affiliate data:', affiliateData);
 
+        const payload = { 
+          userId: user.user_id, 
+          addressId: undefined,
+          // 🎯 NEW: Pass affiliate code
+          ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
+        };
+
+        console.log('📤 Join group payload:', payload);
         await groupOrdersApi.joinByUuid(uuid, payload);
         const g = await groupOrdersApi.getByUuid(uuid);
 

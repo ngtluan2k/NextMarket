@@ -37,8 +37,30 @@ export class VnpayStrategy implements PaymentStrategy {
       order.id
     );
 
+    // ✅ Reload payment with full relations including orderItem.subtotal
+    // Use query builder to explicitly select all columns including nullable ones
+    const paymentWithOrder = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.order', 'order')
+      .leftJoinAndSelect('order.orderItem', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('orderItem.variant', 'variant')
+      .leftJoinAndSelect('order.group_order', 'group_order')
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .addSelect([
+        'orderItem.id',
+        'orderItem.uuid',
+        'orderItem.quantity',
+        'orderItem.price',
+        'orderItem.discount',
+        'orderItem.subtotal', // ✅ Explicitly select subtotal
+        'orderItem.note',
+      ])
+      .where('payment.id = :id', { id: savedPayment.id })
+      .getOne();
+
     return {
-      payment: savedPayment,
+      payment: paymentWithOrder || savedPayment,
       redirectUrl,
       paymentUuid: savedPayment.uuid,
       orderUuid: order.uuid,

@@ -3,7 +3,6 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Reques
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { AffiliateLinksService } from './affiliate-links.service';
-import { CreateGroupAffiliateLinkDto } from './dto/create-group-affiliate-link.dto';
 
 interface AuthRequest extends Request {
   user: { userId: number; roles?: string[] };
@@ -140,35 +139,5 @@ export class AffiliateLinksController {
         error: error?.message || 'Failed to track click',
       };
     }
-  }
-
-  // ==================== GROUP AFFILIATE LINKS ====================
-
-  @Post('create-group-link')
-  @UseGuards(JwtAuthGuard, ThrottlerGuard)
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // Limit: max 3 group creations per 60 seconds
-  async createGroupAffiliateLink(
-    @Request() req: AuthRequest,
-    @Body() dto: CreateGroupAffiliateLinkDto,
-  ) {
-    const userId = req.user.userId;
-    console.log(`[GROUP-AFFILIATE] User ${userId} creating group affiliate link:`, dto);
-    
-    try {
-      const result = await this.service.createGroupAffiliateLink(userId, dto);
-      console.log(`[SUCCESS] Group affiliate link created for user ${userId}`);
-      return result;
-    } catch (error: any) {
-      console.log(`[ERROR] Failed to create group affiliate link for user ${userId}:`, error.message);
-      throw error;
-    }
-  }
-
-  @Get('my-group-links')
-  @UseGuards(JwtAuthGuard)
-  async getMyGroupAffiliateLinks(@Request() req: AuthRequest) {
-    const userId = req.user.userId;
-    console.log(`[GROUP-AFFILIATE] User ${userId} fetching group affiliate links`);
-    return this.service.getMyGroupAffiliateLinks(userId);
   }
 }

@@ -22,9 +22,10 @@ import { OrderStatusHistory } from '../order-status-history/order-status-history
 import { AffiliateLinksModule } from '../affiliate-links/affiliate-links.module';
 import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 import { Referral } from '../referral/referrals.entity';
+import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,Referral]), 
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,Referral,AffiliateLink]), 
   forwardRef(() => PaymentsModule),  
   AffiliateLinksModule,
   AffiliateCommissionsModule],

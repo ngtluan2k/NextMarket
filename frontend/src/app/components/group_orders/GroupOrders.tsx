@@ -3,6 +3,7 @@ import { Pencil, Info, Users } from "lucide-react";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { groupOrdersApi } from '../../../service/groupOrderItems.service';
+import { getAffiliateDataForOrder } from '../../../utils/affiliate-tracking';
 
 export default function GroupOrderCreate() {
     const navigate = useNavigate();
@@ -35,14 +36,21 @@ export default function GroupOrderCreate() {
                 return;
             }
 
+            // 🎯 NEW: Get affiliate code from localStorage
+            const affiliateData = getAffiliateDataForOrder();
+            console.log('🔍 Creating group with affiliate data:', affiliateData);
+
             const payload = {
                 name: groupName,
                 storeId: resolvedStoreId,
                 hostUserId,
                 // expiresAt: new Date(Date.now() + 2*60*60*1000).toISOString(),
                 targetMemberCount,
+                // 🎯 NEW: Pass affiliate code
+                ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
             };
 
+            console.log('📤 Group creation payload:', payload);
             const group = await groupOrdersApi.create(payload);
             const storeSlug = group?.store?.slug; // service trả về group kèm relations
 

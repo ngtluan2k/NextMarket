@@ -18,6 +18,7 @@ export type CreateGroupOrderPayload = {
   name: string;
   storeId: number;
   hostUserId: number;
+  affiliateCode?: string;
 };
 
 export type UpdateGroupOrderPayload = {
@@ -31,6 +32,7 @@ export type JoinGroupPayload = {
   userId: number;
   addressId?: number;
   joinCode?: string;
+  affiliateCode?: string;
 };
 
 export type UpdateMemberAddressPayload = {

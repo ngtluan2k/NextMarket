@@ -26,7 +26,30 @@ export class MomoStrategy {
     });
     const saved = await this.paymentRepo.save(payment);
     const redirectUrl = `https://test-payment.momo.vn/pay?orderId=${saved.uuid}`;
-    return { payment: saved, redirectUrl };
+    
+    // ✅ Reload payment with full relations including orderItem.subtotal
+    // Use query builder to explicitly select all columns including nullable ones
+    const paymentWithOrder = await this.paymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.order', 'order')
+      .leftJoinAndSelect('order.orderItem', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('orderItem.variant', 'variant')
+      .leftJoinAndSelect('order.group_order', 'group_order')
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .addSelect([
+        'orderItem.id',
+        'orderItem.uuid',
+        'orderItem.quantity',
+        'orderItem.price',
+        'orderItem.discount',
+        'orderItem.subtotal', // ✅ Explicitly select subtotal
+        'orderItem.note',
+      ])
+      .where('payment.id = :id', { id: saved.id })
+      .getOne();
+
+    return { payment: paymentWithOrder || saved, redirectUrl };
   }
 
   async handleCallback(payload: any) {

@@ -26,6 +26,7 @@ import { OrderStatuses } from '../orders/types/orders';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { ForbiddenException } from '@nestjs/common/exceptions';
 import { historyStatus } from '../order-status-history/order-status-history.entity';
+import { AffiliateResolutionService } from '../affiliate-links/affiliate-resolution.service';
 
 
 
@@ -54,7 +55,7 @@ export class GroupOrdersService {
         private readonly userAddressRepo: Repository<UserAddress>,
         @InjectRepository(OrderStatusHistory)
         private orderStatusHistoryRepo: Repository<OrderStatusHistory>,
-
+        private readonly affiliateResolutionService: AffiliateResolutionService,
 
     ) { }
 
@@ -110,6 +111,29 @@ export class GroupOrdersService {
             throw new BadRequestException('expiresAt must be in the future');
         }
 
+        // 🎯 NEW: Resolve affiliate code if provided (host's affiliate)
+        let groupAffiliateCode: string | null = null;
+        let groupAffiliateUserId: number | null = null;
+        let groupAffiliateProgramId: number | null = null;
+
+        if (dto.affiliateCode) {
+            try {
+                console.log(`🔍 Resolving group affiliate code: ${dto.affiliateCode}`);
+                const affiliateInfo = await this.affiliateResolutionService.resolveAffiliateCode(dto.affiliateCode);
+                
+                if (affiliateInfo && affiliateInfo.isValid) {
+                    groupAffiliateUserId = affiliateInfo.userId;
+                    groupAffiliateProgramId = affiliateInfo.programId || null;
+                    groupAffiliateCode = dto.affiliateCode;
+                    console.log(`✅ Resolved group affiliate: userId=${groupAffiliateUserId}, programId=${groupAffiliateProgramId}`);
+                } else {
+                    console.warn(`⚠️ Could not resolve group affiliate code: ${dto.affiliateCode}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error resolving group affiliate code ${dto.affiliateCode}:`, error);
+            }
+        }
+
         const group = this.groupOrderRepo.create({
             store: { id: dto.storeId } as any,
             user: { id: dto.hostUserId } as any, // host
@@ -119,35 +143,46 @@ export class GroupOrdersService {
             join_code: this.generateJoinCode(),
             invite_link: null,
             target_member_count: dto.targetMemberCount || 2,
-        });
+            // 🎯 NEW: Set group-level affiliate tracking
+            group_affiliate_code: groupAffiliateCode,
+            group_affiliate_user_id: groupAffiliateUserId,
+            group_affiliate_program_id: groupAffiliateProgramId,
+            affiliate_detection_method: groupAffiliateCode ? 'explicit' : null,
+            affiliate_detected_at: groupAffiliateCode ? new Date() : null,
+        } as any);
 
         const saved = await this.groupOrderRepo.save(group);
+        console.log(`✅ Group ${(saved as any).id} created with affiliate tracking:`, {
+            groupAffiliateCode,
+            groupAffiliateUserId,
+            groupAffiliateProgramId,
+        });
         // cập nhật invite_link dựa trên uuid
         console.log('FE_BASE_URL =', this.config.get<string>('FE_BASE_URL'));
 
         const baseUrl = this.config.get<string>('FE_BASE_URL');
-        const inviteLink = `${baseUrl}/group/${saved.uuid}`;
-        if (saved.invite_link !== inviteLink) {
+        const inviteLink = `${baseUrl}/group/${(saved as any).uuid}`;
+        if ((saved as any).invite_link !== inviteLink) {
             await this.groupOrderRepo.update(
-                { id: saved.id },
+                { id: (saved as any).id },
                 { invite_link: inviteLink }
             );
         }
 
         // ensure host is a member
         const hostMember = this.memberRepo.create({
-            group_order: { id: saved.id } as any,
+            group_order: { id: (saved as any).id } as any,
             user: { id: dto.hostUserId } as any,
             is_host: 1 as any, // Temporary fix: use 1 instead of true for integer column
             status: 'joined',
         });
         await this.memberRepo.save(hostMember);
         await this.gateway.notifyUser(dto.hostUserId, 'group-created', {
-            groupId: saved.id,
+            groupId: (saved as any).id,
             invite_link: inviteLink,
         });
 
-        return this.getGroupOrderById(saved.id);
+        return this.getGroupOrderById((saved as any).id);
     }
 
     async getGroupOrderById(id: number) {
@@ -174,7 +209,7 @@ export class GroupOrdersService {
         return group;
     }
 
-    async joinGroupOrder(userId: number, groupId: number, joinCode?: string) {
+    async joinGroupOrder(userId: number, groupId: number, joinCode?: string, affiliateCode?: string) {
         const group = await this.groupOrderRepo.findOne({ where: { id: groupId } });
         if (!group) throw new NotFoundException('Group order not found');
         if (group.status !== 'open') {
@@ -195,13 +230,49 @@ export class GroupOrdersService {
         });
         if (existed) return existed;
 
+        // 🎯 Resolve affiliate code if provided
+        let affiliateUserId: number | null = null;
+        let affiliateProgramId: number | null = null;
+        let affiliateLinkId: number | null = null;
+
+        if (affiliateCode) {
+            try {
+                console.log(`🔍 Resolving affiliate code: ${affiliateCode}`);
+                const affiliateInfo = await this.affiliateResolutionService.resolveAffiliateCode(affiliateCode);
+                
+                if (affiliateInfo && affiliateInfo.isValid) {
+                    affiliateUserId = affiliateInfo.userId;
+                    affiliateProgramId = affiliateInfo.programId || null;
+                    // Note: linkId will be populated during commission calculation
+                    console.log(`✅ Resolved affiliate: userId=${affiliateUserId}, programId=${affiliateProgramId}`);
+                } else {
+                    console.warn(`⚠️ Could not resolve affiliate code: ${affiliateCode}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error resolving affiliate code ${affiliateCode}:`, error);
+                // Continue without affiliate tracking - graceful degradation
+            }
+        }
+
         const member = this.memberRepo.create({
             group_order: { id: groupId } as any,
             user: { id: userId } as any,
             is_host: 0 as any, // Temporary fix: use 0 instead of false for integer column
             status: 'joined',
-        });
+            // 🎯 NEW: Store affiliate tracking
+            referrer_affiliate_code: affiliateCode,
+            referrer_affiliate_user_id: affiliateUserId,
+            referrer_affiliate_program_id: affiliateProgramId,
+            referrer_affiliate_link_id: affiliateLinkId,
+        } as any);
         const savedMember = await this.memberRepo.save(member);
+        console.log(`✅ Member ${userId} joined group ${groupId} with affiliate tracking:`, {
+            affiliateCode,
+            affiliateUserId,
+            affiliateProgramId,
+            affiliateLinkId,
+        });
+
         // Cập nhật lại discount của group
         await this.groupOrderItemsService.updateGroupDiscount(groupId);
 
@@ -242,15 +313,15 @@ export class GroupOrdersService {
         return group;
     }
 
-    async joinGroupOrderByJoinCode(joinCode: string, userId: number) {
+    async joinGroupOrderByJoinCode(joinCode: string, userId: number, affiliateCode?: string) {
         const group = await this.getGroupOrderByJoinCode(joinCode);
-        return this.joinGroupOrder(userId, group.id, joinCode);
+        return this.joinGroupOrder(userId, group.id, joinCode, affiliateCode);
     }
 
-    async joinGroupOrderByUuid(userId: number, uuid: string) {
+    async joinGroupOrderByUuid(userId: number, uuid: string, affiliateCode?: string) {
         const group = await this.groupOrderRepo.findOne({ where: { uuid } });
         if (!group) throw new NotFoundException('Group order not found');
-        return this.joinGroupOrder(userId, group.id);
+        return this.joinGroupOrder(userId, group.id, undefined, affiliateCode);
     }
 
     async updateGroupOrder(
@@ -549,6 +620,36 @@ export class GroupOrdersService {
         const discountTotal = 0;
         const totalAmount = subtotal + shippingFee - discountTotal;
 
+        // 🎯 NEW: Resolve affiliate tracking from group members
+        let affiliateCode: string | null = null;
+        let affiliateUserId: number | null = null;
+        let affiliateProgramId: number | null = null;
+        let affiliateLinkId: number | null = null;
+
+        // Get all members with affiliate tracking
+        const members = await this.memberRepo.find({
+            where: { group_order: { id: group.id } as any },
+        });
+
+        // Priority 1: Check member-specific affiliate (from referrer_affiliate_*)
+        const memberWithAffiliate = members.find(m => m.referrer_affiliate_user_id);
+        if (memberWithAffiliate) {
+            affiliateCode = memberWithAffiliate.referrer_affiliate_code || null;
+            affiliateUserId = memberWithAffiliate.referrer_affiliate_user_id || null;
+            affiliateProgramId = memberWithAffiliate.referrer_affiliate_program_id || null;
+            affiliateLinkId = memberWithAffiliate.referrer_affiliate_link_id || null;
+            console.log(`✅ Using member-specific affiliate: code=${affiliateCode}, userId=${affiliateUserId}`);
+        }
+        // Priority 2: Check group-level affiliate (host inheritance)
+        else if (group.group_affiliate_user_id) {
+            affiliateCode = group.group_affiliate_code || null;
+            affiliateUserId = group.group_affiliate_user_id || null;
+            affiliateProgramId = group.group_affiliate_program_id || null;
+            console.log(`✅ Using group-level affiliate: code=${affiliateCode}, userId=${affiliateUserId}`);
+        } else {
+            console.log(`ℹ️ No affiliate tracking found for group ${group.id}`);
+        }
+
         // Tạo 1 Order duy nhất
         const order = this.orderRepo.create({
             user: { id: userId } as any,
@@ -560,17 +661,30 @@ export class GroupOrdersService {
             discountTotal,
             totalAmount,
             status: 0,
-        });
+            // 🎯 NEW: Set affiliate tracking on order
+            affiliate_code: affiliateCode,
+            affiliate_user_id: affiliateUserId,
+            affiliate_program_id: affiliateProgramId,
+            affiliate_link_id: affiliateLinkId,
+        } as any);
         const savedOrder = await this.orderRepo.save(order);
+        console.log(`✅ Order ${(savedOrder as any).id} created with affiliate tracking:`, {
+            affiliateCode,
+            affiliateUserId,
+            affiliateProgramId,
+            affiliateLinkId,
+        });
 
         // Tạo OrderItems
         for (const it of items) {
+            const itemSubtotal = Number(it.price || 0) * (it.quantity || 1);
             const oi = this.orderItemsRepo.create({
-                order: { id: savedOrder.id } as any,
+                order: { id: (savedOrder as any).id } as any,
                 product: { id: it.product.id } as any,
                 variant: it.variant ? ({ id: it.variant.id } as any) : null,
                 quantity: it.quantity,
                 price: it.price,
+                subtotal: itemSubtotal,
                 groupOrderItem: { id: it.id } as any,
                 note: it.note,
             });
@@ -583,7 +697,7 @@ export class GroupOrdersService {
         }
 
         const result = await this.paymentsService.create({
-            orderUuid: savedOrder.uuid,
+            orderUuid: (savedOrder as any).uuid,
             paymentMethodUuid,
             amount: Number(totalAmount || 0),
             isGroup: true,
@@ -593,7 +707,7 @@ export class GroupOrdersService {
         const redirectUrl = 'redirectUrl' in result ? result.redirectUrl : null;
 
         return {
-            orderUuid: savedOrder.uuid,
+            orderUuid: (savedOrder as any).uuid,
             payment,
             redirectUrl,
         };
@@ -661,12 +775,14 @@ export class GroupOrdersService {
 
             // Tạo OrderItems cho order này
             for (const it of memberItems) {
+                const itemSubtotal = Number(it.price || 0) * (it.quantity || 1);
                 const oi = this.orderItemsRepo.create({
                     order: { id: savedOrder.id } as any,
                     product: { id: it.product.id } as any,
                     variant: it.variant ? ({ id: it.variant.id } as any) : null,
                     quantity: it.quantity,
                     price: it.price,
+                    subtotal: itemSubtotal,
                     groupOrderItem: { id: it.id } as any,
                     note: it.note,
                 });

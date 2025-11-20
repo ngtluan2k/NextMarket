@@ -51,4 +51,11 @@ export class CreateGroupOrderDto {
   @Min(2)
   @Max(100)
   targetMemberCount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Mã affiliate để tracking commission (ví dụ: AFF123)',
+  })
+  @IsOptional()
+  @IsString()
+  affiliateCode?: string;
 }

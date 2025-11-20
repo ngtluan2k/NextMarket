@@ -455,22 +455,47 @@ export class OrdersService {
         }
 
         // Tạo OrderItem
+        // ✅ Calculate discount per item (ensure it's a number, not NaN)
+        const discountPerItem = discountTotal > 0 ? discountTotal / createOrderDto.items.length : 0;
+        const itemSubtotal = itemDto.quantity * itemPrice - discountPerItem;
+
+        console.log('🔍 DEBUG - Before creating OrderItem:', {
+          quantity: itemDto.quantity,
+          itemPrice: itemPrice,
+          discountPerItem: discountPerItem,
+          itemSubtotal: itemSubtotal,
+          isNaN: isNaN(itemSubtotal),
+          typeof: typeof itemSubtotal,
+        });
+
         const orderItem = manager.create(OrderItem, {
           order: savedOrder,
           product,
           variant: variant ?? null,
           quantity: itemDto.quantity,
           price: itemPrice,
-          discount: discountTotal / createOrderDto.items.length,
-          subtotal:
-            itemDto.quantity * itemPrice -
-            (discountTotal / createOrderDto.items.length || 0),
+          discount: discountPerItem,
+          subtotal: isNaN(itemSubtotal) ? 0 : itemSubtotal, // ✅ Ensure not NaN
           pricing_rule: appliedRule ?? undefined,
         });
 
-        console.log('OrderItem created:', orderItem);
+        console.log('✅ OrderItem created (before save):', {
+          id: orderItem.id,
+          quantity: orderItem.quantity,
+          price: orderItem.price,
+          discount: orderItem.discount,
+          subtotal: orderItem.subtotal,
+        });
 
-        await manager.save(orderItem);
+        const savedItem = await manager.save(orderItem);
+
+        console.log('✅ OrderItem saved to DB:', {
+          id: savedItem.id,
+          quantity: savedItem.quantity,
+          price: savedItem.price,
+          discount: savedItem.discount,
+          subtotal: savedItem.subtotal,
+        });
 
         // Cập nhật tạm thời tồn kho
         inventory.used_quantity =

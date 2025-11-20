@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import { message, notification } from 'antd';
 
-const SOCKET_URL = 'http://localhost:3000/notifications';
+// 🎯 NEW: Use environment variable for socket URL
+const SOCKET_URL = `${import.meta.env.VITE_BE_BASE_URL || 'http://localhost:3000'}/notifications`;
 
 /**
  * Generic Notification System - Frontend Service

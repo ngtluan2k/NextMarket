@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { useAuth } from '../hooks/useAuth'; 
 import { groupOrdersApi } from './../../service/groupOrderItems.service';
+import { getAffiliateDataForOrder } from '../../utils/affiliate-tracking';
 
 type JoinGroupModalProps = {
   open: boolean;
@@ -82,7 +83,19 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
 
         // Join bằng joinCode
         try {
-          await groupOrdersApi.join(groupId, { userId: Number(uid), joinCode });
+          // 🎯 NEW: Get affiliate code from localStorage
+          const affiliateData = getAffiliateDataForOrder();
+          console.log('🔍 Joining group with affiliate data:', affiliateData);
+
+          const joinPayload = { 
+            userId: Number(uid), 
+            joinCode,
+            // 🎯 NEW: Pass affiliate code
+            ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
+          };
+
+          console.log('📤 Join group payload:', joinPayload);
+          await groupOrdersApi.join(groupId, joinPayload);
           msgApi.success('Tham gia nhóm thành công!');
           navigate(`/group-orders/${groupId}/detail`);
           setCode('');

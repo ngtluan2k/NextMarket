@@ -51,6 +51,16 @@ export class CommissionCalcService {
         return;
       }
 
+      // 🛡️ NEW: Check if commission already processed for this order (idempotency)
+      const existingCommission = await this.commRepo.findOne({
+        where: { related_order_id: orderId }
+      });
+
+      if (existingCommission) {
+        console.log(`⚠️ Commission already processed for order ${orderId}, skipping to prevent duplicates`);
+        return;
+      }
+
       // 🛒 Check if this is a group buying order and route accordingly
       if ((order as any).group_order) {
         console.log(`🛒 Detected group buying order ${orderId}, routing to group buying commission logic`);
@@ -73,6 +83,7 @@ export class CommissionCalcService {
     programId: number | null,
     linkId: number| null,
     baseAmount: number,
+    groupOrderId?: number, // Optional: for group orders, use group ID instead of order ID
   ) {
     const orderId = order.id;
     const now = new Date();
@@ -138,13 +149,13 @@ export class CommissionCalcService {
         status: 'PENDING', // Start as PENDING, will be updated to PAID after successful wallet operation
         created_at: new Date(),
         link_id: linkId,
-        related_order_id: orderId
+        related_order_id: groupOrderId || orderId // Use group ID for group orders, order ID for regular orders
       } as any);
 
       const savedCommission = await manager.save(rec);
       const commissionId = (savedCommission as any).id;
 
-      console.log(`💾 Commission record created with ID: ${commissionId}`);
+      console.log(`💾 Commission record created with ID: ${commissionId}, Amount: ${computed}, Beneficiary: ${beneficiaryUserId}`);
 
       // ✅ AUTO-CONVERT COMMISSION TO COINS AND ADD TO WALLET with retry mechanism
       const maxRetries = 3;
@@ -152,20 +163,24 @@ export class CommissionCalcService {
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`💰 Attempt ${attempt}/${maxRetries}: Adding commission to wallet`);
+          console.log(`💰 Attempt ${attempt}/${maxRetries}: Adding ${computed} VND commission to wallet for user ${beneficiaryUserId}`);
           
-          await this.walletService.addCommissionToWallet(
+          const walletResult = await this.walletService.addCommissionToWallet(
             beneficiaryUserId,
             computed,
             commissionId?.toString() || 'unknown',
             `Commission from order #${orderId} - Level ${level}`
           );
           
+          console.log(`✅ Wallet operation successful - New balance: ${walletResult.wallet.balance}`);
+          
           // Update commission status to PAID after successful wallet operation
           await manager.update(this.commRepo.target, commissionId, { 
             status: 'PAID',
             paid_at: new Date()
           });
+          
+          console.log(`✅ Commission ${commissionId} status updated to PAID`);
           
           // 💰 Commit budget (move from pending to spent)
           if (programId) {
@@ -199,7 +214,7 @@ export class CommissionCalcService {
             await this.notificationsGateway.notifyCommissionPaid(beneficiaryUserId, {
               commissionId: savedCommission.uuid,
               amount: computed,
-              newBalance: 0, // Will be updated by frontend after receiving notification
+              newBalance: walletResult.wallet.balance,
             });
             console.log(`✅ Commission paid notification sent`);
             
@@ -226,7 +241,8 @@ export class CommissionCalcService {
           break;
           
         } catch (error) {
-          console.error(`❌ Wallet operation attempt ${attempt} failed:`, error);
+          console.error(`❌ Wallet operation attempt ${attempt} failed for user ${beneficiaryUserId}:`, error);
+          console.error(`   Error details:`, (error as any).message || error);
           
           if (attempt === maxRetries) {
             // Final attempt failed - keep commission as PENDING
@@ -239,6 +255,7 @@ export class CommissionCalcService {
             // await this.notificationService.createFailedCommissionAlert(commissionId, error);
           } else {
             // Wait before retry (exponential backoff)
+            console.log(`⏳ Waiting ${1000 * attempt}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           }
         }
@@ -386,6 +403,19 @@ export class CommissionCalcService {
     const linkId = commissionSource.linkId;
     const groupOrder = (order as any).group_order;
 
+    // 🛡️ NEW: Check if commission already processed for this GROUP (not just order)
+    // Group orders can have multiple orders (1 per member), but commission should only be calculated once
+    const existingGroupCommission = await this.commRepo.findOne({
+      where: { 
+        related_order_id: groupOrder.id // Check by group ID, not order ID
+      }
+    });
+
+    if (existingGroupCommission) {
+      console.log(`⚠️ Commission already processed for group ${groupOrder.id}, skipping to prevent duplicates`);
+      return;
+    }
+
     // Prevent self-commission
     const orderUserId = Number(order.user?.id || (order as any).user_id);
     if (orderUserId === level0UserId) {
@@ -461,46 +491,46 @@ export class CommissionCalcService {
 
     console.log(`📦 Processing ${items.length} items for group buying commission calculation`);
 
-    // Process commission for each item
-    // Commission base amount = item subtotal (no member count multiplier)
+    // 🎯 CHANGE: Calculate TOTAL ORDER SUBTOTAL (not per-item)
+    // Commission base amount = sum of all item subtotals
     // Following WeChat/Douyin model: Commission = Order Value × Rate%
-    for (const item of items) {
-      const baseAmount = Number((item as any).subtotal ?? 0);
-      if (baseAmount <= 0) {
-        console.log(`⏭️ Skipping item ${item.id} with zero/negative amount: ${baseAmount}`);
-        continue;
-      }
+    const totalOrderSubtotal = items.reduce((sum, item) => {
+      return sum + Number((item as any).subtotal ?? 0);
+    }, 0);
 
-      // 🎯 Commission is based on individual order amount (no member count multiplier)
-      // Following WeChat/Douyin model: Commission = Order Value × Rate%
-      const commissionBaseAmount = baseAmount;
-      console.log(`💰 Processing group buying item ${item.id}: base amount = ${commissionBaseAmount}`);
+    if (totalOrderSubtotal <= 0) {
+      console.log(`⏭️ Skipping group buying order with zero/negative total: ${totalOrderSubtotal}`);
+      return;
+    }
 
-      try {
-        // Level 1: Direct referrer (affiliate who created the link)
-        await this.allocateLevel(order, item, level0UserId, 1, programId, linkId, commissionBaseAmount);
+    console.log(`💰 Processing group buying order ${orderId}: total subtotal = ${totalOrderSubtotal}`);
 
-        // Levels 2+: Multi-level commission through affiliate tree
-        if (maxLevels > 1) {
-          console.log(`🌳 Processing multi-level commissions for group buying order ${orderId}, levels 2-${maxLevels}`);
+    try {
+      // Level 1: Direct referrer (affiliate who created the link)
+      // Use first item as reference (commission is calculated on total order, not per-item)
+      // Pass groupOrderId so related_order_id = group ID (prevents duplicate commission for multiple orders in same group)
+      await this.allocateLevel(order, items[0], level0UserId, 1, programId, linkId, totalOrderSubtotal, groupOrder.id);
+
+      // Levels 2+: Multi-level commission through affiliate tree
+      if (maxLevels > 1) {
+        console.log(`🌳 Processing multi-level commissions for group buying order ${orderId}, levels 2-${maxLevels}`);
+        
+        const ancestors = await this.affiliateTreeService.findAncestors(level0UserId, maxLevels - 1);
+        console.log(`👥 Found ${ancestors.length} ancestors for multi-level commission`);
+        
+        for (let idx = 0; idx < ancestors.length && idx < maxLevels - 1; idx++) {
+          const beneficiaryId = ancestors[idx];
+          const level = idx + 2; // Level 2 starts from first ancestor
           
-          const ancestors = await this.affiliateTreeService.findAncestors(level0UserId, maxLevels - 1);
-          console.log(`👥 Found ${ancestors.length} ancestors for multi-level commission`);
-          
-          for (let idx = 0; idx < ancestors.length && idx < maxLevels - 1; idx++) {
-            const beneficiaryId = ancestors[idx];
-            const level = idx + 2; // Level 2 starts from first ancestor
-            
-            try {
-              await this.allocateLevel(order, item, beneficiaryId, level, programId, linkId, commissionBaseAmount);
-            } catch (err) {
-              console.error(`❌ Failed to allocate group buying commission for item ${item.id} - level ${level}:`, err);
-            }
+          try {
+            await this.allocateLevel(order, items[0], beneficiaryId, level, programId, linkId, totalOrderSubtotal, groupOrder.id);
+          } catch (err) {
+            console.error(`❌ Failed to allocate group buying commission - level ${level}:`, err);
           }
         }
-      } catch (error) {
-        console.error(`❌ Failed to process group buying commission for item ${item.id}:`, error);
       }
+    } catch (error) {
+      console.error(`❌ Failed to process group buying commission:`, error);
     }
     
     console.log(`✅ Group buying commission calculation completed for order ${orderId}`);
