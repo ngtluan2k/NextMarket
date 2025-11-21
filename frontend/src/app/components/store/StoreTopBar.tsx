@@ -3,8 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { BE_BASE_URL } from '../../api/api';
 import { storeService } from '../../../service/store.service';
 import { StarFilled } from '@ant-design/icons';
-import { useChat } from '../../hooks/useChat';
 import { useNavigate } from 'react-router-dom';
+import { ChatBox } from '../../components/ChatBox';
+import { SenderType } from '../../types/chat.types';
+import { useChatSocket } from '../../hooks/useChatSocket';
 
 export type StoreInfo = {
   id: string | number;
@@ -53,6 +55,20 @@ export default function StoreTopBar({
   sticky = false,
   className,
 }: StoreTopBarProps) {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user?.user_id;
+  const {
+    conversations,
+    setConversations,
+    selectedConversationId,
+    setSelectedConversationId,
+    messages,
+    setMessages,
+    sendMessage,
+    markAsRead,
+    startConversation,
+  } = useChatSocket(userId, SenderType.USER);
+
   const [info, setInfo] = useState<StoreInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -60,6 +76,8 @@ export default function StoreTopBar({
   const { pathname } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const [following, setFollowing] = useState<boolean>(false);
+  const [openChat, setOpenChat] = useState(false);
+  const [convId, setConvId] = useState<number | null>(null);
   const [followers, setFollowers] = useState<number | null>(null);
   const computedBase = basePath ?? `/stores/slug/${storeSlug}`;
   const computedTabs = useMemo(() => {
@@ -85,19 +103,48 @@ export default function StoreTopBar({
       },
     ];
   }, [tabs, computedBase]);
-  const { startConversation } = useChat();
+
+  const handleSelectConversation = (convId: number) => {
+  setSelectedConversationId(convId);
+
+  setConversations(prev =>
+    prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c)
+  );
+
+  markAsRead(convId);
+};
+
   const navigate = useNavigate();
 
-  const handleChatClick = async () => {
-    if (!info?.id) return;
-    try {
-      const conv = await startConversation(Number(info.id));
-      // chuyển hướng tới ChatPage với conversation mới
-      navigate(`/chat/${conv.id}`);
-    } catch (err) {
-      console.error('Cannot start chat', err);
+  const handleStartChat = async () => {
+  if (!info?.id || !userId) return;
+
+  // check conversation đã có chưa
+  const existing = conversations.find(
+    (c) => c.store?.id === Number(info.id)
+  );
+
+  if (existing) {
+    setConvId(existing.id);
+    setSelectedConversationId(existing.id);
+    setOpenChat(true);
+    markAsRead(existing.id);
+    return;
+  }
+
+  // chưa có → tạo mới
+  try {
+    const conversation = await startConversation(Number(info.id));
+    if (conversation?.id) {
+      setConvId(conversation.id);
+      setSelectedConversationId(conversation.id);
+      setOpenChat(true);
     }
-  };
+  } catch (err) {
+    console.error('Lỗi khi tạo conversation:', err);
+  }
+};
+
 
   useEffect(() => {
     let alive = true;
@@ -241,6 +288,7 @@ export default function StoreTopBar({
               </div>
 
               <div className="flex gap-2">
+                {/* Button Theo dõi */}
                 <button
                   type="button"
                   onClick={handleToggleFollow}
@@ -257,8 +305,8 @@ export default function StoreTopBar({
                 {/* Button Chat */}
                 <button
                   type="button"
-                  onClick={handleChatClick}
-                  className="hidden shrink-0 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 sm:block"
+                  onClick={handleStartChat}
+                  className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition sm:block"
                 >
                   Chat
                 </button>
@@ -318,6 +366,24 @@ export default function StoreTopBar({
           </nav>
         </div>
       </div>
+      {openChat && convId && info && (
+        <ChatBox
+          conversationId={convId}
+          userId={userId}
+          storeId={Number(info.id)}
+          senderType={SenderType.USER}
+          onClose={() => setOpenChat(false)}
+          conversations={conversations}
+          setConversations={setConversations}
+          selectedConversationId={selectedConversationId}
+          setSelectedConversationId={setSelectedConversationId}
+          messages={messages}
+          setMessages={setMessages}
+          sendMessage={sendMessage}
+          markAsRead={markAsRead}
+          onSelectConversation={handleSelectConversation}
+        />
+      )}
     </header>
   );
 }

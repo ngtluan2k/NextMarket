@@ -19,8 +19,6 @@ import { existsSync, mkdirSync } from 'fs';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadedFile } from '@nestjs/common';
 
-
-
 @UseGuards(JwtAuthGuard) // áp dụng cho tất cả route
 @Controller('chat')
 export class ChatController {
@@ -56,52 +54,36 @@ export class ChatController {
   }
 
   // ---------------- Messages ----------------
- @UseGuards(JwtAuthGuard)
-  @Post('message')
+  @UseGuards(JwtAuthGuard)
+  @Post('upload')
   @UseInterceptors(
-    FilesInterceptor('media', 10, { // tối đa 10 files
+    FilesInterceptor('media', 10, {
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = join(process.cwd(), 'uploads', 'chat');
-          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+          if (!existsSync(uploadPath))
+            mkdirSync(uploadPath, { recursive: true });
           cb(null, uploadPath);
         },
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, uniqueSuffix + extname(file.originalname));
         },
       }),
       limits: { fileSize: 20 * 1024 * 1024 }, // 20MB mỗi file
-    }),
+    })
   )
-  async sendMessage(
-    @Body()
-    body: {
-      conversationId: number;
-      senderType: SenderType;
-      messageType: MessageType; // nếu nhiều loại file, bạn có thể gộp là MEDIA
-      content?: string;
-    },
-    @UploadedFiles() files?: Express.Multer.File[],
-    @Request() req?: any,
-  ) {
-    const senderId = req.user.userId;
-
-    if (body.senderType === SenderType.USER && senderId !== req.user.sub) {
-      throw new ForbiddenException('Cannot send message as another user');
+  async uploadMedia(@UploadedFiles() files?: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      return { urls: [] };
     }
 
-    const mediaUrls = files?.map(file => `/uploads/chat/${file.filename}`) || [];
+    const urls = files.map((file) => `/uploads/chat/${file.filename}`);
 
-    // Lưu từng file thành message riêng hoặc 1 message có array media
-    return this.chatService.sendMultipleMediaMessages(
-      body.conversationId,
-      senderId,
-      body.senderType,
-      body.content,
-      mediaUrls,
-    );
+    return { urls };
   }
+
   @Post('message/read')
   async markAsRead(
     @Body() body: { conversationId: number; receiverType: SenderType },

@@ -18,7 +18,6 @@ import StoreCampaignManager from './tab/StoreCampaignManager';
 import StoreCampaignDetail from './tab/StoreCampaignDetail';
 import FlashSaleManager from './tab/FlashSaleManager';
 import FlashSaleRegister from './tab/FlashSaleRegister';
-import { ChatPageForStore } from '../ChatPageForStore';
 import { Modal } from 'antd';
 
 const { Content, Footer } = Layout;
@@ -150,7 +149,7 @@ const SellerMainLayout: React.FC = () => {
         }
       />
       <Layout>
-        <SellerHeader onOpenChatModal={openChatModal} />{' '}
+        <SellerHeader />{' '}
         <Content
           style={{
             margin: '0 16px',
@@ -164,16 +163,7 @@ const SellerMainLayout: React.FC = () => {
         </Content>
         <Footer style={{ textAlign: 'center' }}></Footer>
       </Layout>
-      <Modal
-        open={isChatModalVisible}
-        onCancel={closeChatModal}
-        footer={null}
-        width={1000}
-        destroyOnHidden={false}
-        style={{ top: 50 }} // cách top 50px, mở rộng lên trên
-      >
-        <ChatPageForStore />
-      </Modal>
+      
     </Layout>
   );
 };

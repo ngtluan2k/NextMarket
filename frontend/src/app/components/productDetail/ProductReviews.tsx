@@ -148,37 +148,36 @@ export default function ProductReviews({
             <div className="mb-2 text-sm font-medium text-slate-900">
               Tất cả hình ảnh ({allImages.length})
             </div>
-            <div className="grid grid-flow-col auto-cols-[80px] gap-2 overflow-x-auto pb-1">
-              {loading &&
-                Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-20 rounded bg-slate-100 animate-pulse"
-                  />
-                ))}
-              {!loading &&
-                allImages.length > 0 &&
-                allImages.slice(0, 12).map((src, i) => (
-                  <a
-                    key={i}
-                    href={getImageUrl(src)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block h-20 overflow-hidden rounded ring-1 ring-slate-200"
-                  >
-                    <img
-                      src={getImageUrl(src)}
-                      alt=""
-                      className="h-full w-full object-cover"
+            <Image.PreviewGroup>
+              <div className="grid grid-flow-col auto-cols-[80px] gap-2 overflow-x-auto pb-1">
+                {loading &&
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-20 rounded bg-slate-100 animate-pulse"
                     />
-                  </a>
-                ))}
-              {!loading && allImages.length === 0 && (
-                <div className="flex h-20 items-center justify-center rounded border border-dashed border-slate-200 text-slate-400">
-                  <ImageIcon className="mr-1 h-4 w-4" /> Chưa có ảnh
-                </div>
-              )}
-            </div>
+                  ))}
+
+                {!loading &&
+                  allImages.length > 0 &&
+                  allImages.slice(0, 12).map((src, i) => (
+                    <Image
+                      key={i}
+                      src={getImageUrl(src)}
+                      width={80}
+                      height={80}
+                      className="rounded ring-1 ring-slate-200 object-cover"
+                      preview={{ mask: false }} // bỏ overlay
+                    />
+                  ))}
+
+                {!loading && allImages.length === 0 && (
+                  <div className="flex h-20 items-center justify-center rounded border border-dashed border-slate-200 text-slate-400">
+                    <ImageIcon className="mr-1 h-4 w-4" /> Chưa có ảnh
+                  </div>
+                )}
+              </div>
+            </Image.PreviewGroup>
           </div>
         </div>
       </div>

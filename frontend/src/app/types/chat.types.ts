@@ -13,9 +13,14 @@ export enum MessageType {
   VIDEO = 'video',
 }
 
+export interface ConversationRef {
+  id: number;
+}
+
 export interface Message {
   id: number;
   conversation_id: number;
+  conversation?: ConversationRef; // object kèm id
   sender_id: number;
   sender_type: SenderType;
   message_type: MessageType;
@@ -25,6 +30,7 @@ export interface Message {
   created_at: string;
 }
 
+
 export interface Conversation {
   id: number;
   user: User; // <-- thay user_id
@@ -33,4 +39,5 @@ export interface Conversation {
   messages: Message[];
   created_at: string;
   updated_at: string;
+  unreadCount: number; // số tin nhắn chưa đọc trong cuộc hội thoại
 }

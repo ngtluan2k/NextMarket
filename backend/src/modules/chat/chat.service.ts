@@ -38,20 +38,39 @@ export class ChatService {
   }
 
   async getConversationsForUser(userId: number) {
-    return this.conversationRepo.find({
+    const conversations = await this.conversationRepo.find({
       where: { user: { id: userId } },
       relations: ['store', 'messages'],
       order: { updated_at: 'DESC' },
     });
+
+    return conversations.map((c) => ({
+      ...c,
+      unreadCount: c.messages.filter(
+        (m) => !m.is_read && m.sender_type === 'store'
+      ).length,
+    }));
   }
 
   async getConversationsForStore(storeId: number) {
-    return this.conversationRepo.find({
-      where: { store: { id: storeId } },
-      relations: ['user', 'user.profile', 'messages'],
-      order: { updated_at: 'DESC' },
-    });
-  }
+  const conversations = await this.conversationRepo.find({
+    where: { store: { id: storeId } },
+    relations: ['user', 'user.profile', 'messages'],
+    order: { updated_at: 'DESC' },
+  });
+
+  return conversations.map((c) => ({
+    ...c,
+    unreadCount: c.messages.filter(
+      (m) => !m.is_read && m.sender_type === 'user'
+    ).length,
+    messages: c.messages.map((m) => ({
+      ...m,
+      is_read: !!m.is_read, // ép thành boolean
+    })),
+  }));
+}
+
 
   // ---------------- Messages ----------------
   async sendMultipleMediaMessages(
@@ -61,7 +80,24 @@ export class ChatService {
     content: string | undefined,
     mediaUrls: string[]
   ) {
-    const messages = mediaUrls.map((url) => {
+    const messages: any[] = [];
+
+    // Nếu có content text và không có media
+    if (content && mediaUrls.length === 0) {
+      messages.push(
+        this.messageRepo.create({
+          conversation: { id: conversationId },
+          sender_id: senderId,
+          sender_type: senderType,
+          message_type: MessageType.TEXT,
+          content,
+          is_read: false,
+        })
+      );
+    }
+
+    // Nếu có media
+    mediaUrls.forEach((url) => {
       // Lấy đuôi file
       const ext = url.split('.').pop()?.toLowerCase();
 
@@ -79,21 +115,23 @@ export class ChatService {
         type = MessageType.IMAGE; // default
       }
 
-      return this.messageRepo.create({
-        conversation: { id: conversationId },
-        sender_id: senderId,
-        sender_type: senderType,
-        message_type: type,
-        content,
-        media_url: url,
-        is_read: false,
-      });
+      messages.push(
+        this.messageRepo.create({
+          conversation: { id: conversationId },
+          sender_id: senderId,
+          sender_type: senderType,
+          message_type: type,
+          content, // vẫn giữ text nếu muốn kèm media
+          media_url: url,
+          is_read: false,
+        })
+      );
     });
 
     return this.messageRepo.save(messages);
   }
 
-  async markAsRead(conversationId: number, receiverType: SenderType) {
+ async markAsRead(conversationId: number, receiverType: SenderType) {
     return this.messageRepo
       .createQueryBuilder()
       .update()
@@ -102,7 +140,6 @@ export class ChatService {
       .andWhere('sender_type != :receiverType', { receiverType })
       .execute();
   }
-
   async getConversationById(conversationId: number) {
     return this.conversationRepo.findOne({
       where: { id: conversationId },

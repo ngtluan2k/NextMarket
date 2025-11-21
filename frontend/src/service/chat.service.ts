@@ -35,31 +35,19 @@ export const getConversationsForStore = async (storeId: number) => {
 };
 
 // ---------------- Messages ----------------
-export const sendMessage = async (
-  conversationId: number,
-  senderType: SenderType,
-  messageType: MessageType,
-  content?: string,
-  mediaFiles?: File[]
-) => {
+export const uploadMedia = async (mediaFiles: File[]) => {
   const formData = new FormData();
-  formData.append('conversationId', String(conversationId));
-  formData.append('senderType', senderType);
-  formData.append('messageType', messageType);
-  if (content) formData.append('content', content);
-  mediaFiles?.forEach(file => formData.append('media', file)); // 👈 nhiều file
+  mediaFiles.forEach((file) => formData.append('media', file));
 
-  const res = await axios.post(`${BE_BASE_URL}/chat/message`, formData, {
+  const res = await axios.post(`${BE_BASE_URL}/chat/upload`, formData, {
     headers: {
       ...getAuthHeaders(),
       'Content-Type': 'multipart/form-data',
     },
   });
 
-  return res.data;
+  return res.data.urls; // danh sách URL
 };
-
-
 
 export const markAsRead = async (
   conversationId: number,
