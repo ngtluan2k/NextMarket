@@ -119,34 +119,47 @@ export default function StoreTopBar({
 
   const navigate = useNavigate();
 
-  const handleStartChat = async () => {
-  if (!info?.id || !userId) return;
+const handleStartChat = async () => {
+  console.log('Clicked Chat'); // log khi click
+  console.log('info.id:', info?.id, 'userId:', userId);
+  
+  if (!info?.id || !userId) {
+    console.log('Missing info.id or userId, aborting chat');
+    return;
+  }
 
-  // check conversation đã có chưa
+  // kiểm tra conversation đã có chưa
   const existing = conversations.find(
     (c) => c.store?.id === Number(info.id)
   );
+  console.log('Existing conversation:', existing);
 
   if (existing) {
     setConvId(existing.id);
     setSelectedConversationId(existing.id);
     setOpenChat(true);
     markAsRead(existing.id);
+    console.log('Opened existing conversation with id', existing.id);
     return;
   }
 
   // chưa có → tạo mới
   try {
+    console.log('Starting new conversation...');
     const conversation = await startConversation(Number(info.id));
+    console.log('New conversation created:', conversation);
+
     if (conversation?.id) {
       setConvId(conversation.id);
       setSelectedConversationId(conversation.id);
       setOpenChat(true);
+      console.log('ChatBox opened for conversation id', conversation.id);
     }
   } catch (err) {
-    console.error('Lỗi khi tạo conversation:', err);
+    console.error('Error when starting conversation:', err);
   }
 };
+
 
 
   useEffect(() => {

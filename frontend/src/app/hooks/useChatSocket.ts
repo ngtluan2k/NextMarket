@@ -68,35 +68,34 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
     socketRef.current = socket;
 
     // Nhận tin nhắn mới
-   socket.on('newMessage', (msg: Message[]) => {
-  const convId = msg[0]?.conversation?.id ?? msg[0]?.conversation_id;
-  if (!convId) return;
+    socket.on('newMessage', (msg: Message[]) => {
+      const convId = msg[0]?.conversation?.id ?? msg[0]?.conversation_id;
+      if (!convId) return;
 
-  const isOpen = selectedConvRef.current === convId;
+      const isOpen = selectedConvRef.current === convId;
 
-  setConversations(prev =>
-    prev.map(conv => {
-      if (conv.id !== convId) return conv;
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id !== convId) return conv;
 
-      return {
-        ...conv,
-        messages: [...(conv.messages || []), ...msg],
-        unreadCount: isOpen ? 0 : (conv.unreadCount ?? 0) + msg.length,
-      };
-    })
-  );
+          return {
+            ...conv,
+            messages: [...(conv.messages || []), ...msg],
+            unreadCount: isOpen ? 0 : (conv.unreadCount ?? 0) + msg.length,
+          };
+        })
+      );
 
-  // Nếu conversation đang mở → update messages ngay
-  if (isOpen) {
-    setMessages(prev => [...prev, ...msg]);
+      // Nếu conversation đang mở → update messages ngay
+      if (isOpen) {
+        setMessages((prev) => [...prev, ...msg]);
 
-    socketRef.current?.emit('markAsRead', {
-      conversationId: convId,
-      receiverType: senderType,
+        socketRef.current?.emit('markAsRead', {
+          conversationId: convId,
+          receiverType: senderType,
+        });
+      }
     });
-  }
-});
-
 
     // Khi conversation mới được tạo
     socket.on('conversationCreated', (conv: Conversation) => {
@@ -149,12 +148,18 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
   };
 
   const startConversation = async (storeId: number): Promise<Conversation> => {
-    if (!socketRef.current) throw new Error('Socket not connected');
-    return new Promise((resolve) => {
-      socketRef.current!.emit(
+    const socket = socketRef.current;
+    if (!socket) throw new Error('Socket not connected');
+
+    return new Promise((resolve, reject) => {
+      socket.emit(
         'startConversation',
         { storeId, userId: id },
-        (conversation: Conversation) => resolve(conversation)
+        (conversation: Conversation) => {
+          if (!conversation)
+            return reject(new Error('No conversation returned'));
+          resolve(conversation);
+        }
       );
     });
   };

@@ -1,3 +1,4 @@
+import { DollarOutlined } from '@ant-design/icons';
 import React from 'react';
 
 interface GroupPaymentBoxProps {
@@ -44,7 +45,7 @@ export const GroupPaymentBox: React.FC<GroupPaymentBoxProps> = ({
                 return (
                     <div className="bg-white rounded-xl shadow-sm border p-6 sticky top-6">
                         <h3 className="text-lg font-bold mb-4 text-slate-800">
-                            💰 Thanh toán cho nhóm
+                            <DollarOutlined /> Thanh toán cho nhóm
                         </h3>
 
                         <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg mb-4">
@@ -60,7 +61,7 @@ export const GroupPaymentBox: React.FC<GroupPaymentBoxProps> = ({
                             onClick={onHostCheckout}
                             className="w-full px-6 py-4 text-lg font-bold rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all"
                         >
-                            💳 Thanh toán cho nhóm
+                            <DollarOutlined /> Thanh toán cho nhóm
                         </button>
 
                         <p className="text-xs text-slate-500 mt-3 text-center">

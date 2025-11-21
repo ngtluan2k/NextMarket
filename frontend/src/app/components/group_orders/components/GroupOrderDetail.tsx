@@ -16,6 +16,15 @@ import {
     UserOutlined,
     InfoCircleOutlined,
     EnvironmentOutlined,
+    EditOutlined,
+    ClockCircleOutlined,
+    TeamOutlined,
+    UsergroupAddOutlined,
+    LockOutlined,
+    RestOutlined,
+    WarningOutlined,
+    CrownOutlined,
+    SwapOutlined,
 } from '@ant-design/icons';
 import AddressModal from './../../../page/AddressModal';
 import { message } from 'antd';
@@ -533,7 +542,7 @@ export default function GroupOrderDetail() {
                 <div className="mb-6 flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <h1 className="text-2xl font-bold text-slate-900">
-                            📦 Đơn hàng nhóm: {group?.user?.profile?.full_name ?? '—'}
+                            <TeamOutlined/> Đơn hàng nhóm: {group?.user?.profile?.full_name ?? '—'}
                         </h1>
 
                         {group?.store?.slug && (
@@ -560,37 +569,37 @@ export default function GroupOrderDetail() {
                                         onClick={onEditName}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        ✏️ Sửa tên nhóm
+                                        <EditOutlined /> Sửa tên nhóm
                                     </button>
                                     <button
                                         onClick={onEditDeadline}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        ⏰ Sửa thời hạn
+                                        <ClockCircleOutlined /> Sửa thời hạn
                                     </button>
                                     <button
                                         onClick={onEditTargetCount}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        🎯 Sửa mục tiêu
+                                        <TeamOutlined /> Giới hạn thành viên
                                     </button>
                                     <button
                                         onClick={onAddMember}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        👥 Thêm thành viên
+                                        <UsergroupAddOutlined /> Thêm thành viên
                                     </button>
                                     <button
                                         onClick={onManualLockGroup}
                                         className="px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition-colors"
                                     >
-                                        🔒 Khóa nhóm ngay
+                                        <LockOutlined /> Khóa nhóm ngay
                                     </button>
                                     <button
                                         onClick={onDeleteGroup}
                                         className="px-3 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
                                     >
-                                        🗑️ Xóa nhóm
+                                        <RestOutlined /> Xóa nhóm
                                     </button>
                                 </div>
                             )}
@@ -781,7 +790,7 @@ export default function GroupOrderDetail() {
                                             onClick={onEditDeliveryMode}
                                             className="w-full px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded transition-colors font-medium"
                                         >
-                                            🔄 Thay đổi chế độ giao hàng
+                                            <SwapOutlined /> Thay đổi chế độ giao hàng
                                         </button>
                                     )}
                                 </div>
@@ -836,14 +845,14 @@ export default function GroupOrderDetail() {
                         {/* PANEL 2: Thành viên */}
                         <section className="lg:col-span-4 bg-white rounded-xl shadow-sm border p-6">
                             <h2 className="font-bold text-lg mb-4">
-                                👥 Thành viên ({members.length})
+                                <TeamOutlined/> Thành viên ({members.length})
                             </h2>
 
                             {membersWithoutAddress.length > 0 &&
                                 group?.delivery_mode === 'member_address' && (
                                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                                         <p className="text-xs font-semibold text-yellow-800 mb-1">
-                                            ⚠️ Thành viên chưa có địa chỉ:
+                                            <WarningOutlined /> Thành viên chưa có địa chỉ:
                                         </p>
                                         <ul className="text-xs text-yellow-700 space-y-0.5">
                                             {membersWithoutAddress.map((m) => (
@@ -876,7 +885,7 @@ export default function GroupOrderDetail() {
                                                 </div>
                                                 {m.is_host === 1 ? (
                                                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                                        👑 Host
+                                                        <CrownOutlined/> Host
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">

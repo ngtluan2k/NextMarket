@@ -64,13 +64,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { userId?: number; storeId?: number; orderId?: number },
     @ConnectedSocket() client: Socket
   ) {
-    if (!data.userId && !data.storeId)
+
+
+    if (!data.userId || !data.storeId) {
       throw new Error('UserId or StoreId is required');
+    }
 
-    const userId = data.userId!;
-    const storeId = data.storeId!;
+    const userId = data.userId;
+    const storeId = data.storeId;
 
-    // Kiểm tra conversation đã tồn tại chưa
+    // Tạo hoặc lấy conversation đã tồn tại
     const conversation = await this.chatService.createConversation(
       userId,
       storeId,
@@ -78,6 +81,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     // Emit về chính socket của sender để cập nhật list conversation
+    // Lúc này conversation đã có user.profile.full_name và store.name
     client.emit('conversationCreated', conversation);
 
     return conversation;

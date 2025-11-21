@@ -17,7 +17,11 @@ export class ChatService {
   ) {}
 
   // ---------------- Conversation ----------------
-  async createConversation(userId: number, storeId: number, orderId?: number) {
+  async createConversation(
+    userId: number,
+    storeId: number,
+    orderId?: number
+  ): Promise<Conversation> {
     const where: any = { user: { id: userId }, store: { id: storeId } };
     if (orderId) where.order = { id: orderId };
 
@@ -25,16 +29,24 @@ export class ChatService {
       where,
       relations: ['user', 'user.profile', 'store', 'order', 'messages'],
     });
+
     if (existing) return existing;
 
-    const conversationData: any = {
+    const conversation = this.conversationRepo.create({
       user: { id: userId } as User,
       store: { id: storeId } as Store,
-    };
-    if (orderId) conversationData.order = { id: orderId } as Order;
+      order: orderId ? ({ id: orderId } as Order) : undefined,
+    });
 
-    const conversation = this.conversationRepo.create(conversationData);
-    return this.conversationRepo.save(conversation);
+    const savedConversation = await this.conversationRepo.save(conversation);
+
+    // Fetch lại với relations đầy đủ để chắc chắn có user.profile.full_name và store.name
+    const fullConversation = await this.conversationRepo.findOneOrFail({
+      where: { id: savedConversation.id },
+      relations: ['user', 'user.profile', 'store', 'order', 'messages'],
+    });
+
+    return fullConversation;
   }
 
   async getConversationsForUser(userId: number) {
@@ -53,24 +65,23 @@ export class ChatService {
   }
 
   async getConversationsForStore(storeId: number) {
-  const conversations = await this.conversationRepo.find({
-    where: { store: { id: storeId } },
-    relations: ['user', 'user.profile', 'messages'],
-    order: { updated_at: 'DESC' },
-  });
+    const conversations = await this.conversationRepo.find({
+      where: { store: { id: storeId } },
+      relations: ['user', 'user.profile', 'messages'],
+      order: { updated_at: 'DESC' },
+    });
 
-  return conversations.map((c) => ({
-    ...c,
-    unreadCount: c.messages.filter(
-      (m) => !m.is_read && m.sender_type === 'user'
-    ).length,
-    messages: c.messages.map((m) => ({
-      ...m,
-      is_read: !!m.is_read, // ép thành boolean
-    })),
-  }));
-}
-
+    return conversations.map((c) => ({
+      ...c,
+      unreadCount: c.messages.filter(
+        (m) => !m.is_read && m.sender_type === 'user'
+      ).length,
+      messages: c.messages.map((m) => ({
+        ...m,
+        is_read: !!m.is_read, // ép thành boolean
+      })),
+    }));
+  }
 
   // ---------------- Messages ----------------
   async sendMultipleMediaMessages(
@@ -131,7 +142,7 @@ export class ChatService {
     return this.messageRepo.save(messages);
   }
 
- async markAsRead(conversationId: number, receiverType: SenderType) {
+  async markAsRead(conversationId: number, receiverType: SenderType) {
     return this.messageRepo
       .createQueryBuilder()
       .update()
