@@ -22,7 +22,6 @@ const AffiliateTree = ({ treeData, defaultExpandAll = true, showCommissions = fa
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState<boolean>(true);
 
-  // Update expanded keys when prop changes
   React.useEffect(() => {
     if (propExpandedKeys && propExpandedKeys.length > 0) {
       console.log('🔍 Setting expanded keys from props:', propExpandedKeys);

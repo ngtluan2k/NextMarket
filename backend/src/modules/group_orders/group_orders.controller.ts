@@ -35,7 +35,7 @@ export class GroupOrdersController {
 
   @Post(':id/join') //tham gia group.
   join(@Param('id', ParseIntPipe) id: number, @Body() dto: JoinGroupOrderDto) {
-    return this.service.joinGroupOrder(dto.userId, id,dto.joinCode);
+    return this.service.joinGroupOrder(dto.userId, id, dto.joinCode);
   }
 
   @Get('code/:code')
@@ -161,6 +161,39 @@ export class GroupOrdersController {
   ) {
     const userId = req.user.userId;
     return this.service.leaveGroupOrder(id, userId);
+  }
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/checkout-my-items')
+  async checkoutMyItems(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { paymentMethodUuid: string; addressId?: number },
+    @Req() req: any
+  ) {
+    const userId = req.user.userId;
+    return this.service.checkoutMemberItems(
+      id,
+      userId,
+      body.paymentMethodUuid,
+      body.addressId
+    );
+  }
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/lock')
+  async lockGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any
+  ) {
+    const userId = req.user.userId;
+    return this.service.manualLockGroup(id, userId);
+  }
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/unlock')
+  async unlockGroup(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any
+  ) {
+    const userId = req.user.userId;
+    return this.service.unlockGroupOrder(id, userId);
   }
 }
 

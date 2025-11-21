@@ -40,6 +40,7 @@ import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 
 
 const orderStatusMap: Record<number, string> = {
+    '-1': 'Chờ Nhóm Hoàn Tất',
     0: 'Đang Chờ Xác Nhận',
     1: 'Đã Xác Nhận',
     2: 'Đang Xử Lý',
@@ -52,6 +53,7 @@ const orderStatusMap: Record<number, string> = {
 
 function getStatusColor(status: string | number): string {
     switch (Number(status)) {
+        case -1: return 'amber';
         case 0: return 'orange';
         case 1: return 'blue';
         case 2: return 'cyan';
@@ -94,14 +96,14 @@ export default function GroupOrderDetailModal({
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
 
-    
+
     const tableDataSource = useMemo(() => {
         if (!groupData) return [];
 
         const { groupInfo, orders = [] } = groupData;
         const groupOrderItems = groupInfo?.items || [];
         const memberItemsMap = new Map<number, any>();
-        
+
 
         groupOrderItems.forEach((item: any) => {
             const memberId = item.member?.id;
@@ -114,12 +116,15 @@ export default function GroupOrderDetailModal({
                     user: item.member?.user,
                     items: [],
                     totalAmount: 0,
+                    totalQuantity: 0,
                 });
             }
 
             const memberData = memberItemsMap.get(memberId);
             memberData.items.push(item);
             memberData.totalAmount += Number(item.price || 0);
+            memberData.totalQuantity += Number(item.quantity || 0);
+
         });
 
         // Convert Map to Array
@@ -171,13 +176,21 @@ export default function GroupOrderDetailModal({
     const memberCount = uniqueMemberIds.size;
 
 
-    const totalAmount = orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+    const totalAmount = tableDataSource.reduce(
+        (sum, memberData) => sum + Number(memberData.totalAmount || 0),
+        0
+    );
+
+
+    const subtotal = tableDataSource.reduce(
+        (sum, memberData) => sum + Number(memberData.totalAmount || 0),
+        0
+    );
     const totalItems = groupOrderItems.reduce(
         (sum: number, item: any) => sum + (item.quantity || 0),
         0
     );
 
-    // Lấy thông tin group
     const group = groupInfo;
     const host = groupInfo?.user;
 
@@ -253,7 +266,7 @@ export default function GroupOrderDetailModal({
         {
             title: 'Địa chỉ giao hàng',
             key: 'address',
-            render: (_: any, record: any) => {  
+            render: (_: any, record: any) => {
                 if (!record.userAddress) return <Tag>Chưa có địa chỉ</Tag>;
 
                 return (
@@ -314,15 +327,15 @@ export default function GroupOrderDetailModal({
             key: 'quantity',
             width: 80,
             align: 'center' as const,
-            render: (_: any, record: any) => ( 
-                <span className="font-semibold">{record.totalQuantity}</span>  
+            render: (_: any, record: any) => (
+                <span className="font-semibold">{record.totalQuantity}</span>
             ),
         },
         {
             title: 'Tổng tiền',
             key: 'amount',
             width: 130,
-            render: (_: any, record: any) => (  
+            render: (_: any, record: any) => (
                 <div className="text-right">
                     <div className="font-semibold text-lg text-blue-600">
                         ₫{parseFloat(record.totalAmount || '0').toLocaleString('vi-VN')}
@@ -682,9 +695,7 @@ export default function GroupOrderDetailModal({
                                 <div className="text-gray-600 mb-2">Tạm tính:</div>
                                 <div className="text-2xl font-semibold">
                                     ₫
-                                    {orders
-                                        .reduce((sum, o) => sum + Number(o.subtotal || 0), 0)
-                                        .toLocaleString('vi-VN')}
+                                    {subtotal.toLocaleString('vi-VN')}
                                 </div>
                             </Col>
                             <Col span={12} className="text-right">

@@ -102,7 +102,7 @@ export class AuthService {
     return {
       access_token: token,
       user: {
-        id: user.id,
+        user_id: user.id,
         email: user.email,
         full_name: user.profile?.full_name || '',
         roles,

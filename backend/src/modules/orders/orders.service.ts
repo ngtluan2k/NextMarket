@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Repository, Not } from 'typeorm';
 import { Order } from './order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -54,7 +54,7 @@ export class OrdersService {
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     console.log('🚀 Starting order creation with data:', JSON.stringify(createOrderDto, null, 2));
-    
+
     return this.ordersRepository.manager.transaction(async (manager) => {
       console.log('📝 Starting database transaction for order creation');
       const user = await manager.findOneBy(User, { id: createOrderDto.userId });
@@ -134,24 +134,24 @@ export class OrdersService {
       if (createOrderDto.affiliateCode) {
         try {
           console.log('🔍 Resolving affiliate code:', createOrderDto.affiliateCode);
-          
+
           // Validate affiliate code format
           if (!createOrderDto.affiliateCode.trim()) {
             throw new BadRequestException('Affiliate code cannot be empty');
           }
-          
+
           // Get the first product ID for affiliate link resolution
           const firstProductId = createOrderDto.items.length > 0 ? createOrderDto.items[0].productId : undefined;
           const firstVariantId = createOrderDto.items.length > 0 ? createOrderDto.items[0].variantId : undefined;
-          
+
           console.log('📦 Product info for affiliate resolution:', { firstProductId, firstVariantId });
-          
+
           affiliateInfo = await this.affiliateResolutionService.resolveAffiliateCode(
             createOrderDto.affiliateCode.trim(),
             firstProductId,
             firstVariantId
           );
-          
+
           if (affiliateInfo && affiliateInfo.isValid) {
             console.log('✅ Affiliate resolved:', affiliateInfo);
           } else {
@@ -162,15 +162,15 @@ export class OrdersService {
           }
         } catch (error) {
           console.error('❌ Affiliate resolution error:', error);
-          
+
           if (error instanceof BadRequestException) {
             // Re-throw validation errors
             throw error;
           }
-          
+
           console.error('Error details:', error instanceof Error ? error.message : String(error));
           console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
-          
+
           // For database/network errors, continue without affiliate tracking
           // but log the issue for monitoring
           affiliateInfo = null;
@@ -495,6 +495,9 @@ export class OrdersService {
 
   async findAll(): Promise<Order[]> {
     return this.ordersRepository.find({
+      where: {
+        status: Not(OrderStatuses.draft), 
+      },
       relations: [
         'user',
         'store',
@@ -515,12 +518,13 @@ export class OrdersService {
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('product.media', 'media')
       .leftJoinAndSelect('orderItem.variant', 'variant')
-      .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule') // <--- sửa ở đây
+      .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule')
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
       .leftJoinAndSelect('product.reviews', 'reviews')
       .leftJoinAndSelect('order.payment', 'payment')
       .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .leftJoinAndSelect('order.group_order', 'groupOrder')
       .where('order.id = :id', { id })
       .getOne();
 
@@ -705,7 +709,9 @@ export class OrdersService {
       .createQueryBuilder('order')
       .select('SUM(order.totalAmount)', 'sum')
       .where('order.store_id = :storeId', { storeId })
-      .andWhere('order.status = :status', { status: OrderStatuses.completed })
+      .andWhere('order.status != :waitingGroup', {
+        waitingGroup: OrderStatuses.waiting_group
+      })
       .getRawOne();
 
     return Number(sum ?? 0);
@@ -725,18 +731,27 @@ export class OrdersService {
       .leftJoinAndSelect('order.orderItem', 'orderItem')
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('orderItem.variant', 'variant')
+
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+
       .leftJoinAndSelect('order.payment', 'payment')
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+
       .leftJoinAndSelect('order.group_order', 'group_order')
       .leftJoinAndSelect('group_order.user', 'group_host')
       .leftJoinAndSelect('group_host.profile', 'group_host_profile')
+
       .leftJoinAndSelect(
         'product.reviews',
         'reviews',
         'reviews.order_id = order.id'
       )
-      .where('order.store_id = :storeId', { storeId });
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status != :waitingGroup', {
+        waitingGroup: OrderStatuses.waiting_group
+      })
+      .andWhere('order.status != :draft', { draft: OrderStatuses.draft });
 
     // ========== BƯỚC 2: APPLY FILTERS ==========
     if (filters.status !== undefined && filters.status !== null) {
@@ -855,7 +870,10 @@ export class OrdersService {
     let query = this.ordersRepository
       .createQueryBuilder('order')
       .leftJoin('order.payment', 'payment')
-      .where('order.store_id = :storeId', { storeId });
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere('order.status != :waitingGroup', {
+        waitingGroup: OrderStatuses.waiting_group
+      });
 
     // filters như trước
     if (filters.status !== undefined && filters.status !== null) {
@@ -949,7 +967,10 @@ export class OrdersService {
 
   async findByUser2(userId: number): Promise<Order[]> {
     return this.ordersRepository.find({
-      where: { user: { id: userId } },
+      where: { 
+      user: { id: userId },
+      status: Not(OrderStatuses.draft), 
+    },
       relations: [
         'store',
         'user',
@@ -957,6 +978,8 @@ export class OrdersService {
         'voucherUsages',
         'voucherUsages.voucher',
         'group_order',
+        'payment',
+        'payment.paymentMethod',
         'orderItem',
         'orderItem.product',
         'orderItem.product.media',
@@ -980,7 +1003,8 @@ export class OrdersService {
       .leftJoinAndSelect('order.userAddress', 'userAddress')
       .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
       .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-      .where('order.user_id = :userId', { userId });
+      .where('order.user_id = :userId', { userId })
+      .andWhere('order.status != :draft', { draft: OrderStatuses.draft });
 
     if (filters.status) {
       query = query.andWhere('order.status = :status', {

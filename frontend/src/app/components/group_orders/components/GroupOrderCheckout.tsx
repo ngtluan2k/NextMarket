@@ -7,12 +7,13 @@ import {
 } from '@ant-design/icons';
 import {
   groupOrderItemsApi,
+  groupOrdersApi,
   userApi,
   paymentApi,
 } from '../../../../service/groupOrderItems.service';
 import AddressModal from '../../../page/AddressModal';
 import { UserAddress } from '../../../types/user';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
@@ -26,6 +27,7 @@ interface GroupOrderCheckout {
   discountPercent: number;
   onSuccess?: () => void;
   deliveryMode: 'host_address' | 'member_address';
+  isMemberCheckout?: boolean;
 }
 
 export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
@@ -36,9 +38,10 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
   totalAmount, // Đã là giá đã giảm
   discountPercent,
   deliveryMode,
+  isMemberCheckout,
   onSuccess,
 }) => {
-  const { me } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
@@ -68,7 +71,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
         return;
       }
       const userId =
-        me?.user_id || me?.id || Number(localStorage.getItem('userId'));
+        user?.user_id || user?.id || Number(localStorage.getItem('userId'));
       if (!userId) {
         message.error('Vui lòng đăng nhập để tiếp tục');
         return;
@@ -96,7 +99,14 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
       } else {
         // member_address mode: chỉ load payment methods
         const paymentMethodsRes = await paymentApi.getPaymentMethods();
-        setPaymentMethods(paymentMethodsRes || []);
+        const onlinePaymentMethods = (paymentMethodsRes || []).filter(
+          (method: any) => method.type !== 'cod'
+        );
+
+        if (onlinePaymentMethods.length === 0) {
+          message.warning('Không có phương thức thanh toán online nào khả dụng!');
+        }
+        setPaymentMethods(onlinePaymentMethods || []);
       }
     } catch (error) {
       console.error('Failed to load checkout data:', error);
@@ -105,7 +115,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
   };
 
   const handleCheckout = async () => {
-    console.log('🔍 Debug Checkout:', {
+    console.log(' Debug Checkout:', {
       deliveryMode,
       selectedAddress,
       selectedPaymentMethod,
@@ -136,7 +146,9 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
 
       console.log('📤 Checkout payload:', payload);
 
-      const response = await groupOrderItemsApi.checkout(groupId, payload);
+      const response = isMemberCheckout
+        ? await groupOrdersApi.checkoutMyItems(groupId, payload)
+        : await groupOrderItemsApi.checkout(groupId, payload);
 
       console.log(' Checkout response:', response);
 
@@ -154,6 +166,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
 
         navigate('/order-success', {
           state: {
+            status: 'success',
             orderCode: response.orderUuid || response.orderCode,
             total: totals.totalAfter,
             paymentMethodLabel:
@@ -169,8 +182,8 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
               groupItems.length > 0
                 ? new Set(groupItems.map((item) => item.member?.user?.id)).size
                 : 0,
-            deliveryMode: deliveryMode, // ← Thêm info
-            orderCount: response.orderCount || 1, // ← Số orders được tạo
+            deliveryMode: deliveryMode,
+            orderCount: response.orderCount || 1,
           },
           replace: true,
         });
@@ -259,6 +272,15 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
             showIcon
           />
 
+          {deliveryMode === 'member_address' && isMemberCheckout && (
+            <Alert
+              message="⚠️ Bắt buộc thanh toán trước"
+              description="Chế độ giao hàng riêng yêu cầu tất cả thành viên thanh toán online trước. Không hỗ trợ thanh toán khi nhận hàng (COD)."
+              type="warning"
+              showIcon
+            />
+          )}
+
           {/* Order Summary */}
           <Card title="Tóm tắt đơn hàng" size="small">
             <div className="space-y-2">
@@ -278,7 +300,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
                       • {item.quantity} x{' '}
                       {formatPrice(
                         getItemPreGroupPrice(item, discountPercent) /
-                          item.quantity
+                        item.quantity
                       )}
                     </p>
                   </div>
@@ -311,7 +333,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
             </div>
           </Card>
 
-          {/* ✅ Chỉ hiển thị Address Selection khi deliveryMode = host_address */}
+          {/*  Chỉ hiển thị Address Selection khi deliveryMode = host_address */}
           {deliveryMode === 'host_address' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

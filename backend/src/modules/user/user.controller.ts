@@ -75,23 +75,22 @@ export class UserController {
   @ApiOperation({ summary: 'User login' })
   @ApiBody({ type: LoginDto })
   async login(@Body() dto: LoginDto) {
+    
     const userData = await this.userService.login(dto);
-
-    // Tạo JWT
-    const payload = {
-      sub: userData.id,
-      username: userData.username,
-      email: userData.email,
-      roles: userData.roles,
-      permissions: userData.permissions,
-    };
-    const token = await this.jwtService.signAsync(payload);
-
+  
     return {
       status: 200,
       message: 'Login successful',
-      data: payload,
-      access_token: token,
+      data: {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        is_affiliate: userData.is_affiliate,
+        roles: userData.roles,
+        permissions: userData.permissions,
+        
+      },
+      access_token: userData.access_token,
     };
   }
 

@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
@@ -27,6 +29,9 @@ import { CodStrategy } from './strategies/cod.strategy';
 import { VnpayStrategy } from './strategies/vnpay.strategy';
 import { MomoStrategy } from './strategies/momo.strategy';
 import { EveryCoinStrategy } from './strategies/everycoin.strategy';
+import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
+import { GroupOrdersService } from '../group_orders/group_orders.service';
+import { OrderStatuses } from '../orders/types/orders';
 
 @Injectable()
 export class PaymentsService {
@@ -46,11 +51,15 @@ export class PaymentsService {
     @InjectRepository(Inventory) private inventoryRepo: Repository<Inventory>,
     @InjectRepository(OrderStatusHistory)
     private historyRepo: Repository<OrderStatusHistory>,
+    @InjectRepository(GroupOrderMember)
+    private groupOrderMemberRepo: Repository<GroupOrderMember>,
+    @Inject(forwardRef(() => GroupOrdersService))
+    private groupOrdersService: GroupOrdersService,
     private codStrategy: CodStrategy,
     private vnpayStrategy: VnpayStrategy,
     private momoStrategy: MomoStrategy,
     private everycoinStrategy: EveryCoinStrategy
-  ) {}
+  ) { }
 
   async create(dto: CreatePaymentDto) {
     const order = await this.ordersRepo.findOne({
@@ -83,6 +92,14 @@ export class PaymentsService {
     this.logger.log(
       ` strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`
     );
+
+    if (strategyType === 'vnpay' || strategyType === 'momo') {
+      if (order.status === OrderStatuses.pending) {
+        order.status = OrderStatuses.draft;
+        await this.ordersRepo.save(order);
+        this.logger.log(`Order #${order.id} set to draft (payment: ${strategyType})`);
+      }
+    }
     let result;
     switch (strategyType) {
       case 'cod':
@@ -130,7 +147,7 @@ export class PaymentsService {
 
     const payments = await this.paymentsRepo.find({
       where: { order: { id: order.id } },
-      relations: ['paymentMethod', 'order'],
+      relations: ['paymentMethod', 'order', 'order.user'],
     });
 
     return payments;
@@ -147,26 +164,39 @@ export class PaymentsService {
     success: boolean;
     rawPayload?: any;
   }) {
-    return this.dataSource.transaction(async (manager) => {
-      // 1. Tìm payment
+    // Biến để lưu thông tin group order (nếu có)
+    let groupOrderId: number | null = null;
+    let userId: number | null = null;
+
+    // Thực hiện transaction
+    const payment = await this.dataSource.transaction(async (manager) => {
+      // 1. Tìm payment với relations cần thiết
       const payment = await manager.findOne(Payment, {
         where: { uuid: paymentUuid },
-        relations: ['order', 'paymentMethod'],
+        relations: ['order', 'order.group_order', 'order.user', 'paymentMethod'],
       });
-      if (!payment) throw new NotFoundException('Payment not found');
 
-      // 2. Check trùng transaction id
+      if (!payment) {
+        throw new NotFoundException('Payment not found');
+      }
+
+      this.logger.log(
+        `Processing payment callback: ${paymentUuid}, success: ${success}`
+      );
+
+      // 2. Check trùng transaction id (tránh duplicate callback)
       const existingTx = await manager.findOne(PaymentTransaction, {
         where: { providerTransactionId },
       });
+
       if (existingTx) {
         this.logger.warn(
-          'Duplicate provider transaction id: ' + providerTransactionId
+          `Duplicate provider transaction id: ${providerTransactionId}`
         );
         return payment;
       }
 
-      // 3. Tạo transaction
+      // 3. Tạo payment transaction record
       const tx = manager.create(PaymentTransaction, {
         payment,
         providerTransactionId,
@@ -177,14 +207,19 @@ export class PaymentsService {
       });
       await manager.save(tx);
 
-      // 4. Nếu thất bại
+      // 4. Nếu payment THẤT BẠI
       if (!success) {
         payment.status = PaymentStatus.Failed;
         await manager.save(payment);
+
+        this.logger.warn(
+          `Payment ${paymentUuid} failed: ${providerTransactionId}`
+        );
+
         return payment;
       }
 
-      // 5. Nếu thành công
+      // 5. Nếu payment THÀNH CÔNG - Update payment
       payment.status = PaymentStatus.Paid;
       payment.transactionId = providerTransactionId;
       payment.paidAt = new Date();
@@ -194,47 +229,97 @@ export class PaymentsService {
           : JSON.stringify(rawPayload || {});
       await manager.save(payment);
 
-      // 6. Update order status + history
+      this.logger.log(`✅ Payment ${paymentUuid} marked as paid`);
+
+      // 6. Update order status + tạo history
       const order = payment.order;
       const oldStatus = order.status;
-      order.status = 0; // đã thanh toán
-      await manager.save(order);
 
-      const history = manager.create(OrderStatusHistory, {
-        order: order as Order,
-        oldStatus: oldStatus as unknown as historyStatus,
-        newStatus: order.status as unknown as historyStatus,
-        changedAt: new Date(),
-        note: 'Payment completed via provider',
-      });
-      await manager.save(history);
+      // Chỉ update order status nếu KHÔNG PHẢI group order waiting_group
+      // Vì group order waiting_group sẽ được update khi tất cả members paid
+      if (order.status !== -1) {
+        if (order.status === OrderStatuses.draft) {
+          order.status = OrderStatuses.confirmed; // 1
+        } else {
+          order.status = 0; // confirmed
+        }
+        await manager.save(order);
 
-      // 7. Cập nhật tồn kho
+        const history = manager.create(OrderStatusHistory, {
+          order: order as Order,
+          oldStatus: oldStatus as unknown as historyStatus,
+          newStatus: order.status as unknown as historyStatus,
+          changedAt: new Date(),
+          note: 'Payment completed via provider',
+        });
+        await manager.save(history);
+
+        this.logger.log(`Order #${order.id} status updated to confirmed`);
+      }
+
+      // 7. ✅ Xử lý GROUP ORDER - Update member.has_paid
+      if (payment.order.group_order) {
+        groupOrderId = payment.order.group_order.id;
+        userId = payment.order.user?.id || null;
+
+        this.logger.log(
+          `🔍 Processing group order payment - Group #${groupOrderId}, User #${userId}`
+        );
+
+        // Tìm member trong group (dùng query builder)
+        const member = await manager
+          .getRepository(GroupOrderMember)
+          .createQueryBuilder('member')
+          .where('member.group_order_id = :groupOrderId', { groupOrderId })
+          .andWhere('member.user_id = :userId', { userId })
+          .getOne();
+
+        if (member) {
+          // ✅ CẬP NHẬT has_paid = true, status = 'paid'
+          member.has_paid = true;
+          member.status = 'paid';
+          await manager.save(member);
+
+          this.logger.log(
+            `✅ Member #${member.id} marked as paid for group #${groupOrderId}`
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ Member not found for group #${groupOrderId}, user #${userId}`
+          );
+        }
+      }
+
+      // 8. Cập nhật tồn kho (nếu cần)
       const items: OrderItem[] = await manager.find(OrderItem, {
         where: { order: { id: order.id } },
         relations: ['variant', 'product'],
       });
 
       for (const item of items) {
-        // Nếu có variant thì trừ trong variant.stock
         this.logger.debug(
-          `Processing orderItem ${item.id}, product=${
-            item.product.id
-          }, variant=${item.variant?.id || 'none'}`
+          `Processing orderItem ${item.id}, product=${item.product.id}, variant=${item.variant?.id || 'none'
+          }`
         );
 
+        // Nếu có variant thì trừ stock
         if (item.variant) {
           item.variant.stock = (item.variant.stock || 0) - item.quantity;
           await manager.save(item.variant);
+
+          this.logger.debug(
+            `Updated variant #${item.variant.id} stock: ${item.variant.stock}`
+          );
         }
 
-        // Tìm inventory theo product + variant
+        // Tìm và update inventory (nếu cần - code đã comment)
         let inv: Inventory | null = null;
+
         if (item.variant) {
           inv = await manager.findOne(Inventory, {
             where: {
               product: { id: item.product.id },
-              variant: item.variant ? { id: item.variant.id } : IsNull(),
+              variant: { id: item.variant.id },
             },
             relations: ['product', 'variant'],
           });
@@ -248,25 +333,37 @@ export class PaymentsService {
           });
         }
 
+        // Có thể uncomment nếu muốn update inventory
         // if (inv) {
-        //   inv.used_quantity = (inv.used_quantity || 0) - item.quantity;
+        //   inv.used_quantity = (inv.used_quantity || 0) + item.quantity;
         //   inv.quantity = (inv.quantity || 0) - item.quantity;
         //   await manager.save(inv);
-        //   this.logger.log(
-        //     `Updated inventory: product ${item.product.id}, variant ${
-        //       item.variant?.id || 'none'
-        //     } → used_quantity = ${inv.used_quantity}`
-        //   );
-        // } else {
-        //   this.logger.warn(
-        //     `No inventory found for product ${item.product.id}, variant ${
-        //       item.variant?.id || 'none'
-        //     }`
-        //   );
         // }
       }
 
       return payment;
-    });
+    }); // ← KẾT THÚC TRANSACTION
+
+    // 9. ✅ SAU KHI TRANSACTION COMMIT - Xử lý group order async
+    if (success && groupOrderId && userId) {
+      try {
+        this.logger.log(
+          `🔔 Broadcasting member paid event for group #${groupOrderId}`
+        );
+
+        // Gọi service để broadcast và check complete group
+        await this.groupOrdersService.handleMemberPaid(groupOrderId, userId);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        this.logger.error(
+          `❌ Failed to handle member paid for group #${groupOrderId}: ${errorMessage
+          }`
+        );
+        // Không throw error vì payment đã thành công rồi
+        // Chỉ log để debug
+      }
+    }
+
+    return payment;
   }
 }

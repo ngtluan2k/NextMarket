@@ -62,7 +62,11 @@ import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
 import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
 import { AuthConsumerChat } from './components/AuthConsumerChat';
-// import { ChatBubble } from './components/ChatBubble';
+import AffiliateRulesDebug from './components/debug/AffiliateRulesDebug';
+import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
+import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
+import LoginPerformanceDebug from './components/debug/LoginPerformanceDebug';
+import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -207,6 +211,10 @@ const App: React.FC = () => {
                 path="/affiliate/dashboard/support"
                 element={<Support />}
               />
+              <Route
+                path="affiliate/dashboard/affiliate-tree"
+                element={<UserAffiliateTree/>}
+              />
             </Route>
             <Route path="/product/:id" element={<AffiliateLinkResolver />} />
             <Route
@@ -223,6 +231,22 @@ const App: React.FC = () => {
             <Route
               path="/debug/affiliate-variant"
               element={<AffiliateVariantTest />}
+            />
+            <Route
+              path="/debug/affiliate-rules"
+              element={<AffiliateRulesDebug />}
+            />
+            <Route
+              path="/debug/commission-tree"
+              element={<CommissionTreeDebug />}
+            />
+            <Route
+              path="/debug/commission-database"
+              element={<CommissionDatabaseDebug />}
+            />
+            <Route
+              path="/debug/login-performance"
+              element={<LoginPerformanceDebug />}
             />
           </Routes>
           <AuthConsumerChat />

@@ -1,4 +1,6 @@
-export enum OrderStatuses {
+export enum OrderStatuses { 
+  draft = -2,
+  waiting_group = -1,
   pending = 0,
   confirmed = 1,
   processing = 2,

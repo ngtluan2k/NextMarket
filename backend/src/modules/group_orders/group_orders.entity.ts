@@ -86,6 +86,14 @@ export class GroupOrder {
 
   @Column({
     type: 'integer',
+    nullable: true,
+    default: 2,
+    comment: 'Số lượng thành viên mục tiêu để tự động khóa nhóm',
+  })
+  target_member_count!: number | null;
+
+  @Column({
+    type: 'integer',
     default: OrderStatuses.pending,
     comment:
       'Trạng thái đơn hàng của nhóm: 0=pending, 1=confirmed, 2=processing, 3=shipped, 4=delivered, 5=completed, 6=cancelled, 7=returned',

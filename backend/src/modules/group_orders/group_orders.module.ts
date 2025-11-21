@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module,forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupOrder } from './../group_orders/group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
@@ -21,7 +21,7 @@ import { User } from '../user/user.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,]),PaymentsModule],
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,]),forwardRef(() => PaymentsModule),],
   controllers: [GroupOrdersController, GroupOrderItemsController],
   providers: [GroupOrdersService, GroupOrderItemsService,GroupOrdersGateway],
   exports: [GroupOrdersService,GroupOrdersGateway],

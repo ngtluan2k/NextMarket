@@ -11,7 +11,8 @@ import {
 import dayjs, { Dayjs } from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
-import { fetchMyWalletTransactions, WalletTransaction } from '../../../../service/wallet.service';
+import { fetchMyWalletTransactions } from '../../../../service/wallet.service';
+import { WalletTransaction } from '../../../types/wallet';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');

@@ -130,11 +130,15 @@ export default function AffiliateRulesManager() {
   }, [groupedRules, selectedProgramId, searchText]);
 
   const fetchRules = useCallback(async () => {
+    console.log('🔄 [AffiliateRulesManager] Starting to fetch rules...');
     setLoading(true);
     try {
       const data = await listRules();
+      console.log('✅ [AffiliateRulesManager] Rules fetched successfully:', data?.length || 0, 'rules');
+      console.log('📊 [AffiliateRulesManager] Sample rule structure:', data?.[0]);
       setRules(data || []);
     } catch (e: any) {
+      console.error('❌ [AffiliateRulesManager] Error fetching rules:', e);
       msg.error(e?.message || 'Tải danh sách rule thất bại');
     } finally {
       setLoading(false);

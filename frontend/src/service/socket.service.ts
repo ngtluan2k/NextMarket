@@ -126,8 +126,7 @@ export class SocketService {
             this.socket.removeAllListeners();
         }
     }
-
-    // === Emit functions ===
+    
     emitAddItem(groupId: number, userId: number, item: any) {
         this.socket?.emit('add-item', { groupId, userId, item });
     }
@@ -145,8 +144,32 @@ export class SocketService {
     }
 
     onMemberAddressUpdated(callback: (data: any) => void) {
-    this.socket?.on('member-address-updated', callback);
-}
+        this.socket?.on('member-address-updated', callback);
+    }
+
+    onMemberPaid(callback: (data: any) => void) {
+        this.socket?.on('member-paid', callback);
+    }
+
+    onPaymentProgress(callback: (data: any) => void) {
+        this.socket?.on('payment-progress', callback);
+    }
+
+    onGroupCompleted(callback: (data: any) => void) {
+        this.socket?.on('group-completed', callback);
+    }
+
+    onTargetReachedWarning(callback: (data: any) => void) {
+        this.socket?.on('target-reached-warning', callback);
+    }
+
+    onGroupAutoLocked(callback: (data: any) => void) {
+        this.socket?.on('group-auto-locked', callback);
+    }
+
+    onGroupManualLocked(callback: (data: any) => void) {
+        this.socket?.on('group-manual-locked', callback);
+    }
 }
 
 export const socketService = new SocketService();

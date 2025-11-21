@@ -299,9 +299,9 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
                           const imageUrl = rawUrl.startsWith('http')
                             ? rawUrl
                             : `${BE_BASE_URL}/${rawUrl.replace(
-                                /^\/+/,
-                                ''
-                              )}`;
+                              /^\/+/,
+                              ''
+                            )}`;
                           return (
                             <img
                               src={imageUrl}
@@ -471,25 +471,40 @@ export default function EveryMartHeader({ labels }: { labels?: HeaderLabels }) {
         open={openLogin}
         onClose={() => setOpenLogin(false)}
         onLogin={async (data: LoginPayload) => {
+          console.time('🚀 [Frontend] Login Total Time');
           try {
+            console.time('📡 [Frontend] Login API Call');
+
+            // Chỉ 1 API call duy nhất - backend đã trả về đầy đủ thông tin
             const res = await fetch(`${BE_BASE_URL}/users/login`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
             });
+
+            console.timeEnd('📡 [Frontend] Login API Call');
+
             const json = await res.json();
             if (!res.ok) throw new Error(json.message || 'Login thất bại');
 
-            login(json.data, json.access_token);
+            console.time('💾 [Frontend] Set Auth State');
+
             const profileRes = await fetch(`${BE_BASE_URL}/users/me`, {
-              headers: {
-                Authorization: `Bearer ${json.access_token}`,
-              },
+              headers: { Authorization: `Bearer ${json.access_token}` },
             });
-            const profileJson = await profileRes.json();
+
             if (profileRes.ok) {
-              login(profileJson.data, json.access_token);
+              const profileData = await profileRes.json();
+              // Lưu profile đầy đủ
+              localStorage.setItem('user', JSON.stringify(profileData.data));
+              login(profileData.data, json.access_token);
+            } else {
+              // Fallback: dùng data từ login nếu /users/me fail
+              login(json.data, json.access_token);
             }
+
+            console.timeEnd('💾 [Frontend] Set Auth State');
+            console.timeEnd('🚀 [Frontend] Login Total Time');
 
             setOpenLogin(false);
           } catch (err: any) {

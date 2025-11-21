@@ -11,8 +11,9 @@ import { GroupOrder } from '../group_orders/group_orders.entity';
 import { User } from '../user/user.entity';
 import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { UserAddress } from '../user_address/user_address.entity';
+import { Order } from '../orders/order.entity';
 
-export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered';
+export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered' | 'paid';
 
 @Entity('group_order_members')
 export class GroupOrderMember {
@@ -23,7 +24,7 @@ export class GroupOrderMember {
   @JoinColumn({ name: 'group_order_id' })
   group_order!: GroupOrder;
 
-  @Column({ type: 'integer', width: 1, default: () => '0' })
+  @Column({ type: 'boolean', default: false })
   is_host!: boolean;
 
   @CreateDateColumn({ type: 'timestamp' })
@@ -31,7 +32,7 @@ export class GroupOrderMember {
 
   @Column({
     type: 'enum',
-    enum: ['joined', 'left', 'ordered'],
+    enum: ['joined', 'left', 'ordered', 'paid'],
     default: 'joined',
   })
   status!: GroupOrderMemberStatus;
@@ -48,5 +49,12 @@ export class GroupOrderMember {
   @ManyToOne(() => UserAddress, { nullable: true })
   @JoinColumn({ name: 'address_id' })
   address_id?: UserAddress;
+
+  @Column({ type: 'boolean', default: false })
+  has_paid!: boolean;
+
+  @ManyToOne(() => Order, { nullable: true })
+  @JoinColumn({ name: 'order_id' })
+  order?: Order;
 
 }
