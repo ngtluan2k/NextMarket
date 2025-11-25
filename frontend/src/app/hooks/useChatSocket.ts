@@ -67,17 +67,24 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
 
     socketRef.current = socket;
 
-    // Nhận tin nhắn mới
     socket.on('newMessage', (msg: Message[]) => {
-      const convId = msg[0]?.conversation?.id ?? msg[0]?.conversation_id;
+      console.log('[Hook] New message received:', msg);
+      // Lấy convId từ message (ưu tiên conversation.id)
+      let convId = msg[0]?.conversation?.id ?? msg[0]?.conversation_id;
       if (!convId) return;
 
-      const isOpen = selectedConvRef.current === convId;
+      // Convert sang number (vì BE đôi khi trả string)
+      convId = Number(convId);
 
+      const isOpen = selectedConvRef.current === convId;
+      console.log('[Socket] New message convId:', convId);
+      console.log('[Socket] Current selectedConvRef:', selectedConvRef.current);
+      console.log('[Socket] Tin nhắn có thuộc conversation đang mở?', isOpen);
+
+      // Cập nhật trong danh sách conversation
       setConversations((prev) =>
         prev.map((conv) => {
           if (conv.id !== convId) return conv;
-
           return {
             ...conv,
             messages: [...(conv.messages || []), ...msg],
@@ -86,10 +93,9 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
         })
       );
 
-      // Nếu conversation đang mở → update messages ngay
+      // Nếu đang mở thì append message + emit markAsRead
       if (isOpen) {
         setMessages((prev) => [...prev, ...msg]);
-
         socketRef.current?.emit('markAsRead', {
           conversationId: convId,
           receiverType: senderType,
@@ -97,10 +103,28 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
       }
     });
 
-    // Khi conversation mới được tạo
+    // Khi conversation mới được tạo (1-1)
     socket.on('conversationCreated', (conv: Conversation) => {
       setConversations((prev) => [conv, ...prev]);
     });
+
+    // Khi conversation nhóm được tạo
+    socket.on('groupConversationCreated', (conv: Conversation) => {
+      // Join room ngay
+      socket.emit('joinGroupConversation', { conversationId: conv.id });
+      setConversations((prev) => [conv, ...prev]);
+    });
+
+    // Join room khi selectedConversationId thay đổi (mở group chat)
+    if (selectedConversationId) {
+      socket.emit(
+        'joinGroupConversation',
+        { conversationId: selectedConversationId },
+        () => {
+          console.log('Joined room group-' + selectedConversationId);
+        }
+      );
+    }
 
     // Khi phía gửi nhận thông báo đã đọc
     socket.on('messageRead', ({ conversationId, messageIds }: any) => {
@@ -164,6 +188,28 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
     });
   };
 
+  const startGroupConversation = async (
+    groupOrderId: number
+  ): Promise<Conversation> => {
+    if (!socketRef.current) throw new Error('Socket not connected');
+    return new Promise((resolve, reject) => {
+      socketRef.current!.emit(
+        'startGroupConversation',
+        { groupOrderId },
+        (conv: Conversation) => {
+          if (!conv) return reject(new Error('No group conversation returned'));
+          // Join room ngay
+          socketRef.current!.emit('joinConversation', conv.id);
+          resolve(conv);
+        }
+      );
+    });
+  };
+
+  const joinConversationRoom = (conversationId: number) => {
+    socketRef.current?.emit('joinConversation', conversationId);
+  };
+
   const markAsRead = (conversationId: number) => {
     if (!socketRef.current) return;
     socketRef.current.emit('markAsRead', {
@@ -181,6 +227,8 @@ export const useChatSocket = (id: number, senderType: SenderType) => {
     setSelectedConversationId,
     sendMessage,
     startConversation,
+    startGroupConversation,
     markAsRead,
+    joinConversationRoom,
   };
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { UserProfile } from '../types/order';
 
 export interface User {
   id: number;
@@ -7,6 +8,7 @@ export interface User {
   roles: string[];
   permissions: string[];
   user_id: number;
+  profile?: UserProfile;
 }
 
 export const useAuth = () => {

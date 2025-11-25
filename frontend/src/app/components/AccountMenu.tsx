@@ -63,7 +63,7 @@ export default function AccountMenu({ className = '' }) {
             Thông tin tài khoản
           </Link>
           <Link
-            to="account/orders"
+            to="/account/orders"
             className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
           >
             <Package className="h-4 w-4 text-slate-500" />

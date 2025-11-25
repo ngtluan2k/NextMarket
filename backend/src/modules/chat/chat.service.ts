@@ -6,6 +6,7 @@ import { Message, MessageType, SenderType } from './entities/message.entity';
 import { User } from '../user/user.entity';
 import { Store } from '../store/store.entity';
 import { Order } from '../orders/order.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
 
 @Injectable()
 export class ChatService {
@@ -13,7 +14,9 @@ export class ChatService {
     @InjectRepository(Conversation)
     private readonly conversationRepo: Repository<Conversation>,
     @InjectRepository(Message)
-    private readonly messageRepo: Repository<Message>
+    private readonly messageRepo: Repository<Message>,
+    @InjectRepository(GroupOrder)
+    private readonly groupOrderRepo: Repository<GroupOrder>
   ) {}
 
   // ---------------- Conversation ----------------
@@ -48,6 +51,55 @@ export class ChatService {
 
     return fullConversation;
   }
+
+  async createGroupConversation(groupOrderId: number) {
+  // Kiểm tra đã có conversation cho group_order chưa
+  const existing = await this.conversationRepo.findOne({
+  where: { group_order: { id: groupOrderId } },
+  relations: [
+    'group_order',
+    'group_order.members',
+    'group_order.members.user',
+    'group_order.members.user.profile',
+    'store',
+    'user',
+    'messages',
+  ],
+});
+
+  if (existing) return existing;
+
+  // Lấy thông tin group order (để có store và host user)
+  const groupOrder = await this.groupOrderRepo.findOne({
+    where: { id: groupOrderId },
+    relations: ['store', 'user'],
+  });
+  if (!groupOrder) throw new Error('GroupOrder not found');
+
+  // Tạo mới conversation cho group chat, gắn store và host user
+  const conversation = this.conversationRepo.create({
+    group_order: { id: groupOrderId },
+    store: undefined,   // gắn store
+    user: undefined,     // gắn host
+  });
+
+  const savedConversation = await this.conversationRepo.save(conversation);
+
+  // Fetch lại đầy đủ quan hệ
+  return this.conversationRepo.findOneOrFail({
+  where: { id: savedConversation.id },
+  relations: [
+    'group_order',
+    'group_order.members',
+    'group_order.members.user',
+    'group_order.members.user.profile',
+    'store',
+    'user',
+    'messages',
+  ],
+});
+
+}
 
   async getConversationsForUser(userId: number) {
     const conversations = await this.conversationRepo.find({
@@ -154,7 +206,8 @@ export class ChatService {
   async getConversationById(conversationId: number) {
     return this.conversationRepo.findOne({
       where: { id: conversationId },
-      relations: ['user', 'user.profile', 'store', 'messages'],
+      relations: ['user', 'user.profile', 'store', 'messages', 'group_order', 'group_order.members', 'group_order.members.user',
+  'group_order.members.user.profile',],
     });
   }
 }
