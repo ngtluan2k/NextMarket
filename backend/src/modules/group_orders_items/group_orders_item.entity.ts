@@ -12,6 +12,7 @@ import { GroupOrderMember } from '../group_orders_members/group_orders_member.en
 import { Product } from '../product/product.entity';
 import { Variant } from '../variant/variant.entity';
 import { OrderItem } from '../order-items/order-item.entity';
+import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 
 @Entity('group_order_items')
 export class GroupOrderItem {
@@ -48,6 +49,13 @@ export class GroupOrderItem {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.groupOrderItem)
   orderItems!: OrderItem[];
+
+  @Column({ type: 'int', nullable: true })
+  pricing_rule_id?: number | null;
+
+  @ManyToOne(() => PricingRules, { nullable: true })
+  @JoinColumn({ name: 'pricing_rule_id' })
+  pricing_rule?: PricingRules | null;
 
 
 }

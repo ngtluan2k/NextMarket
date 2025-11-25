@@ -147,20 +147,20 @@ export const userVoucherApi = {
     filterByStoreOnly = false
   ): Promise<Voucher[]> => {
     const params = new URLSearchParams();
-    
+
     if (storeId !== undefined) {
       params.append('storeId', storeId.toString());
     }
-    
+
     if (filterByStoreOnly) {
       params.append('filterByStore', 'true');
     }
-    
+
     const queryString = params.toString();
-    const url = queryString 
+    const url = queryString
       ? `${ENDPOINTS.userVouchers}/available?${queryString}`
       : `${ENDPOINTS.userVouchers}/available`;
-    
+
     const res = await api.get<Voucher[]>(url);
     return res.data;
   },
@@ -314,12 +314,12 @@ export const voucherDiscoveryApi = {
     if (limit) {
       params.append('limit', limit.toString());
     }
-    
+
     const queryString = params.toString();
-    const url = queryString 
+    const url = queryString
       ? `${ENDPOINTS.userVouchers}/discover?${queryString}`
       : `${ENDPOINTS.userVouchers}/discover`;
-    
+
     const res = await api.get<Voucher[]>(url);
     return res.data;
   },

@@ -125,7 +125,7 @@ export default function BuyBox({
     console.log('Product ID:', product?.id);
     console.log('Quantity:', quantity);
     console.log('Selected Variant ID:', selectedVariantId);
-    console.log('Selected Pricing Rule ID:', selectedRuleId); // ✅ bây giờ hợp lệ
+    console.log('Selected Pricing Rule ID:', selectedRuleId); //  bây giờ hợp lệ
     console.log('Full product object:', product);
 
     const token = localStorage.getItem('token');
@@ -228,13 +228,13 @@ export default function BuyBox({
     product.selectedPricingRule =
       selectedRule?.id && selectedRule.type
         ? {
-            id: selectedRule.id,
-            type: selectedRule.type as
-              | 'bulk'
-              | 'subscription'
-              | 'normal'
-              | 'flash_sale',
-          }
+          id: selectedRule.id,
+          type: selectedRule.type as
+            | 'bulk'
+            | 'subscription'
+            | 'normal'
+            | 'flash_sale',
+        }
         : null;
 
     console.log('🛒 Add to Cart clicked:', {
@@ -302,17 +302,18 @@ export default function BuyBox({
         productId: product.id,
         variantId: selectedVariantId,
         quantity: qty,
+        calculatedPrice,
         // BE sẽ tự tính price theo logic mới
       });
 
-      // ✅ KHÔNG gửi userId và price - BE tự xử lý
+      //  KHÔNG gửi userId và price - BE tự xử lý
       await addGroupItem({
         productId: Number(product.id),
         variantId: selectedVariantId ?? undefined,
         quantity: qty,
-        // ❌ BỎ userId - BE lấy từ JWT token
-        // ❌ BỎ price - BE tự tính theo calculateItemPrice()
         note: undefined, // có thể thêm nếu cần
+        pricingRuleId: selectedRuleId ?? undefined,
+
       });
 
       showMessage?.('success', 'Đã thêm vào đơn hàng nhóm');
@@ -325,7 +326,7 @@ export default function BuyBox({
         msg = e.message;
       }
 
-      // ✅ Xử lý các lỗi pricing cụ thể
+      //  Xử lý các lỗi pricing cụ thể
       if (msg.includes('pricing') || msg.includes('giá')) {
         msg = 'Không thể xác định giá sản phẩm. Vui lòng thử lại.';
       }
@@ -465,11 +466,10 @@ export default function BuyBox({
           {groupId ? (
             <>
               <button
-                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
-                  !availability || loading
+                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${!availability || loading
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:opacity-90'
-                }`}
+                  }`}
                 style={{ background: TIKI_RED }}
                 onClick={handleAddToGroup}
                 disabled={!availability || loading}
@@ -493,11 +493,10 @@ export default function BuyBox({
           ) : (
             <>
               <button
-                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${
-                  !availability || loading
+                className={`h-11 w-full rounded-xl px-4 text-base font-semibold text-white transition-opacity ${!availability || loading
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:opacity-90'
-                }`}
+                  }`}
                 style={{ background: TIKI_RED }}
                 onClick={handleBuyNow}
                 disabled={!availability || loading}

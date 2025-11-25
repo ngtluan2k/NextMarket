@@ -177,6 +177,7 @@ const OrderSuccess: React.FC = () => {
     );
   }
 
+
   return (
     <div
       style={{
@@ -516,7 +517,6 @@ const OrderSuccess: React.FC = () => {
               {items.length > 0 ? (
                 <div style={{ maxHeight: 400, overflowY: 'auto' }}>
                   {items.map((item, index) => (
-                    
                     <div
                       key={index}
                       style={{
@@ -545,6 +545,7 @@ const OrderSuccess: React.FC = () => {
                             : '/placeholder.png'
                             
                         }
+                        
                         alt={item.name}
                         width={60}
                         height={60}

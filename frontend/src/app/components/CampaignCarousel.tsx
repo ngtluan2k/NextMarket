@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Carousel } from 'bootstrap';
 import { getActiveCampaigns, Campaign } from '../../service/campaign.service';
+import { Link } from 'react-router-dom';
 
 type Slide = { imageUrl: string; alt?: string; href?: string };
 
@@ -67,17 +68,17 @@ const CampaignCarousel: React.FC<{ id?: string; interval?: number }> = ({
   }, [normalized]);
 
   useEffect(() => {
-  let instance: any;
-  if (hostRef.current) {
-    instance = Carousel.getOrCreateInstance(hostRef.current, {
-      interval, // ⬅ sẽ dùng 3000ms
-      pause: 'hover',
-      touch: true,
-      wrap: true,
-    });
-  }
-  return () => instance?.dispose?.();
-}, [interval, pages.length]);
+    let instance: any;
+    if (hostRef.current) {
+      instance = Carousel.getOrCreateInstance(hostRef.current, {
+        interval, // ⬅ sẽ dùng 3000ms
+        pause: 'hover',
+        touch: true,
+        wrap: true,
+      });
+    }
+    return () => instance?.dispose?.();
+  }, [interval, pages.length]);
 
 
   return (
@@ -108,7 +109,7 @@ const CampaignCarousel: React.FC<{ id?: string; interval?: number }> = ({
               <div className="row g-3">
                 {group.map((s, j) => (
                   <div key={j} className="col-12 col-lg-6">
-                    <a href={s.href || '#'} aria-label={s.alt}>
+                    <Link to={s.href || '#'} aria-label={s.alt}>
                       <img
                         className="w-100"
                         style={{
@@ -123,7 +124,7 @@ const CampaignCarousel: React.FC<{ id?: string; interval?: number }> = ({
                           e.currentTarget.src = FALLBACK;
                         }}
                       />
-                    </a>
+                    </Link>
                   </div>
                 ))}
               </div>

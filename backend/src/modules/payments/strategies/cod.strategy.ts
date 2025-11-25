@@ -34,15 +34,16 @@ export class CodStrategy {
         order,
         paymentMethod,
         amount: order.totalAmount,
-        status: PaymentStatus.Paid, // ✅ Set to Paid for testing
+        status: PaymentStatus.Unpaid, 
         paidAt: new Date(),
         isGroup,
       });
+    
       await manager.save(payment);
 
       // ✅ FOR TESTING: Automatically set order to COMPLETED to trigger affiliate commissions
       const oldStatus = order.status;
-      order.status = OrderStatuses.completed; // Status = 5 (completed)
+      order.status = OrderStatuses.pending; 
       const updatedOrder = await manager.save(order);
 
       // Tạo lịch sử trạng thái đơn hàng

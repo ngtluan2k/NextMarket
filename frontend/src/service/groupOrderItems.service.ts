@@ -1,3 +1,5 @@
+import { PricingRule } from './../app/components/productDetail/Info';
+import { calculateTotalAmount } from './../utils/chart-helper';
 import { api } from '../app/api/api';
 
 
@@ -6,12 +8,15 @@ export type GroupOrderItemPayload = {
   productId: number;
   variantId?: number;
   quantity: number;
-  note?: string;
+  note?: string; 
+  pricingRuleId?: number;
+  
 };
 
 export type GroupOrderCheckoutPayload = {
   paymentMethodUuid: string;
   addressId?: number;
+  voucherCode?: string;
 };
 
 export type CreateGroupOrderPayload = {

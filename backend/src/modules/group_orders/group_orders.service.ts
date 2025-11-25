@@ -7,7 +7,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere ,In} from 'typeorm';
+import { Repository, FindOptionsWhere, In } from 'typeorm';
 import { GroupOrder } from './group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
 import { Order } from '../orders/order.entity';
@@ -26,6 +26,8 @@ import { OrderStatuses } from '../orders/types/orders';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { ForbiddenException } from '@nestjs/common/exceptions';
 import { historyStatus } from '../order-status-history/order-status-history.entity';
+import { VouchersService } from '../vouchers/vouchers.service';
+import { Voucher, VoucherType } from '../vouchers/vouchers.entity';
 
 
 
@@ -54,7 +56,8 @@ export class GroupOrdersService {
         private readonly userAddressRepo: Repository<UserAddress>,
         @InjectRepository(OrderStatusHistory)
         private orderStatusHistoryRepo: Repository<OrderStatusHistory>,
-
+        @Inject(forwardRef(() => VouchersService))
+        private readonly vouchersService: VouchersService,
 
     ) { }
 
@@ -184,8 +187,8 @@ export class GroupOrdersService {
             throw new BadRequestException('Group is expired');
         }
         if (joinCode !== undefined && group.join_code && group.join_code !== joinCode.trim().toUpperCase()) {
-        throw new BadRequestException('Mã tham gia không hợp lệ');
-    }
+            throw new BadRequestException('Mã tham gia không hợp lệ');
+        }
 
         const existed = await this.memberRepo.findOne({
             where: {
@@ -444,7 +447,8 @@ export class GroupOrdersService {
         groupId: number,
         userId: number,
         paymentMethodUuid: string,
-        addressId?: number
+        addressId?: number,
+        voucherCode?: string
     ) {
         // 1) Validate group + quyền host
         const group = await this.groupOrderRepo.findOne({
@@ -515,7 +519,8 @@ export class GroupOrdersService {
             userId,
             addressId,
             paymentMethodUuid,
-            items
+            items,
+            voucherCode
         );
 
         console.log(` Group #${groupId} completed by host payment (host_address mode)`);
@@ -529,7 +534,8 @@ export class GroupOrdersService {
         userId: number,
         addressId: number | undefined,
         paymentMethodUuid: string,
-        items: GroupOrderItem[]
+        items: GroupOrderItem[],
+        voucherCode?: string
     ) {
         // Validate: Host phải chọn địa chỉ
         if (!addressId) {
@@ -546,8 +552,63 @@ export class GroupOrdersService {
         // Tính tiền
         const subtotal = items.reduce((s, it) => s + Number(it.price || 0), 0);
         const shippingFee = 0;
-        const discountTotal = 0;
-        const totalAmount = subtotal + shippingFee - discountTotal;
+
+        let discountTotal = 0;
+        let appliedVoucher: Voucher | null = null;
+
+        if (voucherCode && voucherCode.trim()) {
+            try {
+                // Prepare order items for validation
+                const orderItems = items.map((item) => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                    price: Number(item.price),
+                }));
+
+                // Validate voucher
+                const validation = await this.vouchersService.validateVoucher(
+                    voucherCode.trim(),
+                    userId,
+                    orderItems,
+                    group.store.id
+                );
+
+                appliedVoucher = validation.voucher;
+
+                // KIỂM TRA: Chỉ cho phép PLATFORM và STORE voucher
+                if (
+                    appliedVoucher.type !== VoucherType.PLATFORM &&
+                    appliedVoucher.type !== VoucherType.STORE
+                ) {
+                    throw new BadRequestException(
+                        `Mua nhóm chỉ được áp dụng voucher PLATFORM hoặc STORE. Voucher này là loại ${this.getVoucherTypeName(appliedVoucher.type)}.`
+                    );
+                }
+
+                // KIỂM TRA THÊM: Nếu là STORE voucher, phải khớp với store của group
+                if (appliedVoucher.type === VoucherType.STORE) {
+                    if (appliedVoucher.store?.id !== group.store.id) {
+                        throw new BadRequestException(
+                            'Voucher STORE này không áp dụng cho cửa hàng của nhóm mua này.'
+                        );
+                    }
+                }
+
+                discountTotal = Number(validation.discount);
+
+                this.logger.log(
+                    `Voucher ${voucherCode} (${this.getVoucherTypeName(appliedVoucher.type)}) validated - Discount: ${discountTotal}đ`
+                );
+            } catch (err: any) {
+                // Nếu voucher không hợp lệ → throw error
+                const errorMsg = err instanceof BadRequestException
+                    ? err.message
+                    : `Voucher không hợp lệ: ${err.message}`;
+                throw new BadRequestException(errorMsg);
+            }
+        }
+
+        const totalAmount = Math.max(0, subtotal + shippingFee - discountTotal);
 
         // Tạo 1 Order duy nhất
         const order = this.orderRepo.create({
@@ -577,6 +638,22 @@ export class GroupOrdersService {
             await this.orderItemsRepo.save(oi);
         }
 
+        // Áp dụng voucher nếu có
+        if (appliedVoucher) {
+            try {
+                await this.vouchersService.applyVoucher(
+                    appliedVoucher.id,
+                    userId,
+                    savedOrder
+                );
+                this.logger.log(
+                    ` Applied voucher ${appliedVoucher.code} to order #${savedOrder.id}`
+                );
+            } catch (err: any) {
+                this.logger.error(` Failed to apply voucher: ${err.message}`);
+            }
+        }
+
         // Gọi thanh toán
         if (!paymentMethodUuid) {
             throw new BadRequestException('Thiếu paymentMethodUuid');
@@ -596,106 +673,115 @@ export class GroupOrdersService {
             orderUuid: savedOrder.uuid,
             payment,
             redirectUrl,
+            voucherApplied: appliedVoucher ? {
+                code: appliedVoucher.code,
+                title: appliedVoucher.title,
+                type: this.getVoucherTypeName(appliedVoucher.type),
+                discount: discountTotal,
+                originalAmount: subtotal,
+                finalAmount: totalAmount,
+            } : null,
+
         };
     }
 
 
 
-    private async checkoutMemberAddresses(
-        group: GroupOrder,
-        userId: number,
-        paymentMethodUuid: string,
-        items: GroupOrderItem[]
-    ) {
-        // Validate: Tất cả members phải có địa chỉ
-        const membersWithoutAddress = group.members.filter(m => !m.address_id);
-        if (membersWithoutAddress.length > 0) {
-            const names = membersWithoutAddress
-                .map(m => m.user?.username || `User #${m.user?.id}`)
-                .join(', ');
-            throw new BadRequestException(
-                `Các thành viên sau chưa có địa chỉ: ${names}`
-            );
-        }
+    // private async checkoutMemberAddresses(
+    //     group: GroupOrder,
+    //     userId: number,
+    //     paymentMethodUuid: string,
+    //     items: GroupOrderItem[]
+    // ) {
+    //     // Validate: Tất cả members phải có địa chỉ
+    //     const membersWithoutAddress = group.members.filter(m => !m.address_id);
+    //     if (membersWithoutAddress.length > 0) {
+    //         const names = membersWithoutAddress
+    //             .map(m => m.user?.username || `User #${m.user?.id}`)
+    //             .join(', ');
+    //         throw new BadRequestException(
+    //             `Các thành viên sau chưa có địa chỉ: ${names}`
+    //         );
+    //     }
 
-        // Nhóm items theo member
-        const itemsByMember = new Map<number, GroupOrderItem[]>();
+    //     // Nhóm items theo member
+    //     const itemsByMember = new Map<number, GroupOrderItem[]>();
 
-        for (const item of items) {
-            const memberId = item.member.id;
-            if (!itemsByMember.has(memberId)) {
-                itemsByMember.set(memberId, []);
-            }
-            itemsByMember.get(memberId)!.push(item);
-        }
+    //     for (const item of items) {
+    //         const memberId = item.member.id;
+    //         if (!itemsByMember.has(memberId)) {
+    //             itemsByMember.set(memberId, []);
+    //         }
+    //         itemsByMember.get(memberId)!.push(item);
+    //     }
 
-        const createdOrders = [];
-        let grandTotal = 0;
+    //     const createdOrders = [];
+    //     let grandTotal = 0;
 
-        // Tạo Order cho mỗi member
-        for (const [memberId, memberItems] of itemsByMember.entries()) {
-            const member = group.members.find(m => m.id === memberId);
-            if (!member || !member.address_id) {
-                throw new BadRequestException(
-                    `Member #${memberId} không có địa chỉ`
-                );
-            }
+    //     // Tạo Order cho mỗi member
+    //     for (const [memberId, memberItems] of itemsByMember.entries()) {
+    //         const member = group.members.find(m => m.id === memberId);
+    //         if (!member || !member.address_id) {
+    //             throw new BadRequestException(
+    //                 `Member #${memberId} không có địa chỉ`
+    //             );
+    //         }
 
-            const subtotal = memberItems.reduce((s, it) => s + Number(it.price || 0), 0);
-            grandTotal += subtotal;
+    //         const subtotal = memberItems.reduce((s, it) => s + Number(it.price || 0), 0);
+    //         grandTotal += subtotal;
 
-            // Tạo order cho member này
-            const order = this.orderRepo.create({
-                user: { id: member.user.id } as any,  // Host vẫn là người thanh toán
-                store: { id: group.store.id } as any,
-                userAddress: { id: member.address_id.id } as any,  // ← Địa chỉ của member
-                group_order: { id: group.id } as any,
-                subtotal,
-                shippingFee: 0,
-                discountTotal: 0,
-                totalAmount: subtotal,
-                status: 0,
-            });
-            const savedOrder = await this.orderRepo.save(order);
-            createdOrders.push(savedOrder);
+    //         // Tạo order cho member này
+    //         const order = this.orderRepo.create({
+    //             user: { id: member.user.id } as any,  // Host vẫn là người thanh toán
+    //             store: { id: group.store.id } as any,
+    //             userAddress: { id: member.address_id.id } as any,  // ← Địa chỉ của member
+    //             group_order: { id: group.id } as any,
+    //             subtotal,
+    //             shippingFee: 0,
+    //             discountTotal: 0,
+    //             totalAmount: subtotal,
+    //             status: 0,
+    //         });
+    //         const savedOrder = await this.orderRepo.save(order);
+    //         createdOrders.push(savedOrder);
 
-            // Tạo OrderItems cho order này
-            for (const it of memberItems) {
-                const oi = this.orderItemsRepo.create({
-                    order: { id: savedOrder.id } as any,
-                    product: { id: it.product.id } as any,
-                    variant: it.variant ? ({ id: it.variant.id } as any) : null,
-                    quantity: it.quantity,
-                    price: it.price,
-                    groupOrderItem: { id: it.id } as any,
-                    note: it.note,
-                });
-                await this.orderItemsRepo.save(oi);
-            }
-        }
+    //         // Tạo OrderItems cho order này
+    //         for (const it of memberItems) {
+    //             const oi = this.orderItemsRepo.create({
+    //                 order: { id: savedOrder.id } as any,
+    //                 product: { id: it.product.id } as any,
+    //                 variant: it.variant ? ({ id: it.variant.id } as any) : null,
+    //                 quantity: it.quantity,
+    //                 price: it.price,
+    //                 groupOrderItem: { id: it.id } as any,
+    //                 note: it.note,
+    //             });
+    //             await this.orderItemsRepo.save(oi);
+    //         }
+    //     }
 
-        // Gọi thanh toán cho order đầu tiên (đại diện)
-        if (!paymentMethodUuid) {
-            throw new BadRequestException('Thiếu paymentMethodUuid');
-        }
+    //     // Gọi thanh toán cho order đầu tiên (đại diện)
+    //     if (!paymentMethodUuid) {
+    //         throw new BadRequestException('Thiếu paymentMethodUuid');
+    //     }
 
-        const result = await this.paymentsService.create({
-            orderUuid: createdOrders[0].uuid,
-            paymentMethodUuid,
-            amount: Number(grandTotal || 0),
-            isGroup: true,
-        });
+    //     const result = await this.paymentsService.create({
+    //         orderUuid: createdOrders[0].uuid,
+    //         paymentMethodUuid,
+    //         amount: Number(grandTotal || 0),
+    //         isGroup: true,
+    //     });
 
-        const payment = 'payment' in result ? result.payment : result;
-        const redirectUrl = 'redirectUrl' in result ? result.redirectUrl : null;
+    //     const payment = 'payment' in result ? result.payment : result;
+    //     const redirectUrl = 'redirectUrl' in result ? result.redirectUrl : null;
 
-        return {
-            orderUuid: createdOrders[0].uuid,
-            orderCount: createdOrders.length,
-            payment,
-            redirectUrl,
-        };
-    }
+    //     return {
+    //         orderUuid: createdOrders[0].uuid,
+    //         orderCount: createdOrders.length,
+    //         payment,
+    //         redirectUrl,
+    //     };
+    // }
 
 
     async getGroupOrderWithAllOrders(groupId: number) {
@@ -1044,7 +1130,8 @@ export class GroupOrdersService {
         groupId: number,
         userId: number,
         paymentMethodUuid: string,
-        addressId?: number
+        addressId?: number,
+        voucherCode?: string
     ) {
         // 1. Validate group
         const group = await this.groupOrderRepo.findOne({
@@ -1085,6 +1172,14 @@ export class GroupOrdersService {
 
         if (member.has_paid) {
             throw new BadRequestException('Bạn đã thanh toán rồi!');
+        }
+
+        if (voucherCode && voucherCode.trim()) {
+            if (group.user.id !== userId) {
+                throw new ForbiddenException(
+                    'Chỉ host mới có thể áp dụng voucher cho nhóm mua.'
+                );
+            }
         }
 
         // 3. Lấy items của member này
@@ -1134,8 +1229,103 @@ export class GroupOrdersService {
         // 5. Tính tiền
         const subtotal = myItems.reduce((sum, it) => sum + Number(it.price || 0), 0);
         const shippingFee = 0;
-        const discountTotal = 0;
-        const totalAmount = subtotal + shippingFee - discountTotal;
+
+        //  XỬ LÝ VOUCHER
+        let discountTotal = 0;
+        let appliedVoucher: Voucher | null = null;
+
+        if (voucherCode && voucherCode.trim() && group.user.id === userId) {
+            try {
+                // Lấy TẤT CẢ items trong nhóm
+                const allGroupItems = await this.groupOrderItemRepo.find({
+                    where: { group_order: { id: groupId } },
+                    relations: ['product', 'variant'],
+                });
+
+                const totalGroupValue = allGroupItems.reduce(
+                    (sum, it) => sum + Number(it.price || 0),
+                    0
+                );
+
+                // Validate voucher với toàn bộ nhóm
+                const orderItems = allGroupItems.map((item) => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                    price: Number(item.price),
+                }));
+
+                const validation = await this.vouchersService.validateVoucher(
+                    voucherCode.trim(),
+                    userId,
+                    orderItems,
+                    group.store.id
+                );
+
+                appliedVoucher = validation.voucher;
+
+                // ✨ KIỂM TRA: Chỉ cho phép PLATFORM và STORE voucher
+                if (
+                    appliedVoucher.type !== VoucherType.PLATFORM &&
+                    appliedVoucher.type !== VoucherType.STORE
+                ) {
+                    throw new BadRequestException(
+                        `Mua nhóm chỉ được áp dụng voucher PLATFORM hoặc STORE. Voucher này là loại ${this.getVoucherTypeName(appliedVoucher.type)}.`
+                    );
+                }
+
+                // ✨ KIỂM TRA THÊM: Nếu là STORE voucher
+                if (appliedVoucher.type === VoucherType.STORE) {
+                    if (appliedVoucher.store?.id !== group.store.id) {
+                        throw new BadRequestException(
+                            'Voucher STORE này không áp dụng cho cửa hàng của nhóm mua này.'
+                        );
+                    }
+                }
+
+                const totalDiscount = Number(validation.discount);
+
+                // Phân bổ discount cho member này theo tỷ lệ
+                const ratio = subtotal / totalGroupValue;
+                discountTotal = Math.floor(totalDiscount * ratio);
+
+                this.logger.log(
+                    ` Host voucher: Total ${totalDiscount}đ, Member ${userId} ratio ${(ratio * 100).toFixed(2)}%, discount ${discountTotal}đ`
+                );
+
+                // Lưu voucher info để các members khác biết
+                await this.saveGroupVoucherInfo(groupId, {
+                    voucherCode: appliedVoucher.code,
+                    voucherId: appliedVoucher.id,
+                    voucherType: appliedVoucher.type,
+                    totalDiscount: totalDiscount,
+                    totalGroupValue: totalGroupValue,
+                    appliedBy: userId,
+                    appliedAt: new Date(),
+                });
+
+            } catch (err: any) {
+                const errorMsg = err instanceof BadRequestException
+                    ? err.message
+                    : `Voucher không hợp lệ: ${err.message}`;
+                throw new BadRequestException(errorMsg);
+            }
+        } else if (!voucherCode || !voucherCode.trim()) {
+            // Member khác host → đọc voucher info từ cache
+            const voucherInfo = await this.getGroupVoucherInfo(groupId);
+
+            if (voucherInfo) {
+                const ratio = subtotal / voucherInfo.totalGroupValue;
+                discountTotal = Math.floor(voucherInfo.totalDiscount * ratio);
+
+                this.logger.log(
+                    `📊 Member ${userId} auto-applying voucher ${voucherInfo.voucherCode}: discount ${discountTotal}đ`
+                );
+
+                appliedVoucher = { code: voucherInfo.voucherCode } as Voucher;
+            }
+        }
+
+        const totalAmount = Math.max(0, subtotal + shippingFee - discountTotal);
 
         // 6. Tạo Order cho member này
         const order = this.orderRepo.create({
@@ -1167,6 +1357,24 @@ export class GroupOrdersService {
         );
         await this.orderItemsRepo.save(orderItems);
 
+        if (appliedVoucher && group.user.id === userId) {
+            try {
+                const voucherInfo = await this.getGroupVoucherInfo(groupId);
+                if (voucherInfo) {
+                    await this.vouchersService.applyVoucher(
+                        voucherInfo.voucherId,
+                        userId,
+                        savedOrder
+                    );
+                    this.logger.log(
+                        `✅ Applied voucher ${voucherInfo.voucherCode} to host's order #${savedOrder.id}`
+                    );
+                }
+            } catch (err: any) {
+                this.logger.error(`❌ Failed to apply voucher: ${err.message}`);
+            }
+        }
+
         // 8. Tạo Payment
         const payment = await this.paymentsService.create({
             orderUuid: savedOrder.uuid,
@@ -1186,6 +1394,13 @@ export class GroupOrdersService {
             message: 'Thanh toán thành công',
             orderUuid: savedOrder.uuid,
             order: savedOrder,
+            voucherDiscount: discountTotal > 0 ? {
+                amount: discountTotal,
+                code: appliedVoucher?.code,
+                note: group.user.id === userId
+                    ? 'Bạn (host) đã áp dụng voucher cho cả nhóm'
+                    : 'Discount được phân bổ từ voucher của host',
+            } : null,
             redirectUrl: typeof payment === 'object' && 'redirectUrl' in payment
                 ? payment.redirectUrl
                 : null,
@@ -1196,7 +1411,7 @@ export class GroupOrdersService {
     private async checkAndCompleteGroup(groupId: number) {
         const group = await this.groupOrderRepo.findOne({
             where: { id: groupId },
-            relations: ['members', 'orders', 'user'],
+            relations: ['members', 'members.user','orders', 'user'],
         });
 
         if (!group || group.status !== 'locked') return;
@@ -1259,6 +1474,19 @@ export class GroupOrdersService {
                     message: `${paidCount}/${activeMembers.length} thành viên đã thanh toán`,
                 });
             }
+        }
+        if (shouldComplete) {
+            await this.groupOrderRepo.update(groupId, {
+                status: 'completed',
+                order_status: OrderStatuses.confirmed,
+            });
+
+            await this.gateway.broadcastGroupUpdate(groupId, 'group-completed', {
+                groupId,
+                message: completionMessage || '🎉 Đơn nhóm đã thanh toán xong!',
+            });
+
+            this.logger.log(`Group #${groupId} completed (host_address flow)`);
         }
     }
 
@@ -1461,6 +1689,32 @@ export class GroupOrdersService {
             ` Completed handling member paid for group #${groupOrderId}`
         );
     }
+
+    private getVoucherTypeName(type: VoucherType): string {
+        const typeNames = {
+            [VoucherType.SHIPPING]: 'SHIPPING',
+            [VoucherType.PRODUCT]: 'PRODUCT',
+            [VoucherType.STORE]: 'STORE',
+            [VoucherType.CATEGORY]: 'CATEGORY',
+            [VoucherType.PLATFORM]: 'PLATFORM',
+        };
+        return typeNames[type] || 'UNKNOWN';
+    }
+    private groupVoucherCache = new Map<number, any>();
+
+    private async saveGroupVoucherInfo(groupId: number, info: any) {
+        this.groupVoucherCache.set(groupId, info);
+
+        // Auto-clear sau 1 giờ
+        setTimeout(() => {
+            this.groupVoucherCache.delete(groupId);
+        }, 3600000);
+    }
+
+    private async getGroupVoucherInfo(groupId: number) {
+        return this.groupVoucherCache.get(groupId) || null;
+    }
+
 }
 
 
