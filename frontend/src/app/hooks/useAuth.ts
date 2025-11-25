@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 
 export interface User {
@@ -7,6 +8,11 @@ export interface User {
   roles: string[];
   permissions: string[];
   user_id: number;
+  full_name?: string;
+  profile?: {
+    full_name?: string;
+  };
+
 }
 
 export const useAuth = () => {

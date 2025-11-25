@@ -78,10 +78,15 @@ export class GroupOrderItemsService {
 		variantId?: number,
 		quantity = 1,
 		groupId?: number,
-		type?: 'bulk' | 'group' | 'flash_sale'
-	): Promise<{ basePrice: number; finalPrice: number; discountPercent: number }> {
+		type?: 'bulk' | 'group' | 'flash_sale',
+		pricingRuleId?: number
+	): Promise<{ basePrice: number; finalPrice: number; discountPercent: number, appliedRule?: PricingRules | null  }> {
 
-		const product = await this.productRepo.findOne({ where: { id: productId } });
+		const product = await this.productRepo.findOne({
+			where: { id: productId },
+			relations: ['pricing_rules', 'pricing_rules.variant'],
+		});
+
 		if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
 
 		let variant: Variant | null = null;
@@ -112,6 +117,14 @@ export class GroupOrderItemsService {
 
 		const now = new Date();
 		let appliedRule: PricingRules | null = null;
+
+		if (pricingRuleId) {
+			const directRule = (product.pricing_rules ?? []).find(r => r.id === pricingRuleId);
+			if (directRule) {
+				appliedRule = directRule;
+				basePrice = Number(directRule.price);
+			}
+		}
 
 		if (type === 'flash_sale') {
 			// Lấy pricing rules flash_sale
@@ -162,26 +175,28 @@ export class GroupOrderItemsService {
 				}
 			}
 		}
-
-		return { basePrice, finalPrice, discountPercent };
+console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appliedRule });
+		return { basePrice, finalPrice, discountPercent,appliedRule };
 	}
 
 
 	// Thêm sản phẩm vào group
 	async addItem(
 		groupId: number,
-		dto: CreateGroupOrderItemDto & { userId: number }
+		dto: CreateGroupOrderItemDto & { userId: number , pricingRuleId?: number}
 	) {
 		const group = await this.ensureGroupOpen(groupId);
 		const member = await this.ensureMember(groupId, dto.userId);
 
 
-		// 💰 Tính đơn giá theo logic order
-		const { basePrice, finalPrice, discountPercent } = await this.calculateItemPrice(
+		//  Tính đơn giá theo logic order
+		const { basePrice, finalPrice, discountPercent ,appliedRule} = await this.calculateItemPrice(
 			dto.productId,
 			dto.variantId,
 			dto.quantity,
-			groupId
+			groupId,
+			'group',
+			dto.pricingRuleId
 		);
 
 		const item = this.itemRepo.create({
@@ -190,15 +205,16 @@ export class GroupOrderItemsService {
 			product: { id: dto.productId } as Product,
 			variant: dto.variantId ? ({ id: dto.variantId } as Variant) : null,
 			quantity: dto.quantity,
-			price: finalPrice * dto.quantity, // ✅ finalPrice là number
+			price: finalPrice * dto.quantity, //  finalPrice là number
 			note: dto.note ?? null,
+			 pricing_rule: appliedRule ? ({ id: appliedRule.id } as PricingRules) : null,
 		});
 
 
 		const saved = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: saved.id },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'variant','pricing_rule'],
 		});
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', {
 			item: full,
@@ -293,6 +309,7 @@ export class GroupOrderItemsService {
 				'variant',
 				'member.user.profile',
 				'member.address_id',
+				'pricing_rule',
 			],
 			order: { id: 'DESC' },
 		});

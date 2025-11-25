@@ -17,9 +17,9 @@ export class GroupOrderItemsController {
 	create(
 		@Param('groupId', ParseIntPipe) groupId: number,
 		@Body() dto: CreateGroupOrderItemDto,
-		@Req() req: AuthRequest, // ✅ LẤY USER TỪ TOKEN
+		@Req() req: AuthRequest, //  LẤY USER TỪ TOKEN
 	) {
-		const userId = req.user.sub; // ✅ LẤY USER_ID TỪ TOKEN
+		const userId = req.user.sub; //  LẤY USER_ID TỪ TOKEN
 		return this.service.addItem(groupId, { ...dto, userId });
 	}
 

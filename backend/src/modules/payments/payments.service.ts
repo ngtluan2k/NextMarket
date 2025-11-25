@@ -61,81 +61,106 @@ export class PaymentsService {
     private everycoinStrategy: EveryCoinStrategy
   ) { }
 
-  async create(dto: CreatePaymentDto) {
-    const order = await this.ordersRepo.findOne({
-      where: { uuid: dto.orderUuid },
-      relations: [
-        'orderItem',
-        'orderItem.variant',
-        'orderItem.product',
-        'group_order',
-      ],
-    });
-    if (!order) throw new NotFoundException('Order not found');
+ async create(dto: CreatePaymentDto) {
+  this.logger.log(`PaymentsService.create dto=${JSON.stringify(dto)}`);
 
-    // if (order.status === 0) {
-    //   throw new ConflictException('Order already paid');
-    // }
+  const order = await this.ordersRepo.findOne({
+    where: { uuid: dto.orderUuid },
+    relations: [
+      'orderItem',
+      'orderItem.variant',
+      'orderItem.product',
+      'group_order',
+      'user',
+    ],
+  });
+  if (!order) throw new NotFoundException('Order not found');
 
-    const method = await this.methodsRepo.findOne({
-      where: { uuid: dto.paymentMethodUuid },
-    });
-    this.logger.log(`Fetched method: ${JSON.stringify(method)}`);
+  const method = await this.methodsRepo.findOne({
+    where: { uuid: dto.paymentMethodUuid },
+  });
+  if (!method) throw new BadRequestException('Invalid payment method');
 
-    if (!method) throw new BadRequestException('Invalid payment method');
+  const isGroupOrder = !!order.group_order;
+  const strategyType = method?.type || 'cod';
+  this.logger.log(
+    `strategyType=${strategyType}, isGroupOrder=${isGroupOrder}, orderId=${order.id}`,
+  );
 
-    const isGroupOrder = !!order.group_order;
-    this.logger.log(
-      `🟢 Payment for ${isGroupOrder ? 'GROUP' : 'INDIVIDUAL'} order`
-    );
-    const strategyType = method?.type || 'cod';
-    this.logger.log(
-      ` strategyType: ${strategyType}, paymentMethodUuid: ${dto.paymentMethodUuid}`
-    );
-
-    if (strategyType === 'vnpay' || strategyType === 'momo') {
-      if (order.status === OrderStatuses.pending) {
-        order.status = OrderStatuses.draft;
-        await this.ordersRepo.save(order);
-        this.logger.log(`Order #${order.id} set to draft (payment: ${strategyType})`);
-      }
+  if (strategyType === 'vnpay' || strategyType === 'momo') {
+    if (order.status === OrderStatuses.pending) {
+      order.status = OrderStatuses.draft;
+      await this.ordersRepo.save(order);
     }
-    let result;
-    switch (strategyType) {
-      case 'cod':
-        result = await this.codStrategy.createPayment(
-          order,
-          method,
-          isGroupOrder
-        );
-        break;
-      case 'vnpay':
-        result = await this.vnpayStrategy.createPayment(
-          order,
-          method,
-          isGroupOrder
-        );
-        break;
-      case 'momo':
-        result = await this.momoStrategy.createPayment(
-          order,
-          method,
-          isGroupOrder
-        );
-        break;
-      case 'everycoin': // <-- thêm case
-        result = await this.everycoinStrategy.createPayment(
-          order,
-          method,
-          isGroupOrder
-        );
-        break;
-      default:
-        throw new BadRequestException('Unsupported payment method type');
-    }
-
-    return result;
   }
+
+  let result;
+  switch (strategyType) {
+    case 'cod':
+      result = await this.codStrategy.createPayment(order, method, isGroupOrder);
+      break;
+    case 'vnpay':
+      result = await this.vnpayStrategy.createPayment(order, method, isGroupOrder);
+      break;
+    case 'momo':
+      result = await this.momoStrategy.createPayment(order, method, isGroupOrder);
+      break;
+    case 'everycoin':
+      result = await this.everycoinStrategy.createPayment(order, method, isGroupOrder);
+      break;
+    default:
+      throw new BadRequestException('Unsupported payment method type');
+  }
+
+  this.logger.log('Finished strategy execution');
+
+  if (strategyType === 'cod' && isGroupOrder && order.group_order && order.user) {
+    this.logger.log(
+      `COD group order detected: groupId=${order.group_order.id}, userId=${order.user.id}`,
+    );
+
+    const hostMember = await this.groupOrderMemberRepo.findOne({
+      where: {
+        group_order: { id: order.group_order.id } as any,
+        user: { id: order.user.id } as any,
+      },
+      relations: ['user'],
+    });
+
+    if (!hostMember) {
+      this.logger.warn('Host member not found for COD group order');
+    } else {
+      const markMemberPaid = async (member: GroupOrderMember) => {
+        if (!member.has_paid) {
+          member.has_paid = true;
+          member.status = 'paid';
+          await this.groupOrderMemberRepo.save(member);
+          this.logger.log(`Marked member #${member.id} as paid`);
+        }
+      };
+
+      await markMemberPaid(hostMember);
+
+      if (hostMember.is_host && order.group_order.delivery_mode === 'host_address') {
+        const members = await this.groupOrderMemberRepo.find({
+          where: { group_order: { id: order.group_order.id } as any },
+          relations: ['user'],
+        });
+        this.logger.log(`Host paid: marking ${members.length} members as paid`);
+        for (const member of members) {
+          await markMemberPaid(member);
+        }
+      }
+
+      await this.groupOrdersService.handleMemberPaid(
+        order.group_order.id,
+        hostMember.user.id,
+      );
+    }
+  }
+
+  return result;
+}
 
   async findByOrder(orderUuid: string) {
     const order = await this.ordersRepo.findOne({

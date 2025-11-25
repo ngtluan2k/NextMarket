@@ -34,9 +34,11 @@ export default function GroupOrderCreate() {
                 alert("Thiếu storeId hoặc thông tin người dùng. Vui lòng kiểm tra lại.");
                 return;
             }
+            const fullName = user?.profile?.full_name || (user as any)?.full_name || user?.username || '';
+            const finalGroupName = fullName ? `${groupName.trim()} - ${fullName}` : groupName.trim();
 
             const payload = {
-                name: groupName,
+                name: finalGroupName,
                 storeId: resolvedStoreId,
                 hostUserId,
                 // expiresAt: new Date(Date.now() + 2*60*60*1000).toISOString(),
@@ -173,7 +175,14 @@ export default function GroupOrderCreate() {
                             </div>
                             <div>
                                 <div className="font-semibold text-slate-800">Tên nhóm</div>
-                                <div className="text-sm text-slate-500">{groupName}</div>
+                                <div className="text-sm text-slate-500">
+                                    {groupName} - {
+                                        user?.profile?.full_name ||
+                                        (user as any)?.full_name ||
+                                        user?.username ||
+                                        'Bạn'
+                                    }
+                                </div>
                             </div>
                         </div>
                         <button

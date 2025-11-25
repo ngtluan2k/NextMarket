@@ -567,7 +567,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   placeholder="Chọn cửa hàng (để trống nếu áp dụng tất cả)"
                   allowClear
                   showSearch
-                  filterOption={(input, option) =>
+                  filterOption={(input:any, option:any) =>
                     (option?.children as unknown as string)
                       ?.toLowerCase()
                       .includes(input.toLowerCase())
@@ -597,7 +597,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   allowClear
                   showSearch
                   loading={fetchingCategories}
-                  filterOption={(input, option) =>
+                  filterOption={(input:any, option:any) =>
                     (option?.children as unknown as string)
                       ?.toLowerCase()
                       .includes(input.toLowerCase())
@@ -627,7 +627,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   allowClear
                   showSearch
                   loading={fetchingProducts}
-                  filterOption={(input, option) =>
+                  filterOption={(input:any, option:any) =>
                     (option?.children as unknown as string)
                       ?.toLowerCase()
                       .includes(input.toLowerCase())
@@ -652,7 +652,7 @@ const VoucherFormModal: React.FC<VoucherFormModalProps> = ({
                   allowClear
                   showSearch
                   loading={fetchingProducts}
-                  filterOption={(input, option) =>
+                  filterOption={(input:any, option:any) =>
                     (option?.children as unknown as string)
                       ?.toLowerCase()
                       .includes(input.toLowerCase())

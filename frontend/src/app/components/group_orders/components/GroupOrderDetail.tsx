@@ -21,6 +21,7 @@ import AddressModal from './../../../page/AddressModal';
 import { message } from 'antd';
 import { GroupPaymentBox } from './GroupPaymentBox';
 
+
 export default function GroupOrderDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -36,6 +37,12 @@ export default function GroupOrderDetail() {
         React.useState(false);
     const [showMemberCheckout, setShowMemberCheckout] = React.useState(false);
 
+    const [voucherCode, setVoucherCode] = React.useState<string>('');
+    const [voucherError, setVoucherError] = React.useState<string>('');
+    const [voucherDiscount, setVoucherDiscount] = React.useState<number>(0);
+    const [isValidatingVoucher, setIsValidatingVoucher] = React.useState(false);
+    const [appliedVoucher, setAppliedVoucher] = React.useState<any>(null);
+
     const { socketService } = useGroupOrderSocket(Number(id), (event, data) => {
         switch (event) {
             case 'group-state':
@@ -47,7 +54,7 @@ export default function GroupOrderDetail() {
                 if (data?.member) {
                     setMembers((prev) => {
                         const exists = prev.some(
-                            (m) => m?.user?.user_id === data.member?.user?.user_id
+                            (m) => m?.user?.userId === data.member?.user?.user_id
                         );
                         return exists ? prev : [data.member, ...prev];
                     });
@@ -57,7 +64,7 @@ export default function GroupOrderDetail() {
             case 'member-left':
                 if (data?.userId) {
                     setMembers((prev) =>
-                        prev.filter((m) => m?.user?.id !== data.userId)
+                        prev.filter((m) => m?.user?.userId !== data.userId)
                     );
                 }
                 break;
@@ -102,7 +109,7 @@ export default function GroupOrderDetail() {
                 // Hiển thị notification
                 if (data?.userId && data.userId !== user?.user_id) {
                     const updatedMember = members.find(
-                        (m) => m?.user?.id === data.userId
+                        (m) => m?.user?.userId === data.userId
                     );
                     const memberName =
                         updatedMember?.user?.profile?.full_name ||
@@ -141,7 +148,7 @@ export default function GroupOrderDetail() {
                 break;
 
             case 'payment-progress':
-                
+
                 if (data?.paidMembers && data?.totalMembers) {
                     message.info(
                         `💳 Tiến độ thanh toán: ${data.paidMembers}/${data.totalMembers} (${data.progress}%)`,
@@ -197,6 +204,15 @@ export default function GroupOrderDetail() {
     // Helper tính giá trước giảm nhóm
     const getItemPreGroupPrice = (item: any, discountPercent: number) => {
         const p = Number(item?.price) || 0;
+
+        // Nếu có pricing_rule, sử dụng giá từ pricing rule
+        if (item?.pricing_rule?.price) {
+            const pricingRulePrice = Number(item.pricing_rule.price);
+            const totalBeforeDiscount = pricingRulePrice * item.quantity;
+            return totalBeforeDiscount;
+        }
+
+        // Nếu không có pricing rule, tính ngược từ giá đã giảm
         if (!discountPercent) return p;
         const factor = 1 - discountPercent / 100;
         return factor > 0 ? Math.round(p / factor) : p;
@@ -217,6 +233,86 @@ export default function GroupOrderDetail() {
         );
         const discountAmount = Math.max(subtotalBefore - totalAfter, 0);
         return { subtotalBefore, discountAmount, totalAfter };
+    };
+
+    // Validate voucher function
+    const validateVoucher = async (code: string) => {
+        if (!code || !code.trim()) {
+            setVoucherError('');
+            setVoucherDiscount(0);
+            setAppliedVoucher(null);
+            return;
+        }
+
+        setIsValidatingVoucher(true);
+        setVoucherError('');
+
+        try {
+            const orderItems = groupItems.map((item: any) => ({
+                productId: item.product.id,
+                quantity: item.quantity,
+                price: Number(item.price),
+            }));
+
+            const storeId = groupItems[0]?.product?.store_id || 0;
+            const token = localStorage.getItem('token');
+
+            const response = await fetch(`${import.meta.env.VITE_BE_BASE_URL}/user/vouchers/apply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    code: code.trim(),
+                    storeId: storeId,
+                    orderItems: orderItems,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Voucher không hợp lệ');
+            }
+
+            const data = await response.json();
+            const { voucher, discount } = data;
+
+            // Chỉ cho phép PLATFORM (4) hoặc STORE (2)
+            if (voucher.type !== 4 && voucher.type !== 2) {
+                const typeNames: any = {
+                    0: 'SHIPPING',
+                    1: 'PRODUCT',
+                    2: 'STORE',
+                    3: 'CATEGORY',
+                    4: 'PLATFORM',
+                };
+                throw new Error(
+                    `Mua nhóm chỉ được áp dụng voucher PLATFORM hoặc STORE. Voucher này là loại ${typeNames[voucher.type] || 'UNKNOWN'}.`
+                );
+            }
+
+            setAppliedVoucher(voucher);
+            setVoucherDiscount(Number(discount));
+            message.success(`Áp dụng voucher thành công! Giảm ${Number(discount).toLocaleString()}đ`);
+        } catch (error: any) {
+            const errorMsg = error?.message || 'Voucher không hợp lệ';
+            setVoucherError(errorMsg);
+            setVoucherDiscount(0);
+            setAppliedVoucher(null);
+            message.error(errorMsg);
+        } finally {
+            setIsValidatingVoucher(false);
+        }
+    };
+
+    // Remove voucher function
+    const removeVoucher = () => {
+        setVoucherCode('');
+        setVoucherError('');
+        setVoucherDiscount(0);
+        setAppliedVoucher(null);
+        message.info('Đã xóa voucher');
     };
 
     const onEditName = async () => {
@@ -533,7 +629,7 @@ export default function GroupOrderDetail() {
                 <div className="mb-6 flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <h1 className="text-2xl font-bold text-slate-900">
-                            📦 Đơn hàng nhóm: {group?.user?.profile?.full_name ?? '—'}
+                            {group?.name ?? '—'}
                         </h1>
 
                         {group?.store?.slug && (
@@ -941,6 +1037,17 @@ export default function GroupOrderDetail() {
                                 groupTotal={totals.totalAfter}
                                 onCheckout={() => setShowMemberCheckout(true)}
                                 onHostCheckout={() => setShowCheckout(true)}
+                                voucherCode={voucherCode}
+                                voucherDiscount={voucherDiscount}
+                                appliedVoucher={appliedVoucher}
+                                voucherError={voucherError}
+                                isValidatingVoucher={isValidatingVoucher}
+                                onVoucherCodeChange={(code) => {
+                                    setVoucherCode(code);
+                                    setVoucherError('');
+                                }}
+                                onApplyVoucher={() => validateVoucher(voucherCode)}
+                                onRemoveVoucher={removeVoucher}
                             />
                         </section>
 
@@ -991,7 +1098,7 @@ export default function GroupOrderDetail() {
                                                 ).map((it: any) => {
                                                     const canEdit = canEditItem(it);
 
-                                                    // ✅ Lấy địa chỉ của member
+                                                    //  Lấy địa chỉ của member
                                                     const memberAddress = it?.member?.address_id;
 
                                                     return (
@@ -1129,13 +1236,27 @@ export default function GroupOrderDetail() {
                                                 </span>
                                             </div>
                                         )}
+                                        {/* Hiển thị giảm giá từ voucher nếu có */}
+                                        {voucherDiscount > 0 && (
+                                            <div className="flex justify-between text-sm text-orange-600 font-medium">
+                                                <span>🎟️ Giảm từ voucher:</span>
+                                                <span className="font-bold">
+                                                    -{voucherDiscount.toLocaleString()} đ
+                                                </span>
+                                            </div>
+                                        )}
 
                                         <div className="flex justify-between items-center text-xl font-bold border-t pt-3 border-green-300">
                                             <span className="text-slate-900">Thành tiền:</span>
                                             <span className="text-green-600">
-                                                {totals.totalAfter.toLocaleString()} đ
+                                                {(totals.totalAfter - voucherDiscount).toLocaleString()} đ
                                             </span>
                                         </div>
+
+
+
+
+
                                     </div>
 
 
@@ -1201,6 +1322,9 @@ export default function GroupOrderDetail() {
                 totalAmount={totals.totalAfter}
                 discountPercent={group?.discount_percent || 0}
                 deliveryMode={group?.delivery_mode || 'host_address'}
+                preAppliedVoucherCode={voucherCode}
+                preAppliedVoucherDiscount={voucherDiscount}
+                preAppliedVoucher={appliedVoucher}
                 onSuccess={() => {
                     setShowCheckout(false);
                     refresh();

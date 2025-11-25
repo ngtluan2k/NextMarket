@@ -5,5 +5,5 @@ export type AuthContextType = {
   token: string | null;
   login: (user: Me, token: string) => void;
   logout: () => void;
-  loadAddresses: () => Promise<void>;
+  loadAddresses: (userId: number, token: string) => Promise<void>;
 };

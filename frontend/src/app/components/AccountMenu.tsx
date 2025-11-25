@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { getRoles } from '../../utils/auth.helper';
+import { Link } from 'react-router-dom';
 
 export default function AccountMenu({ className = '' }) {
   const { me, logout } = useAuth();
@@ -53,56 +54,56 @@ export default function AccountMenu({ className = '' }) {
 
       {open && (
         <div className="absolute right-0 z-[120] mt-2 w-64 origin-top-right rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5">
-          <a
-            href="/account"
+          <Link
+            to="/account"
             className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
           >
             <User className="h-4 w-4 text-slate-500" />
             Thông tin tài khoản
-          </a>
-          <a
-            href="account/orders"
+          </Link>
+          <Link
+            to="account/orders"
             className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
           >
             <Package className="h-4 w-4 text-slate-500" />
             Đơn hàng của tôi
-          </a>
-          <a
-            href="/support"
+          </Link>
+          <Link
+            to="/support"
             className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
           >
             <LifeBuoy className="h-4 w-4 text-slate-500" />
             Trung tâm hỗ trợ
-          </a>
+          </Link>
 
           {role?.includes('Seller') && (
-            <a
-              href="/myStores"
+            <Link
+              to="/myStores"
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
             >
               <ShopOutlined className="h-4 w-4 text-slate-500" />
               Cửa hàng của tôi
-            </a>
+            </Link>
           )}
 
           {role?.includes('User') && (
-            <a
-              href="/affiliate "
+            <Link
+              to="/affiliate "
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
             >
               <SignatureOutlined className="h-4 w-4 text-slate-500" />
               Tiếp thị liên kết
-            </a>
+            </Link>
           )}
 
           {role?.includes('Admin') && (
-            <a
-              href="/admin"
+            <Link
+              to="/admin"
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
             >
               <KeyOutlined />
               Quản trị
-            </a>
+            </Link>
           )}
           <button
             onClick={logout}
