@@ -13,13 +13,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loadAddresses = async (userId: number, token: string) => {
     try {
       console.time('📍 [Auth] Load Addresses');
-      const addressRes = await fetch(`${BE_BASE_URL}/users/${userId}/addresses`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const addressRes = await fetch(
+        `${BE_BASE_URL}/users/${userId}/addresses`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const addresses = (await addressRes.json()) || [];
       console.timeEnd('📍 [Auth] Load Addresses');
-      
-      setMe(prev => prev ? { ...prev, addresses } : null);
+
+      setMe((prev) => (prev ? { ...prev, addresses } : null));
       localStorage.setItem('user', JSON.stringify({ ...me, addresses }));
     } catch (err) {
       console.warn('Load addresses error:', err);
@@ -31,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const tokenStr = localStorage.getItem('token');
     const cachedUser = localStorage.getItem('user');
-    
+
     if (tokenStr && cachedUser) {
       // Use cached data immediately, validate token in background
       setMe(JSON.parse(cachedUser));
@@ -42,14 +45,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = (user: Me, token: string) => {
     console.time('💾 [Auth] Login State Update');
-    
+
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('token', token);
     setMe(user);
     setToken(token);
-    
+
     console.timeEnd('💾 [Auth] Login State Update');
-    
+
     // Don't fetch additional data immediately
     // Let components request addresses when needed
   };

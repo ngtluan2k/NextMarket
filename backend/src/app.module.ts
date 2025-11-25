@@ -65,15 +65,18 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
 import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-  
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 10,
-    }]),
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 seconds
+        limit: 10, // 10 requests per TTL
+      },
+    ]),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -93,7 +96,7 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',//chạy sql trên web thì sửa lại thành postgres và bỏ commemnt dòng ssl
+        type: 'mysql',
         host: config.get('DB_HOST'),
         port: config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
@@ -105,7 +108,7 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
         // ssl: true,
       }),
     }),
-    
+
     ProductModule,
     UserModule,
     CategoryModule,
@@ -163,6 +166,7 @@ import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
     CampaignsModule,
     FlashSaleSchedulesModule,
     RevokedTokensModule,
+    ChatModule,
   ],
   providers: [],
 })

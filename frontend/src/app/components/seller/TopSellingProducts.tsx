@@ -32,9 +32,26 @@ export default function TopSellingProducts({
       );
 
       const topProducts = data
-        .filter((p) => (p.sold || 0) > 0) // chỉ lấy sản phẩm có bán
-        .sort((a, b) => (b.sold || 0) - (a.sold || 0)) // sắp xếp giảm dần
-        .slice(0, 5); // lấy 5 sản phẩm đầu
+        .filter((p) => (p.sold || 0) > 0)
+        .sort((a, b) => (b.sold || 0) - (a.sold || 0))
+        .slice(0, 5)
+        .map((p) => {
+          // ✅ Xử lý ảnh
+          const baseUrl = import.meta.env.VITE_BE_BASE_URL || '';
+          const mediaUrl = p.media?.[0]?.url;
+
+          const image = mediaUrl
+            ? mediaUrl.startsWith('http')
+              ? mediaUrl
+              : `${baseUrl.replace(/\/$/, '')}/${mediaUrl.replace(/^\//, '')}`
+            : '/no-image.png';
+
+          return {
+            ...p,
+            image,
+            revenue: (p.sold || 0) * Number(p.base_price || 0),
+          };
+        }); // lấy 5 sản phẩm đầu
 
       setProducts(topProducts);
 

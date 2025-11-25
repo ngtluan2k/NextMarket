@@ -8,6 +8,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import {
+  CrownOutlined,
   KeyOutlined,
   ShopOutlined,
   SignatureOutlined,
@@ -62,7 +63,7 @@ export default function AccountMenu({ className = '' }) {
             Thông tin tài khoản
           </Link>
           <Link
-            to="account/orders"
+            to="/account/orders"
             className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
           >
             <Package className="h-4 w-4 text-slate-500" />
@@ -86,7 +87,7 @@ export default function AccountMenu({ className = '' }) {
             </Link>
           )}
 
-          {role?.includes('User') && (
+          {role?.some(r => r.toLowerCase() === 'user') && (
             <Link
               to="/affiliate "
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
@@ -101,7 +102,7 @@ export default function AccountMenu({ className = '' }) {
               to="/admin"
               className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50"
             >
-              <KeyOutlined />
+              <CrownOutlined />
               Quản trị
             </Link>
           )}

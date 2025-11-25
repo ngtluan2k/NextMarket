@@ -1,3 +1,4 @@
+import { DollarOutlined } from '@ant-design/icons';
 import React from 'react';
 import { GroupOrderVoucher } from './GroupOrderVoucher';
 
@@ -64,7 +65,7 @@ export const GroupPaymentBox: React.FC<GroupPaymentBoxProps> = ({
                 return (
                     <div className="bg-white rounded-xl shadow-sm border p-6 sticky top-6">
                         <h3 className="text-lg font-bold mb-4 text-slate-800">
-                            💰 Thanh toán cho nhóm
+                            <DollarOutlined /> Thanh toán cho nhóm
                         </h3>
                         {/* Tổng tiền với breakdown */}
                         <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg mb-4 space-y-2">

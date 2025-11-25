@@ -1,4 +1,3 @@
-// frontend/src/app/components/group_orders/components/GroupOrderDetail.tsx
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -16,10 +15,23 @@ import {
     UserOutlined,
     InfoCircleOutlined,
     EnvironmentOutlined,
+    EditOutlined,
+    ClockCircleOutlined,
+    TeamOutlined,
+    UsergroupAddOutlined,
+    LockOutlined,
+    RestOutlined,
+    WarningOutlined,
+    CrownOutlined,
+    SwapOutlined,
 } from '@ant-design/icons';
 import AddressModal from './../../../page/AddressModal';
 import { message } from 'antd';
 import { GroupPaymentBox } from './GroupPaymentBox';
+import { useState } from 'react';
+import GroupChatModal from './GroupChatModal';
+import { useChatSocket } from '../../../hooks/useChatSocket';
+import { SenderType } from '../../../types/chat.types';
 
 
 export default function GroupOrderDetail() {
@@ -42,6 +54,8 @@ export default function GroupOrderDetail() {
     const [voucherDiscount, setVoucherDiscount] = React.useState<number>(0);
     const [isValidatingVoucher, setIsValidatingVoucher] = React.useState(false);
     const [appliedVoucher, setAppliedVoucher] = React.useState<any>(null);
+    const [isChatOpen, setChatOpen] = useState(false);
+
 
     const { socketService } = useGroupOrderSocket(Number(id), (event, data) => {
         switch (event) {
@@ -171,6 +185,19 @@ export default function GroupOrderDetail() {
                 break;
         }
     });
+    const {
+        conversations,
+        setConversations,
+        messages,
+        setMessages,
+        selectedConversationId,
+        setSelectedConversationId,
+        sendMessage,
+        startGroupConversation,
+        markAsRead,
+        joinConversationRoom,
+    } = useChatSocket(user?.user_id ?? 0, SenderType.USER);
+
 
     React.useEffect(() => {
         if (!id) return;
@@ -656,37 +683,43 @@ export default function GroupOrderDetail() {
                                         onClick={onEditName}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        ✏️ Sửa tên nhóm
+                                        <EditOutlined />  Sửa tên nhóm
                                     </button>
                                     <button
                                         onClick={onEditDeadline}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        ⏰ Sửa thời hạn
+                                        <ClockCircleOutlined /> Sửa thời hạn
                                     </button>
                                     <button
                                         onClick={onEditTargetCount}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        🎯 Sửa mục tiêu
+                                        <TeamOutlined />  Sửa mục tiêu
                                     </button>
                                     <button
                                         onClick={onAddMember}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        👥 Thêm thành viên
+                                        <UsergroupAddOutlined /> Thêm thành viên
+                                    </button>
+                                    <button
+                                        onClick={() => setChatOpen(true)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                                    >
+                                        Mở chat nhóm
                                     </button>
                                     <button
                                         onClick={onManualLockGroup}
                                         className="px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition-colors"
                                     >
-                                        🔒 Khóa nhóm ngay
+                                        <LockOutlined /> Khóa nhóm ngay
                                     </button>
                                     <button
                                         onClick={onDeleteGroup}
                                         className="px-3 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
                                     >
-                                        🗑️ Xóa nhóm
+                                        <RestOutlined /> Xóa nhóm
                                     </button>
                                 </div>
                             )}
@@ -735,6 +768,12 @@ export default function GroupOrderDetail() {
                                 className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
                             >
                                 🚪 Rời nhóm
+                            </button>
+                            <button
+                                onClick={() => setChatOpen(true)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded"
+                            >
+                                Mở chat nhóm
                             </button>
                         </div>
                     )}
@@ -1344,6 +1383,19 @@ export default function GroupOrderDetail() {
                     setShowMemberCheckout(false);
                     refresh();
                 }}
+            />
+            <GroupChatModal
+                isOpen={isChatOpen}
+                onClose={() => setChatOpen(false)}
+                groupId={groupId}
+                userId={user?.user_id}
+                startGroupConversation={startGroupConversation}
+                sendMessage={sendMessage}
+                selectedConversationId={selectedConversationId}
+                setSelectedConversationId={setSelectedConversationId}
+                messages={messages}
+                setMessages={setMessages}
+                joinConversationRoom={joinConversationRoom}
             />
 
             {/* Modal chọn địa chỉ cho member */}

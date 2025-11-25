@@ -31,6 +31,7 @@ import { Wallet } from '../wallet/wallet.entity';
 import { WalletTransaction } from '../wallet_transaction/wallet_transaction.entity';
 import { OrderStatuses } from './types/orders';
 import { OrderFilters } from './types/orders';
+import { CustomerFromOrderDto } from './dto/get-order-customer.dto';
 import { randomUUID } from 'crypto';
 @Injectable()
 export class OrdersService {
@@ -49,7 +50,7 @@ export class OrdersService {
     private readonly referralsService: ReferralsService,
     @InjectRepository(OrderStatusHistory)
     private orderStatusHistoryRepository: Repository<OrderStatusHistory>
-  ) { }
+  ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     console.log('🚀 Starting order creation with data:', JSON.stringify(createOrderDto, null, 2));
@@ -376,8 +377,9 @@ export class OrdersService {
               wallet_id: wallet.id,
               type: 'subscription_purchase',
               amount: -itemPrice,
-              reference: `subscription:${itemDto.productId}:${itemDto.variantId ?? '0'
-                }`,
+              reference: `subscription:${itemDto.productId}:${
+                itemDto.variantId ?? '0'
+              }`,
               created_at: new Date(),
             });
             await manager.save(tx);
@@ -723,12 +725,9 @@ export class OrdersService {
     // ========== BƯỚC 1: BUILD QUERY ==========
     let query = this.ordersRepository
       .createQueryBuilder('order')
-      // User & Profile
       .leftJoinAndSelect('order.user', 'user')
       .leftJoinAndSelect('user.profile', 'userProfile')
-      // Address
       .leftJoinAndSelect('order.userAddress', 'userAddress')
-      // Order Items
       .leftJoinAndSelect('order.orderItem', 'orderItem')
       .leftJoinAndSelect('orderItem.product', 'product')
       .leftJoinAndSelect('orderItem.variant', 'variant')
@@ -755,22 +754,19 @@ export class OrdersService {
       .andWhere('order.status != :draft', { draft: OrderStatuses.draft });
 
     // ========== BƯỚC 2: APPLY FILTERS ==========
-
-    // Filter by status
     if (filters.status !== undefined && filters.status !== null) {
       query = query.andWhere('order.status = :status', {
         status: Number(filters.status),
       });
     }
-
-    // Filter by payment status
     if (filters.paymentStatus !== undefined && filters.paymentStatus !== null) {
-      query = query.andWhere('payment.status = :paymentStatus', {
-        paymentStatus: Number(filters.paymentStatus),
-      });
+      query = query.andWhere(
+        '(payment.status IS NULL OR payment.status = :paymentStatus)',
+        {
+          paymentStatus: Number(filters.paymentStatus),
+        }
+      );
     }
-
-    // Filter by date range
     if (filters.fromDate) {
       query = query.andWhere('order.createdAt >= :fromDate', {
         fromDate: filters.fromDate,
@@ -781,29 +777,19 @@ export class OrdersService {
         toDate: filters.toDate,
       });
     }
-
-    // Search by customer name, email, or order ID
     if (filters.search) {
       query = query.andWhere(
-        `(
-        userAddress.recipientName ILIKE :search OR
-        user.username ILIKE :search OR
-        user.email ILIKE :search OR
-        order.id::text ILIKE :search
-      )`,
+        `(userAddress.recipientName ILIKE :search OR user.username ILIKE :search OR user.email ILIKE :search OR order.id::text ILIKE :search)`,
         { search: `%${filters.search}%` }
       );
     }
 
-    // ========== BƯỚC 3: EXECUTE QUERY (KHÔNG PAGINATION Ở ĐÂY) ==========
-    // Lấy tất cả orders trước, sau đó mới group và paginate
+    // ========== BƯỚC 3: FETCH ALL ORDERS ==========
     const allOrders = await query.orderBy('order.id', 'DESC').getMany();
-
     console.log(`📦 Total orders fetched: ${allOrders.length}`);
 
-    // ========== BƯỚC 4: GROUP ORDERS THEO GROUP_ORDER_ID ==========
+    // ========== BƯỚC 4: GROUP ORDERS ==========
     const groupedOrdersMap = new Map<string, Order>();
-    const groupOrderIds = new Set<number>();
     const groupStats = new Map<
       number,
       {
@@ -814,13 +800,10 @@ export class OrdersService {
       }
     >();
 
-    // Phân loại orders
     allOrders.forEach((order) => {
       if (order.group_order_id) {
-        //  Đơn nhóm
         const groupId = order.group_order_id;
 
-        // Lưu thống kê group
         if (!groupStats.has(groupId)) {
           groupStats.set(groupId, {
             totalAmount: 0,
@@ -834,127 +817,100 @@ export class OrdersService {
         stats.totalAmount += Number(order.totalAmount || 0);
         stats.memberCount += 1;
         stats.allOrders.push(order);
-        //tong so luong san pham
+
         const orderQuantity = (order.orderItem || []).reduce(
           (sum, item) => sum + (item.quantity || 0),
           0
         );
         stats.totalQuantity += orderQuantity;
 
-        // Chỉ lưu order đầu tiên làm đại diện
         const groupKey = `group_${groupId}`;
         if (!groupedOrdersMap.has(groupKey)) {
           groupedOrdersMap.set(groupKey, order);
-          groupOrderIds.add(groupId);
         }
       } else {
-        //  Đơn lẻ
         groupedOrdersMap.set(`single_${order.id}`, order);
       }
     });
 
-    console.log(
-      ` After grouping: ${groupedOrdersMap.size} items (${groupOrderIds.size
-      } groups, ${groupedOrdersMap.size - groupOrderIds.size} singles)`
-    );
+    console.log(` After grouping: ${groupedOrdersMap.size} items`);
 
-    // ========== BƯỚC 5: CONVERT MAP → ARRAY VÀ ADD METADATA ==========
-    let resultOrders = Array.from(groupedOrdersMap.values()).map((order) => {
-      const enrichedOrder: any = { ...order };
-
+    // ========== BƯỚC 5: ADD METADATA ==========
+    const resultOrders = Array.from(groupedOrdersMap.values()).map((order) => {
+      const enriched: any = { ...order };
       if (order.group_order_id) {
         const stats = groupStats.get(order.group_order_id);
         if (stats) {
-          enrichedOrder.group_total_amount = stats.totalAmount;
-          enrichedOrder.group_total_quantity = stats.totalQuantity;
-          enrichedOrder.group_member_count = stats.memberCount;
-          enrichedOrder.group_all_orders = stats.allOrders; // Để frontend dùng khi cần
+          enriched.group_total_amount = stats.totalAmount;
+          enriched.group_total_quantity = stats.totalQuantity;
+          enriched.group_member_count = stats.memberCount;
+          enriched.group_all_orders = stats.allOrders;
         }
       } else {
-        enrichedOrder.group_total_amount = null;
-        enrichedOrder.group_total_quantity = null;
-        enrichedOrder.group_member_count = null;
+        enriched.group_total_amount = null;
+        enriched.group_total_quantity = null;
+        enriched.group_member_count = null;
       }
-
-      return enrichedOrder;
+      return enriched;
     });
 
-    // ========== BƯỚC 6: APPLY PAGINATION ==========
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+    // ========== BƯỚC 6: PAGINATION ==========
+    const page = Number(filters.page) || 1;
+    const limit = Number(filters.limit) || 10;
+
     const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    resultOrders = resultOrders.slice(startIndex, endIndex);
-
-    console.log(`📄 Page ${page}: Returning ${resultOrders.length} items`);
-
-    return resultOrders as Order[];
+    const endIndex = Math.min(startIndex + limit, resultOrders.length);
+    return resultOrders.slice(startIndex, endIndex) as Order[];
   }
 
-  // Đếm số lượng orders của store (cho pagination)
   async countOrdersByStore(
     storeId: number,
     filters: OrderFilters = {}
   ): Promise<number> {
-    // Build query tương tự findByStore
     let query = this.ordersRepository
       .createQueryBuilder('order')
-      .leftJoin('order.user', 'user')
-      .leftJoin('order.userAddress', 'userAddress')
       .leftJoin('order.payment', 'payment')
       .where('order.store_id = :storeId', { storeId })
       .andWhere('order.status != :waitingGroup', {
         waitingGroup: OrderStatuses.waiting_group
       });
 
-    // Apply filters
+    // filters như trước
     if (filters.status !== undefined && filters.status !== null) {
       query = query.andWhere('order.status = :status', {
         status: Number(filters.status),
       });
     }
     if (filters.paymentStatus !== undefined && filters.paymentStatus !== null) {
-      query = query.andWhere('payment.status = :paymentStatus', {
-        paymentStatus: Number(filters.paymentStatus),
-      });
+      query = query.andWhere(
+        '(payment.status IS NULL OR payment.status = :paymentStatus)',
+        {
+          paymentStatus: Number(filters.paymentStatus),
+        }
+      );
     }
-    if (filters.fromDate) {
+    if (filters.fromDate)
       query = query.andWhere('order.createdAt >= :fromDate', {
         fromDate: filters.fromDate,
       });
-    }
-    if (filters.toDate) {
+    if (filters.toDate)
       query = query.andWhere('order.createdAt <= :toDate', {
         toDate: filters.toDate,
       });
-    }
-    if (filters.search) {
-      query = query.andWhere(
-        `(
-        userAddress.recipientName ILIKE :search OR
-        user.username ILIKE :search OR
-        user.email ILIKE :search OR
-        order.id::text ILIKE :search
-      )`,
-        { search: `%${filters.search}%` }
-      );
-    }
 
-    // ✅ Lấy tất cả orders để count sau khi group
     const allOrders = await query.getMany();
 
-    // Group để đếm đúng
-    const uniqueGroups = new Set<string>();
+    // Group lại để count chính xác
+    const grouped = new Set<string>();
     allOrders.forEach((order) => {
       if (order.group_order_id) {
-        uniqueGroups.add(`group_${order.group_order_id}`);
+        grouped.add(`group_${order.group_order_id}`);
       } else {
-        uniqueGroups.add(`single_${order.id}`);
+        grouped.add(`single_${order.id}`);
       }
     });
 
-    return uniqueGroups.size;
+    return grouped.size;
   }
 
   // Thống kê cho store (cho cards trong Sale.tsx)
@@ -1089,6 +1045,53 @@ export class OrdersService {
       pending,
     };
   }
+  async getCustomersFromOrders(
+  storeId: number
+): Promise<CustomerFromOrderDto[]> {
+  // Lấy tất cả orders trong store
+  const allOrders = await this.ordersRepository
+    .createQueryBuilder('order')
+    .leftJoinAndSelect('order.user', 'user')
+    .leftJoinAndSelect('user.profile', 'userProfile')
+    .where('order.store_id = :storeId', { storeId })
+    .orderBy('order.id', 'DESC')
+    .getMany();
+
+  // Nhóm theo user
+  const customersMap = new Map<number, CustomerFromOrderDto>();
+
+  allOrders.forEach((order) => {
+    const user = order.user;
+    if (!user || !user.id) return;
+
+    const orderAmount = Number(order.totalAmount || 0);
+    const existing = customersMap.get(user.id);
+
+    if (!existing) {
+      customersMap.set(user.id, {
+        id: user.id,
+        name: user.username,
+        email: user.email,
+        phone: user.profile?.phone,
+        avatar: user.profile?.avatar_url,
+        totalOrders: 1,
+        totalSpent: orderAmount,
+        status: user.status || 'active', // dùng trực tiếp user.status
+        joinDate: user.created_at,
+        lastOrderDate: order.createdAt,
+      });
+    } else {
+      existing.totalOrders += 1;
+      existing.totalSpent += orderAmount;
+      if (!existing.lastOrderDate || new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
+        existing.lastOrderDate = order.createdAt;
+      }
+    }
+  });
+
+  return Array.from(customersMap.values());
+}
+
 
   /**
    * Update order status and trigger commission calculation if order is paid

@@ -169,6 +169,8 @@ export interface DailyRevenueResponse {
   prevPeriod: DailyRevenueItem[];
 }
 
+
+
 export type UpdateProductDto = Partial<CreateProductDto>;
 
 class ProductService {

@@ -31,6 +31,7 @@ import { Not } from 'typeorm';
 import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { OrderItem } from '../order-items/order-item.entity';
 import { FlashSaleSchedule } from '../flash_sale_schedules/entities/flash_sale_schedule.entity';
+import { Order } from '../orders/order.entity';
 @Injectable()
 export class ProductService {
   constructor(
@@ -56,7 +57,9 @@ export class ProductService {
     @InjectRepository(OrderItem)
     private readonly orderItemRepo: Repository<OrderItem>,
     @InjectRepository(FlashSaleSchedule)
-    private readonly scheduleRepo: Repository<FlashSaleSchedule>
+    private readonly scheduleRepo: Repository<FlashSaleSchedule>,
+    @InjectRepository(Order)
+    private readonly ordersRepository: Repository<Order>
   ) {}
 
   async saveProduct(
@@ -610,58 +613,44 @@ export class ProductService {
   }
 
   async getDailyRevenue(storeId: number, days = 7) {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
 
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - (days - 1));
-    startDate.setHours(0, 0, 0, 0);
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - (days - 1));
+  startDate.setHours(0, 0, 0, 0);
 
-    const startDatePrev = new Date(startDate);
-    startDatePrev.setDate(startDate.getDate() - days);
-    startDatePrev.setHours(0, 0, 0, 0);
+  const startDatePrev = new Date(startDate);
+  startDatePrev.setDate(startDate.getDate() - days);
+  startDatePrev.setHours(0, 0, 0, 0);
 
-    const endDatePrev = new Date(startDate);
-    endDatePrev.setDate(startDate.getDate() - 1);
-    endDatePrev.setHours(23, 59, 59, 999);
+  const endDatePrev = new Date(startDate);
+  endDatePrev.setDate(startDate.getDate() - 1);
+  endDatePrev.setHours(23, 59, 59, 999);
 
-    // Lấy productIds của store
-    const products = await this.productRepo.find({
-      where: { store_id: storeId },
-    });
-    const productIds = products.map((p) => p.id);
+  // Lấy doanh thu theo đơn trong khoảng thời gian
+  const thisPeriod = await this.ordersRepository
+    .createQueryBuilder('o')
+    .select('DATE(o.created_at)', 'date')
+    .addSelect('SUM(o.totalAmount)', 'revenue') // totalAmount đã trừ voucher nếu có
+    .where('o.store_id = :storeId', { storeId })
+    .andWhere('o.created_at BETWEEN :start AND :end', { start: startDate, end: today })
+    .groupBy('DATE(o.created_at)')
+    .orderBy('DATE(o.created_at)')
+    .getRawMany();
 
-    // Do join với orders
-    const thisPeriod = await this.orderItemRepo
-      .createQueryBuilder('oi')
-      .innerJoin('oi.order', 'o') // join bảng orders
-      .select('DATE(o.created_at)', 'date')
-      .addSelect('SUM(oi.quantity * oi.price)', 'revenue')
-      .where('oi.product_id IN (:...ids)', { ids: productIds })
-      .andWhere('o.created_at BETWEEN :start AND :end', {
-        start: startDate,
-        end: today,
-      })
-      .groupBy('DATE(o.created_at)')
-      .orderBy('DATE(o.created_at)')
-      .getRawMany();
+  const prevPeriod = await this.ordersRepository
+    .createQueryBuilder('o')
+    .select('DATE(o.created_at)', 'date')
+    .addSelect('SUM(o.totalAmount)', 'revenue')
+    .where('o.store_id = :storeId', { storeId })
+    .andWhere('o.created_at BETWEEN :start AND :end', { start: startDatePrev, end: endDatePrev })
+    .groupBy('DATE(o.created_at)')
+    .orderBy('DATE(o.created_at)')
+    .getRawMany();
 
-    const prevPeriod = await this.orderItemRepo
-      .createQueryBuilder('oi')
-      .innerJoin('oi.order', 'o')
-      .select('DATE(o.created_at)', 'date')
-      .addSelect('SUM(oi.quantity * oi.price)', 'revenue')
-      .where('oi.product_id IN (:...ids)', { ids: productIds })
-      .andWhere('o.created_at BETWEEN :start AND :end', {
-        start: startDatePrev,
-        end: endDatePrev,
-      })
-      .groupBy('DATE(o.created_at)')
-      .orderBy('DATE(o.created_at)')
-      .getRawMany();
-
-    return { thisPeriod, prevPeriod };
-  }
+  return { thisPeriod, prevPeriod };
+}
 
   async searchProducts(query: string) {
     if (!query) return [];

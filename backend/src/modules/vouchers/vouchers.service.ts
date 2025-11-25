@@ -884,111 +884,89 @@ export class VouchersService {
         voucher.total_used_count >= voucher.total_usage_limit)
     );
   }
-  async autoCollectVouchersForUser(userId: number): Promise<void> {
-    console.log(`Tự động thu thập voucher cho user ${userId}`);
+async autoCollectVouchersForUser(userId: number): Promise<void> {
+    console.log(`Tự động thu thập voucher AUTO cho user ${userId}`);
 
-    try {
-      const now = new Date();
+    const now = new Date();
 
-      const autoVouchers = await this.vouchersRepository.find({
-        where: {
-          collection_type: VoucherCollectionType.AUTO,
-          status: VoucherStatus.ACTIVE,
-          start_date: LessThanOrEqual(now),
-          end_date: MoreThanOrEqual(now),
-          // store: IsNull(),
-        },
-      });
+    // Lấy tất cả voucher AUTO đang active
+    const autoVouchers = await this.vouchersRepository.find({
+      where: {
+        collection_type: VoucherCollectionType.AUTO,
+        status: VoucherStatus.ACTIVE,
+        start_date: LessThanOrEqual(now),
+        end_date: MoreThanOrEqual(now),
+        store: IsNull(),
+      },
+    });
 
-      console.log(`📦 Tìm thấy ${autoVouchers} voucher AUTO`);
+    console.log(`📦 Tìm thấy ${autoVouchers.length} voucher AUTO`);
 
-      for (const voucher of autoVouchers) {
-        try {
-          const existing = await this.voucherCollectionRepository.findOne({
-            where: {
-              voucher: { id: voucher.id },
-              user: { id: userId },
-            },
-          });
-
-          if (existing) {
-            console.log(` User đã có voucher ${voucher.code}`);
-            continue;
-          }
-
-          if (
-            voucher.collection_limit &&
-            voucher.collected_count >= voucher.collection_limit
-          ) {
-            console.log(` Voucher ${voucher.code} đã đạt giới hạn thu thập`);
-            continue;
-          }
-
-          if (
-            voucher.applicable_user_ids?.length &&
-            !voucher.applicable_user_ids.includes(userId)
-          ) {
-            console.log(
-              ` User ${userId} không nằm trong danh sách cho voucher ${voucher.code}`
-            );
-            continue;
-          }
-
-          if (voucher.new_user_only) {
-            const userOrdersCount = await this.ordersRepository.count({
-              where: { user: { id: userId } },
-            });
-            if (userOrdersCount > 0) {
-              console.log(` User ${userId} không phải user mới`);
-              continue;
-            }
-          }
-
-          const collection = this.voucherCollectionRepository.create({
+    for (const voucher of autoVouchers) {
+      try {
+        // Kiểm tra đã thu thập chưa
+        const existing = await this.voucherCollectionRepository.findOne({
+          where: {
             voucher: { id: voucher.id },
             user: { id: userId },
-          });
+          },
+        });
 
-          await this.voucherCollectionRepository.save(collection);
-
-          voucher.collected_count += 1;
-          await this.vouchersRepository.save(voucher);
-
-          console.log(
-            `Tự động thu thập voucher ${voucher.code} cho user ${userId}`
-          );
-        } catch (error: any) {
-          console.error(`❌ Lỗi khi xử lý voucher ${voucher?.code || voucher?.id}`);
-
-          console.error("Message:", error.message);
-          console.error("Name:", error.name);
-          console.error("Stack:", error.stack);
-
-          if (error.query) console.error("Query:", error.query);
-          if (error.parameters) console.error("Params:", error.parameters);
-
-          if (error.driverError) {
-            console.error("DriverError:", error.driverError);
-          }
-
-          console.error("──────────────────────────────────────────");
+        if (existing) {
+          console.log(` User đã có voucher ${voucher.code}`);
+          continue;
         }
+
+        // Kiểm tra giới hạn thu thập
+        if (
+          voucher.collection_limit &&
+          voucher.collected_count >= voucher.collection_limit
+        ) {
+          console.log(` Voucher ${voucher.code} đã đạt giới hạn thu thập`);
+          continue;
+        }
+
+        // Kiểm tra applicable_user_ids (nếu có)
+        if (
+          voucher.applicable_user_ids?.length &&
+          !voucher.applicable_user_ids.includes(userId)
+        ) {
+          console.log(
+            ` User ${userId} không nằm trong danh sách cho voucher ${voucher.code}`
+          );
+          continue;
+        }
+
+        // Kiểm tra new_user_only
+        if (voucher.new_user_only) {
+          const userOrdersCount = await this.ordersRepository.count({
+            where: { user: { id: userId } },
+          });
+          if (userOrdersCount > 0) {
+            console.log(` User ${userId} không phải user mới`);
+            continue;
+          }
+        }
+
+        // Tạo bản ghi thu thập
+        const collection = this.voucherCollectionRepository.create({
+          voucher: { id: voucher.id },
+          user: { id: userId },
+        });
+        await this.voucherCollectionRepository.save(collection);
+
+        // Tăng collected_count
+        voucher.collected_count += 1;
+        await this.vouchersRepository.save(voucher);
+
+        console.log(
+          `Tự động thu thập voucher ${voucher.code} cho user ${userId}`
+        );
+      } catch (error) {
+        console.error(`Lỗi khi tự động thu thập voucher ${voucher.id}:`, error);
       }
-    } catch (error: any) {
-      console.error("❌ Lỗi tổng khi load danh sách voucher AUTO:");
-
-      console.error("Message:", error.message);
-      console.error("Name:", error.name);
-      console.error("Stack:", error.stack);
-
-      if (error.query) console.error("Query:", error.query);
-      if (error.parameters) console.error("Params:", error.parameters);
-      if (error.driverError) console.error("DriverError:", error.driverError);
-
-      console.error("══════════════════════════════════════════");
     }
   }
-
   async getUserCollectedVouchers(userId: number): Promise<ExtendedVoucher[]> {
     console.log(`📦 Lấy voucher ĐÃ THU THẬP cho người dùng ${userId}`);
     await this.autoCollectVouchersForUser(userId);
@@ -1046,7 +1024,7 @@ export class VouchersService {
     console.log(`📦 Lấy voucher CÓ THỂ THU THẬP cho người dùng ${userId}`);
     await this.autoCollectVouchersForUser(userId);
 
-
+    
     // 1. Lấy TẤT CẢ voucher nền tảng active
     const now = new Date();
     const allPlatformVouchers = await this.vouchersRepository.find({

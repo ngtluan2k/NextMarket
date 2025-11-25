@@ -7,6 +7,7 @@ import TopSellingProducts from '../../../components/seller/TopSellingProducts';
 import InventoryOverview from '../../../components/seller/InventoryOverview';
 import { Content } from 'antd/es/layout/layout';
 import { useState, useEffect } from 'react';
+import { exportPDF } from '../../../../utils/exportPDF';
 
 const { Title, Text } = Typography;
 
@@ -76,12 +77,24 @@ export default function StoreOwnerDashboard() {
       },
     });
   };
+  const getDays = (period: string) => {
+  switch (period) {
+    case '7 Ngày Qua':
+      return 7;
+    case '30 Ngày Qua':
+      return 30;
+    case '365 Ngày Qua':
+      return 365;
+    default:
+      return 7;
+  }
+};
 
   if (storeLoading) return <Spin size="large" className="m-20" />;
 
   return (
     <Layout className="min-h-screen bg-gray-50">
-      <Content className="p-6">
+      <Content id="dashboard-content" className="p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <Title level={2} className="!mb-1 !text-gray-900">
@@ -99,13 +112,18 @@ export default function StoreOwnerDashboard() {
             >
               <Select.Option value="7 Ngày Qua">7 Ngày Qua</Select.Option>
               <Select.Option value="30 Ngày Qua">30 Ngày Qua</Select.Option>
+              <Select.Option value="365 Ngày Qua">
+                365 Ngày Qua
+              </Select.Option>{' '}
+              {/* mới */}
             </Select>
+
             <Button
               type="primary"
               icon={<ExportOutlined />}
-              className="bg-cyan-500 border-cyan-500"
+              onClick={() => exportPDF('dashboard-content', 'dashboard.pdf')}
             >
-              Xuất Dữ Liệu
+              Xuất PDF
             </Button>
             <Button
               danger
@@ -122,7 +140,7 @@ export default function StoreOwnerDashboard() {
             {store && (
               <SalesOverview
                 storeId={store.id}
-                days={period === '7 Ngày Qua' ? 7 : 30}
+                days={getDays(period)}
               />
             )}
           </div>
@@ -130,19 +148,22 @@ export default function StoreOwnerDashboard() {
             {store && (
               <StatsCards
                 storeId={store.id}
-                days={period === '7 Ngày Qua' ? 7 : 30}
+                days={getDays(period)}
               />
             )}
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-           <TopSellingProducts 
-           storeId={store?.id ?? 0}
-           days={period === '7 Ngày Qua' ? 7 : 30}
+            <TopSellingProducts
+              storeId={store?.id ?? 0}
+              days={getDays(period)}
             />
           </div>
-          <InventoryOverview />
+          <InventoryOverview
+            storeId={store?.id ?? 0}
+            days={getDays(period)}
+          />
         </div>
       </Content>
     </Layout>

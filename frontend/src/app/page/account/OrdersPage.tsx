@@ -10,7 +10,7 @@ import {
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
 import ReviewModal from '../../components/account/ReviewModal';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -54,6 +54,7 @@ export type OrderSummary = {
   id: string;
   code: string;
   storeName?: string;
+  storeSlug?: string;
   status: OrderTab;
   createdAt?: string | number | Date;
   totalPrice?: number;
@@ -85,6 +86,7 @@ export type OrderSummary = {
     pricing_rule_id?: number | null;
     product?: {
       id: number;
+      slug: string;
       name: string;
       media?: Array<{ url: string; is_primary: boolean }>;
       reviews?: Array<{
@@ -141,6 +143,7 @@ export default function OrdersPage() {
   const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(
     null
   );
+  const navigate = useNavigate();
 
   // gọi API theo tab + q + page
   useEffect(() => {
@@ -153,12 +156,12 @@ export default function OrdersPage() {
       try {
         // Lấy dữ liệu từ backend
         const res = await orderService.getOrderByUser(userId);
-        console.log('Orders fetched:', res);
         // Map dữ liệu backend về OrderSummary
         const items: OrderSummary[] = (res as any[]).map((o) => ({
           id: String(o.id),
           code: o.uuid,
           storeName: o.store?.name ?? '',
+          storeSlug: o.store?.slug ?? '',
           status: mapStatus(Number(o.status)),
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
@@ -183,6 +186,7 @@ export default function OrdersPage() {
               orderItemId: String(it.id),
               productId: product?.id,
               name: product?.name ?? it.name,
+              slug: product?.slug ?? '',
               image: image ? `${BE_BASE_URL}${image}` : undefined,
               qty: it.quantity,
               price: Number(it.price ?? 0),
@@ -379,10 +383,11 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${active
-                    ? 'text-sky-700 border-b-2 border-sky-600'
-                    : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${
+                    active
+                      ? 'text-sky-700 border-b-2 border-sky-600'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                   aria-pressed={active}
                 >
                   {t.label}
@@ -443,23 +448,34 @@ export default function OrdersPage() {
                   const mergedProducts = Array.from(
                     o.items.reduce((map, item) => {
                       if (!item.productId) return map;
+
+                      // Lấy slug: ưu tiên orderItem.product.slug, fallback item.slug
+                      const orderItem = o.orderItem?.find(
+                        (oi) => oi.product?.id === item.productId
+                      );
+                      const slug =
+                        orderItem?.product?.slug ?? (item as any).slug ?? '';
+
                       const existing = map.get(item.productId);
                       if (existing) {
                         existing.qty += item.qty;
                       } else {
                         map.set(item.productId, {
-                          productId: item.productId, // chính xác
+                          productId: item.productId,
                           name: item.name,
                           image: item.image,
                           qty: item.qty,
                           price: item.price,
                           isReviewed: item.isReviewed,
                           reviewId: item.reviewId ?? null,
+                          slug, // chắc chắn có giá trị, không undefined
                         });
                       }
                       return map;
-                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean; reviewId?: number | null }>())
+                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean; reviewId?: number | null; slug?: string }>())
                   ).map(([_, v]) => v);
+
+
 
                   return (
                     <li
@@ -471,7 +487,12 @@ export default function OrdersPage() {
                         <div className="text-sm text-slate-700">
                           <span className="font-medium">Mã đơn:</span> {o.code}
                           {o.storeName && (
-                            <span className="ml-3 text-slate-500">
+                            <span
+                              className="ml-3 text-slate-500 cursor-pointer hover:text-blue-600"
+                              onClick={() =>
+                                navigate(`/stores/slug/${o.storeSlug}`)
+                              } // giả sử bạn có storeSlug
+                            >
                               | {o.storeName}
                             </span>
                           )}
@@ -482,7 +503,12 @@ export default function OrdersPage() {
                           )}
                           {o.groupOrderId && (
                             <span className="ml-3 inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-600 px-2 py-0.5 rounded-full">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
                                 <path d="M12 2a5 5 0 0 1 5 5v3h2a3 3 0 0 1 3 3v6h-2v-6a1 1 0 0 0-1-1h-2v7h-2v-7h-4v7H9v-7H7a1 1 0 0 0-1 1v6H4v-6a3 3 0 0 1 3-3h2V7a5 5 0 0 1 5-5z" />
                               </svg>
                               Mua nhóm
@@ -496,8 +522,6 @@ export default function OrdersPage() {
                         </div>
                       </div>
 
-
-
                       {/* Products */}
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {mergedProducts.slice(0, 3).map((it) => (
@@ -507,6 +531,16 @@ export default function OrdersPage() {
                                 src={it.image || '/placeholder.png'}
                                 alt={it.name}
                                 className="h-full w-full object-cover"
+                                onClick={() => {
+                                  if (it.slug) {
+                                    navigate(`/products/slug/${it.slug}`);
+                                  } else {
+                                    console.warn(
+                                      'Product slug is missing for',
+                                      it
+                                    );
+                                  }
+                                }}
                               />
                             </div>
                             <div className="min-w-0 flex flex-col">
@@ -519,23 +553,24 @@ export default function OrdersPage() {
 
                               {(o.status === 'delivered' ||
                                 o.status === 'completed') && (
-                                  <button
-                                    className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${it.isReviewed
+                                <button
+                                  className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${
+                                    it.isReviewed
                                       ? 'bg-sky-600 hover:bg-sky-700'
                                       : 'bg-emerald-600 hover:bg-emerald-700'
-                                      }`}
-                                    onClick={() => {
-                                      setOpenReview(true);
-                                      setSelectedProductId(
-                                        it.productId?.toString() ?? null
-                                      );
-                                      setSelectedOrderId(o.id);
-                                      setSelectedReviewId(it.reviewId ?? null);
-                                    }}
-                                  >
-                                    {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
-                                  </button>
-                                )}
+                                  }`}
+                                  onClick={() => {
+                                    setOpenReview(true);
+                                    setSelectedProductId(
+                                      it.productId?.toString() ?? null
+                                    );
+                                    setSelectedOrderId(o.id);
+                                    setSelectedReviewId(it.reviewId ?? null);
+                                  }}
+                                >
+                                  {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}

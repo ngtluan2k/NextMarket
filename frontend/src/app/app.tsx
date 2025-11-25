@@ -6,7 +6,7 @@ import { initializeAffiliateTracking } from '../utils/affiliate-tracking';
 import { SellerRegistration } from './components/register_seller/SellerRegistration';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationSocketProvider } from './components/NotificationSocketProvider';
 import Home from './page/Home';
 import CategoryPage from './page/CategoryPage';
@@ -61,6 +61,7 @@ import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
 import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
+import { AuthConsumerChat } from './components/AuthConsumerChat';
 import AffiliateRulesDebug from './components/debug/AffiliateRulesDebug';
 import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
 import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
@@ -92,6 +93,7 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
+      
       <NotificationSocketProvider>
         <CartProvider>
           {contextHolder}
@@ -247,6 +249,7 @@ const App: React.FC = () => {
               element={<LoginPerformanceDebug />}
             />
           </Routes>
+          <AuthConsumerChat />
           <CampaignAdPopup />
         </CartProvider>
       </NotificationSocketProvider>

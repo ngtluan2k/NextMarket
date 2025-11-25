@@ -34,6 +34,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
 import { StoreLevelEnum } from '../store-level/store-level.enum';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Injectable()
 export class StoreService {
@@ -95,7 +96,7 @@ export class StoreService {
       where: includeDeleted
         ? { user_id: userId }
         : { user_id: userId, is_deleted: false },
-         relations: ['storeLevels'],
+      relations: ['storeLevels'],
     });
   }
 
@@ -890,11 +891,7 @@ export class StoreService {
 
     const store = await this.storeRepo.findOne({
       where: { slug, is_deleted: false },
-      relations: [
-        'products',
-        'products.media',
-        'followers',
-      ],
+      relations: ['products', 'products.media', 'followers'],
     });
 
     if (!store) return null;

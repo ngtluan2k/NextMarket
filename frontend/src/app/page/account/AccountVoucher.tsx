@@ -63,6 +63,7 @@ const AccountVoucher: React.FC = () => {
       // Chỉ lấy voucher ĐÃ THU THẬP
       const response = await userVoucherApi.getMyCollectedVouchers();
       setCollectedVouchers(response);
+      console.log(response)
       console.log('📦 Loaded collected vouchers:', response.length);
     } catch (error: any) {
       console.error('Error fetching collected vouchers:', error);

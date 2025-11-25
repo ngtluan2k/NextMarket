@@ -10,6 +10,8 @@ type ProductRaw = {
   base_price?: string;
   variants?: { price: string }[];
   brand?: { id: number; name: string };
+  avg_rating?: number;
+  review_count?: number;
 };
 
 type Props = {
@@ -71,6 +73,8 @@ const ProductList: React.FC<Props> = ({
             price: Number(mainVariant?.price || p.base_price || 0),
             brandId: p.brand?.id, // thêm brandId để lọc
             brandName: p.brand?.name,
+            avg_rating: p.avg_rating || 0,
+            review_count: p.review_count || 0,
           };
         });
 

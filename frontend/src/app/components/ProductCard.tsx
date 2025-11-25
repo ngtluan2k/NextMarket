@@ -19,9 +19,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
     <div className="rounded-xl border border-slate-200 bg-white p-2 hover:shadow-md transition-shadow">
       <div className="cursor-pointer">
         <img
-          src={
-            product.image
-          }
+          src={product.image}
           alt={product.name}
           className="w-full aspect-square object-cover rounded-lg"
         />
@@ -33,12 +31,17 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           {product.price.toLocaleString()}₫
         </p>
         {/* ⭐ hiển thị sao trung bình */}
-            <div className="mt-1 flex items-center gap-1">
-              <Rate disabled allowHalf value={product.avg_rating} style={{ fontSize: 14 }} />
-              <span className="text-xs text-slate-500">
-                ({product.avg_rating?.toFixed(1) ?? 0})
-              </span>
-            </div>
+        <div className="mt-1 flex items-center gap-1">
+          <Rate
+            disabled
+            allowHalf
+            value={product.avg_rating}
+            style={{ fontSize: 14 }}
+          />
+          <span className="text-xs text-slate-500">
+            ({Number(product.avg_rating ?? 0).toFixed(1)})
+          </span>
+        </div>
       </div>
     </div>
   );

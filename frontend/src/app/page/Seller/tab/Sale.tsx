@@ -771,7 +771,7 @@ export default function Sale() {
           <Table
             rowKey="id"
             columns={columns}
-            dataSource={filteredSales}
+            dataSource={sales}
             rowSelection={rowSelection}
             loading={loading}
             pagination={{

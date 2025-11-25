@@ -3,6 +3,10 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { BE_BASE_URL } from '../../api/api';
 import { storeService } from '../../../service/store.service';
 import { StarFilled } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { ChatBox } from '../../components/ChatBox';
+import { SenderType } from '../../types/chat.types';
+import { useChatSocket } from '../../hooks/useChatSocket';
 
 export type StoreInfo = {
   id: string | number;
@@ -51,6 +55,20 @@ export default function StoreTopBar({
   sticky = false,
   className,
 }: StoreTopBarProps) {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user?.user_id;
+  const {
+    conversations,
+    setConversations,
+    selectedConversationId,
+    setSelectedConversationId,
+    messages,
+    setMessages,
+    sendMessage,
+    markAsRead,
+    startConversation,
+  } = useChatSocket(userId, SenderType.USER);
+
   const [info, setInfo] = useState<StoreInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -58,6 +76,8 @@ export default function StoreTopBar({
   const { pathname } = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const [following, setFollowing] = useState<boolean>(false);
+  const [openChat, setOpenChat] = useState(false);
+  const [convId, setConvId] = useState<number | null>(null);
   const [followers, setFollowers] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get('groupId');
@@ -86,6 +106,61 @@ export default function StoreTopBar({
       },
     ];
   }, [tabs, computedBase, groupId]);
+
+  const handleSelectConversation = (convId: number) => {
+  setSelectedConversationId(convId);
+
+  setConversations(prev =>
+    prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c)
+  );
+
+  markAsRead(convId);
+};
+
+  const navigate = useNavigate();
+
+const handleStartChat = async () => {
+  console.log('Clicked Chat'); // log khi click
+  console.log('info.id:', info?.id, 'userId:', userId);
+  
+  if (!info?.id || !userId) {
+    console.log('Missing info.id or userId, aborting chat');
+    return;
+  }
+
+  // kiểm tra conversation đã có chưa
+  const existing = conversations.find(
+    (c) => c.store?.id === Number(info.id)
+  );
+  console.log('Existing conversation:', existing);
+
+  if (existing) {
+    setConvId(existing.id);
+    setSelectedConversationId(existing.id);
+    setOpenChat(true);
+    markAsRead(existing.id);
+    console.log('Opened existing conversation with id', existing.id);
+    return;
+  }
+
+  // chưa có → tạo mới
+  try {
+    console.log('Starting new conversation...');
+    const conversation = await startConversation(Number(info.id));
+    console.log('New conversation created:', conversation);
+
+    if (conversation?.id) {
+      setConvId(conversation.id);
+      setSelectedConversationId(conversation.id);
+      setOpenChat(true);
+      console.log('ChatBox opened for conversation id', conversation.id);
+    }
+  } catch (err) {
+    console.error('Error when starting conversation:', err);
+  }
+};
+
+
 
   useEffect(() => {
     let alive = true;
@@ -227,18 +302,30 @@ export default function StoreTopBar({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleToggleFollow}
-                className={[
-                  'hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block',
-                  following
-                    ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
-                    : 'bg-blue-600 text-white hover:bg-blue-700',
-                ].join(' ')}
-              >
-                {following ? 'Đang Theo Dõi' : '+ Theo Dõi'}
-              </button>
+              <div className="flex gap-2">
+                {/* Button Theo dõi */}
+                <button
+                  type="button"
+                  onClick={handleToggleFollow}
+                  className={[
+                    'hidden shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:block',
+                    following
+                      ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
+                      : 'bg-blue-600 text-white hover:bg-blue-700',
+                  ].join(' ')}
+                >
+                  {following ? 'Đang Theo Dõi' : '+ Theo Dõi'}
+                </button>
+
+                {/* Button Chat */}
+                <button
+                  type="button"
+                  onClick={handleStartChat}
+                  className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition sm:block"
+                >
+                  Chat
+                </button>
+              </div>
 
               {showSearch && (
                 <form
@@ -294,6 +381,24 @@ export default function StoreTopBar({
           </nav>
         </div>
       </div>
+      {openChat && convId && info && (
+        <ChatBox
+          conversationId={convId}
+          userId={userId}
+          storeId={Number(info.id)}
+          senderType={SenderType.USER}
+          onClose={() => setOpenChat(false)}
+          conversations={conversations}
+          setConversations={setConversations}
+          selectedConversationId={selectedConversationId}
+          setSelectedConversationId={setSelectedConversationId}
+          messages={messages}
+          setMessages={setMessages}
+          sendMessage={sendMessage}
+          markAsRead={markAsRead}
+          onSelectConversation={handleSelectConversation}
+        />
+      )}
     </header>
   );
 }
