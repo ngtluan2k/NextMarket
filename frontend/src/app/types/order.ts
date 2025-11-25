@@ -32,6 +32,22 @@ export interface ProductItem {
   uuid: string;
 }
 
+export interface GroupOrderMember {
+  id: number;
+  is_host: boolean;
+  joined_at: string;
+  status: 'joined' | 'pending' | 'left';
+  has_paid: boolean;
+  user: {
+    id: number;
+    uuid: string;
+    username: string;
+    email: string;
+    profile?: UserProfile;
+  };
+}
+
+
 export interface GroupOrder {
   id: number;
   uuid: string;
@@ -47,14 +63,16 @@ export interface GroupOrder {
     email: string;
     profile?: UserProfile;
   };
+  members?: GroupOrderMember[]; // <-- thêm dòng này
 }
+
 
 export interface UserProfile {
   id: number;
   user_id: number;
   full_name?: string;
   phone?: string;
-  avatar?: string;
+  avatar_url?: string;
   date_of_birth?: string;
   gender?: string;
   bio?: string;

@@ -96,7 +96,8 @@ export class GroupOrdersController {
       id,
       userId,
       body.paymentMethodUuid,
-      body.addressId
+      body.addressId,
+      body.voucherCode
     );
   }
 
@@ -166,7 +167,7 @@ export class GroupOrdersController {
   @Post(':id/checkout-my-items')
   async checkoutMyItems(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { paymentMethodUuid: string; addressId?: number },
+    @Body() body: { paymentMethodUuid: string; addressId?: number ; voucherCode?: string;},
     @Req() req: any
   ) {
     const userId = req.user.userId;
@@ -174,7 +175,8 @@ export class GroupOrdersController {
       id,
       userId,
       body.paymentMethodUuid,
-      body.addressId
+      body.addressId,
+       body.voucherCode
     );
   }
   @UseGuards(JwtAuthGuard)

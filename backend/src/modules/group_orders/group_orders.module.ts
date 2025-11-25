@@ -1,4 +1,4 @@
-import { Module,forwardRef } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupOrder } from './../group_orders/group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
@@ -19,11 +19,16 @@ import { PaymentsModule } from '../payments/payments.module';
 import { UserAddress } from '../user_address/user_address.entity';
 import { User } from '../user/user.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
+import { Voucher } from '../vouchers/vouchers.entity';
+import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
+import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
+import { VouchersService } from '../vouchers/vouchers.service';
+import { VoucherUsageService } from '../voucher-usage/voucher-usage.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,]),forwardRef(() => PaymentsModule),],
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant, PricingRules, Inventory, OrderItem, UserAddress, User, OrderStatusHistory, Voucher, VoucherUsage, VoucherCollection,]), forwardRef(() => PaymentsModule),],
   controllers: [GroupOrdersController, GroupOrderItemsController],
-  providers: [GroupOrdersService, GroupOrderItemsService,GroupOrdersGateway],
-  exports: [GroupOrdersService,GroupOrdersGateway],
+  providers: [GroupOrdersService, GroupOrderItemsService, GroupOrdersGateway, VouchersService, VoucherUsageService,],
+  exports: [GroupOrdersService, GroupOrdersGateway],
 })
-export class GroupOrdersModule {}  
+export class GroupOrdersModule { }  

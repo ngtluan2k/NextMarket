@@ -53,7 +53,7 @@ export class VouchersService {
     private readonly voucherUsageService: VoucherUsageService,
     @InjectRepository(VoucherCollection)
     private readonly voucherCollectionRepository: Repository<VoucherCollection>
-  ) {}
+  ) { }
 
   async create(
     createVoucherDto: CreateVoucherDto,
@@ -112,7 +112,7 @@ export class VouchersService {
     if (
       createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
       (createVoucherDto.min_order_amount ?? 0) <
-        (createVoucherDto.discount_value ?? 0)
+      (createVoucherDto.discount_value ?? 0)
     ) {
       throw new BadRequestException(
         'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
@@ -408,8 +408,8 @@ export class VouchersService {
     filterByStoreOnly = false
   ): Promise<Voucher[]> {
     if (userId) {
-    await this.autoCollectVouchersForUser(userId);  
-  }
+      await this.autoCollectVouchersForUser(userId);
+    }
     const now = new Date();
 
     const queryBuilder = this.vouchersRepository
@@ -715,8 +715,8 @@ export class VouchersService {
           err instanceof Error
             ? err.message
             : typeof err === 'string'
-            ? err
-            : 'Voucher không hợp lệ';
+              ? err
+              : 'Voucher không hợp lệ';
 
         invalidVouchers.push({
           code,
@@ -759,9 +759,8 @@ export class VouchersService {
           .forEach((v) =>
             invalidVouchers.push({
               code: v.voucher.code,
-              error: `Không thể áp dụng vì đã chọn voucher ${
-                bestNonStackable.voucher.code
-              } cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'}`,
+              error: `Không thể áp dụng vì đã chọn voucher ${bestNonStackable.voucher.code
+                } cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'}`,
             })
           );
 
@@ -769,9 +768,8 @@ export class VouchersService {
         stackableVouchers.forEach((v) =>
           invalidVouchers.push({
             code: v.voucher.code,
-            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng ${
-              groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'
-            }`,
+            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'
+              }`,
           })
         );
       } else {

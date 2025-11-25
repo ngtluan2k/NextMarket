@@ -28,6 +28,9 @@ interface GroupOrderCheckout {
   onSuccess?: () => void;
   deliveryMode: 'host_address' | 'member_address';
   isMemberCheckout?: boolean;
+  preAppliedVoucherCode?: string;
+  preAppliedVoucherDiscount?: number;
+  preAppliedVoucher?: any;
 }
 
 export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
@@ -40,6 +43,10 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
   deliveryMode,
   isMemberCheckout,
   onSuccess,
+  preAppliedVoucherCode,
+  preAppliedVoucherDiscount,
+  preAppliedVoucher,
+
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -53,6 +60,10 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
     string | null
   >(null);
   const navigate = useNavigate();
+  const voucherCode = preAppliedVoucherCode || '';
+  const voucherDiscount = preAppliedVoucherDiscount || 0;
+  const appliedVoucher = preAppliedVoucher || null;
+
 
   // Load data khi modal mở
   useEffect(() => {
@@ -143,6 +154,9 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
       if (deliveryMode === 'host_address' && selectedAddress) {
         payload.addressId = selectedAddress.id;
       }
+      if (voucherCode?.trim()) {
+        payload.voucherCode = voucherCode.trim();
+      }
 
       console.log('📤 Checkout payload:', payload);
 
@@ -168,7 +182,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
           state: {
             status: 'success',
             orderCode: response.orderUuid || response.orderCode,
-            total: totals.totalAfter,
+            total: totals.totalAfter - voucherDiscount,
             paymentMethodLabel:
               paymentMethods.find((pm) => pm.uuid === selectedPaymentMethod)
                 ?.name || 'Unknown',
@@ -215,6 +229,15 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
   // Helper tính giá trước giảm nhóm
   const getItemPreGroupPrice = (item: any, discountPercent: number) => {
     const p = Number(item?.price) || 0;
+
+    // Nếu có pricing_rule, sử dụng giá từ pricing rule
+    if (item?.pricing_rule?.price) {
+      const pricingRulePrice = Number(item.pricing_rule.price);
+      const totalBeforeDiscount = pricingRulePrice * item.quantity;
+      return totalBeforeDiscount;
+    }
+
+    // Nếu không có pricing rule, tính ngược từ giá đã giảm
     if (!discountPercent) return p;
     const factor = 1 - discountPercent / 100;
     return factor > 0 ? Math.round(p / factor) : p;
@@ -325,9 +348,18 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
                     <span>-{formatPrice(totals.discountAmount)}</span>
                   </div>
                 )}
+
+                {/* ⭐ THÊM: Hiển thị giảm từ voucher */}
+                {voucherDiscount > 0 && (
+                  <div className="flex justify-between text-orange-600">
+                    <span>Giảm từ voucher:</span>
+                    <span>-{formatPrice(voucherDiscount)}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-lg font-bold text-green-600">
                   <span>Tổng cộng:</span>
-                  <span>{formatPrice(totals.totalAfter)}</span>
+                  <span>{formatPrice(totals.totalAfter - voucherDiscount)}</span>
                 </div>
               </div>
             </div>
@@ -431,7 +463,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
             >
               {loading
                 ? 'Đang xử lý...'
-                : `Thanh toán ${formatPrice(totals.totalAfter)}`}
+                : `Thanh toán ${formatPrice(totals.totalAfter - voucherDiscount)}`}
             </Button>
           </div>
         </div>

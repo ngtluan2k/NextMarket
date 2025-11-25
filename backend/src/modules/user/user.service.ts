@@ -31,6 +31,7 @@ import {
   ResetPasswordByOtpDto,
 } from './dto/password-reset.dto';
 import { Wallet } from '../wallet/wallet.entity';
+import { profile } from 'console';
 
 @Injectable()
 export class UserService {
@@ -157,6 +158,7 @@ export class UserService {
       .leftJoinAndSelect('userRole.role', 'role')
       .leftJoinAndSelect('role.rolePermissions', 'rolePermission')
       .leftJoinAndSelect('rolePermission.permission', 'permission')
+      .leftJoinAndSelect('user.profile', 'profile')
       .select([
         'user.id',
         'user.email',
@@ -169,6 +171,9 @@ export class UserService {
         'rolePermission.id',
         'permission.id',
         'permission.code',
+        'profile.id',
+        'profile.full_name',
+        'profile.user_id',
       ])
       .where('user.email = :email', { email: dto.email })
       .getOne();
@@ -217,7 +222,8 @@ export class UserService {
       roles,
       permissions,
       access_token: token,
-      
+      profile,
+
     };
   }
 

@@ -88,6 +88,7 @@ export class UserController {
         is_affiliate: userData.is_affiliate,
         roles: userData.roles,
         permissions: userData.permissions,
+        profile: userData.profile,
         
       },
       access_token: userData.access_token,

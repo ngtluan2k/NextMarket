@@ -1,6 +1,6 @@
 import { Store } from "../../service/store.service";
 import { User } from "./user";
-import { Order } from "./order";
+import { GroupOrder, Order } from "./order";
 
 export enum SenderType {
   USER = 'user',
@@ -36,6 +36,7 @@ export interface Conversation {
   user: User; // <-- thay user_id
   store: Store;
   order?: Order;
+  group_order?: GroupOrder
   messages: Message[];
   created_at: string;
   updated_at: string;

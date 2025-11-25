@@ -53,43 +53,40 @@ export const ChatBox = ({
 
   // Auto scroll + mark as read khi mở conversation
   useEffect(() => {
+    if (!selectedConversation) return;
+
+    // Scroll xuống cuối
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-    if (selectedConversation) {
-      const unreadMessages = selectedConversation.messages.filter(
-        (msg) => msg.sender_type !== senderType && !msg.is_read
-      );
-      if (unreadMessages.length === 0) return; // đã đọc hết → không làm gì
+    // Đánh dấu tin nhắn chưa đọc
+    const unreadMessages = (selectedConversation.messages || []).filter(
+      (msg) => msg.sender_type !== senderType && !msg.is_read
+    );
 
-      markAsRead(selectedConversation.id);
+    if (unreadMessages.length === 0) return;
 
-      setConversations((prev) =>
-        prev.map((conv) => {
-          if (conv.id === selectedConversation.id) {
-            return {
-              ...conv,
-              messages: conv.messages.map((msg) =>
-                msg.sender_type !== senderType && !msg.is_read
-                  ? (() => {
-                      console.log(
-                        'Message marked as read:',
-                        msg.id,
-                        msg.content
-                      );
-                      return { ...msg, is_read: true };
-                    })()
-                  : msg
-              ),
-              unreadCount: 0,
-            };
-          }
-          return conv;
-        })
-      );
-    }
+    markAsRead(selectedConversation.id);
+
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === selectedConversation.id) {
+          return {
+            ...conv,
+            messages: (conv.messages || []).map((msg) =>
+              msg.sender_type !== senderType && !msg.is_read
+                ? { ...msg, is_read: true }
+                : msg
+            ),
+            unreadCount: 0,
+          };
+        }
+        return conv;
+      })
+    );
   }, [selectedConversationId]);
+
   const handleClose = () => {
-    setSelectedConversationId(null); // 💥 FIX
+    setSelectedConversationId(null);
     onClose();
   };
 
@@ -142,7 +139,7 @@ export const ChatBox = ({
             {c.store?.name ||
               c.user?.profile?.full_name ||
               `User #${c.user?.id}`}
-            {c.unreadCount > 0 && (
+            {(c.unreadCount || 0) > 0 && (
               <span className="ml-1 bg-red-500 text-white px-1 rounded text-xs">
                 {c.unreadCount}
               </span>
@@ -157,11 +154,11 @@ export const ChatBox = ({
         <div className="flex justify-between items-center px-3 py-2 border-b">
           <h3 className="font-semibold text-sm">
             {selectedConversation
-              ? `Đang chat với ${
-                  selectedConversation.store?.name ??
-                  selectedConversation.user?.profile?.full_name ??
-                  `ID #${selectedConversation.id}`
-                }`
+              ? selectedConversation.store?.name
+                ? `Đang chat với ${selectedConversation.store.name}`
+                : selectedConversation.user?.profile?.full_name
+                ? `Đang chat với ${selectedConversation.user.profile.full_name}`
+                : 'Đang load...'
               : 'Chọn cuộc chat'}
           </h3>
           <button onClick={handleClose} className="text-red-500 font-bold">
@@ -172,7 +169,7 @@ export const ChatBox = ({
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
           {selectedConversation ? (
-            messages.map((m) => (
+            (messages || []).map((m) => (
               <div
                 key={m.id}
                 className={`flex ${

@@ -57,6 +57,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('⚠️ Disconnected:', client.id);
   }
 
+ @SubscribeMessage('joinGroupConversation')
+handleJoinGroupConversation(
+  @MessageBody() data: { conversationId: number },
+  @ConnectedSocket() client: Socket
+) {
+  client.join(`group-${data.conversationId}`);
+  console.log('Joined room:', `group-${data.conversationId}`);
+}
+
+
   // ---------------- Send message ----------------
   @SubscribeMessage('startConversation')
   async handleStartConversation(
@@ -64,13 +74,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data: { userId?: number; storeId?: number; orderId?: number },
     @ConnectedSocket() client: Socket
   ) {
-    if (!data.userId && !data.storeId)
+    if (!data.userId || !data.storeId) {
       throw new Error('UserId or StoreId is required');
+    }
 
-    const userId = data.userId!;
-    const storeId = data.storeId!;
+    const userId = data.userId;
+    const storeId = data.storeId;
 
-    // Kiểm tra conversation đã tồn tại chưa
+    // Tạo hoặc lấy conversation đã tồn tại
     const conversation = await this.chatService.createConversation(
       userId,
       storeId,
@@ -78,48 +89,87 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     // Emit về chính socket của sender để cập nhật list conversation
+    // Lúc này conversation đã có user.profile.full_name và store.name
     client.emit('conversationCreated', conversation);
 
     return conversation;
   }
 
-  @SubscribeMessage('sendMessage')
-  async handleMessage(
-    @MessageBody()
-    data: {
-      conversationId: number;
-      senderId: number;
-      senderType: SenderType;
-      content?: string;
-      mediaUrls?: string[];
-    },
+  @SubscribeMessage('startGroupConversation')
+  async handleStartGroupConversation(
+    @MessageBody() data: { groupOrderId: number },
     @ConnectedSocket() client: Socket
   ) {
-    console.log('📩 Received sendMessage from client:', data);
+    if (!data.groupOrderId) throw new Error('groupOrderId is required');
 
-    // Lưu tin nhắn
-    const messages = await this.chatService.sendMultipleMediaMessages(
-      data.conversationId,
-      data.senderId,
-      data.senderType,
-      data.content,
-      data.mediaUrls || []
+    const conversation = await this.chatService.createGroupConversation(
+      data.groupOrderId
     );
 
-    // Lấy thông tin conversation
-    const conversation = await this.chatService.getConversationById(
-      data.conversationId
-    );
-    if (!conversation?.store || !conversation?.user)
-      throw new Error('Conversation or participants not found');
+    if (conversation) {
+      console.log(`[ChatGateway] conversation returned, id=${conversation.id}`);
+    } else {
+      console.warn(
+        `[ChatGateway] conversation is null for groupOrderId=${data.groupOrderId}`
+      );
+    }
 
-    // Xác định receiver key
+    // Cho client join room group
+    client.join(`conversation-${conversation.id}`);
+
+    // Emit lại conversation cho chính client
+    client.emit('groupConversationCreated', conversation);
+
+    return conversation;
+  }
+
+ @SubscribeMessage('sendMessage')
+async handleMessage(
+  @MessageBody()
+  data: {
+    conversationId: number;
+    senderId: number;
+    senderType: SenderType;
+    content?: string;
+    mediaUrls?: string[];
+  },
+  @ConnectedSocket() client: Socket
+) {
+  console.log('📩 Received sendMessage from client:', data);
+
+  // Lưu tin nhắn
+  const messages = await this.chatService.sendMultipleMediaMessages(
+    data.conversationId,
+    data.senderId,
+    data.senderType,
+    data.content,
+    data.mediaUrls || []
+  );
+  console.log('💾 Messages saved:', messages.map(m => m.id));
+
+  // Lấy thông tin conversation
+  const conversation = await this.chatService.getConversationById(
+    data.conversationId
+  );
+  console.log('📝 Conversation fetched:', conversation?.id, conversation?.group_order?.id);
+
+  if (!conversation) throw new Error('Conversation not found');
+
+  // Nếu là group conversation
+  if (conversation.group_order) {
+    const room = `group-${conversation.id}`;
+    console.log('🏠 Broadcasting to room:', room);
+    this.server.to(room).emit('newMessage', messages);
+  } else if (conversation.store && conversation.user) {
+    console.log('👤 1-1 conversation, sending to specific sockets');
+
     const receiverKey =
       data.senderType === SenderType.USER
         ? `${SenderType.STORE}-${conversation.store.id}`
         : `${SenderType.USER}-${conversation.user.id}`;
 
     const receiverSockets = this.onlineUsers.get(receiverKey) || [];
+    console.log('🔑 Receiver sockets:', receiverSockets);
     receiverSockets.forEach((sid) =>
       this.server.to(sid).emit('newMessage', messages)
     );
@@ -127,13 +177,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Emit lại cho sender
     const senderKey = `${data.senderType}-${data.senderId}`;
     const senderSockets = this.onlineUsers.get(senderKey) || [];
+    console.log('🔑 Sender sockets:', senderSockets);
     senderSockets.forEach((sid) =>
       this.server.to(sid).emit('newMessage', messages)
     );
-    console.log('senderSockets', senderSockets);
-
-    return messages;
   }
+
+  return messages;
+}
+
 
   // ---------------- Get conversation list ----------------
   @SubscribeMessage('getConversations')

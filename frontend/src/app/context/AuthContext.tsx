@@ -13,64 +13,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loadAddresses = async (userId: number, token: string) => {
     try {
       console.time('📍 [Auth] Load Addresses');
-      const addressRes = await fetch(`${BE_BASE_URL}/users/${userId}/addresses`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const addressRes = await fetch(
+        `${BE_BASE_URL}/users/${userId}/addresses`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const addresses = (await addressRes.json()) || [];
       console.timeEnd('📍 [Auth] Load Addresses');
-      
-      setMe(prev => prev ? { ...prev, addresses } : null);
+
+      setMe((prev) => (prev ? { ...prev, addresses } : null));
       localStorage.setItem('user', JSON.stringify({ ...me, addresses }));
     } catch (err) {
       console.warn('Load addresses error:', err);
     }
   };
 
-  // Optimized token validation - no additional API calls on startup
-  const validateToken = async (token: string) => {
-    try {
-      // Chỉ verify token, không fetch user data
-      const res = await fetch(`${BE_BASE_URL}/auth/verify`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      if (!res.ok) throw new Error('Token invalid');
-      
-      // Token valid, use cached user data
-      const cachedUser = localStorage.getItem('user');
-      if (cachedUser) {
-        setMe(JSON.parse(cachedUser));
-        setToken(token);
-      }
-    } catch (err) {
-      console.warn('Token validation failed:', err);
-      logout();
-    }
-  };
 
   // Kiểm tra token khi app khởi động
   useEffect(() => {
     const tokenStr = localStorage.getItem('token');
     const cachedUser = localStorage.getItem('user');
-    
+
     if (tokenStr && cachedUser) {
       // Use cached data immediately, validate token in background
       setMe(JSON.parse(cachedUser));
       setToken(tokenStr);
-      validateToken(tokenStr); // Background validation
+
     }
   }, []);
 
   const login = (user: Me, token: string) => {
     console.time('💾 [Auth] Login State Update');
-    
+
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('token', token);
     setMe(user);
     setToken(token);
-    
+
     console.timeEnd('💾 [Auth] Login State Update');
-    
+
     // Don't fetch additional data immediately
     // Let components request addresses when needed
   };
