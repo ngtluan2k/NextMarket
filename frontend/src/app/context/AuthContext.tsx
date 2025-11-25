@@ -30,29 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Optimized token validation - no additional API calls on startup
-  const validateToken = async (token: string) => {
-    try {
-      const res = await fetch(`${BE_BASE_URL}/auth/verify`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log('🔍 VERIFY RAW STATUS:', res.status);
-
-      const text = await res.text();
-      console.log('🔍 VERIFY RESPONSE BODY:', text);
-
-      if (!res.ok) throw new Error('Token invalid');
-
-      const cachedUser = localStorage.getItem('user');
-      if (cachedUser) {
-        setMe(JSON.parse(cachedUser));
-        setToken(token);
-      }
-    } catch (err) {
-      console.warn('❌ Token validation failed:', err);
-      logout();
-    }
-  };
+ 
 
   // Kiểm tra token khi app khởi động
   useEffect(() => {
@@ -63,7 +41,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Use cached data immediately, validate token in background
       setMe(JSON.parse(cachedUser));
       setToken(tokenStr);
-      validateToken(tokenStr); // Background validation
     }
   }, []);
 

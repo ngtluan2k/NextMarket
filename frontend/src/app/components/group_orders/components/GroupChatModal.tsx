@@ -166,74 +166,101 @@ export default function GroupChatModal({
 
             return (
               <div
-  key={m.id}
-  className={`flex items-start gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
->
-  {/* Avatar chỉ hiện với người khác */}
-  {!isMe && (
-    <img
-      src={
-        (() => {
-          const member = groupConv?.group_order?.members?.find(
-            (mem) => mem.user.id === m.sender_id
-          );
-          const avatarFromProfile = member?.user?.profile?.avatar_url;
-          return avatarFromProfile
-            ? avatarFromProfile.startsWith('http')
-              ? avatarFromProfile
-              : `${BE_BASE_URL}${avatarFromProfile}`
-            : 'https://via.placeholder.com/32';
-        })()
-      }
-      alt={m.sender_id.toString()}
-          className="w-8 h-8 rounded-full object-cover mt-7" // <-- mt-1 làm avatar xuống 0.25rem
+                key={m.id}
+                className={`flex items-start gap-2 ${
+                  isMe ? 'flex-row-reverse' : 'flex-row'
+                }`}
+              >
+                {/* Avatar chỉ hiện với người khác */}
+                {!isMe && (
+                  <img
+                    src={(() => {
+                      const member = groupConv?.group_order?.members?.find(
+                        (mem) => mem.user.id === m.sender_id
+                      );
+                      const avatarFromProfile =
+                        member?.user?.profile?.avatar_url;
+                      return avatarFromProfile
+                        ? avatarFromProfile.startsWith('http')
+                          ? avatarFromProfile
+                          : `${BE_BASE_URL}${avatarFromProfile}`
+                        : 'https://via.placeholder.com/32';
+                    })()}
+                    alt={m.sender_id.toString()}
+                    className="w-8 h-8 rounded-full object-cover mt-7" // <-- mt-1 làm avatar xuống 0.25rem
+                  />
+                )}
 
-    />
-  )}
+                <div className="flex flex-col items-start max-w-[75%]">
+                  {/* Tên người gửi */}
+                  {!isMe && (
+                    <span className="text-xs text-gray-500 mb-1">
+                      {groupConv?.group_order?.members?.find(
+                        (mem) => mem.user.id === m.sender_id
+                      )?.user.username || 'Người dùng'}
+                    </span>
+                  )}
 
-  <div className="flex flex-col items-start max-w-[75%]">
-    {/* Tên người gửi */}
-    {!isMe && (
-      <span className="text-xs text-gray-500 mb-1">
-        {groupConv?.group_order?.members?.find((mem) => mem.user.id === m.sender_id)?.user.username ||
-          'Người dùng'}
-      </span>
-    )}
+                  {/* Nội dung message */}
+                  {m.content && (
+                    <div
+                      className={`px-4 py-2 rounded-2xl text-sm shadow-sm break-words ${
+                        isMe
+                          ? 'bg-blue-500 text-white rounded-br-none'
+                          : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                      }`}
+                    >
+                      {m.content}
+                    </div>
+                  )}
 
-    {/* Nội dung message */}
-    {m.content && (
-      <div
-        className={`px-4 py-2 rounded-2xl text-sm shadow-sm break-words ${
-          isMe ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'
-        }`}
-      >
-        {m.content}
-      </div>
-    )}
-
-    {/* Media */}
-    {m.media_url && (
-      <div className="flex flex-wrap gap-2 mt-1">
-        {(Array.isArray(m.media_url) ? m.media_url : [m.media_url]).map((url, idx) => {
-          const fullUrl = url.startsWith('http') ? url : `${BE_BASE_URL}${url}`;
-          const ext = url.split('.').pop()?.toLowerCase();
-          if (['png', 'jpg', 'jpeg', 'gif'].includes(ext || '')) {
-            return <img key={idx} src={fullUrl} alt="media" className="h-24 w-24 object-cover rounded-lg" />;
-          }
-          if (['mp4', 'webm', 'ogg'].includes(ext || '')) {
-            return <video key={idx} src={fullUrl} controls className="h-32 w-32 rounded-lg object-cover" />;
-          }
-          return (
-            <a key={idx} href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline">
-              {url.split('/').pop()}
-            </a>
-          );
-        })}
-      </div>
-    )}
-  </div>
-</div>
-
+                  {/* Media */}
+                  {m.media_url && (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {(Array.isArray(m.media_url)
+                        ? m.media_url
+                        : [m.media_url]
+                      ).map((url, idx) => {
+                        const fullUrl = url.startsWith('http')
+                          ? url
+                          : `${BE_BASE_URL}${url}`;
+                        const ext = url.split('.').pop()?.toLowerCase();
+                        if (['png', 'jpg', 'jpeg', 'gif'].includes(ext || '')) {
+                          return (
+                            <img
+                              key={idx}
+                              src={fullUrl}
+                              alt="media"
+                              className="h-24 w-24 object-cover rounded-lg"
+                            />
+                          );
+                        }
+                        if (['mp4', 'webm', 'ogg'].includes(ext || '')) {
+                          return (
+                            <video
+                              key={idx}
+                              src={fullUrl}
+                              controls
+                              className="h-32 w-32 rounded-lg object-cover"
+                            />
+                          );
+                        }
+                        return (
+                          <a
+                            key={idx}
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 underline"
+                          >
+                            {url.split('/').pop()}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
