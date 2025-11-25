@@ -292,13 +292,6 @@ export const ProductForm: React.FC = () => {
 
   // --------- Step 1 helpers ----------
   const [priceText, setPriceText] = useState('');
-  useEffect(() => {
-    setPriceText(
-      form.base_price
-        ? new Intl.NumberFormat('vi-VN').format(form.base_price)
-        : ''
-    );
-  }, [form.base_price]);
   const shortCount = form.short_description?.length ?? 0;
 
   // category dropdown giống Edit
@@ -328,10 +321,22 @@ export const ProductForm: React.FC = () => {
   const remain = selectedCats.length - previewCats.length;
 
   function onPriceChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
-    const n = onlyDigits ? Number(onlyDigits) : 0;
-    setPriceText(onlyDigits ? new Intl.NumberFormat('vi-VN').format(n) : '');
-    setForm((prev) => ({ ...prev, base_price: n }));
+    const digits = e.target.value.replace(/[^0-9]/g, ''); // chỉ giữ số
+    setPriceText(digits);
+    setForm((prev) => ({
+      ...prev,
+      base_price: digits ? Number(digits) : 0,
+    }));
+  }
+  
+  // khi blur mới format thành "10.000"
+  function onPriceBlur() {
+    setPriceText((prev) => {
+      const digits = prev.replace(/[^0-9]/g, '');
+      if (!digits) return '';
+      const n = Number(digits);
+      return new Intl.NumberFormat('vi-VN').format(n);
+    });
   }
 
   // --------- Submit ----------
@@ -574,6 +579,7 @@ export const ProductForm: React.FC = () => {
                     inputMode="numeric"
                     value={priceText}
                     onChange={onPriceChange}
+                    onBlur={onPriceBlur}
                     placeholder="0"
                     className="w-full bg-transparent px-2 py-2.5 text-sm outline-none"
                   />

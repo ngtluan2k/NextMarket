@@ -1,112 +1,72 @@
-import type { ComponentType } from "react";
+// components/flash-sale/types.ts
 
-export type LucideIcon = ComponentType<{ className?: string }>;
-
-export interface Category {
-  id: string;
-  name: string;
-  /** optional key để map icon ở client, VD: "Smartphone" | "Laptop" ... */
-  iconKey?: string | null;
-}
-
-export interface Product {
+export interface FlashSaleScheduleApi {
   id: number;
-  uuid: string;
   name: string;
-  slug: string;
-  short_description?: string;
+  starts_at: string;
+  ends_at: string;
   description?: string;
-  base_price?: number | string;
   status: string;
-  created_at: string;
-  updated_at: string;
-  store_id?: number;
-  brand_id?: number;
-  avg_rating?: number;
-  review_count?:number;
-  store?: {
-    id: number;
-    uuid: string;
-    user_id: number;
-    name: string;
-    slug: string;
-    description?: string;
-    email?: string | null;
-    phone?: string | null;
-    status: string;
-    created_at: string;
-    updated_at: string;
-  };
-  brand?: {
-    id: number;
-    uuid: string;
-    name: string;
-    description?: string;
-    logo_url?: string | null;
-    created_at: string;
-  };
-  categories?: Array<{
-    id: number;
-    uuid: string;
-    product_id: number;
-    category_id: number | null;
-    created_at: string;
-    updated_at: string;
-    category?: {
-      id: number;
-      uuid: string;
-      parent_id: number | null;
-      name: string;
-      slug: string;
-      description?: string;
-      created_at: string;
-    };
-  }>;
-  media?: Array<{
-    id: number;
-    uuid: string;
-    media_type: string;
-    url: string;
-    is_primary: boolean;
-    sort_order: number;
-  }>;
-  variants?: Array<{
-    id: number;
-    uuid: string;
-    product_id: number;
-    sku: string;
-    variant_name: string;
-    price: string | number;
-    stock: number;
-    barcode: string;
-    created_at: string;
-    updated_at: string;
-    inventories?: Array<{
-      id: number;
-      uuid: string;
-      location: string;
-      quantity: number;
-      used_quantity?: number;
-    }>;
-  }>;
-
-  pricing_rules?: Array<{
-    id: number;
-    uuid: string;
-    type: string;
-    min_quantity: number;
-    price: string | number;
-    cycle: string;
-    starts_at: string;
-    ends_at: string;
-    variant_sku?: string;
-    name?: string;
-    status?: 'active' | 'inactive';
-    limit_quantity?:number;
-  }>;
 }
 
-export interface FlashSaleMeta {
-  endAt: string | number | Date;
-  stats?: Array<{ label: string; value: string }>;
+export interface FlashSaleSchedule {
+  id: number;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  description?: string;
+  status: string;
+}
+
+export interface FlashSaleApiProduct {
+  id: number;
+
+  // tên
+  name?: string;
+  product_name?: string;
+
+  // media
+  image?: string;
+  media?: Array<{ url: string; is_primary?: boolean }>;
+
+  // rating
+  rating?: number | string;
+  avg_rating?: number | string;
+  review_count?: number | string;
+  reviews?: number | string;
+
+  // giá
+  price?: number | string;
+  base_price?: number | string;
+  flash_sale_price?: number | string;
+  original_price?: number | string;
+  salePrice?: number | string;
+  originalPrice?: number | string;
+  discount?: number | string;
+
+  limit_quantity?: number;
+  remaining_quantity?: number;
+  stock?: number;
+  brand?: { name: string } | string;
+  variants?: Array<{ price: number | string; stock?: number }>;
+  pricing_rules?: Array<{ price: number | string }>;
+  badge?: string;
+}
+
+export interface FlashSaleProduct {
+  id: number;
+  name: string;
+  image: string;
+  rating: number;
+  reviews: number;
+  originalPrice: number;
+  salePrice: number;
+  discount: number;
+  badge: string;
+}
+
+export interface FlashSaleTimeSlot {
+  time: string;
+  label: string;
+  isHighlighted: boolean;
 }
