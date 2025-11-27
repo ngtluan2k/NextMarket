@@ -5,7 +5,6 @@ import {
   AffiliatedProduct,
   BalanceInfo,
   CommissionHistory,
-  CommissionSummaryPeriod,
   CreateLinkRequest,
   CreateLinkResponse,
   DashboardStats,
@@ -17,6 +16,7 @@ import {
   CreateGroupAffiliateLinkRequest,
   CreateGroupAffiliateLinkResponse,
   MyGroupLinksResponse,
+  CommissionSummary,
 } from '../../app/types/affiliate-links';
 
 export const getAuthHeaders = () => {
@@ -51,6 +51,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 }
 
+
+
 export async function getCommissionHistory(
   page = 1,
   limit = 20
@@ -70,15 +72,13 @@ export async function getCommissionHistory(
   }
 }
 
+
 export async function getCommissionSummary(
-  period: 'daily' | 'weekly' | 'monthly' = 'monthly',
-  limit = 12
-): Promise<CommissionSummaryPeriod[]> {
+): Promise<CommissionSummary> {
   try {
     const res = await axios.get(
       `${BE_BASE_URL}/affiliate-links/commission-summary`,
       {
-        params: { period, limit },
         headers: getAuthHeaders(),
       }
     );

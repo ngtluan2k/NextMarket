@@ -20,20 +20,6 @@ import {
   ProgramPausedData,
 } from './types/notification.types';
 
-/**
- * Generic Notifications Gateway
- * 
- * Handles real-time notifications for all application features.
- * Currently implemented: Affiliate notifications
- * 
- * TODO for future implementation:
- * - Order notifications (confirmed, shipped, delivered, cancelled, refunded)
- * - Group order notifications (member joined, locked, completed)
- * - Payment notifications (received, failed, refund processed)
- * - Seller notifications (new order, low stock, new review)
- * - Admin notifications (fraud alert, system error)
- * - System notifications (maintenance, account verified)
- */
 @WebSocketGateway({
   cors: {
     origin: [process.env.FE_BASE_URL, process.env.BE_BASE_URL].filter(
@@ -110,17 +96,7 @@ export class NotificationsGateway
     console.log(`[NotificationsGateway] User ${userId} unregistered`);
   }
 
-  // ========================================
-  // GENERIC NOTIFICATION METHODS
-  // ========================================
 
-  /**
-   * Generic method to send notification to a specific user
-   * This is the core method that all specific notification methods should use
-   * 
-   * @param userId - Target user ID
-   * @param payload - Notification payload
-   */
   async notify(userId: number, payload: NotificationPayload) {
     if (!this.server) {
       console.warn('[NotificationsGateway] Server not ready, skip emit');
@@ -151,24 +127,14 @@ export class NotificationsGateway
     // await this.saveNotificationToDatabase(userId, notification);
   }
 
-  /**
-   * Send notification to multiple users
-   * 
-   * @param userIds - Array of user IDs
-   * @param payload - Notification payload
-   */
+
   async notifyMultiple(userIds: number[], payload: NotificationPayload) {
     await Promise.all(
       userIds.map(userId => this.notify(userId, payload))
     );
   }
 
-  /**
-   * Broadcast notification to all connected users
-   * Use with caution - only for system-wide announcements
-   * 
-   * @param payload - Notification payload
-   */
+
   async broadcast(payload: NotificationPayload) {
     if (!this.server) {
       console.warn('[NotificationsGateway] Server not ready, skip broadcast');
@@ -188,10 +154,7 @@ export class NotificationsGateway
     console.log(`[NotificationsGateway] Broadcasted ${payload.type} to all users`);
   }
 
-  /**
-   * @deprecated Use notify() instead
-   * Kept for backward compatibility
-   */
+
   async notifyUser(userId: number, event: string, data: any) {
     const userRoom = this.getUserRoom(userId);
     this.server?.to(userRoom).emit(event, {
@@ -200,19 +163,12 @@ export class NotificationsGateway
     });
   }
 
-  // ========================================
-  // AFFILIATE NOTIFICATION METHODS (✅ Implemented)
-  // ========================================
 
-  /**
-   * Send commission earned notification
-   * Called when a new commission is created and paid
-   */
   async notifyCommissionEarned(userId: number, data: CommissionEarnedData) {
     await this.notify(userId, {
       type: NotificationType.COMMISSION_EARNED,
       title: '🎉 Bạn nhận được hoa hồng mới!',
-      message: `Bạn vừa nhận ${data.amount.toLocaleString('vi-VN')} VND từ đơn hàng ${data.orderNumber}`,
+      message: `Bạn vừa nhận ${data.amount.toLocaleString('vi-VN')} coins từ đơn hàng ${data.orderNumber}`,
       data,
       priority: NotificationPriority.HIGH,
       actionUrl: `/affiliate/commissions/${data.commissionId}`,
@@ -226,8 +182,8 @@ export class NotificationsGateway
   async notifyCommissionPaid(userId: number, data: CommissionPaidData) {
     await this.notify(userId, {
       type: NotificationType.COMMISSION_PAID,
-      title: '💰 Hoa hồng đã được thanh toán!',
-      message: `${data.amount.toLocaleString('vi-VN')} VND đã được cộng vào ví của bạn`,
+      title: ' Hoa hồng đã được thanh toán!',
+      message: `${data.amount.toLocaleString('vi-VN')} coins đã được cộng vào ví của bạn`,
       data,
       priority: NotificationPriority.MEDIUM,
       actionUrl: '/affiliate/wallet',
@@ -241,22 +197,19 @@ export class NotificationsGateway
   async notifyCommissionReversed(userId: number, data: CommissionReversedData) {
     await this.notify(userId, {
       type: NotificationType.COMMISSION_REVERSED,
-      title: '⚠️ Hoa hồng bị hoàn trả',
-      message: `Hoa hồng ${data.amount.toLocaleString('vi-VN')} VND từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
+      title: ' Hoa hồng bị hoàn trả',
+      message: `Hoa hồng ${data.amount.toLocaleString('vi-VN')} coins từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
       data,
       priority: NotificationPriority.HIGH,
       actionUrl: `/affiliate/commissions/${data.commissionId}`,
     });
   }
 
-  /**
-   * Send budget alert to admin
-   * Called when program budget is running low (<20%)
-   */
+
   async notifyBudgetAlert(userId: number, data: BudgetAlertData) {
     await this.notify(userId, {
       type: NotificationType.BUDGET_ALERT,
-      title: '⚠️ Cảnh báo ngân sách',
+      title: '! Cảnh báo ngân sách',
       message: `Chương trình "${data.programName}" còn ${data.percentageRemaining.toFixed(1)}% ngân sách`,
       data,
       priority: NotificationPriority.HIGH,
@@ -264,10 +217,7 @@ export class NotificationsGateway
     });
   }
 
-  /**
-   * Send program paused notification
-   * Called when a program is automatically paused (e.g., budget exhausted)
-   */
+
   async notifyProgramPaused(userId: number, data: ProgramPausedData) {
     await this.notify(userId, {
       type: NotificationType.PROGRAM_PAUSED,
@@ -279,10 +229,7 @@ export class NotificationsGateway
     });
   }
 
-  /**
-   * Send program resumed notification
-   * Called when a paused program is resumed
-   */
+
   async notifyProgramResumed(userId: number, data: ProgramPausedData) {
     await this.notify(userId, {
       type: NotificationType.PROGRAM_RESUMED,

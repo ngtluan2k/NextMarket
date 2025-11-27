@@ -338,14 +338,16 @@ export class AffiliateLinksService {
   clearDashboardStatsCache(userId?: number): void {
     if (userId) {
       this.dashboardStatsCache.delete(userId);
-      this.logger.debug(`🗑️ Dashboard stats cache cleared for user ${userId}`);
+      this.logger.debug(` Dashboard stats cache cleared for user ${userId}`);
     } else {
       this.dashboardStatsCache.clear();
-      this.logger.debug(`🗑️ All dashboard stats cache cleared`);
+      this.logger.debug(` All dashboard stats cache cleared`);
     }
   }
 
   async getCommissionHistory(userId: number, page = 1, limit = 20) {
+    // console.log(`get commission for user: ${userId}`);
+
     const offset = (page - 1) * limit;
 
     const [commissions, total] = await this.commRepo
@@ -401,57 +403,34 @@ export class AffiliateLinksService {
     };
   }
 
-  async getCommissionSummaryByPeriod(
-    userId: number,
-    period: 'daily' | 'weekly' | 'monthly' = 'monthly',
-    limit = 12
-  ) {
-    try {
-      let dateFormat: string;
+  async getUserCommissionSummary(userId: number) {
+    console.log('get commission for user: ' + userId);
 
-      switch (period) {
-        case 'daily':
-          dateFormat = 'YYYY-MM-DD';
-          break;
-        case 'weekly':
-          dateFormat = 'IYYY-IW';
-          break;
-        case 'monthly':
-        default:
-          dateFormat = 'YYYY-MM';
-          break;
-      }
+    const totals = await this.commRepo
+      .createQueryBuilder('c')
+      .where('c.beneficiary_user_id = :userId', { userId })
+      .select([
+        'COALESCE(SUM(CASE WHEN c.status = \'PENDING\' THEN c.amount ELSE 0 END), 0) as "totalPending"',
+        'COALESCE(SUM(CASE WHEN c.status = \'PAID\' THEN c.amount ELSE 0 END), 0) as "totalPaid"',
+        'COALESCE(SUM(c.amount), 0) as "totalEarned"',
+        'COUNT(c.id) as "totalCommissions"',
+        'COUNT(DISTINCT c.order_item_id) as "totalOrders"',
+      ])
+      .getRawOne<{
+        totalPending: string;
+        totalPaid: string;
+        totalEarned: string;
+        totalCommissions: string;
+        totalOrders: string;
+      }>();
 
-      const summaries = await this.commRepo
-        .createQueryBuilder('c')
-        .leftJoin('c.beneficiary_user_id', 'user')
-        .where('user.id = :userId', { userId })
-        .select([
-          `TO_CHAR(c.created_at, '${dateFormat}') as period`,
-          "COALESCE(SUM(CASE WHEN c.status = 'PENDING' THEN c.amount ELSE 0 END), 0) as totalPending",
-          "COALESCE(SUM(CASE WHEN c.status = 'PAID' THEN c.amount ELSE 0 END), 0) as totalPaid",
-          'COALESCE(SUM(c.amount), 0) as totalEarned',
-          'COUNT(c.id) as totalCommissions',
-          'COUNT(DISTINCT c.order_item_id) as totalOrders',
-        ])
-        .groupBy('period')
-        .orderBy('period', 'DESC')
-        .limit(limit)
-        .getRawMany();
-
-      return summaries.map((summary) => ({
-        period: summary.period,
-        totalEarned: parseFloat(summary.totalEarned || '0'),
-        totalPending: parseFloat(summary.totalPending || '0'),
-        totalPaid: parseFloat(summary.totalPaid || '0'),
-        totalCommissions: parseInt(summary.totalCommissions || '0', 10),
-        totalOrders: parseInt(summary.totalOrders || '0', 10),
-      }));
-    } catch (error) {
-      console.error('Error in getCommissionSummaryByPeriod:', error);
-
-      return [];
-    }
+    return {
+      totalEarned: parseFloat(totals?.totalEarned || '0'),
+      totalPending: parseFloat(totals?.totalPending || '0'),
+      totalPaid: parseFloat(totals?.totalPaid || '0'),
+      totalCommissions: parseInt(totals?.totalCommissions || '0', 10),
+      totalOrders: parseInt(totals?.totalOrders || '0', 10),
+    };
   }
 
   async getAvailableBalance(userId: number) {

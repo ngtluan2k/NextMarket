@@ -125,4 +125,5 @@ export class AffiliateCommissionsService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
 }

@@ -106,8 +106,7 @@ export type Program = {
 
 
 
-export interface CommissionSummaryPeriod {
-  period: string;
+export interface CommissionSummary {
   totalEarned: number;
   totalPending: number;
   totalPaid: number;

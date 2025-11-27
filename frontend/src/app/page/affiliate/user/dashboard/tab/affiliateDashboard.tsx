@@ -64,7 +64,7 @@ export function AffiliateDashboard() {
         message.success({
           content: `🎉 Bạn vừa nhận ${data.amount?.toLocaleString(
             'vi-VN'
-          )} VND hoa hồng từ đơn hàng ${data.orderNumber}!`,
+          )} coin hoa hồng từ đơn hàng ${data.orderNumber}!`,
           duration: 5,
         });
         refreshData();
@@ -75,7 +75,7 @@ export function AffiliateDashboard() {
         message.success({
           content: `💰 ${data.amount?.toLocaleString(
             'vi-VN'
-          )} VND đã được cộng vào ví của bạn!`,
+          )} coin đã được cộng vào ví của bạn!`,
           duration: 4,
         });
         refreshData();
@@ -86,7 +86,7 @@ export function AffiliateDashboard() {
         message.warning({
           content: `⚠️ Hoa hồng ${data.amount?.toLocaleString(
             'vi-VN'
-          )} VND từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
+          )} coin từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
           duration: 6,
         });
         refreshData();
@@ -189,11 +189,11 @@ export function AffiliateDashboard() {
           </Card>
         ))}
       </div>
-      <div className='grid grid-cols-3 gap-4 w-full'>
+      <div className="grid grid-cols-3 gap-4 w-full">
         <WalletTransactionHistory className="border-gray-200 shadow-sm" />
-        <Card className='col-span-2 bg-white rounded-lg shadow p-2'>
-        <TransactionStatistic />
-        </Card>
+        <div className="col-span-2">
+          <TransactionStatistic />
+        </div>
       </div>
     </div>
   );

@@ -4,9 +4,6 @@ import { useEffect, useState, useMemo, memo } from 'react';
 import {
   LineChart,
   Line,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -19,35 +16,25 @@ import {
 import { useTransactionData } from '../../../hooks/useTransaction';
 import {
   formatCurrency,
-  getTransactionTypeDisplay,
   calculateTotalAmount,
 } from '../../../../utils/chart-helper';
 import { ApiResponse } from '../../../types/wallet';
 import { fetchMyWalletTransactions } from '../../../../service/wallet.service';
-
-const COLORS: string[] = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b'];
-
-const StatCard = memo(({ label, value, color }: any) => (
-  <div className={`bg-${color}-50 p-4 rounded-lg`}>
-    <p className="text-xs text-gray-600">{label}</p>
-    <p className="text-2xl font-bold text-${color}-600">{value}</p>
-  </div>
-));
 
 const TransactionStatistic = () => {
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Call custom hook directly (not inside useMemo)
   const chartData = useTransactionData(apiResponse);
-  
-  // Memoize total amount and commission count
+
   const { totalAmount, commissionCount } = useMemo(() => {
     if (!apiResponse?.transactions) {
       return { totalAmount: 0, commissionCount: 0 };
     }
-    const commissions = apiResponse.transactions.filter(tx => tx.type === 'affiliate_commission');
+    const commissions = apiResponse.transactions.filter(
+      (tx) => tx.type === 'affiliate_commission'
+    );
     return {
       totalAmount: calculateTotalAmount(apiResponse.transactions),
       commissionCount: commissions.length,
@@ -102,28 +89,31 @@ const TransactionStatistic = () => {
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-4 pb-6">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-xs text-gray-600">Total Commission</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {formatCurrency(totalAmount)}
-          </p>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-xs text-gray-600">Commission Transactions</p>
-          <p className="text-2xl font-bold text-green-600">
-            {commissionCount}
-          </p>
-        </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <p className="text-xs text-gray-600">Avg Commission</p>
-          <p className="text-2xl font-bold text-purple-600">
-            {formatCurrency(totalAmount / (commissionCount || 1))}
-          </p>
-        </div>
+      <div className="grid grid-cols-3 gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm">
+       
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="text-xs text-gray-600">Total Commission</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {formatCurrency(totalAmount)}
+            </p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <p className="text-xs text-gray-600">Commission Transactions</p>
+            <p className="text-2xl font-bold text-green-600">
+              {commissionCount}
+            </p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <p className="text-xs text-gray-600">Avg Commission</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {formatCurrency(totalAmount / (commissionCount || 1))}
+            </p>
+          </div>
+       
       </div>
-      <div className="col-span-2 space-y-6 overflow-y-auto max-h-screen pr-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
+
+      <div className="col-span-2 space-y-6 overflow-y-auto max-h-screen">
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="font-semibold text-gray-700 mb-4">
             Daily Transaction Trend
           </h3>
@@ -160,7 +150,7 @@ const TransactionStatistic = () => {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="font-semibold text-gray-700 mb-4">
             Wallet Balance Over Time
           </h3>
