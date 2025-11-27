@@ -496,6 +496,18 @@ export class ProductService {
       }));
     });
 
+    // Separate product-level media from variant-specific media
+    const productLevelMedia = product.media.filter((m) => !m.variant_id);
+    const variantMediaMap: Record<number, any[]> = {};
+    product.media.forEach((m) => {
+      if (m.variant_id) {
+        if (!variantMediaMap[m.variant_id]) {
+          variantMediaMap[m.variant_id] = [];
+        }
+        variantMediaMap[m.variant_id].push(m);
+      }
+    });
+
     // Map product sang DTO
     const response: ProductResponseDto = {
       id: product.id,
@@ -507,24 +519,27 @@ export class ProductService {
       base_price: product.base_price,
       avg_rating: product.avg_rating, // thêm dòng này
       review_count: product.review_count, // thêm dòng này
-      media: product.media.map((m) => ({
+      media: productLevelMedia.map((m) => ({
         url: m.url,
       })),
-      variants: product.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        variant_name: v.variant_name,
-        price: v.price,
-        stock: v.stock,
-        // For now, include all product media for each variant
-        // TODO: Implement variant-specific media in the future
-        media: product.media.map((m) => ({
-          url: m.url,
-          is_primary: m.is_primary,
-          sort_order: m.sort_order,
-        })),
-        inventory: variantInventoryMap[v.sku] || [],
-      })),
+      variants: product.variants.map((v) => {
+        // Get variant-specific media, fallback to product-level media if none exist
+        const variantSpecificMedia = variantMediaMap[v.id] || productLevelMedia;
+        return {
+          id: v.id,
+          sku: v.sku,
+          variant_name: v.variant_name,
+          price: v.price,
+          stock: v.stock,
+          // Display variant-specific media if available, otherwise product-level media
+          media: variantSpecificMedia.map((m) => ({
+            url: m.url,
+            is_primary: m.is_primary,
+            sort_order: m.sort_order,
+          })),
+          inventory: variantInventoryMap[v.sku] || [],
+        };
+      }),
       inventories: variantInventoryMap, // toàn bộ inventory map
       brand: product.brand
         ? { id: product.brand.id, name: product.brand.name }
@@ -760,6 +775,18 @@ export class ProductService {
       }));
     });
 
+    // Separate product-level media from variant-specific media
+    const productLevelMedia = product.media.filter((m) => !m.variant_id);
+    const variantMediaMap: Record<number, any[]> = {};
+    product.media.forEach((m) => {
+      if (m.variant_id) {
+        if (!variantMediaMap[m.variant_id]) {
+          variantMediaMap[m.variant_id] = [];
+        }
+        variantMediaMap[m.variant_id].push(m);
+      }
+    });
+
     // Map to consistent DTO format (same as findBySlug)
     const response: ProductResponseDto = {
       id: product.id,
@@ -771,23 +798,27 @@ export class ProductService {
       base_price: product.base_price,
       avg_rating: product.avg_rating,
       review_count: product.review_count,
-      media: product.media.map((m) => ({
+      media: productLevelMedia.map((m) => ({
         url: m.url,
       })),
-      variants: product.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        variant_name: v.variant_name,
-        price: v.price,
-        stock: v.stock,
-        // Include all product media for each variant (consistent with findBySlug)
-        media: product.media.map((m) => ({
-          url: m.url,
-          is_primary: m.is_primary,
-          sort_order: m.sort_order,
-        })),
-        inventory: variantInventoryMap[v.sku] || [],
-      })),
+      variants: product.variants.map((v) => {
+        // Get variant-specific media, fallback to product-level media if none exist
+        const variantSpecificMedia = variantMediaMap[v.id] || productLevelMedia;
+        return {
+          id: v.id,
+          sku: v.sku,
+          variant_name: v.variant_name,
+          price: v.price,
+          stock: v.stock,
+          // Display variant-specific media if available, otherwise product-level media
+          media: variantSpecificMedia.map((m) => ({
+            url: m.url,
+            is_primary: m.is_primary,
+            sort_order: m.sort_order,
+          })),
+          inventory: variantInventoryMap[v.sku] || [],
+        };
+      }),
       inventories: variantInventoryMap,
       brand: product.brand
         ? { id: product.brand.id, name: product.brand.name }

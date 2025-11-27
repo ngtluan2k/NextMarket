@@ -8,7 +8,7 @@ import {
 import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
 import dayjs from 'dayjs';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../../context/AuthContext';
 import { useGroupOrderSocket } from './../../../hooks/useGroupOrderSocket';
 import { GroupOrderCheckout } from './GroupOrderCheckout';
 import {
