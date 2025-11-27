@@ -26,7 +26,15 @@ export class WalletTransaction {
   @Column({ type: 'varchar', length: 50 })
   type!: string; // e.g., 'review_reward'
 
-  @Column({ type: 'decimal' })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string): number => parseFloat(value),
+    },
+  })
   amount!: number;
 
   @Column({ type: 'varchar', nullable: true })

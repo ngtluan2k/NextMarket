@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+'use client';
+
+import { useEffect, useState, useMemo, memo } from 'react';
 import {
   LineChart,
   Line,
@@ -25,14 +27,33 @@ import { fetchMyWalletTransactions } from '../../../../service/wallet.service';
 
 const COLORS: string[] = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b'];
 
+const StatCard = memo(({ label, value, color }: any) => (
+  <div className={`bg-${color}-50 p-4 rounded-lg`}>
+    <p className="text-xs text-gray-600">{label}</p>
+    <p className="text-2xl font-bold text-${color}-600">{value}</p>
+  </div>
+));
+
 const TransactionStatistic = () => {
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Call custom hook directly (not inside useMemo)
   const chartData = useTransactionData(apiResponse);
+  
+  // Memoize total amount and commission count
+  const { totalAmount, commissionCount } = useMemo(() => {
+    if (!apiResponse?.transactions) {
+      return { totalAmount: 0, commissionCount: 0 };
+    }
+    const commissions = apiResponse.transactions.filter(tx => tx.type === 'affiliate_commission');
+    return {
+      totalAmount: calculateTotalAmount(apiResponse.transactions),
+      commissionCount: commissions.length,
+    };
+  }, [apiResponse]);
 
-  console.log('Chart data: ', JSON.stringify(chartData, null, 2));
   // Fetch data from backend
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -79,12 +100,8 @@ const TransactionStatistic = () => {
     );
   }
 
-  // Calculate totals
-  const totalAmount = calculateTotalAmount(apiResponse?.transactions || []);
-
   return (
     <div>
-      {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4 pb-6">
         <div className="bg-blue-50 p-4 rounded-lg">
           <p className="text-xs text-gray-600">Total Commission</p>
@@ -93,20 +110,19 @@ const TransactionStatistic = () => {
           </p>
         </div>
         <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-xs text-gray-600">Transactions</p>
+          <p className="text-xs text-gray-600">Commission Transactions</p>
           <p className="text-2xl font-bold text-green-600">
-            {apiResponse?.total || 0}
+            {commissionCount}
           </p>
         </div>
         <div className="bg-purple-50 p-4 rounded-lg">
-          <p className="text-xs text-gray-600">Avg Transaction</p>
+          <p className="text-xs text-gray-600">Avg Commission</p>
           <p className="text-2xl font-bold text-purple-600">
-            {formatCurrency(totalAmount / (apiResponse?.total || 1))}
+            {formatCurrency(totalAmount / (commissionCount || 1))}
           </p>
         </div>
       </div>
       <div className="col-span-2 space-y-6 overflow-y-auto max-h-screen pr-4">
-        {/* Line Chart - Daily Trend */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="font-semibold text-gray-700 mb-4">
             Daily Transaction Trend
@@ -144,7 +160,6 @@ const TransactionStatistic = () => {
           )}
         </div>
 
-        {/* Area Chart - Running Balance */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="font-semibold text-gray-700 mb-4">
             Wallet Balance Over Time

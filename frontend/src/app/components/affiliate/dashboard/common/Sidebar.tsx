@@ -26,11 +26,6 @@ const Sidebar = () => {
       icon: Link2,
     },
     {
-      name: 'Nhóm Affiliate',
-      href: '/affiliate/dashboard/group-links',
-      icon: Users,
-    },
-    {
       name: 'Thanh toán',
       href: '/affiliate/dashboard/payments',
       icon: CreditCard,

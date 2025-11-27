@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { Button, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { AffiliateProgram, AffiliateProgramFormData, CreateAffiliateProgramDto } from '../../../types/affiliate';
@@ -15,41 +15,29 @@ import AffiliateProgramStatistic from '../../../components/admin/affiliate_admin
 import AffiliateProgramsTable from '../../../components/admin/affiliate_admin_components/affiliate-programs/AffiliateProgramTable';
 import AffiliateProgramFormModal from '../../../components/admin/affiliate_admin_components/affiliate-programs/AffiliateProgramFormModal';
 
+// Memoized program card
+const ProgramCard = memo(({ program, onEdit, onView }: any) => (
+  <div className="p-4 border rounded-lg hover:shadow-lg transition">
+    <h3 className="font-semibold text-lg">{program.name}</h3>
+    <p className="text-sm text-gray-500">{program.status}</p>
+    <div className="mt-3 flex gap-2">
+      <Button size="small" onClick={() => onEdit(program)}>Edit</Button>
+      <Button size="small" onClick={() => onView(program.id)}>View</Button>
+    </div>
+  </div>
+));
+
 const AffiliateProgramDashboard = () => {
   const [programs, setPrograms] = useState<AffiliateProgram[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [chartData, setChartData] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<AffiliateProgram | null>(null);
-
   const [viewingProgramId, setViewingProgramId] = useState<number | null>(null);
   const [isDetailVisible, setIsDetailVisible] = useState(false);
 
-  const fetchPrograms = async () => {
-    setLoading(true);
-    try {
-      const response = await getAllAffiliatePrograms();
-
-      if (Array.isArray(response)) {
-        setPrograms(response);
-        processChartData(response);
-      } else if (response && response.data && Array.isArray(response.data)) {
-        setPrograms(response.data);
-        processChartData(response.data);
-      } else {
-        setPrograms([]);
-        console.warn('Unexpected response structure:', response);
-      }
-    } catch (error) {
-      console.error('Error fetching programs:', error);
-      message.error('Không thể tải dữ liệu chương trình tiếp thị liên kết');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const processChartData = (programs: AffiliateProgram[]) => {
+  // Memoize chart data processing
+  const processChartData = useCallback((programs: AffiliateProgram[]) => {
     const dataForChart: any[] = [];
     const now = new Date();
 
@@ -77,7 +65,30 @@ const AffiliateProgramDashboard = () => {
     });
 
     setChartData(Array.from(monthlyDataMap.values()));
-  };
+  }, []);
+
+  const fetchPrograms = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getAllAffiliatePrograms();
+
+      if (Array.isArray(response)) {
+        setPrograms(response);
+        processChartData(response);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        setPrograms(response.data);
+        processChartData(response.data);
+      } else {
+        setPrograms([]);
+        console.warn('Unexpected response structure:', response);
+      }
+    } catch (error) {
+      console.error('Error fetching programs:', error);
+      message.error('Không thể tải dữ liệu chương trình tiếp thị liên kết');
+    } finally {
+      setLoading(false);
+    }
+  }, [processChartData]);
 
   useEffect(() => {
     fetchPrograms();

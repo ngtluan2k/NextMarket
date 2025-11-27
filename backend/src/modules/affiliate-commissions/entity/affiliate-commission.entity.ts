@@ -60,7 +60,7 @@ export class AffiliateCommission {
   @Column({ type: 'int', nullable: true })
   program_id!: number | null;
 
-  @Column({ type: 'decimal', nullable: true })
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   reversed_amount?: number; // Số tiền đã reverse
 
   @Column({ type: 'timestamp', nullable: true })

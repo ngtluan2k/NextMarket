@@ -1,5 +1,10 @@
 // modules/affiliate-links/affiliate-links.service.ts
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AffiliateLink } from './affiliate-links.entity';
@@ -9,49 +14,69 @@ import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity'
 import { Product } from '../product/product.entity';
 import { User } from '../user/user.entity';
 import { WalletService } from '../wallet/wallet.service';
-import { GroupOrder } from '../group_orders/group_orders.entity';
-import { Store } from '../store/store.entity';
 
 @Injectable()
 export class AffiliateLinksService {
+  private readonly logger = new Logger(AffiliateLinksService.name);
+  private dashboardStatsCache: Map<number, { data: any; timestamp: number }> =
+    new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000;
+
   constructor(
-    @InjectRepository(AffiliateLink) private readonly linkRepo: Repository<AffiliateLink>,
-    @InjectRepository(AffiliateClick) private readonly clickRepo: Repository<AffiliateClick>,
-    @InjectRepository(AffiliateCommission) private readonly commRepo: Repository<AffiliateCommission>,
-    @InjectRepository(AffiliateProgram) private readonly programRepo: Repository<AffiliateProgram>,
-    @InjectRepository(Product) private readonly productRepo: Repository<Product>,
+    @InjectRepository(AffiliateLink)
+    private readonly linkRepo: Repository<AffiliateLink>,
+    @InjectRepository(AffiliateClick)
+    private readonly clickRepo: Repository<AffiliateClick>,
+    @InjectRepository(AffiliateCommission)
+    private readonly commRepo: Repository<AffiliateCommission>,
+    @InjectRepository(AffiliateProgram)
+    private readonly programRepo: Repository<AffiliateProgram>,
+    @InjectRepository(Product)
+    private readonly productRepo: Repository<Product>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
-    @InjectRepository(GroupOrder) private readonly groupOrderRepo: Repository<GroupOrder>,
-    @InjectRepository(Store) private readonly storeRepo: Repository<Store>,
-    private readonly walletService: WalletService,
+    private readonly walletService: WalletService
   ) {}
 
-  async createAffiliateLink(userId: number, productId: number, variantId?: number, programId?: number) {
-    console.log(`[DEBUG] Creating affiliate link for user ${userId}, product ${productId}, variant ${variantId}, program ${programId}`);
-    
+  async createAffiliateLink(
+    userId: number,
+    productId: number,
+    variantId?: number,
+    programId?: number
+  ) {
+    console.log(
+      `[DEBUG] Creating affiliate link for user ${userId}, product ${productId}, variant ${variantId}, program ${programId}`
+    );
+
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
       console.log(`[ERROR] User ${userId} not found`);
       throw new NotFoundException('User not found');
     }
-    
-    console.log(`[DEBUG] User found: ${user.email}, is_affiliate: ${(user as any).is_affiliate}, code: ${(user as any).code}`);
-    
-    // Auto-enable affiliate status and generate code if not exists
+
+    console.log(
+      `[DEBUG] User found: ${user.email}, is_affiliate: ${
+        (user as any).is_affiliate
+      }, code: ${(user as any).code}`
+    );
+
     if (!(user as any).is_affiliate || !(user as any).code) {
-      const affiliateCode = (user as any).code || `AFF${userId}${Date.now().toString().slice(-4)}`;
+      const affiliateCode =
+        (user as any).code || `AFF${userId}${Date.now().toString().slice(-4)}`;
       await this.userRepo.update(userId, {
         is_affiliate: true,
         code: affiliateCode,
         updated_at: new Date(),
       });
-      console.log(`✅ Auto-enabled affiliate status for user ${userId} with code: ${affiliateCode}`);
+      console.log(
+        ` Auto-enabled affiliate status for user ${userId} with code: ${affiliateCode}`
+      );
     }
 
-    // Ensure user has a wallet (auto-create if not exists)
     await this.walletService.createWalletIfNotExists(userId);
 
-    const product = await this.productRepo.findOne({ where: { id: productId } });
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
     if (!product) throw new NotFoundException('Product not found');
 
     let program: AffiliateProgram | null = null;
@@ -59,62 +84,77 @@ export class AffiliateLinksService {
       program = await this.programRepo.findOne({ where: { id: programId } });
       if (!program) throw new NotFoundException('Program not found');
 
-      // 🚫 Prevent variant from being associated with multiple programs (if variantId is provided)
       if (variantId) {
-        console.log(`[DEBUG] Checking conflict for variant ${variantId} of product ${productId} with program ${programId}`);
+        console.log(
+          `[DEBUG] Checking conflict for variant ${variantId} of product ${productId} with program ${programId}`
+        );
         const variantConflict = await this.linkRepo
           .createQueryBuilder('l')
           .leftJoin('l.program_id', 'p')
-          .where('l.code LIKE :variantPattern', { variantPattern: `%:${productId}:${variantId}` })
+          .where('l.code LIKE :variantPattern', {
+            variantPattern: `%:${productId}:${variantId}`,
+          })
           .andWhere('p.id IS NOT NULL')
           .andWhere('p.id != :pid', { pid: programId })
           .getCount();
 
         console.log(`[DEBUG] Variant conflict count: ${variantConflict}`);
         if (variantConflict > 0) {
-          console.log(`[ERROR] Variant ${variantId} of product ${productId} already belongs to another affiliate program`);
-          throw new ForbiddenException(`Biến thể này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể khác hoặc liên hệ admin.`);
+          console.log(
+            `[ERROR] Variant ${variantId} of product ${productId} already belongs to another affiliate program`
+          );
+          throw new ForbiddenException(
+            `Biến thể này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể khác hoặc liên hệ admin.`
+          );
         }
       } else {
-        // For products without variant, check if any variant of this product is already in another program
-        console.log(`[DEBUG] Checking conflict for product ${productId} (no variant) with program ${programId}`);
+        console.log(
+          `[DEBUG] Checking conflict for product ${productId} (no variant) with program ${programId}`
+        );
         const productConflict = await this.linkRepo
           .createQueryBuilder('l')
           .leftJoin('l.program_id', 'p')
-          .where('l.code LIKE :productPattern', { productPattern: `%:${productId}:%` })
+          .where('l.code LIKE :productPattern', {
+            productPattern: `%:${productId}:%`,
+          })
           .andWhere('p.id IS NOT NULL')
           .andWhere('p.id != :pid', { pid: programId })
           .getCount();
 
         console.log(`[DEBUG] Product conflict count: ${productConflict}`);
         if (productConflict > 0) {
-          console.log(`[ERROR] Some variants of product ${productId} already belong to another affiliate program`);
-          throw new ForbiddenException(`Một số biến thể của sản phẩm này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể cụ thể hoặc liên hệ admin.`);
+          console.log(
+            `[ERROR] Some variants of product ${productId} already belong to another affiliate program`
+          );
+          throw new ForbiddenException(
+            `Một số biến thể của sản phẩm này đã thuộc về chương trình affiliate khác. Vui lòng chọn biến thể cụ thể hoặc liên hệ admin.`
+          );
         }
       }
     }
 
-    // code dạng: AFF:{userId}:{productId}:{variantId?}
-    // Thêm userId vào code để đảm bảo unique cho mỗi user
-    const code = `AFF:${userId}:${productId}${variantId ? `:${variantId}` : ''}`;
+    const code = `AFF:${userId}:${productId}${
+      variantId ? `:${variantId}` : ''
+    }`;
 
-    // kiểm tra duplicate theo user + code
     console.log(`[DEBUG] Checking for existing link with code: ${code}`);
-    const existed = await this.linkRepo.findOne({ 
-      where: { 
-        code, 
-        user_id: { id: userId } 
+    const existed = await this.linkRepo.findOne({
+      where: {
+        code,
+        user_id: { id: userId },
       },
-      relations: ['user_id', 'program_id']
+      relations: ['user_id', 'program_id'],
     });
-    
+
     console.log(`[DEBUG] Existing link found: ${existed ? 'YES' : 'NO'}`);
-    
+
     let saved;
     if (existed) {
       saved = existed;
       console.log(`[DEBUG] Using existing link with ID: ${existed.id}`);
-      console.log(`[INFO] Link affiliate cho sản phẩm này đã tồn tại, trả về link cũ`);
+      console.log(
+        `[INFO] Link affiliate cho sản phẩm này đã tồn tại, trả về link cũ`
+      );
     } else {
       console.log(`[DEBUG] Creating new affiliate link...`);
       try {
@@ -124,7 +164,7 @@ export class AffiliateLinksService {
             program_id: program || undefined,
             code,
             created_at: new Date(),
-          }),
+          })
         );
         console.log(`[DEBUG] Successfully created link with ID: ${saved.id}`);
       } catch (error) {
@@ -133,11 +173,13 @@ export class AffiliateLinksService {
       }
     }
 
-    // Trả về URL theo origin production của bạn, frontend có thể normalize
-    const affiliate_link = `https://everymart.com/product/${productId}?aff=${user.code}${
-      variantId ? `&variant=${variantId}` : ''
-    }${programId ? `&program=${programId}` : ''}`;
+    const affiliate_link = `https://everymart.com/product/${productId}?aff=${
+      user.code
+    }${variantId ? `&variant=${variantId}` : ''}${
+      programId ? `&program=${programId}` : ''
+    }`;
 
+    console.log(`current affiliate links: `, affiliate_link);
     return {
       link_id: (saved as any).id,
       affiliate_link,
@@ -156,8 +198,6 @@ export class AffiliateLinksService {
 
     const mapped = links.map((l) => {
       const parts = (l.code || '').split(':');
-      // Code format: AFF:{userId}:{productId}:{variantId?}
-      // parts[0] = 'AFF', parts[1] = userId, parts[2] = productId, parts[3] = variantId (optional)
       const pid = parts[2] ? Number(parts[2]) : undefined;
       const vid = parts[3] ? Number(parts[3]) : undefined;
       const affCode = ((l as any).user_id?.code as string) || '';
@@ -170,7 +210,9 @@ export class AffiliateLinksService {
         program_name: (l as any).program_id?.name,
         affiliate_link:
           pid && affCode
-            ? `https://everymart.com/product/${pid}?aff=${affCode}${vid ? `&variant=${vid}` : ''}${programId ? `&program=${programId}` : ''}`
+            ? `https://everymart.com/product/${pid}?aff=${affCode}${
+                vid ? `&variant=${vid}` : ''
+              }${programId ? `&program=${programId}` : ''}`
             : null,
         created_at: l.created_at,
       };
@@ -180,31 +222,34 @@ export class AffiliateLinksService {
   }
 
   async deleteMyLink(linkId: number, userId: number) {
-    const link = await this.linkRepo.findOne({ where: { id: linkId }, relations: ['user_id'] });
+    const link = await this.linkRepo.findOne({
+      where: { id: linkId },
+      relations: ['user_id'],
+    });
     if (!link) throw new NotFoundException('Affiliate link not found');
-    if ((link as any).user_id?.id !== userId) throw new ForbiddenException('Bạn không có quyền xóa link affiliate này. Chỉ có thể xóa link do chính bạn tạo.');
+    if ((link as any).user_id?.id !== userId)
+      throw new ForbiddenException(
+        'Bạn không có quyền xóa link affiliate này. Chỉ có thể xóa link do chính bạn tạo.'
+      );
 
-    // Xoá commissions liên quan link (nếu cần)
     await this.commRepo.delete({ link_id: { id: linkId } as any });
     await this.linkRepo.remove(link);
     return { success: true, link_id: linkId };
   }
 
   async getAffiliatedProducts(userId: number) {
-    // Lấy theo link đã tạo
-    const links = await this.linkRepo.find({ where: { user_id: { id: userId } as any } });
+    const links = await this.linkRepo.find({
+      where: { user_id: { id: userId } as any },
+    });
     const productIds = new Set<number>();
     links.forEach((l) => {
       const parts = (l.code || '').split(':');
-      // Code format: AFF:{userId}:{productId}:{variantId?}
-      // parts[0] = 'AFF', parts[1] = userId, parts[2] = productId, parts[3] = variantId (optional)
       const pid = parts[2] ? Number(parts[2]) : undefined;
       if (pid) productIds.add(pid);
     });
 
     if (productIds.size === 0) return { message: 'OK', products: [] };
 
-    // Lấy products kèm relations
     const products = await this.productRepo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.media', 'media')
@@ -219,12 +264,19 @@ export class AffiliateLinksService {
 
   async getDashboardStats(userId: number) {
     try {
-      // Get total number of affiliate links created
+      const now = Date.now();
+      const cached = this.dashboardStatsCache.get(userId);
+      if (cached && cached.timestamp + this.CACHE_TTL > now) {
+        this.logger.debug(` Dashboard stats cache hit for user ${userId}`);
+        return cached.data;
+      }
+
+      this.logger.debug(` Fetching dashboard stats for user ${userId}`);
+
       const totalLinks = await this.linkRepo.count({
         where: { user_id: { id: userId } as any },
       });
 
-      // Get commission statistics - query directly by beneficiary_user_id
       const commissionStats = await this.commRepo
         .createQueryBuilder('c')
         .leftJoin('c.beneficiary_user_id', 'user')
@@ -237,9 +289,6 @@ export class AffiliateLinksService {
         ])
         .getRawOne();
 
-      // Count unique buyers per link
-      // Logic: 1 user buying multiple times through same link = 1 buyer
-      //        1 user buying through different links = counted separately per link
       const buyersStats = await this.commRepo
         .createQueryBuilder('c')
         .leftJoin('c.beneficiary_user_id', 'beneficiary')
@@ -247,9 +296,9 @@ export class AffiliateLinksService {
         .leftJoin('orderItem.order', 'order')
         .leftJoin('c.link_id', 'link')
         .where('beneficiary.id = :userId', { userId })
-        .andWhere('c.level = :level', { level: 1 }) // Only count direct purchases (level 1)
+        .andWhere('c.level = :level', { level: 1 })
         .select([
-          'COUNT(DISTINCT CONCAT(link.id, \'-\', order.user_id)) as totalBuyers'
+          "COUNT(DISTINCT CONCAT(link.id, '-', order.user_id)) as totalBuyers",
         ])
         .getRawOne();
 
@@ -258,16 +307,24 @@ export class AffiliateLinksService {
       const totalPaid = parseFloat(commissionStats?.totalPaid || '0');
       const totalBuyers = parseInt(buyersStats?.totalBuyers || '0', 10);
 
-      return {
+      const result = {
         totalRevenue: totalRevenue.toFixed(2),
         totalPending: totalPending.toFixed(2),
         totalPaid: totalPaid.toFixed(2),
         totalLinks,
         totalBuyers,
       };
+
+      this.dashboardStatsCache.set(userId, { data: result, timestamp: now });
+      this.logger.debug(`✅ Dashboard stats cached for user ${userId}`);
+
+      return result;
     } catch (error) {
-      console.error('Error in getDashboardStats:', error);
-      // Return default values if query fails
+      this.logger.error(
+        `❌ Error in getDashboardStats for user ${userId}:`,
+        error
+      );
+
       return {
         totalRevenue: '0.00',
         totalPending: '0.00',
@@ -278,10 +335,17 @@ export class AffiliateLinksService {
     }
   }
 
-  /**
-   * Get detailed commission history for a user
-   */
-  async getCommissionHistory(userId: number, page: number = 1, limit: number = 20) {
+  clearDashboardStatsCache(userId?: number): void {
+    if (userId) {
+      this.dashboardStatsCache.delete(userId);
+      this.logger.debug(`🗑️ Dashboard stats cache cleared for user ${userId}`);
+    } else {
+      this.dashboardStatsCache.clear();
+      this.logger.debug(`🗑️ All dashboard stats cache cleared`);
+    }
+  }
+
+  async getCommissionHistory(userId: number, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
 
     const [commissions, total] = await this.commRepo
@@ -297,7 +361,7 @@ export class AffiliateLinksService {
       .take(limit)
       .getManyAndCount();
 
-    const formattedCommissions = commissions.map(commission => ({
+    const formattedCommissions = commissions.map((commission) => ({
       id: commission.id,
       amount: parseFloat(commission.amount.toString()),
       rate_percent: commission.rate_percent,
@@ -307,19 +371,23 @@ export class AffiliateLinksService {
       product: {
         id: (commission as any).order_item_id?.product?.id,
         name: (commission as any).order_item_id?.product?.name,
-        image: (commission as any).order_item_id?.product?.media?.find((m: any) => m.is_primary)?.url || 
-               (commission as any).order_item_id?.product?.media?.[0]?.url,
+        image:
+          (commission as any).order_item_id?.product?.media?.find(
+            (m: any) => m.is_primary
+          )?.url || (commission as any).order_item_id?.product?.media?.[0]?.url,
       },
       order: {
         id: (commission as any).order_item_id?.order?.id,
-        order_number: (commission as any).order_item_id?.order?.order_number || `ORD-${(commission as any).order_item_id?.order?.id}`,
+        order_number:
+          (commission as any).order_item_id?.order?.order_number ||
+          `ORD-${(commission as any).order_item_id?.order?.id}`,
         total_amount: (commission as any).order_item_id?.order?.total_amount,
         created_at: (commission as any).order_item_id?.order?.created_at,
       },
       affiliate_link: {
-        id: null, // No longer using affiliate links
+        id: null,
         code: null,
-      }
+      },
     }));
 
     return {
@@ -329,14 +397,15 @@ export class AffiliateLinksService {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-      }
+      },
     };
   }
 
-  /**
-   * Get commission summary by time periods
-   */
-  async getCommissionSummaryByPeriod(userId: number, period: 'daily' | 'weekly' | 'monthly' = 'monthly', limit: number = 12) {
+  async getCommissionSummaryByPeriod(
+    userId: number,
+    period: 'daily' | 'weekly' | 'monthly' = 'monthly',
+    limit = 12
+  ) {
     try {
       let dateFormat: string;
 
@@ -345,7 +414,7 @@ export class AffiliateLinksService {
           dateFormat = 'YYYY-MM-DD';
           break;
         case 'weekly':
-          dateFormat = 'IYYY-IW'; // ISO week format for PostgreSQL
+          dateFormat = 'IYYY-IW';
           break;
         case 'monthly':
         default:
@@ -370,7 +439,7 @@ export class AffiliateLinksService {
         .limit(limit)
         .getRawMany();
 
-      return summaries.map(summary => ({
+      return summaries.map((summary) => ({
         period: summary.period,
         totalEarned: parseFloat(summary.totalEarned || '0'),
         totalPending: parseFloat(summary.totalPending || '0'),
@@ -380,14 +449,11 @@ export class AffiliateLinksService {
       }));
     } catch (error) {
       console.error('Error in getCommissionSummaryByPeriod:', error);
-      // Return empty array if query fails
+
       return [];
     }
   }
 
-  /**
-   * Get available balance for withdrawal
-   */
   async getAvailableBalance(userId: number) {
     try {
       const balanceStats = await this.commRepo
@@ -408,7 +474,6 @@ export class AffiliateLinksService {
       };
     } catch (error) {
       console.error('Error in getAvailableBalance:', error);
-      // Return default values if query fails
       return {
         availableBalance: 0,
         pendingBalance: 0,
@@ -417,24 +482,28 @@ export class AffiliateLinksService {
     }
   }
 
-  /**
-   * Search products for affiliate link creation
-   */
-  async searchProductsForAffiliate(userId: number, query: string, page: number = 1, limit: number = 20) {
+  async searchProductsForAffiliate(
+    userId: number,
+    query: string,
+    page = 1,
+    limit = 20
+  ) {
     const offset = (page - 1) * limit;
 
-    // Auto-enable affiliate status if not exists
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-    
+
     if (!(user as any).is_affiliate || !(user as any).code) {
-      const affiliateCode = (user as any).code || `AFF${userId}${Date.now().toString().slice(-4)}`;
+      const affiliateCode =
+        (user as any).code || `AFF${userId}${Date.now().toString().slice(-4)}`;
       await this.userRepo.update(userId, {
         is_affiliate: true,
         code: affiliateCode,
         updated_at: new Date(),
       });
-      console.log(`✅ Auto-enabled affiliate status for user ${userId} with code: ${affiliateCode}`);
+      console.log(
+        ` Auto-enabled affiliate status for user ${userId} with code: ${affiliateCode}`
+      );
     }
 
     const [products, total] = await this.productRepo
@@ -445,16 +514,17 @@ export class AffiliateLinksService {
       .leftJoinAndSelect('p.brand', 'brand')
       .leftJoinAndSelect('p.categories', 'categories')
       .leftJoinAndSelect('categories.category', 'category')
-      .where('p.name LIKE :query OR p.description LIKE :query', { query: `%${query}%` })
+      .where('p.name LIKE :query OR p.description LIKE :query', {
+        query: `%${query}%`,
+      })
       .andWhere('p.status = :status', { status: 'active' })
       .orderBy('p.created_at', 'DESC')
       .skip(offset)
       .take(limit)
       .getManyAndCount();
 
-    const formattedProducts = products.map(product => {
-      // Get primary image or first available image
-      const primaryImage = product.media?.find(m => m.is_primary)?.url;
+    const formattedProducts = products.map((product) => {
+      const primaryImage = product.media?.find((m) => m.is_primary)?.url;
       const firstImage = product.media?.[0]?.url;
       const productImage = primaryImage || firstImage;
 
@@ -464,13 +534,14 @@ export class AffiliateLinksService {
         description: product.description,
         base_price: product.base_price,
         image: productImage,
-        media: product.media?.map(m => ({
-          id: m.id,
-          url: m.url,
-          media_type: m.media_type,
-          is_primary: m.is_primary,
-          sort_order: m.sort_order,
-        })) || [],
+        media:
+          product.media?.map((m) => ({
+            id: m.id,
+            url: m.url,
+            media_type: m.media_type,
+            is_primary: m.is_primary,
+            sort_order: m.sort_order,
+          })) || [],
         store: {
           id: product.store?.id,
           name: product.store?.name,
@@ -479,17 +550,19 @@ export class AffiliateLinksService {
           id: product.brand?.id,
           name: product.brand?.name,
         },
-        categories: product.categories?.map(pc => ({
-          id: pc.id,
-          name: pc.category?.name,
-        })) || [],
-        variants: product.variants?.map(variant => ({
-          id: variant.id,
-          name: variant.variant_name,
-          sku: variant.sku,
-          price: variant.price,
-          stock: variant.stock,
-        })) || [],
+        categories:
+          product.categories?.map((pc) => ({
+            id: pc.id,
+            name: pc.category?.name,
+          })) || [],
+        variants:
+          product.variants?.map((variant) => ({
+            id: variant.id,
+            name: variant.variant_name,
+            sku: variant.sku,
+            price: variant.price,
+            stock: variant.stock,
+          })) || [],
       };
     });
 
@@ -500,11 +573,10 @@ export class AffiliateLinksService {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-      }
+      },
     };
   }
 
-  // Track affiliate click
   async trackClick(data: {
     affiliateCode: string;
     clickId: string;
@@ -518,23 +590,21 @@ export class AffiliateLinksService {
     referrer?: string;
   }) {
     try {
-      // Find affiliate link by code
       const link = await this.linkRepo.findOne({
         where: { code: data.affiliateCode },
       });
 
       if (!link) {
-        console.warn(`⚠️ Affiliate link not found for code: ${data.affiliateCode}`);
-        // Still track the click even if link not found for analytics
+        console.warn(
+          ` Affiliate link not found for code: ${data.affiliateCode}`
+        );
       }
 
-      // Parse UTM parameters from referrer if available
       let utmParams = null;
       if (data.source) {
         utmParams = { utm_source: data.source };
       }
 
-      // Create click record
       const click = this.clickRepo.create({
         click_id: data.clickId,
         affiliate_code: data.affiliateCode,
@@ -550,28 +620,26 @@ export class AffiliateLinksService {
       });
 
       await this.clickRepo.save(click);
-
-      // Increment click count on the link
       if (link) {
         await this.linkRepo.increment({ id: link.id }, 'clicks', 1);
       }
 
-      console.log(`📊 Click tracked: ${data.clickId} for affiliate ${data.affiliateCode}`);
-      
+      console.log(
+        ` Click tracked: ${data.clickId} for affiliate ${data.affiliateCode}`
+      );
+
       return {
         success: true,
         clickId: data.clickId,
       };
     } catch (error) {
-      console.error('❌ Failed to track click:', error);
+      console.error(' Failed to track click:', error);
       throw error;
     }
   }
 
-  // Mark click as converted (called when order is created)
   async markClickAsConverted(affiliateCode: string, orderId: number) {
     try {
-      // Find the most recent unconverted click for this affiliate code
       const click = await this.clickRepo.findOne({
         where: {
           affiliate_code: affiliateCode,
@@ -585,11 +653,13 @@ export class AffiliateLinksService {
         click.order_id = orderId;
         click.converted_at = new Date();
         await this.clickRepo.save(click);
-        
-        console.log(`✅ Click ${click.click_id} marked as converted for order ${orderId}`);
+
+        console.log(
+          ` Click ${click.click_id} marked as converted for order ${orderId}`
+        );
       }
     } catch (error) {
-      console.error('❌ Failed to mark click as converted:', error);
+      console.error(' Failed to mark click as converted:', error);
     }
   }
 }

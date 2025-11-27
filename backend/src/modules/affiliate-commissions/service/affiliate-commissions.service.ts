@@ -105,8 +105,7 @@ export class AffiliateCommissionsService {
     await this.repository.delete(id);
   }
 
-  // Find reversed/voided commissions for a user
-  async findReversedByUser(userId: number, page: number = 1, limit: number = 20) {
+  async findReversedByUser(userId: number, page = 1, limit = 20) {
     const [commissions, total] = await this.repository.findAndCount({
       where: {
         beneficiary_user_id: { id: userId } as any,

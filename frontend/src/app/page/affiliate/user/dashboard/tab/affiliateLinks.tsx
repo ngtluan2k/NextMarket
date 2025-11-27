@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useState, memo } from 'react';
 import {
   Tabs,
   Card,
@@ -29,6 +31,22 @@ import { createLink, deleteLink, getMyAffiliatedProducts, getMyLinks, getProgram
 
 const { Title, Text } = Typography;
 
+// Memoized Link Row Component
+const LinkRow = memo(({ link, onShare, onDelete }: any) => (
+  <div className="flex items-center justify-between p-4 border rounded-lg">
+    <div className="flex-1">
+      <p className="font-semibold">{link.affiliate_link}</p>
+      <p className="text-sm text-gray-500">Created: {new Date(link.created_at).toLocaleDateString()}</p>
+    </div>
+    <Space>
+      <Button type="primary" size="small" onClick={() => onShare(link)}>Share</Button>
+      <Popconfirm title="Delete?" onConfirm={() => onDelete(link.link_id)}>
+        <Button danger size="small">Delete</Button>
+      </Popconfirm>
+    </Space>
+  </div>
+));
+
 export default function AffiliateLinks() {
   const [msg, ctx] = message.useMessage();
   const [loading, setLoading] = useState(false);
@@ -48,6 +66,9 @@ export default function AffiliateLinks() {
   const [shareLink, setShareLink] = useState<string>('');
   const [shareRecord, setShareRecord] = useState<MyLink | null>(null);
 
+
+  // console.log('link in backend: '+JSON.stringify(myLinks, null, 2));
+
   // form tạo liên kết
   const [form] = Form.useForm<CreateLinkRequest>();
 
@@ -57,8 +78,8 @@ export default function AffiliateLinks() {
     []
   );
 
-
-  const ensureUrl = useCallback(
+  // Memoized URL builder
+  const ensureUrl = useCallback( // convert to current domain
     (link: MyLink): string => {
       const raw = (link.affiliate_link || '').trim();
       const baseIfMissing =

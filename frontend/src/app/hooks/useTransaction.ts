@@ -16,12 +16,15 @@ export const useTransactionData = (apiResponse: ApiResponse | null): ChartData =
 
   useEffect(() => {
     if (apiResponse?.transactions && apiResponse.transactions.length > 0) {
-      const transactions = apiResponse.transactions;
+      // Filter only affiliate commission transactions for charts
+      const commissionTransactions = apiResponse.transactions.filter(
+        tx => tx.type === 'affiliate_commission'
+      );
 
       setChartData({
-        trend: aggregateByDate(transactions),
-        balance: calculateRunningBalance(transactions),
-        distribution: groupByType(transactions),
+        trend: aggregateByDate(commissionTransactions),
+        balance: calculateRunningBalance(commissionTransactions),
+        distribution: groupByType(commissionTransactions),
       });
     }
   }, [apiResponse]);

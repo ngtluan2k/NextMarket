@@ -66,7 +66,6 @@ import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
 import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
 import LoginPerformanceDebug from './components/debug/LoginPerformanceDebug';
 import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
-import GroupAffiliateLinks from './page/affiliate/user/dashboard/tab/GroupAffiliateLinks';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -195,10 +194,6 @@ const App: React.FC = () => {
               <Route
                 path="/affiliate/dashboard/links"
                 element={<AffiliateLinks />}
-              />
-              <Route
-                path="/affiliate/dashboard/group-links"
-                element={<GroupAffiliateLinks />}
               />
               <Route
                 path="/affiliate/dashboard/payments"

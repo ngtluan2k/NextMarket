@@ -8,10 +8,17 @@ import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { AffiliateRulesModule } from '../affiliate-rules/affiliate-rules.module';
 import { BudgetTrackingService } from './service/budget-tracking.service';
 import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-commission.entity';
+import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AffiliateProgram, AffiliateProgramParticipant, AffiliateLink, AffiliateCommission]),
+    TypeOrmModule.forFeature([
+      AffiliateProgram,
+      AffiliateProgramParticipant,
+      AffiliateLink,
+      AffiliateCommission,
+      AffiliateCommissionRule,
+    ]),
     AffiliateRulesModule,
   ],
   controllers: [AffiliateProgramsController],

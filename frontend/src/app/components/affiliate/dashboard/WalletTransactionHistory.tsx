@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Card, List, Tag, Button, DatePicker, Input, Empty, Spin, Pagination } from 'antd';
 import { 
   WalletOutlined,
@@ -23,6 +25,21 @@ interface WalletTransactionHistoryProps {
   className?: string;
 }
 
+const TransactionItem = memo(({ transaction, formatCurrency, getTransactionIcon, getTransactionColor, getTypeDisplay }: any) => (
+  <div className="flex items-center justify-between p-3 border-b">
+    <div className="flex items-center gap-3">
+      {getTransactionIcon(transaction.amount)}
+      <div>
+        <p className="font-semibold">{getTypeDisplay(transaction.type)}</p>
+        <p className="text-sm text-gray-500">{transaction.description}</p>
+      </div>
+    </div>
+    <Tag color={getTransactionColor(transaction.amount)}>
+      {formatCurrency(transaction.amount)}
+    </Tag>
+  </div>
+));
+
 export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> = ({ className = '' }) => {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<WalletTransaction[]>([]);
@@ -33,15 +50,7 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    loadTransactions(currentPage);
-  }, [currentPage]);
-
-  useEffect(() => {
-    filterTransactions();
-  }, [transactions, searchText, dateRange]);
-
-  const loadTransactions = async (page: number) => {
+  const loadTransactions = useCallback(async (page: number) => {
     try {
       setLoading(true);
       const response = await fetchMyWalletTransactions(page, pageSize);
@@ -52,12 +61,16 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageSize]);
 
-  const filterTransactions = () => {
+  useEffect(() => {
+    loadTransactions(currentPage);
+  }, [currentPage, loadTransactions]);
+
+
+  const filteredTransactions_memo = useMemo(() => {
     let filtered = [...transactions];
 
-    // Filter by search text
     if (searchText) {
       const search = searchText.toLowerCase();
       filtered = filtered.filter(t => 
@@ -75,27 +88,31 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
       });
     }
 
-    setFilteredTransactions(filtered);
-  };
+    return filtered;
+  }, [transactions, searchText, dateRange]);
 
-  const formatCurrency = (amount: number) => {
+  useEffect(() => {
+    setFilteredTransactions(filteredTransactions_memo);
+  }, [filteredTransactions_memo]);
+
+  const formatCurrency = useCallback((amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND'
     }).format(amount);
-  };
+  }, []);
 
-  const getTransactionIcon = (amount: number) => {
+  const getTransactionIcon = useCallback((amount: number) => {
     return amount >= 0 ? (
       <ArrowUpOutlined style={{ color: '#52c41a' }} />
     ) : (
       <ArrowDownOutlined style={{ color: '#ff4d4f' }} />
     );
-  };
+  }, []);
 
-  const getTransactionColor = (amount: number) => {
+  const getTransactionColor = useCallback((amount: number) => {
     return amount >= 0 ? 'success' : 'error';
-  };
+  }, []);
 
   const getTypeDisplay = (type: string) => {
     const typeMap: { [key: string]: string } = {
@@ -135,7 +152,6 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
         </div>
       }
     >
-      {/* Search and Filter */}
       <div className="mb-4 space-y-2">
         <Input
           placeholder="Tìm kiếm giao dịch..."
@@ -214,7 +230,6 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
             )}
           />
 
-          {/* Pagination */}
           {total > pageSize && (
             <div className="mt-4 flex justify-center">
               <Pagination
