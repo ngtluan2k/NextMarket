@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
-import { useAuth } from '../hooks/useAuth'; 
+import { useAuth } from '../context/AuthContext'; 
 import { groupOrdersApi } from './../../service/groupOrderItems.service';
 import { getAffiliateDataForOrder } from '../../utils/affiliate-tracking';
 
@@ -15,7 +15,7 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
   const [loading, setLoading] = React.useState(false);
   const [msgApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
-  const { user } = useAuth(); // user.user_id || user.id
+  const { me } = useAuth();
 
   if (!open) return null;
 
@@ -24,7 +24,7 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
     const raw = code.trim();
     if (!raw) return;
 
-    const uid = user?.user_id ?? user?.id;
+    const uid = me?.user_id ?? me?.id;
     if (uid == null) {
       msgApi.warning('Vui lòng đăng nhập trước khi tham gia nhóm.');
       return;

@@ -13,7 +13,7 @@ import {
 } from '../../../../service/groupOrderItems.service';
 import AddressModal from '../../../page/AddressModal';
 import { UserAddress } from '../../../types/user';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
