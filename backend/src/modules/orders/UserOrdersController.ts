@@ -68,7 +68,7 @@ export class UserOrdersController {
       throw new ForbiddenException('Bạn không thể xem đơn hàng của người khác');
     }
 
-    return this.ordersService.findOne(id);
+    return this.ordersService.findOneForUser(id, userId);
   }
 
   //  POST /users/:userId/orders — User tự tạo đơn hàng

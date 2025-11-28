@@ -534,6 +534,35 @@ export class OrdersService {
     return order;
   }
 
+  async findOneForUser(id: number, userId: number): Promise<Order> {
+  const order = await this.ordersRepository
+    .createQueryBuilder('order')
+    .leftJoinAndSelect('order.user', 'user')
+    .leftJoinAndSelect('order.store', 'store')
+    .leftJoinAndSelect('order.userAddress', 'userAddress')
+    .leftJoinAndSelect('order.orderItem', 'orderItem')
+    .leftJoinAndSelect('orderItem.product', 'product')
+    .leftJoinAndSelect('product.media', 'media')
+    .leftJoinAndSelect('orderItem.variant', 'variant')
+    .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule')
+    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+    .leftJoinAndSelect('product.reviews', 'reviews')
+    .leftJoinAndSelect('order.payment', 'payment')
+    .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+    .leftJoinAndSelect('order.group_order', 'groupOrder')
+    .where('order.id = :id', { id })
+    .andWhere('user.id = :userId', { userId })   // 🔥 Quan trọng nhất
+    .getOne();
+
+  if (!order) {
+    throw new NotFoundException('Không tìm thấy đơn hàng');
+  }
+
+  return order;
+}
+
+
   async remove(id: number): Promise<void> {
     const order = await this.findOne(id);
     await this.ordersRepository.remove(order);
