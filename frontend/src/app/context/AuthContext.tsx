@@ -2,23 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthContextType } from '../types/auth';
 import { Me } from '../types/user';
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-/**
- * Hook to use authentication context
- * Must be used within AuthProvider
- */
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return {
-    ...context,
-    user: context.me, // Alias for backward compatibility
-    loading: false, // AuthProvider loads synchronously from localStorage
-  };
-};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [me, setMe] = useState<Me | null>(null);
@@ -127,4 +111,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  return ctx;
 };

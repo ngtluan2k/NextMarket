@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './useAuth';
 
 interface ActiveGroup {
     id: number;
@@ -22,16 +22,16 @@ interface ActiveGroup {
 export const useActiveGroups = () => {
     const [activeGroups, setActiveGroups] = useState<ActiveGroup[]>([]);
     const [loading, setLoading] = useState(false);
-    const { me } = useAuth();
+    const { user } = useAuth();
     const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
     const fetchActiveGroups = async () => {
-        if (!me?.id) return;
+        if (!user?.id) return;
 
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${BE_BASE_URL}/group-orders/user/${me.id}/active`, {
+            const response = await fetch(`${BE_BASE_URL}/group-orders/user/${user.id}/active`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -50,7 +50,7 @@ export const useActiveGroups = () => {
 
     useEffect(() => {
         fetchActiveGroups();
-    }, [me?.id]);
+    }, [user?.id]);
 
     return { activeGroups, loading, refetch: fetchActiveGroups };
 };

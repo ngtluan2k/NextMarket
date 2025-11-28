@@ -10,7 +10,7 @@ import { BE_BASE_URL } from '../../api/api';
 import { Users } from 'lucide-react';
 import { Rate } from 'antd';
 import { log } from 'console';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { useGroupOrderItems } from '../../hooks/useGroupOrderItems';
 import { StarFilled } from '@ant-design/icons';
 import { PricingRule } from './Info';

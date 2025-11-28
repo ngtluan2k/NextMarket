@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Pencil, Info, Users } from "lucide-react";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { groupOrdersApi } from '../../../service/groupOrderItems.service';
 import { getAffiliateDataForOrder } from '../../../utils/affiliate-tracking';
 
@@ -10,7 +10,7 @@ export default function GroupOrderCreate() {
     const { storeId } = useParams();
     const location = useLocation();
     const [searchParams] = useSearchParams();
-    const { me } = useAuth();
+    const { user } = useAuth();
 
     const storeIdFromRoute = Number(storeId);
     const storeIdFromQuery = Number(searchParams.get("storeId"));
@@ -29,12 +29,14 @@ export default function GroupOrderCreate() {
 
     const handleCreate = async () => {
         try {
-            const hostUserId = me?.user_id ?? null;
+            const hostUserId = user?.user_id ?? null;
 
             if (!resolvedStoreId || !hostUserId) {
                 alert("Thiếu storeId hoặc thông tin người dùng. Vui lòng kiểm tra lại.");
                 return;
             }
+
+            // 🎯 NEW: Get affiliate code from localStorage
             const affiliateData = getAffiliateDataForOrder();
             console.log('🔍 Creating group with affiliate data:', affiliateData);
 
@@ -42,11 +44,13 @@ export default function GroupOrderCreate() {
                 name: groupName,
                 storeId: resolvedStoreId,
                 hostUserId,
+                // expiresAt: new Date(Date.now() + 2*60*60*1000).toISOString(),
                 targetMemberCount,
+                // 🎯 NEW: Pass affiliate code
                 ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
             };
 
-            console.log(' Group creation payload:', payload);
+            console.log('📤 Group creation payload:', payload);
             const group = await groupOrdersApi.create(payload);
             const storeSlug = group?.store?.slug; // service trả về group kèm relations
 

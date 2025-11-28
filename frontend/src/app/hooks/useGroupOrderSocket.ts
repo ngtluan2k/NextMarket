@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { socketService } from './../../service/socket.service';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './useAuth';
 
 export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event: string, data: any) => void) => {
-    const { me } = useAuth();
+    const { user } = useAuth();
     const socketRef = useRef<boolean>(false);
 
     useEffect(() => {
-        if (!me?.id || !groupId) return;
+        if (!user?.id || !groupId) return;
 
         const raw = localStorage.getItem('token');
         const token = raw ?? undefined;
@@ -33,15 +33,15 @@ export const useGroupOrderSocket = (groupId?: number, onRealtimeUpdate?: (event:
         socketService.onTargetReachedWarning((data) => onRealtimeUpdate?.('target-reached-warning', data));
         socketService.onGroupAutoLocked((data) => onRealtimeUpdate?.('group-auto-locked', data));
         socketService.onGroupManualLocked((data) => onRealtimeUpdate?.('group-manual-locked', data));
-        socketService.joinGroup(groupId, me.id);
+        socketService.joinGroup(groupId, user.id);
         socketRef.current = true;
 
         return () => {
-            socketService.leaveGroup(groupId, me.id);
+            socketService.leaveGroup(groupId, user.id);
             // socketService.removeAllListeners();
             socketRef.current = false;
         };
-    }, [me?.id, groupId]);
+    }, [user?.id, groupId]);
 
     return {
         socketService,

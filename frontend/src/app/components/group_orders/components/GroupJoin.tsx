@@ -3,21 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import { getAffiliateDataForOrder } from '../../../../utils/affiliate-tracking';
 
 export default function GroupJoin() {
   const { uuid = '' } = useParams();
   const navigate = useNavigate();
-  const { me } = useAuth();
+  const { user, loading } = useAuth();
   const [msg, setMsg] = React.useState('Đang xử lý tham gia nhóm...');
 
   React.useEffect(() => {
     (async () => {
-      if (!uuid) return;
+      if (!uuid || loading) return;
 
-      // If user is not logged in, redirect to login
-      if (!me?.user_id && !me?.id) {
+      if (!user?.user_id) {
         navigate(`/login?next=/group/${uuid}`, { replace: true });
         return;
       }
@@ -27,9 +26,8 @@ export default function GroupJoin() {
         const affiliateData = getAffiliateDataForOrder();
         console.log('🔍 Joining group with affiliate data:', affiliateData);
 
-        const userId = me.user_id ?? me.id;
         const payload = { 
-          userId, 
+          userId: user.user_id, 
           addressId: undefined,
           // 🎯 NEW: Pass affiliate code
           ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
@@ -44,7 +42,7 @@ export default function GroupJoin() {
         setMsg(e?.response?.data?.message ?? 'Không thể tham gia nhóm');
       }
     })();
-  }, [uuid, me, navigate]);
+  }, [uuid, user, loading, navigate]);
   
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
