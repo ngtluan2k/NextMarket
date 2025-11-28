@@ -14,7 +14,6 @@ import { AffiliateRulesService } from '../../affiliate-rules/affiliate-rules.ser
 import { WalletService } from '../../wallet/wallet.service';
 import { FraudDetectionService } from '../../affiliate-fraud/service/fraud-detection.service';
 import { BudgetTrackingService } from '../../affiliate-program/service/budget-tracking.service';
-import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { User } from '../../user/user.entity';
 import { AffiliateProgram } from '../../affiliate-program/affiliate-program.entity';
 import { AffiliateTreeService } from '../../affiliate-tree/affiliate-tree.service';
@@ -36,7 +35,6 @@ export class CommissionCalcService {
     private readonly walletService: WalletService,
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly budgetTrackingService: BudgetTrackingService,
-    private readonly notificationsGateway: NotificationsGateway,
     private readonly affiliateTreeService: AffiliateTreeService
   ) {}
 
@@ -182,10 +180,12 @@ export class CommissionCalcService {
       const maxRetries = 3;
       let walletSuccess = false;
 
+      // Add commission to wallet for all levels
+      // Each user gets their commission added to their own wallet ONCE
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           console.log(
-            ` Attempt ${attempt}/${maxRetries}: Adding ${computed} VND commission to wallet for user ${beneficiaryUserId}`
+            ` Attempt ${attempt}/${maxRetries}: Adding ${computed} VND commission to wallet for user ${beneficiaryUserId} (Level ${level})`
           );
 
           const walletResult = await this.walletService.addCommissionToWallet(
@@ -226,56 +226,6 @@ export class CommissionCalcService {
           console.log(
             ` Commission ${computed} VND successfully added to user ${beneficiaryUserId} wallet`
           );
-
-          try {
-            console.log(
-              `Preparing to send notification to user ${beneficiaryUserId}`
-            );
-
-            const program = programId
-              ? await this.programRepo.findOne({ where: { id: programId } })
-              : null;
-            console.log(` Program info: ${program?.name || 'No program'}`);
-
-            const orderItem = await this.orderItemRepo.findOne({
-              where: { id: item.id },
-              relations: ['product'],
-            });
-            console.log(
-              `Order item: ${orderItem?.product?.name || 'Unknown Product'}`
-            );
-
-            console.log(`Sending commission paid notification...`);
-            await this.notificationsGateway.notifyCommissionPaid(
-              beneficiaryUserId,
-              {
-                commissionId: savedCommission.uuid,
-                amount: computed,
-                newBalance: walletResult.wallet.balance,
-              }
-            );
-            console.log(`Commission paid notification sent`);
-
-            console.log(`Sending commission earned notification...`);
-            await this.notificationsGateway.notifyCommissionEarned(
-              beneficiaryUserId,
-              {
-                commissionId: savedCommission.uuid,
-                amount: computed,
-                level,
-                orderId,
-                orderNumber: `#${orderId}`,
-                productName: orderItem?.product?.name || 'Unknown Product',
-                programName: program?.name || 'Unknown Program',
-              }
-            );
-            console.log(`Commission earned notification sent`);
-          } catch (notifError) {
-            console.error(
-              ` Failed to send notification to user ${beneficiaryUserId}:`,
-              notifError
-            );
-          }
 
           walletSuccess = true;
           break;
@@ -523,6 +473,9 @@ export class CommissionCalcService {
     console.log(
       ` Processing group buying order ${orderId} with max ${maxLevels} commission levels`
     );
+    console.log(
+      ` 🔍 DEBUG GROUP: level0UserId=${level0UserId}, orderUserId=${orderUserId}, maxLevels=${maxLevels}`
+    );
 
     const groupMembers = groupOrder.members || [];
     const memberCount = groupMembers.length;
@@ -585,7 +538,7 @@ export class CommissionCalcService {
 
       if (maxLevels > 1) {
         console.log(
-          ` Processing multi-level commissions for group buying order ${orderId}, levels 2-${maxLevels}`
+          ` Processing multi-level commissions for group buying order ${orderId}, maxLevels=${maxLevels}, levels 2-${maxLevels}`
         );
 
         const ancestors = await this.affiliateTreeService.findAncestors(
@@ -593,7 +546,13 @@ export class CommissionCalcService {
           maxLevels - 1
         );
         console.log(
-          ` Found ${ancestors.length} ancestors for multi-level commission`
+          ` Found ${ancestors.length} ancestors for multi-level commission (requested: ${maxLevels - 1})`
+        );
+        console.log(
+          ` 🔍 DEBUG ANCESTORS: ${ancestors.join(', ')}`
+        );
+        console.log(
+          ` ⚠️ DEBUG: Will call allocateLevel() ${1 + Math.min(ancestors.length, maxLevels - 1)} times total (1 for Level 1 + ${Math.min(ancestors.length, maxLevels - 1)} for ancestors)`
         );
 
         for (
@@ -603,6 +562,14 @@ export class CommissionCalcService {
         ) {
           const beneficiaryId = ancestors[idx];
           const level = idx + 2;
+
+          // Skip if ancestor is the same as level0UserId (prevent self-commission at higher levels)
+          if (beneficiaryId === level0UserId) {
+            console.log(
+              ` ⚠️ Skipping Level ${level} - beneficiary ${beneficiaryId} is same as level0UserId (prevent duplicate)`
+            );
+            continue;
+          }
 
           try {
             await this.allocateLevel(
@@ -888,6 +855,10 @@ export class CommissionCalcService {
       console.warn(' Unable to fetch num_levels from rule, defaulting to 1');
     }
 
+    console.log(
+      ` 🔍 DEBUG REGULAR: maxLevels=${maxLevels}`
+    );
+
     const items = await this.orderItemRepo.find({
       where: { order: { id: order.id } },
       relations: ['product'],
@@ -938,6 +909,12 @@ export class CommissionCalcService {
             level0UserId,
             maxLevels - 1
           );
+          console.log(
+            ` Found ${ancestors.length} ancestors for item ${item.id} (requested: ${maxLevels - 1})`
+          );
+          console.log(
+            ` ⚠️ DEBUG: Will call allocateLevel() ${1 + Math.min(ancestors.length, maxLevels - 1)} times for this item (1 for Level 1 + ${Math.min(ancestors.length, maxLevels - 1)} for ancestors)`
+          );
           for (
             let idx = 0;
             idx < ancestors.length && idx < maxLevels - 1;
@@ -945,6 +922,15 @@ export class CommissionCalcService {
           ) {
             const beneficiaryId = ancestors[idx];
             const level = idx + 2;
+            
+            // Skip if ancestor is the same as level0UserId (prevent self-commission at higher levels)
+            if (beneficiaryId === level0UserId) {
+              console.log(
+                ` ⚠️ Skipping Level ${level} - beneficiary ${beneficiaryId} is same as level0UserId (prevent duplicate)`
+              );
+              continue;
+            }
+            
             try {
               await this.allocateLevel(
                 order,
