@@ -71,6 +71,7 @@ export default function Info({
   product,
   selectedVariantId,
   setSelectedVariantId,
+  onVariantNameClick,
   quantity,
   setQuantity,
   calculatedPrice,
@@ -84,6 +85,7 @@ export default function Info({
   product?: Product;
   selectedVariantId: number | null;
   setSelectedVariantId: (id: number) => void;
+  onVariantNameClick?: (variantId: number) => void;
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
@@ -126,7 +128,7 @@ export default function Info({
   ]);
 
   useEffect(() => {
-  console.log('🧩 [Info] selectedRuleId (prop):', selectedRuleId);
+  // console.log('🧩 [Info] selectedRuleId (prop):', selectedRuleId);
 }, [selectedRuleId]);
 
   /** --------------------- Stock & Max Quantity --------------------- */
@@ -306,7 +308,11 @@ export default function Info({
                   ? 'border-blue-500 text-blue-600'
                   : 'border-gray-300'
               }`}
-              onClick={() => setSelectedVariantId(v.id)}
+              onClick={() => {
+                setSelectedVariantId(v.id);
+                // Trigger gallery scroll to variant's first image
+                onVariantNameClick?.(v.id);
+              }}
             >
               {v.variant_name} ({vnd(v.price)})
             </button>

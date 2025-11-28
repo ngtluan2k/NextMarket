@@ -523,8 +523,17 @@ export class ProductService {
         url: m.url,
       })),
       variants: product.variants.map((v) => {
-        // Get variant-specific media, fallback to product-level media if none exist
-        const variantSpecificMedia = variantMediaMap[v.id] || productLevelMedia;
+        // Get variant-specific media
+        const variantSpecificMedia = variantMediaMap[v.id];
+        
+        // If variant has its own media, use it; otherwise use product-level media (primary first)
+        let mediaToDisplay = variantSpecificMedia;
+        if (!mediaToDisplay || mediaToDisplay.length === 0) {
+          // Use product-level media (primary first, then first available)
+          const primaryMedia = productLevelMedia.find((m) => m.is_primary);
+          mediaToDisplay = primaryMedia ? [primaryMedia] : (productLevelMedia.length > 0 ? [productLevelMedia[0]] : []);
+        }
+        
         return {
           id: v.id,
           sku: v.sku,
@@ -532,7 +541,7 @@ export class ProductService {
           price: v.price,
           stock: v.stock,
           // Display variant-specific media if available, otherwise product-level media
-          media: variantSpecificMedia.map((m) => ({
+          media: mediaToDisplay.map((m) => ({
             url: m.url,
             is_primary: m.is_primary,
             sort_order: m.sort_order,

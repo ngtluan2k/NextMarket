@@ -20,6 +20,7 @@ export interface CartItem {
     variant_name: string;
     price: number;
     stock: number;
+    media?: { url: string; is_primary?: boolean }[];
   };
   type: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   pricing_rule?: PricingRule;

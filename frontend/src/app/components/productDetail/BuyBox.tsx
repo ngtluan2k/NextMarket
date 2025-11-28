@@ -8,12 +8,9 @@ import { PricingRuleInfo, Product } from '../../types/product';
 import { LightProduct, CheckoutLocationState } from '../../types/buyBox';
 import { BE_BASE_URL } from '../../api/api';
 import { Users } from 'lucide-react';
-import { Rate } from 'antd';
-import { log } from 'console';
 import { useAuth } from '../../context/AuthContext';
 import { useGroupOrderItems } from '../../hooks/useGroupOrderItems';
 import { StarFilled } from '@ant-design/icons';
-import { PricingRule } from './Info';
 
 function toAbs(p?: string) {
   if (!p) return '';
@@ -64,13 +61,13 @@ export default function BuyBox({
   groupId?: number | null;
   selectedRuleId?: number | null; // ✅ thêm dòng này
 }) {
-  console.log('📦 BuyBox props:', {
-    product,
-    selectedVariantId,
-    quantity,
-    selectedType,
-    selectedRuleId,
-  });
+  // console.log('📦 BuyBox props:', {
+  //   product,
+  //   selectedVariantId,
+  //   quantity,
+  //   selectedType,
+  //   selectedRuleId,
+  // });
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { user } = useAuth();
@@ -89,17 +86,17 @@ export default function BuyBox({
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
-    console.log('💰 [BuyBox] nhận selectedRuleId:', selectedRuleId);
+    // console.log('💰 [BuyBox] nhận selectedRuleId:', selectedRuleId);
   }, [selectedRuleId]);
   useEffect(() => {
-    console.log('BuyBox mounted/updated', {
-      productId: product?.id,
-      productName: product?.name,
-      location: location.pathname,
-      showLoginModal,
-    });
+    // console.log('BuyBox mounted/updated', {
+    //   productId: product?.id,
+    //   productName: product?.name,
+    //   location: location.pathname,
+    //   showLoginModal,
+    // });
     const token = localStorage.getItem('token');
-    console.log(' Token:', token ? 'exists' : 'null');
+    // console.log(' Token:', token ? 'exists' : 'null');
   }, [location.pathname, showLoginModal, product, quantity]);
 
   const handleBuyNow = async () => {
@@ -130,7 +127,7 @@ export default function BuyBox({
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('No token, saving buyNowData');
+      // console.log('No token, saving buyNowData');
       localStorage.setItem(
         'buyNowData',
         JSON.stringify({ product, quantity, variantId: selectedVariantId })
@@ -177,7 +174,7 @@ export default function BuyBox({
       subtotal: calculatedPrice * quantity,
     };
 
-    console.log(JSON.stringify(checkoutState));
+    // console.log(JSON.stringify(checkoutState));
     console.log('Navigating to /checkout with state:', checkoutState);
     console.log('Checkout items built:', checkoutState.items);
     navigate('/checkout', { state: checkoutState });
