@@ -98,12 +98,15 @@ export class NotificationsGateway
 
 
   async notify(userId: number, payload: NotificationPayload) {
+    console.log(`[NotificationsGateway] notify() called for user ${userId}, type: ${payload.type}`);
+    
     if (!this.server) {
       console.warn('[NotificationsGateway] Server not ready, skip emit');
       return;
     }
 
     const userRoom = this.getUserRoom(userId);
+    console.log(`[NotificationsGateway] User room: ${userRoom}`);
     
     const notification = {
       type: payload.type,
@@ -115,13 +118,11 @@ export class NotificationsGateway
       timestamp: new Date(),
     };
     
-    // Emit generic 'notification' event
-    this.server.to(userRoom).emit('notification', notification);
-    
-    // Also emit specific event for backward compatibility
+    console.log(`[NotificationsGateway] Emitting specific "${payload.type}" event to room ${userRoom}`);
+    // Emit specific event (frontend will dispatch custom events)
     this.server.to(userRoom).emit(payload.type, notification);
 
-    console.log(`[NotificationsGateway] Sent ${payload.type} to user ${userId}`);
+    console.log(`[NotificationsGateway] ✅ Sent ${payload.type} to user ${userId} in room ${userRoom}`);
     
     // TODO: Save notification to database for history
     // await this.saveNotificationToDatabase(userId, notification);

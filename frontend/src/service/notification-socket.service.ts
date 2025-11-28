@@ -182,16 +182,9 @@ class NotificationSocketService {
     });
 
     // ========================================
-    // GENERIC NOTIFICATION LISTENER
+    // GENERIC NOTIFICATION LISTENER (Removed - using specific type listeners instead)
     // ========================================
-    this.socket.on('notification', (data: NotificationData) => {
-      console.log('[NotificationSocket] Received notification:', data.type, data);
-      
-      // 🔧 FIX: Don't show popup here - let components decide how to display
-      // Only dispatch custom events for components to listen
-      window.dispatchEvent(new CustomEvent('notification', { detail: data }));
-      window.dispatchEvent(new CustomEvent(data.type, { detail: data.data }));
-    });
+    // Removed to prevent duplicate notifications
 
     // ========================================
     // AFFILIATE NOTIFICATIONS (✅ Implemented)

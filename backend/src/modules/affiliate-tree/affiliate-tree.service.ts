@@ -600,6 +600,7 @@ export class AffiliateTreeService {
     
     try {
       // Get descendants with level using recursive query
+      // IMPORTANT: Exclude the current user from results to prevent self-reference
       const descendantsQuery = `
         WITH RECURSIVE DescendantsCTE AS (
           SELECT 
@@ -610,6 +611,7 @@ export class AffiliateTreeService {
             referrals
           WHERE 
             referrer_id = $1
+            AND referee_id != $1
 
           UNION ALL
 
@@ -623,6 +625,7 @@ export class AffiliateTreeService {
             DescendantsCTE dcte ON r.referrer_id = dcte.referee_id
           WHERE 
             dcte.level < $2
+            AND r.referee_id != $1
         )
         SELECT 
           referee_id,

@@ -56,7 +56,7 @@ export class CommissionCalcService {
 
       if (!order) {
         console.warn(
-          `⚠️ Order ${orderId} not found for commission calculation`
+          ` Order ${orderId} not found for commission calculation`
         );
         return;
       }
@@ -67,7 +67,7 @@ export class CommissionCalcService {
 
       if (existingCommission) {
         console.log(
-          `⚠️ Commission already processed for order ${orderId}, skipping to prevent duplicates`
+          ` Commission already processed for order ${orderId}, skipping to prevent duplicates`
         );
         return;
       }
@@ -138,7 +138,7 @@ export class CommissionCalcService {
     }
 
     console.log(
-      `💵 Calculated commission: ${computed} VND (${rate}% of ${baseAmount})`
+      ` Calculated commission: ${computed} VND (${rate}% of ${baseAmount})`
     );
 
     if (programId) {
@@ -235,7 +235,7 @@ export class CommissionCalcService {
             const program = programId
               ? await this.programRepo.findOne({ where: { id: programId } })
               : null;
-            console.log(`📋 Program info: ${program?.name || 'No program'}`);
+            console.log(` Program info: ${program?.name || 'No program'}`);
 
             const orderItem = await this.orderItemRepo.findOne({
               where: { id: item.id },
@@ -463,7 +463,6 @@ export class CommissionCalcService {
       return;
     }
 
-    // Prevent self-commission
     const orderUserId = Number(order.user?.id || (order as any).user_id);
     if (orderUserId === level0UserId) {
       console.log(
@@ -472,7 +471,6 @@ export class CommissionCalcService {
       return;
     }
 
-    // Check program status
     if (programId) {
       const program = await this.programRepo.findOne({
         where: { id: programId },
@@ -564,13 +562,13 @@ export class CommissionCalcService {
 
     if (totalOrderSubtotal <= 0) {
       console.log(
-        `⏭️ Skipping group buying order with zero/negative total: ${totalOrderSubtotal}`
+        `Skipping group buying order with zero/negative total: ${totalOrderSubtotal}`
       );
       return;
     }
 
     console.log(
-      `💰 Processing group buying order ${orderId}: total subtotal = ${totalOrderSubtotal}`
+      ` Processing group buying order ${orderId}: total subtotal = ${totalOrderSubtotal}`
     );
 
     try {
@@ -587,7 +585,7 @@ export class CommissionCalcService {
 
       if (maxLevels > 1) {
         console.log(
-          `🌳 Processing multi-level commissions for group buying order ${orderId}, levels 2-${maxLevels}`
+          ` Processing multi-level commissions for group buying order ${orderId}, levels 2-${maxLevels}`
         );
 
         const ancestors = await this.affiliateTreeService.findAncestors(
@@ -595,7 +593,7 @@ export class CommissionCalcService {
           maxLevels - 1
         );
         console.log(
-          `👥 Found ${ancestors.length} ancestors for multi-level commission`
+          ` Found ${ancestors.length} ancestors for multi-level commission`
         );
 
         for (
@@ -640,64 +638,161 @@ export class CommissionCalcService {
   ) {
     try {
       const groupMembers = groupOrder.members || [];
+      let enrolledCount = 0;
+      let skippedCount = 0;
 
       console.log(
-        ` Checking ${groupMembers.length} members for orphan status in group ${groupOrder.id}`
+        `\n🌳 [ENROLL FLOW] Group ${groupOrder.id} - Affiliate ${affiliateUserId}`
+      );
+      console.log(
+        ` Checking ${groupMembers.length} members for orphan status`
       );
 
       for (const member of groupMembers) {
         const memberId = member.user.id;
+        console.log(`\n  👤 Member ${memberId}:`);
 
+        // CHECK 1: Self-referral prevention
         if (memberId === affiliateUserId) {
-          console.log(
-            ` Skipping affiliate user ${affiliateUserId} (cannot be their own referrer)`
-          );
+          console.log(`    ⛔ Self-referral`);
+          skippedCount++;
           continue;
         }
 
+        // ========================================
+        // CHECK 2: Already has a referrer
+        // ========================================
         const existingReferral = await this.referralRepo
           .createQueryBuilder('r')
+          .leftJoinAndSelect('r.referrer', 'referrer')
           .where('r.referee_id = :memberId', { memberId })
           .getOne();
 
         if (existingReferral) {
-          console.log(`Member ${memberId} already has a referrer, skipping`);
+          console.log(
+            `    ✅ Has referrer: ${existingReferral.referrer?.id}`
+          );
+          skippedCount++;
           continue;
         }
+        console.log(
+          `    ℹ️  Orphan - can enroll`
+        );
 
-        try {
-          const affiliateUser = await this.userRepo.findOne({
-            where: { id: affiliateUserId },
-          });
-          const memberUser = await this.userRepo.findOne({
-            where: { id: memberId },
-          });
+        // ========================================
+        // CHECK 3: Circular reference prevention
+        // ========================================
+        const wouldCreateCircle = await this.referralRepo
+          .createQueryBuilder('r')
+          .where('r.referrer_id = :memberId', { memberId })
+          .andWhere('r.referee_id = :affiliateUserId', { affiliateUserId })
+          .getOne();
 
-          if (!affiliateUser || !memberUser) {
-            console.error(
-              ` Cannot find affiliate user ${affiliateUserId} or member user ${memberId}`
+        if (wouldCreateCircle) {
+          console.log(
+            ` ⛔ [CHECK 3] Would create circular reference`
+          );
+          skippedCount++;
+          continue;
+        }
+        console.log(
+          `    ✅ [CHECK 3] No circular reference`
+        );
+
+        // ========================================
+        // CHECK 4: Hierarchy violation prevention
+        // ========================================
+        const isAncestorOfAffiliate = await this.referralRepo
+          .createQueryBuilder('r')
+          .where('r.referee_id = :affiliateUserId', { affiliateUserId })
+          .getOne();
+
+        if (isAncestorOfAffiliate) {
+          const ancestors = await this.affiliateTreeService.findAncestors(
+            affiliateUserId,
+            100
+          );
+          
+          if (ancestors.includes(memberId)) {
+            console.log(
+              `    ⛔ [CHECK 4] Is ancestor of affiliate`
             );
+            skippedCount++;
             continue;
           }
+        }
+        console.log(
+          `    ✅ [CHECK 4] No hierarchy violation`
+        );
 
+        // ========================================
+        // CHECK 5: Validate users exist
+        // ========================================
+        const affiliateUser = await this.userRepo.findOne({
+          where: { id: affiliateUserId },
+        });
+        const memberUser = await this.userRepo.findOne({
+          where: { id: memberId },
+        });
+
+        if (!affiliateUser || !memberUser) {
+          console.error(
+            `    ⛔ [CHECK 5] User not found`
+          );
+          skippedCount++;
+          continue;
+        }
+        console.log(
+          `    ✅ [CHECK 5] Users exist`
+        );
+
+        // All checks passed - Enroll member
+        try {
+          console.log(
+            `    📝 Creating referral with code: "${affiliateUser.code}" (from affiliate user ${affiliateUserId})`
+          );
+          
           const newReferral = this.referralRepo.create({
             referrer: affiliateUser,
             referee: memberUser,
+            code: affiliateUser.code, // Use affiliate user's code
+            status: 'active',
             created_at: new Date(),
           });
 
-          await this.referralRepo.save(newReferral);
           console.log(
-            ` Enrolled orphan member ${memberId} under affiliate user ${affiliateUserId}`
+            `    📋 Referral object before save:`,
+            JSON.stringify({
+              referrer_id: affiliateUser.id,
+              referee_id: memberUser.id,
+              code: newReferral.code,
+              status: newReferral.status,
+              created_at: newReferral.created_at,
+            }, null, 2)
           );
+
+          const savedReferral = await this.referralRepo.save(newReferral);
+          
+          console.log(
+            `    ✅ [ENROLLED] → Affiliate ${affiliateUserId} with code "${savedReferral.code}"`
+          );
+          console.log(
+            `    ✅ Referral ID: ${savedReferral.id}, Code: "${savedReferral.code}", Status: ${savedReferral.status}`
+          );
+          enrolledCount++;
         } catch (err) {
-          console.error(` Failed to enroll member ${memberId}:`, err);
+          console.error(`    ⛔ [ERROR] Enroll failed:`, (err as any).message);
+          console.error(`    ⛔ Error details:`, err);
+          skippedCount++;
         }
+
       }
 
+      // Summary
       console.log(
-        `Affiliate tree enrollment completed for group ${groupOrder.id}`
+        `\n📊 Group ${groupOrder.id} enrollment summary:`
       );
+      console.log(`   Total: ${groupMembers.length} | Enrolled: ${enrolledCount} | Skipped: ${skippedCount}`);
     } catch (error) {
       console.error(` Error during affiliate tree enrollment:`, error);
     }
@@ -707,9 +802,9 @@ export class CommissionCalcService {
     if (!order) return;
 
     const orderId = order.id;
-    console.log(`📋 Processing regular order commission for order ${orderId}`);
+    console.log(` Processing regular order commission for order ${orderId}`);
 
-    console.log(`🔍 DEBUG - Order ${orderId} affiliate fields:`, {
+    console.log(` DEBUG - Order ${orderId} affiliate fields:`, {
       affiliate_code: (order as any).affiliate_code,
       affiliate_user_id: (order as any).affiliate_user_id,
       affiliate_program_id: (order as any).affiliate_program_id,
@@ -729,7 +824,7 @@ export class CommissionCalcService {
         ? Number((order as any).affiliate_link_id)
         : null;
       console.log(
-        `👤 Using affiliate user: ${level0UserId}, program: ${programId}, link: ${linkId}`
+        ` Using affiliate user: ${level0UserId}, program: ${programId}, link: ${linkId}`
       );
     }
 
@@ -738,27 +833,27 @@ export class CommissionCalcService {
         where: { id: programId },
       });
       if (!program) {
-        console.warn(`⚠️ Affiliate program ${programId} not found`);
+        console.warn(` Affiliate program ${programId} not found`);
         return;
       }
       if (program.status !== 'active') {
         console.warn(
-          `⚠️ Affiliate program ${programId} is not active (status: ${program.status})`
+          ` Affiliate program ${programId} is not active (status: ${program.status})`
         );
         return;
       }
-      console.log(`✅ Using active affiliate program: ${program.name}`);
+      console.log(` Using active affiliate program: ${program.name}`);
     }
 
     if (!level0UserId) {
-      console.log(`ℹ️ No affiliate tracking found for order ${orderId}`);
+      console.log(` No affiliate tracking found for order ${orderId}`);
       return;
     }
 
     const orderUserId = Number(order.user?.id || (order as any).user_id);
     if (orderUserId === level0UserId) {
       console.log(
-        `🚫 Preventing self-commission for user ${level0UserId} on order ${orderId}`
+        ` Preventing self-commission for user ${level0UserId} on order ${orderId}`
       );
       return;
     }
@@ -790,7 +885,7 @@ export class CommissionCalcService {
         maxLevels = Number((ruleLevel1 as any).rule.num_levels) || 1;
       }
     } catch (err) {
-      console.warn('⚠️ Unable to fetch num_levels from rule, defaulting to 1');
+      console.warn(' Unable to fetch num_levels from rule, defaulting to 1');
     }
 
     const items = await this.orderItemRepo.find({
@@ -799,19 +894,19 @@ export class CommissionCalcService {
     });
 
     if (!items || items.length === 0) {
-      console.warn(`⚠️ No order items found for order ${orderId}`);
+      console.warn(` No order items found for order ${orderId}`);
       return;
     }
 
     console.log(
-      `📦 Processing ${items.length} items for commission calculation`
+      ` Processing ${items.length} items for commission calculation`
     );
 
     for (const item of items) {
       const baseAmount = Number((item as any).subtotal ?? 0);
       if (baseAmount <= 0) {
         console.log(
-          `⏭️ Skipping item ${item.id} with zero/negative amount: ${baseAmount}`
+          ` Skipping item ${item.id} with zero/negative amount: ${baseAmount}`
         );
         continue;
       }

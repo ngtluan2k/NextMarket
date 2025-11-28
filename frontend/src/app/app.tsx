@@ -60,11 +60,6 @@ import AdminCampaignStoreProductsWrapper from './components/admin/AdminCampaignS
 import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
-import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
-import AffiliateRulesDebug from './components/debug/AffiliateRulesDebug';
-import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
-import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
-import LoginPerformanceDebug from './components/debug/LoginPerformanceDebug';
 import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
 
 interface CartProps {
@@ -224,28 +219,6 @@ const App: React.FC = () => {
               element={<GroupOrderDetail />}
             />
             <Route path="/group/:uuid" element={<GroupJoin />} />
-
-            {/* Debug Routes */}
-            <Route
-              path="/debug/affiliate-variant"
-              element={<AffiliateVariantTest />}
-            />
-            <Route
-              path="/debug/affiliate-rules"
-              element={<AffiliateRulesDebug />}
-            />
-            <Route
-              path="/debug/commission-tree"
-              element={<CommissionTreeDebug />}
-            />
-            <Route
-              path="/debug/commission-database"
-              element={<CommissionDatabaseDebug />}
-            />
-            <Route
-              path="/debug/login-performance"
-              element={<LoginPerformanceDebug />}
-            />
           </Routes>
           <CampaignAdPopup />
         </CartProvider>

@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   Card, 
-  Tree, 
   Tag, 
   Statistic, 
   Row, 
@@ -10,7 +9,10 @@ import {
   Select, 
   Button,
   Space,
-  Progress
+  Progress,
+  Tooltip,
+  Badge,
+  Divider
 } from 'antd';
 import { 
   TeamOutlined, 
@@ -18,8 +20,9 @@ import {
   DollarOutlined, 
   UserOutlined,
   ReloadOutlined,
-  UserSwitchOutlined,
-  BranchesOutlined
+  BranchesOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
 import { fetchMyDownlineTree, fetchMyAffiliateStats } from '../../../../../../service/afiliate/affiliate-tree.service';
 import { 
@@ -66,42 +69,50 @@ const UserAffiliateTree: React.FC = () => {
     loadStats();
   }, [maxDepth, programId]);
 
-  // Transform tree data for Ant Design Tree component
-  const transformToTreeData = (downlines: any[]) => {
-    if (!downlines || downlines.length === 0) return [];
-    
-    // Create completely unique keys using multiple identifiers
-    const timestamp = Date.now();
-    const flatNodes = downlines.map((item: any, globalIndex: number) => ({
-      ...item,
-      uniqueKey: `affiliate-${timestamp}-${item.level}-${item.affiliateCode}-${globalIndex}-${Math.random().toString(36).substr(2, 9)}`,
-      globalIndex
-    }));
-    
-    // Sort by level to ensure proper hierarchy
-    flatNodes.sort((a, b) => a.level - b.level);
-    
-    // Build flat tree structure (no nested children for now to avoid complexity)
-    return flatNodes.map((item: any) => ({
-      title: (
-        <div className="flex items-center space-x-2">
-          <Tag color="purple">F{item.level}</Tag>
-          <Tag color="blue">{item.affiliateCode}</Tag>
-          <Tag color={item.status === 'active' ? 'green' : 'default'}>
-            {item.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-          </Tag>
-          <span className="text-sm text-gray-600">
-            {item.totalOrders} đơn hàng • {Number(item.totalRevenue).toLocaleString('vi-VN')}đ
-          </span>
-        </div>
-      ),
-      key: item.uniqueKey,
-      icon: <UserSwitchOutlined />,
-      isLeaf: true // Make all nodes leaf nodes to avoid nesting issues
-    }));
+  // Group data by level (filter out self-references)
+  const levelGroups = useMemo(() => {
+    const groups: Record<number, any[]> = {};
+    (downlineData?.tree || []).forEach((item: any) => {
+      // Skip if this is a self-reference (shouldn't happen but just in case)
+      if (item.level === 0) {
+        console.warn('⚠️ Skipping self-reference in tree:', item);
+        return;
+      }
+      
+      if (!groups[item.level]) {
+        groups[item.level] = [];
+      }
+      groups[item.level].push(item);
+    });
+    return groups;
+  }, [downlineData]);
+
+  const levels = useMemo(() => {
+    return Object.keys(levelGroups)
+      .map(Number)
+      .sort((a, b) => a - b);
+  }, [levelGroups]);
+
+  // Get tier color
+  const getTierColor = (tier: string) => {
+    const colors: Record<string, string> = {
+      bronze: '#CD7F32',
+      silver: '#C0C0C0',
+      gold: '#FFD700',
+      platinum: '#E5E4E2',
+    };
+    return colors[tier] || '#999';
   };
 
-  const treeNodes = transformToTreeData(downlineData?.tree || []);
+  const getTierLabel = (tier: string) => {
+    const labels: Record<string, string> = {
+      bronze: 'Bronze',
+      silver: 'Silver',
+      gold: 'Gold',
+      platinum: 'Platinum',
+    };
+    return labels[tier] || tier;
+  };
 
   return (
     <div className="space-y-6">
@@ -224,32 +235,186 @@ const UserAffiliateTree: React.FC = () => {
         closable
       />
 
-      {/* Downline Tree */}
+      {/* Downline Tree Visualization */}
       <Card 
         title={
           <div className="flex items-center space-x-2">
             <BranchesOutlined />
-            <span>Cây Downline</span>
+            <span>Biểu đồ Cây Affiliate</span>
           </div>
         } 
         loading={loading}
       >
-        {treeNodes && treeNodes.length > 0 ? (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <Tree
-              showIcon
-              defaultExpandAll
-              treeData={treeNodes}
-              style={{
-                background: 'transparent',
-                fontSize: '14px'
-              }}
-            />
+        {downlineData && downlineData.tree && downlineData.tree.length > 0 ? (
+          <div className="space-y-6">
+            {/* Root Node */}
+            <div className="flex flex-col items-center">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg px-6 py-4 shadow-lg mb-4">
+                <div className="flex items-center gap-2">
+                  <UserOutlined className="text-xl" />
+                  <span className="font-semibold">Bạn (Root)</span>
+                </div>
+              </div>
+              {levels.length > 0 && (
+                <div className="text-2xl text-gray-400 mb-4">↓</div>
+              )}
+            </div>
+
+            {/* Level Nodes */}
+            {levels.map((level) => {
+              const levelData = levelGroups[level];
+              const levelStats = {
+                total: levelData.length,
+                active: levelData.filter((d: any) => d.status === 'active').length,
+                totalRevenue: levelData.reduce((sum: number, d: any) => sum + d.totalRevenue, 0),
+                totalCommission: levelData.reduce(
+                  (sum: number, d: any) => sum + d.totalCommissionGenerated,
+                  0
+                ),
+              };
+
+              return (
+                <div key={`level-${level}`} className="space-y-4">
+                  {/* Level Header */}
+                  <div className="flex flex-col items-center gap-2 mb-4">
+                    <div className="bg-gray-100 px-4 py-2 rounded-full">
+                      <span className="font-semibold text-gray-700">Cấp F{level}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap justify-center text-xs">
+                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        {levelStats.active}/{levelStats.total} hoạt động
+                      </span>
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
+                        {Number(levelStats.totalRevenue).toLocaleString('vi-VN', {
+                          notation: 'compact',
+                        })}
+                        đ
+                      </span>
+                      <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                        Hoa hồng: {Number(levelStats.totalCommission).toLocaleString('vi-VN', {
+                          notation: 'compact',
+                        })}
+                        đ
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Level Nodes Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {levelData.map((member: any, index: number) => (
+                      <Tooltip
+                        key={`${level}-${member.affiliateCode}-${index}`}
+                        title={
+                          <div className="text-sm space-y-1">
+                            <div className="font-semibold">{member.affiliateCode}</div>
+                            <Divider style={{ margin: '4px 0' }} />
+                            <div>
+                              <strong>Trạng thái:</strong>{' '}
+                              {member.status === 'active' ? (
+                                <span className="text-green-400">✓ Hoạt động</span>
+                              ) : (
+                                <span className="text-red-400">✗ Không hoạt động</span>
+                              )}
+                            </div>
+                            <div>
+                              <strong>Đơn hàng:</strong> {member.totalOrders}
+                            </div>
+                            <div>
+                              <strong>Doanh thu:</strong>{' '}
+                              {Number(member.totalRevenue).toLocaleString('vi-VN')}đ
+                            </div>
+                            <div>
+                              <strong>Hoa hồng:</strong>{' '}
+                              {Number(member.totalCommissionGenerated).toLocaleString('vi-VN')}đ
+                            </div>
+                            <div>
+                              <strong>Tham gia:</strong>{' '}
+                              {new Date(member.joinedDate).toLocaleDateString('vi-VN')}
+                            </div>
+                            <div>
+                              <strong>Downline trực tiếp:</strong> {member.directReferrals}
+                            </div>
+                            <div>
+                              <strong>Tổng downline:</strong> {member.totalDownlines}
+                            </div>
+                          </div>
+                        }
+                        placement="top"
+                      >
+                        <div
+                          className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${
+                            member.status === 'active'
+                              ? 'border-green-400 bg-green-50 hover:bg-green-100'
+                              : 'border-gray-300 bg-gray-50 hover:bg-gray-100 opacity-70'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2 mb-2">
+                            <Badge
+                              count={
+                                <span
+                                  className="text-xs font-bold text-white rounded-full w-5 h-5 flex items-center justify-center"
+                                  style={{
+                                    backgroundColor: getTierColor(member.performanceTier),
+                                  }}
+                                >
+                                  {getTierLabel(member.performanceTier)[0]}
+                                </span>
+                              }
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                                style={{
+                                  backgroundColor:
+                                    member.status === 'active' ? '#52c41a' : '#bfbfbf',
+                                }}
+                              >
+                                <UserOutlined className="text-sm" />
+                              </div>
+                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm truncate">
+                                {member.affiliateCode}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {member.totalOrders} đơn •{' '}
+                                {Number(member.totalRevenue).toLocaleString('vi-VN', {
+                                  notation: 'compact',
+                                })}
+                                đ
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 flex-wrap">
+                            {member.status === 'active' ? (
+                              <Tag color="green" icon={<CheckCircleOutlined />}>
+                                Hoạt động
+                              </Tag>
+                            ) : (
+                              <Tag color="default" icon={<CloseCircleOutlined />}>
+                                Không hoạt động
+                              </Tag>
+                            )}
+                            <Tag color="blue">F{level}</Tag>
+                          </div>
+                        </div>
+                      </Tooltip>
+                    ))}
+                  </div>
+
+                  {/* Connector to next level */}
+                  {level < Math.max(...levels) && (
+                    <div className="flex justify-center py-4">
+                      <div className="text-2xl text-gray-400">↓</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            <BranchesOutlined className="text-4xl mb-2" />
-            <p>Chưa có downline nào</p>
+          <div className="text-center py-12 text-gray-500">
+            <BranchesOutlined className="text-5xl mb-4" />
+            <p className="text-lg font-semibold">Chưa có downline nào</p>
             <p className="text-sm">Chia sẻ link affiliate của bạn để bắt đầu xây dựng team</p>
           </div>
         )}

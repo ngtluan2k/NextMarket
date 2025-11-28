@@ -8,6 +8,7 @@ import {
   updateAffiliateProgram,
   createAffiliateProgram,
   deleteAffiliateProgram,
+  hardDeleteAffiliateProgram,
   getAllAffiliatePrograms,
 } from '../../../../service/afiliate/affiliate.service';
 import AffiliateProgramDetail from './AffiliateProgramDetail';
@@ -167,13 +168,27 @@ const AffiliateProgramDashboard = () => {
     try {
       const response = await deleteAffiliateProgram(id);
       if (response) {
-        message.success('Xoá chương trình thành công');
+        message.success('Xoá tạm thời chương trình thành công');
         fetchPrograms();
       } else {
         message.error('Không thể xóa chương trình');
       }
     } catch (error) {
       message.error('Đã xảy ra lỗi');
+    }
+  };
+
+  const handleHardDelete = async (id: number) => {
+    try {
+      const response = await hardDeleteAffiliateProgram(id);
+      if (response) {
+        message.success('Xoá cứng chương trình thành công. Tất cả dữ liệu liên quan đã bị xóa vĩnh viễn.');
+        fetchPrograms();
+      } else {
+        message.error('Không thể xóa cứng chương trình');
+      }
+    } catch (error) {
+      message.error('Đã xảy ra lỗi khi xóa cứng chương trình');
     }
   };
 
@@ -218,6 +233,7 @@ const AffiliateProgramDashboard = () => {
           onView={handleViewDetail}
           onEdit={openModalForEdit}
           onDelete={handleDelete}
+          onHardDelete={handleHardDelete}
         />
 
         <AffiliateProgramFormModal

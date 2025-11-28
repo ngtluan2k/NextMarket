@@ -11,6 +11,7 @@ interface Props {
   onView: (id: number) => void;
   onEdit: (program: AffiliateProgram) => void;
   onDelete: (id: number) => void;
+  onHardDelete: (id: number) => void;
 }
 
 const vnd = (value: number) =>
@@ -19,7 +20,7 @@ const vnd = (value: number) =>
     currency: 'VND',
   }).format(value || 0);
 
-const AffiliateProgramsTable = ({ programs, loading, onView, onEdit, onDelete }: Props) => {
+const AffiliateProgramsTable = ({ programs, loading, onView, onEdit, onDelete, onHardDelete }: Props) => {
   const columns: ColumnsType<AffiliateProgram> = [
     {
       title: 'Tên',
@@ -175,14 +176,26 @@ const AffiliateProgramsTable = ({ programs, loading, onView, onEdit, onDelete }:
             Chỉnh sửa
           </Button>
           <Popconfirm
-            title="Xóa chương trình"
-            description="Bạn có chắc chắn muốn xóa chương trình này không?"
+            title="Xóa tạm thời"
+            description="Chương trình sẽ chuyển sang trạng thái ngừng hoạt động. Bạn có thể kích hoạt lại sau."
             onConfirm={() => onDelete(record.id)}
             okText="Có"
             cancelText="Không"
           >
+            <Button type="link" icon={<DeleteOutlined />}>
+              Xóa tạm
+            </Button>
+          </Popconfirm>
+          <Popconfirm
+            title="Xóa cứng chương trình"
+            description="⚠️ Cảnh báo: Thao tác này sẽ xóa vĩnh viễn chương trình, tất cả liên kết affiliate, quy tắc hoa hồng và dữ liệu hoa hồng. Không thể hoàn tác!"
+            onConfirm={() => onHardDelete(record.id)}
+            okText="Xóa vĩnh viễn"
+            okButtonProps={{ danger: true }}
+            cancelText="Hủy"
+          >
             <Button type="link" danger icon={<DeleteOutlined />}>
-              Xóa
+              Xóa cứng
             </Button>
           </Popconfirm>
         </Space>
