@@ -3,10 +3,11 @@ import { FloatingChatBubble } from "./FloatingChatBubble";
 import { ChatBox } from "./ChatBox";
 import { useChatSocket } from "../hooks/useChatSocket";
 import { SenderType } from "../types/chat.types";
+import { useLocation } from "react-router-dom";
 
 export default function ChatWidget({ userId }: { userId: number }) {
   const [open, setOpen] = useState(false);
-
+  const location = useLocation();
   const {
     conversations,
     setConversations,
@@ -47,7 +48,11 @@ useEffect(() => {
     markAsRead(convId);
   };
 
-  
+  const isSellerPage = location.pathname.startsWith("/myStores");
+  if (isSellerPage) {
+    // Đã gọi đủ hooks rồi, return null an toàn
+    return null;
+  }
 
   return (
     <>

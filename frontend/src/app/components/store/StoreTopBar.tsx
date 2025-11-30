@@ -386,7 +386,8 @@ const handleStartChat = async () => {
           conversationId={convId}
           userId={userId}
           storeId={Number(info.id)}
-          senderType={SenderType.USER}
+          // senderType={SenderType.USER}
+          senderType={SenderType.STORE} 
           onClose={() => setOpenChat(false)}
           conversations={conversations}
           setConversations={setConversations}

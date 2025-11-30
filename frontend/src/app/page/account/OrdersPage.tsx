@@ -115,7 +115,7 @@ const TABS: { key: OrderTab; label: string }[] = [
   { key: 'returned', label: 'Đã trả/Hoàn' },
 ];
 
-const PAGE_SIZE = 10; 
+const PAGE_SIZE = 5; 
 
 const getUserIdFromStorage = (): number | null => {
   const raw = localStorage.getItem('user');
