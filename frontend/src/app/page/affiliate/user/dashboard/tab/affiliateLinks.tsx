@@ -236,6 +236,35 @@ export default function AffiliateLinks() {
     [copyToClipboard, form, msg, createLink, refreshAll]
   );
 
+  // Helper function to get product name
+  const getProductName = useCallback((productId: number | undefined) => {
+    if (!productId) return '—';
+    const product = affiliatedProducts.find(p => p.id === productId);
+    return product ? product.name : `ID: ${productId}`;
+  }, [affiliatedProducts]);
+
+  // Helper function to get variant name from product
+  const getVariantName = useCallback((productId: number | undefined, variantId: number | undefined) => {
+    if (!variantId || !productId) return '—';
+    const product = affiliatedProducts.find(p => p.id === productId);
+    if (!product) return `ID: ${variantId}`;
+    const variant = product.variants?.find(v => v.id === variantId);
+    return variant ? variant.variant_name : `ID: ${variantId}`;
+  }, [affiliatedProducts]);
+
+  // Helper function to get affiliated variants for a product
+  const getAffiliatedVariants = useCallback((productId: number | undefined) => {
+    if (!productId) return [];
+    // Get all links for this product
+    const productLinks = myLinks.filter(link => link.productId === productId);
+    // Get unique variant IDs that have affiliate links
+    const variantIds = new Set(productLinks.map(link => link.variantId).filter(v => v !== undefined));
+    // Find the product and return only variants that have affiliate links
+    const product = affiliatedProducts.find(p => p.id === productId);
+    if (!product || !product.variants) return [];
+    return product.variants.filter(v => variantIds.has(v.id));
+  }, [myLinks, affiliatedProducts]);
+
   const myLinksColumns = useMemo(
     () => [
       {
@@ -246,16 +275,28 @@ export default function AffiliateLinks() {
           v ? <Tag color="blue">{v}</Tag> : <Tag>Không xác định</Tag>,
       },
       {
-        title: 'ID sản phẩm',
-        dataIndex: 'productId',
+        title: 'Sản phẩm',
         key: 'productId',
-        render: (v: number | undefined) => (typeof v === 'number' ? v : '—'),
+        render: (_: unknown, record: MyLink) => {
+          const productName = getProductName(record.productId);
+          return productName === '—' ? (
+            <span style={{ color: '#999' }}>—</span>
+          ) : (
+            <span style={{ fontWeight: 500 }}>{productName}</span>
+          );
+        },
       },
       {
         title: 'Biến thể',
-        dataIndex: 'variantId',
         key: 'variantId',
-        render: (v: number | undefined) => (typeof v === 'number' ? v : '—'),
+        render: (_: unknown, record: MyLink) => {
+          const variantName = getVariantName(record.productId, record.variantId);
+          return variantName === '—' ? (
+            <span style={{ color: '#999' }}>—</span>
+          ) : (
+            <Tag color="green">{variantName}</Tag>
+          );
+        },
       },
       {
         title: 'Liên kết tiếp thị',
@@ -328,7 +369,7 @@ export default function AffiliateLinks() {
         ),
       },
     ],
-    [copyToClipboard, deleteLink, ensureUrl, handleShare, msg, refreshAll]
+    [copyToClipboard, deleteLink, ensureUrl, handleShare, msg, refreshAll, getVariantName, getProductName]
   );
 
   const productsColumns = useMemo(
@@ -381,15 +422,38 @@ export default function AffiliateLinks() {
         ),
       },
       {
-        title: 'Biến thể',
+        title: 'Biến thể có liên kết',
         key: 'variants',
-        render: (record: any) => (
-          <Text>
-            {record.variants && record.variants.length > 0
-              ? record.variants.length
-              : '0'}
-          </Text>
-        ),
+        render: (record: any) => {
+          const affiliatedVariants = getAffiliatedVariants(record.id);
+          if (affiliatedVariants.length === 0) {
+            return <Text type="secondary">Không có biến thể liên kết</Text>;
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {affiliatedVariants.map((variant: any) => (
+                <div
+                  key={variant.id}
+                  style={{
+                    padding: '6px 10px',
+                    backgroundColor: '#f0f7ff',
+                    borderRadius: '4px',
+                    border: '1px solid #b3d8ff',
+                    fontSize: '12px',
+                  }}
+                >
+                  <div style={{ fontWeight: 500 }}>{variant.variant_name || variant.sku}</div>
+                  <div style={{ color: '#666', fontSize: '11px' }}>
+                    Giá: {variant.price ? `VND ${Number(variant.price).toFixed(0)}` : '—'}
+                  </div>
+                  <div style={{ color: '#666', fontSize: '11px' }}>
+                    Kho: {variant.stock || 0}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        },
       },
       {
         title: 'Giá',
@@ -410,7 +474,7 @@ export default function AffiliateLinks() {
           v ? new Date(v).toLocaleString() : '—',
       },
     ],
-    []
+    [getAffiliatedVariants]
   );
 
   return (
@@ -551,18 +615,26 @@ export default function AffiliateLinks() {
           style={{ marginBottom: 16 }}
         >
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-            {productDetail.media && productDetail.media.length > 0 && (
-              <img
-                src={productDetail.media[0].url}
-                alt={productDetail.name}
-                style={{
-                  width: '200px',
-                  height: '200px',
-                  objectFit: 'cover',
-                  borderRadius: '8px',
-                }}
-              />
-            )}
+            {/* Display variant image if selected, otherwise product image */}
+            {(() => {
+              const displayImage = selectedVariant?.media?.find((m: any) => m.is_primary)?.url ||
+                selectedVariant?.media?.[0]?.url ||
+                productDetail.media?.find((m: any) => m.is_primary)?.url ||
+                productDetail.media?.[0]?.url;
+              
+              return displayImage ? (
+                <img
+                  src={displayImage}
+                  alt={productDetail.name}
+                  style={{
+                    width: '200px',
+                    height: '200px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                  }}
+                />
+              ) : null;
+            })()}
             <div style={{ flex: 1 }}>
               <Title level={5}>{productDetail.name}</Title>
               <Text type="secondary">

@@ -572,7 +572,7 @@ export class GroupOrdersService {
         // 2) Lấy items của group
         const items = await this.groupOrderItemRepo.find({
             where: { group_order: { id: groupId } as any },
-            relations: ['product', 'variant', 'member', 'member.user', 'member.address_id'],
+            relations: ['product', 'product.media', 'variant', 'member', 'member.user', 'member.address_id'],
             order: { id: 'ASC' },
         });
 

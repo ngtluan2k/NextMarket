@@ -14,6 +14,7 @@ import AffiliateProgramDashboard from '../../page/affiliate/admin/AffiliateProgr
 import AffiliateRegistration from '../../page/affiliate/admin/AffiliateRegistrationManager';
 import { Empty } from 'antd';
 import AffiliateRulesManager from '../../page/affiliate/admin/AffiliateRulesManager';
+import AdminAffiliateTreeView from '../../page/affiliate/admin/AdminAffiliateTreeView';
 import CampaignPage from './CampaignPage';
 import { Campaign } from '../../../service/campaign.service';
 import CampaignDetailPage from './campaigns_components/CampaignDetailPage';
@@ -214,6 +215,8 @@ export const AdminDashboard: React.FC = () => {
         return <AffiliateProgramDashboard />;
       case '11-3':
         return <AffiliateRulesManager />;
+      case '11-4':
+        return <AdminAffiliateTreeView />;
       case 'permissions':
         return <PermissionManager />;
       case 'userRoles':

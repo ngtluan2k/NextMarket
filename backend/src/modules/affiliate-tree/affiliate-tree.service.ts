@@ -848,4 +848,196 @@ export class AffiliateTreeService {
       throw new Error(`Failed to get affiliate stats: ${errorMessage}`);
     }
   }
+
+  /**
+   * Get entire affiliate tree from root node (OPTIMIZED - NO commission data)
+   * Commission data loaded separately on demand for better performance
+   * @param maxDepth - Maximum depth of tree
+   * @returns Complete tree structure with all users (without commission)
+   */
+  async getFullAffiliateTree(maxDepth = 10) {
+    console.log(`🌳 [getFullAffiliateTree] Starting to fetch full affiliate tree with maxDepth: ${maxDepth}`);
+
+    try {
+      // OPTIMIZED: Single query that finds root AND fetches entire tree
+      // Includes children count to avoid separate queries
+      // FIX: Added WITH RECURSIVE because TreeCTE references itself
+      const treeQuery = `
+        WITH RECURSIVE RootUser AS (
+          -- Find root user (user with no referrer) - OPTIMIZED: LEFT JOIN instead of NOT IN
+          SELECT u.id, u.email, u.username
+          FROM users u
+          LEFT JOIN referrals r ON u.id = r.referee_id
+          WHERE r.referee_id IS NULL
+          LIMIT 1
+        ),
+        TreeCTE AS (
+          -- Anchor: root user
+          SELECT 
+            u.id,
+            u.email,
+            u.username,
+            0 AS level,
+            CAST(u.id AS VARCHAR) AS path,
+            (SELECT COUNT(*) FROM referrals WHERE referrer_id = u.id) as children_count
+          FROM users u
+          WHERE u.id = (SELECT id FROM RootUser)
+
+          UNION ALL
+
+          -- Recursive: all descendants
+          SELECT 
+            u.id,
+            u.email,
+            u.username,
+            tcte.level + 1,
+            tcte.path || ',' || CAST(u.id AS VARCHAR),
+            (SELECT COUNT(*) FROM referrals WHERE referrer_id = u.id)
+          FROM users u
+          INNER JOIN referrals r ON u.id = r.referee_id
+          INNER JOIN TreeCTE tcte ON r.referrer_id = tcte.id
+          WHERE tcte.level < $1
+        )
+        SELECT 
+          id,
+          email,
+          username,
+          level,
+          path,
+          children_count
+        FROM TreeCTE
+        ORDER BY level ASC, id ASC
+      `;
+
+      const treeUsers = await this.referralRepository.query(treeQuery, [maxDepth]);
+      console.log(`✅ [getFullAffiliateTree] Fetched ${treeUsers.length} users from tree in single query`);
+
+      if (!treeUsers || treeUsers.length === 0) {
+        console.warn(`⚠️ [getFullAffiliateTree] No users found in tree`);
+        return {
+          rootUser: null,
+          tree: []
+        };
+      }
+
+      // Build tree structure WITHOUT commission data (lazy loaded on demand)
+      const treeStructure = treeUsers.map((user: any) => ({
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        level: user.level,
+        path: user.path,
+        childrenCount: user.children_count || 0,
+        // Commission data NOT included - loaded separately via getNodeCommissionDetails()
+      }));
+
+      console.log(`✅ [getFullAffiliateTree] Tree built successfully with ${treeStructure.length} nodes (NO commission data - lazy loaded)`);
+
+      return {
+        rootUser: treeStructure[0],
+        tree: treeStructure
+      };
+
+    } catch (error) {
+      console.error(`❌ [getFullAffiliateTree] Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get full affiliate tree: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Get commission details for a specific user (lazy loaded on demand)
+   * Called only when admin clicks on a node
+   * @param userId - User ID to fetch commission for
+   * @returns Commission details for the user
+   */
+  async getNodeCommissionDetails(userId: number) {
+    console.log(`💰 [getNodeCommissionDetails] Fetching commission for user: ${userId}`);
+
+    try {
+      const commissionSummary = await this.getCommissionSummaryForUsers([userId]);
+      const commission = commissionSummary.get(userId) || {
+        totalEarned: 0,
+        totalPending: 0,
+        totalPaid: 0,
+        ratePercent: 0
+      };
+
+      console.log(`✅ [getNodeCommissionDetails] Commission fetched for user ${userId}`);
+      return commission;
+
+    } catch (error) {
+      console.error(`❌ [getNodeCommissionDetails] Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get commission details: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Get user details by ID (OPTIMIZED - single query)
+   * @param userId - User ID to fetch
+   * @returns User details with referral counts (commission loaded separately)
+   */
+  async getUserTreeNodeDetails(userId: number) {
+    console.log(`👤 [getUserTreeNodeDetails] Fetching details for user: ${userId}`);
+
+    try {
+      // OPTIMIZED: Single query that gets all user details including referral counts
+      const userDetailsQuery = `
+        SELECT 
+          u.id,
+          u.email,
+          u.username,
+          u.created_at,
+          (SELECT COUNT(*) FROM referrals WHERE referrer_id = u.id) as direct_referrals,
+          (
+            WITH RECURSIVE DescendantsCTE AS (
+              SELECT referee_id, 1 AS level
+              FROM referrals
+              WHERE referrer_id = u.id
+
+              UNION ALL
+
+              SELECT r.referee_id, dcte.level + 1
+              FROM referrals r
+              INNER JOIN DescendantsCTE dcte ON r.referrer_id = dcte.referee_id
+              WHERE dcte.level < 100
+            )
+            SELECT COUNT(DISTINCT referee_id)
+            FROM DescendantsCTE
+          ) as total_downlines
+        FROM users u
+        WHERE u.id = $1
+      `;
+
+      const result = await this.userRepository.query(userDetailsQuery, [userId]);
+
+      if (!result || result.length === 0) {
+        throw new Error(`User ${userId} not found`);
+      }
+
+      const userDetails = result[0];
+
+      // Get commission separately (lazy loaded)
+      const commission = await this.getNodeCommissionDetails(userId);
+
+      const finalResult = {
+        id: userDetails.id,
+        email: userDetails.email,
+        username: userDetails.username,
+        createdAt: userDetails.created_at,
+        commission,
+        directReferrals: userDetails.direct_referrals || 0,
+        totalDownlines: userDetails.total_downlines || 0
+      };
+
+      console.log(`✅ [getUserTreeNodeDetails] Details fetched for user ${userId} in single query`);
+      return finalResult;
+
+    } catch (error) {
+      console.error(`❌ [getUserTreeNodeDetails] Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get user tree node details: ${errorMessage}`);
+    }
+  }
 }

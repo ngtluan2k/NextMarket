@@ -45,6 +45,7 @@ import OtpVerifyPage from './page/OtpVerify';
 import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
 import StoreOwnerVoucherManager from '../app/components/seller/StoreOwnerVoucherManager';
 import AffiliateRulesManager from './page/affiliate/admin/AffiliateRulesManager';
+import AdminAffiliateTreeView from './page/affiliate/admin/AdminAffiliateTreeView';
 import OrderDetailPage from './page/account/OrderDetailPage';
 import GroupOrders from './components/group_orders/GroupOrders';
 import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
@@ -120,6 +121,10 @@ const App: React.FC = () => {
             <Route
               path="/admin/affiliate-rules"
               element={<AffiliateRulesManager />}
+            />
+            <Route
+              path="/admin/affiliate-tree"
+              element={<AdminAffiliateTreeView />}
             />
             <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
 

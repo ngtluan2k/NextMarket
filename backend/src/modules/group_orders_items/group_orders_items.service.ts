@@ -198,7 +198,7 @@ export class GroupOrderItemsService {
 		const saved = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: saved.id },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 		});
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', {
 			item: full,
@@ -262,7 +262,7 @@ export class GroupOrderItemsService {
 				// Broadcast cập nhật từng item để frontend cập nhật realtime
 				const updatedItem = await this.itemRepo.findOne({
 					where: { id: item.id },
-					relations: ['member', 'member.user', 'product', 'variant', 'member.user.profile', 'member.address_id'],
+					relations: ['member', 'member.user', 'product', 'product.media', 'variant', 'member.user.profile', 'member.address_id'],
 				});
 
 				if (updatedItem) {
@@ -290,6 +290,7 @@ export class GroupOrderItemsService {
 				'member',
 				'member.user',
 				'product',
+				'product.media',
 				'variant',
 				'member.user.profile',
 				'member.address_id',
@@ -302,7 +303,7 @@ export class GroupOrderItemsService {
 	async listMemberItems(groupId: number, memberId: number) {
 		return this.itemRepo.find({
 			where: { group_order: { id: groupId }, member: { id: memberId } },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 			order: { id: 'DESC' },
 		});
 	}
@@ -347,7 +348,7 @@ export class GroupOrderItemsService {
 		const updated = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: updated.id },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 		});
 		console.log('[WS] item-added emit', { groupId, id: full?.id });
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {

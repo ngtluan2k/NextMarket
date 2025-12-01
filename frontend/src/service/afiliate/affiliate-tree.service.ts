@@ -103,4 +103,33 @@ export async function fetchMyAffiliateStats() {
   return await res.json();
 }
 
+/**
+ * ADMIN FULL AFFILIATE TREE SERVICES
+ * Fetch entire affiliate tree from root node without program filter
+ */
+
+// Get full affiliate tree from root node
+export async function fetchFullAffiliateTree(maxDepth = 10) {
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/full-tree`);
+  url.searchParams.set('maxDepth', String(maxDepth));
+  const res = await fetch(url.toString(), { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch full affiliate tree (${res.status})`);
+  return await res.json();
+}
+
+// Get user tree node details (OPTIMIZED - single query)
+export async function fetchUserTreeNodeDetails(userId: number) {
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/node-details/${userId}`);
+  const res = await fetch(url.toString(), { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch user tree node details (${res.status})`);
+  return await res.json();
+}
+
+// Get node commission details (lazy loaded on demand)
+export async function fetchNodeCommissionDetails(userId: number) {
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/node-commission/${userId}`);
+  const res = await fetch(url.toString(), { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch node commission details (${res.status})`);
+  return await res.json();
+}
 

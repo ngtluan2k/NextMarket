@@ -127,6 +127,46 @@ export class AffiliateTreeController {
       data: rules,
     };
   }
+
+  @Get('full-tree')
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Lấy toàn bộ cây affiliate từ root node (không filter theo program)' })
+  @ApiQuery({ name: 'maxDepth', required: false, type: Number, description: 'Default is 10' })
+  async getFullAffiliateTree(
+    @Query('maxDepth', new DefaultValuePipe(10), ParseIntPipe) maxDepth: number,
+  ) {
+    const treeData = await this.affiliateTreeService.getFullAffiliateTree(maxDepth);
+    return {
+      message: 'Lấy toàn bộ cây affiliate thành công',
+      data: treeData,
+    };
+  }
+
+  @Get('node-details/:userId')
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Lấy chi tiết user node trong cây affiliate' })
+  async getUserTreeNodeDetails(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    const nodeDetails = await this.affiliateTreeService.getUserTreeNodeDetails(userId);
+    return {
+      message: 'Lấy chi tiết user node thành công',
+      data: nodeDetails,
+    };
+  }
+
+  @Get('node-commission/:userId')
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Lấy thông tin hoa hồng của user node (lazy loaded)' })
+  async getNodeCommissionDetails(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    const commission = await this.affiliateTreeService.getNodeCommissionDetails(userId);
+    return {
+      message: 'Lấy thông tin hoa hồng thành công',
+      data: commission,
+    };
+  }
 }
 
 /**
