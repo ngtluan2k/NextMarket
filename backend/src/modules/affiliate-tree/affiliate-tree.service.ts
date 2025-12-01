@@ -8,6 +8,7 @@ import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.enti
 import { AffiliateProgramParticipant } from '../affiliate-program/affiliate-program-participant.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
 import { OrderStatuses } from '../orders/types/orders';
+import { AffiliateRootTracking } from '../affiliate-root-tracking/dto/affiliate-root-tracking.entity';
 
 @Injectable()
 export class AffiliateTreeService {
@@ -24,6 +25,8 @@ export class AffiliateTreeService {
     private readonly participantRepository: Repository<AffiliateProgramParticipant>,
     @InjectRepository(AffiliateProgram)
     private readonly programRepository: Repository<AffiliateProgram>,
+    @InjectRepository(AffiliateRootTracking)
+    private readonly rootTrackingRepository: Repository<AffiliateRootTracking>,
   ) {}
 
   async findAncestors(userId: number, maxDepth: number): Promise<number[]> {
@@ -850,66 +853,73 @@ export class AffiliateTreeService {
   }
 
   /**
-   * Get entire affiliate tree from root node (OPTIMIZED - NO commission data)
-   * Commission data loaded separately on demand for better performance
+   * Get entire affiliate tree from root node (OPTIMIZED - WITH commission data)
+   * Uses AffiliateRootTracking to find the active root user
    * @param maxDepth - Maximum depth of tree
-   * @returns Complete tree structure with all users (without commission)
+   * @returns Complete tree structure with all users and commission data
    */
   async getFullAffiliateTree(maxDepth = 10) {
     console.log(`🌳 [getFullAffiliateTree] Starting to fetch full affiliate tree with maxDepth: ${maxDepth}`);
 
     try {
-      // OPTIMIZED: Single query that finds root AND fetches entire tree
-      // Includes children count to avoid separate queries
-      // FIX: Added WITH RECURSIVE because TreeCTE references itself
+      // Get active root user from AffiliateRootTracking
+      const rootTracking = await this.rootTrackingRepository.findOne({
+        where: { isActive: true },
+        relations: ['user'],
+      });
+
+      if (!rootTracking || !rootTracking.user) {
+        console.warn(`⚠️ [getFullAffiliateTree] No active root user found`);
+        return {
+          rootUser: null,
+          tree: []
+        };
+      }
+
+      const rootUserId = rootTracking.user.id;
+      console.log(`🌳 [getFullAffiliateTree] Root user ID: ${rootUserId}`);
+
+      // OPTIMIZED: Single recursive query to fetch entire tree from root
       const treeQuery = `
-        WITH RECURSIVE RootUser AS (
-          -- Find root user (user with no referrer) - OPTIMIZED: LEFT JOIN instead of NOT IN
-          SELECT u.id, u.email, u.username
-          FROM users u
-          LEFT JOIN referrals r ON u.id = r.referee_id
-          WHERE r.referee_id IS NULL
-          LIMIT 1
-        ),
-        TreeCTE AS (
+        WITH RECURSIVE affiliate_tree AS (
           -- Anchor: root user
-          SELECT 
-            u.id,
+          SELECT
+            u.id AS user_id,
             u.email,
             u.username,
             0 AS level,
-            CAST(u.id AS VARCHAR) AS path,
-            (SELECT COUNT(*) FROM referrals WHERE referrer_id = u.id) as children_count
+            ARRAY[u.id] AS path_to_root
           FROM users u
-          WHERE u.id = (SELECT id FROM RootUser)
+          WHERE u.id = $1 AND u.status = 'active'
 
           UNION ALL
 
           -- Recursive: all descendants
-          SELECT 
-            u.id,
+          SELECT
+            u.id AS user_id,
             u.email,
             u.username,
-            tcte.level + 1,
-            tcte.path || ',' || CAST(u.id AS VARCHAR),
-            (SELECT COUNT(*) FROM referrals WHERE referrer_id = u.id)
+            at.level + 1 AS level,
+            at.path_to_root || u.id AS path_to_root
           FROM users u
-          INNER JOIN referrals r ON u.id = r.referee_id
-          INNER JOIN TreeCTE tcte ON r.referrer_id = tcte.id
-          WHERE tcte.level < $1
+          JOIN referrals r ON u.id = r.referee_id
+          JOIN affiliate_tree at ON r.referrer_id = at.user_id
+          WHERE
+            at.level < $2
+            AND NOT (u.id = ANY(at.path_to_root))
+            AND u.status = 'active'
         )
-        SELECT 
-          id,
+        SELECT
+          user_id,
           email,
           username,
           level,
-          path,
-          children_count
-        FROM TreeCTE
-        ORDER BY level ASC, id ASC
+          path_to_root
+        FROM affiliate_tree
+        ORDER BY level ASC, user_id ASC
       `;
 
-      const treeUsers = await this.referralRepository.query(treeQuery, [maxDepth]);
+      const treeUsers = await this.referralRepository.query(treeQuery, [rootUserId, maxDepth]);
       console.log(`✅ [getFullAffiliateTree] Fetched ${treeUsers.length} users from tree in single query`);
 
       if (!treeUsers || treeUsers.length === 0) {
@@ -920,18 +930,26 @@ export class AffiliateTreeService {
         };
       }
 
-      // Build tree structure WITHOUT commission data (lazy loaded on demand)
+      // Get all user IDs for commission batch query
+      const userIds = treeUsers.map((u: any) => u.user_id);
+      const commissionMap = await this.getCommissionSummaryForUsers(userIds);
+
+      // Build tree structure WITH commission data
       const treeStructure = treeUsers.map((user: any) => ({
-        userId: user.id,
+        userId: user.user_id,
         email: user.email,
         username: user.username,
         level: user.level,
-        path: user.path,
-        childrenCount: user.children_count || 0,
-        // Commission data NOT included - loaded separately via getNodeCommissionDetails()
+        path: user.path_to_root.join(','),
+        commission: commissionMap.get(user.user_id) || {
+          totalEarned: 0,
+          totalPending: 0,
+          totalPaid: 0,
+          ratePercent: 0
+        },
       }));
 
-      console.log(`✅ [getFullAffiliateTree] Tree built successfully with ${treeStructure.length} nodes (NO commission data - lazy loaded)`);
+      console.log(`✅ [getFullAffiliateTree] Tree built successfully with ${treeStructure.length} nodes (WITH commission data)`);
 
       return {
         rootUser: treeStructure[0],
@@ -1038,6 +1056,45 @@ export class AffiliateTreeService {
       console.error(`❌ [getUserTreeNodeDetails] Error:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to get user tree node details: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Get root user info from AffiliateRootTracking
+   * @returns Root user details (id, email, username, isSystemRoot, createdAt)
+   */
+  async getRootUserInfo() {
+    console.log(`🌳 [getRootUserInfo] Fetching active root user...`);
+
+    try {
+      // Get active root tracking record
+      const rootTracking = await this.rootTrackingRepository.findOne({
+        where: { isActive: true },
+        relations: ['user'],
+      });
+
+      if (!rootTracking || !rootTracking.user) {
+        console.warn(`⚠️ [getRootUserInfo] No active root user found`);
+        return null;
+      }
+
+      const user = rootTracking.user;
+      const result = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        uuid: user.uuid,
+        isSystemRoot: (user as any).is_system_root || false,
+        createdAt: user.created_at,
+      };
+
+      console.log(`✅ [getRootUserInfo] Root user found: ${user.email} (ID: ${user.id})`);
+      return result;
+
+    } catch (error) {
+      console.error(`❌ [getRootUserInfo] Error:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get root user info: ${errorMessage}`);
     }
   }
 }

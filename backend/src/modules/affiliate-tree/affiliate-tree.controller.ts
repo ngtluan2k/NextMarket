@@ -128,6 +128,17 @@ export class AffiliateTreeController {
     };
   }
 
+  @Get('root-user')
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Lấy thông tin root user của cây affiliate' })
+  async getRootUser() {
+    const rootUser = await this.affiliateTreeService.getRootUserInfo();
+    return {
+      message: 'Lấy thông tin root user thành công',
+      data: rootUser,
+    };
+  }
+
   @Get('full-tree')
   @Roles('Admin')
   @ApiOperation({ summary: 'Lấy toàn bộ cây affiliate từ root node (không filter theo program)' })

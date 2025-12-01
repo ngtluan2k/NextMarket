@@ -6,12 +6,13 @@ import { AffiliateCommission } from '../affiliate-commissions/entity/affiliate-c
 import { AffiliateCommissionRule } from '../affiliate-rules/affiliate-rules.entity';
 import { AffiliateProgramParticipant } from '../affiliate-program/affiliate-program-participant.entity';
 import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity';
+import { AffiliateRootTracking } from '../affiliate-root-tracking/dto/affiliate-root-tracking.entity';
 import { AffiliateTreeService } from './affiliate-tree.service';
 import { AffiliateTreeController, UserAffiliateTreeController } from './affiliate-tree.controller';
 import { UserModule } from '../user/user.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Referral, User, AffiliateCommission, AffiliateCommissionRule, AffiliateProgramParticipant, AffiliateProgram]), UserModule],
+  imports: [TypeOrmModule.forFeature([Referral, User, AffiliateCommission, AffiliateCommissionRule, AffiliateProgramParticipant, AffiliateProgram, AffiliateRootTracking]), UserModule],
   providers: [AffiliateTreeService],
   controllers: [AffiliateTreeController, UserAffiliateTreeController],
   exports: [AffiliateTreeService, TypeOrmModule],

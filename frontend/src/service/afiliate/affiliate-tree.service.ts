@@ -108,6 +108,14 @@ export async function fetchMyAffiliateStats() {
  * Fetch entire affiliate tree from root node without program filter
  */
 
+// Get root user info
+export async function fetchRootUser() {
+  const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/root-user`);
+  const res = await fetch(url.toString(), { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch root user (${res.status})`);
+  return await res.json();
+}
+
 // Get full affiliate tree from root node
 export async function fetchFullAffiliateTree(maxDepth = 10) {
   const url = new URL(`${BE_BASE_URL}/admin/affiliate-tree/full-tree`);
