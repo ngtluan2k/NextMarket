@@ -10,11 +10,9 @@ import {
   Divider,
   Avatar,
   Descriptions,
-  Tooltip,
   Select,
   Space,
   Input,
-  Empty,
 } from 'antd';
 import {
   ReloadOutlined,
@@ -24,7 +22,6 @@ import {
   MailOutlined,
   CalendarOutlined,
   BranchesOutlined,
-  CheckCircleOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
 import {
@@ -40,6 +37,8 @@ interface TreeNode {
   username: string;
   level: number;
   path: string;
+  parentId?: number;
+  children?: TreeNode[];
   commission: {
     totalEarned: number;
     totalPending: number;
@@ -65,6 +64,102 @@ interface UserNodeDetails {
 }
 
 const { Option } = Select;
+
+// Tree Node Renderer Component
+interface TreeNodeRendererProps {
+  node: TreeNode;
+  highlightedUserId: number | null;
+  onNodeClick: (userId: number) => void;
+  depth?: number;
+}
+
+const TreeNodeRenderer: React.FC<TreeNodeRendererProps> = ({
+  node,
+  highlightedUserId,
+  onNodeClick,
+  depth = 0,
+}) => {
+  const isHighlighted = highlightedUserId === node.userId;
+  const hasChildren = node.children && node.children.length > 0;
+  const isRoot = depth === 0;
+
+  return (
+    <div className="flex flex-col items-center">
+      {/* Node Card */}
+      <div
+        id={`user-card-${node.userId}`}
+        onClick={() => onNodeClick(node.userId)}
+        className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg min-w-max ${
+          isHighlighted
+            ? 'border-yellow-400 bg-yellow-100 shadow-lg ring-2 ring-yellow-300'
+            : isRoot
+            ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md'
+            : 'border-green-300 bg-green-50 hover:bg-green-100'
+        }`}
+      >
+        <div className="flex items-start gap-2 mb-2">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0"
+            style={{
+              backgroundColor: isHighlighted ? '#faad14' : isRoot ? '#1890ff' : '#52c41a',
+            }}
+          >
+            {node.userId}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm truncate">
+              {node.email}
+            </div>
+            <div className="text-xs text-gray-600">
+              {Number(node.commission?.totalEarned || 0).toLocaleString('vi-VN', {
+                notation: 'compact',
+              })}đ
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          <Tag color={isHighlighted ? 'gold' : isRoot ? 'blue' : 'green'}>
+            {isRoot ? '🌳 Root' : `F${node.level}`}
+          </Tag>
+          {hasChildren && (
+            <Tag color="cyan">
+              👥 {node.children?.length}
+            </Tag>
+          )}
+        </div>
+      </div>
+
+      {/* Children */}
+      {hasChildren && (
+        <div className="mt-6 flex flex-col items-center">
+          {/* Connector line */}
+          <div className="w-1 h-6 bg-gray-300"></div>
+
+          {/* Children container */}
+          <div className="flex gap-8 flex-wrap justify-center mt-2">
+            {node.children?.map((child) => (
+              <div key={child.userId} className="flex flex-col items-center">
+                {/* Horizontal line from parent */}
+                <div className="h-1 w-12 bg-gray-300 mb-2"></div>
+
+                {/* Vertical line to child */}
+                <div className="w-1 h-4 bg-gray-300 mb-2"></div>
+
+                {/* Recursive child node */}
+                <TreeNodeRenderer
+                  node={child}
+                  highlightedUserId={highlightedUserId}
+                  onNodeClick={onNodeClick}
+                  depth={depth + 1}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function AdminAffiliateTreeView() {
   const [loading, setLoading] = useState(false);
@@ -124,28 +219,33 @@ export default function AdminAffiliateTreeView() {
     }
   };
 
-  // Group data by level
-  const levelGroups = useMemo(() => {
-    const groups: Record<number, TreeNode[]> = {};
-    treeNodes.forEach((item: TreeNode) => {
-      // Skip root node (level 0)
-      if (item.level === 0) {
-        return;
-      }
-      
-      if (!groups[item.level]) {
-        groups[item.level] = [];
-      }
-      groups[item.level].push(item);
+  // Build hierarchical tree structure
+  const hierarchicalTree = useMemo(() => {
+    const nodeMap = new Map<number, TreeNode>();
+    
+    // Create map of all nodes
+    treeNodes.forEach((node) => {
+      nodeMap.set(node.userId, { ...node, children: [] });
     });
-    return groups;
-  }, [treeNodes]);
 
-  const levels = useMemo(() => {
-    return Object.keys(levelGroups)
-      .map(Number)
-      .sort((a, b) => a - b);
-  }, [levelGroups]);
+    // Build parent-child relationships
+    treeNodes.forEach((node) => {
+      if (node.level > 0 && node.path) {
+        // Extract parent ID from path (path format: "1,2,3" where 1 is root, 2 is parent of 3)
+        const pathParts = node.path.split(',').map(Number);
+        if (pathParts.length > 1) {
+          const parentId = pathParts[pathParts.length - 2];
+          const parentNode = nodeMap.get(parentId);
+          if (parentNode && !parentNode.children?.find(c => c.userId === node.userId)) {
+            parentNode.children?.push(nodeMap.get(node.userId)!);
+          }
+        }
+      }
+    });
+
+    // Return root node
+    return nodeMap.get(treeNodes[0]?.userId) || null;
+  }, [treeNodes]);
 
   const loadNodeDetails = async (userId: number) => {
     setNodeDetailsLoading(true);
@@ -308,136 +408,20 @@ export default function AdminAffiliateTreeView() {
         title={
           <div className="flex items-center space-x-2">
             <BranchesOutlined />
-            <span>Biểu đồ Cây Affiliate</span>
+            <span>Biểu đồ Cây Affiliate (Phân cấp)</span>
           </div>
         } 
         loading={loading}
       >
-        {treeNodes && treeNodes.length > 0 ? (
-          <div className="space-y-6">
-            {/* Root Node */}
-            <div className="flex flex-col items-center">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg px-6 py-4 shadow-lg mb-4">
-                <div className="flex items-center gap-2">
-                  <UserOutlined className="text-xl" />
-                  <span className="font-semibold">{rootUser?.username || 'Root'} (Root)</span>
-                </div>
-              </div>
-              {levels.length > 0 && (
-                <div className="text-2xl text-gray-400 mb-4">↓</div>
-              )}
+        {treeNodes && treeNodes.length > 0 && hierarchicalTree ? (
+          <div className="space-y-4 overflow-x-auto">
+            <div className="inline-block min-w-full">
+              <TreeNodeRenderer 
+                node={hierarchicalTree}
+                highlightedUserId={highlightedUserId}
+                onNodeClick={loadNodeDetails}
+              />
             </div>
-
-            {/* Level Nodes */}
-            {levels.map((level) => {
-              const levelData = levelGroups[level];
-              const levelStats = {
-                total: levelData.length,
-                totalCommission: levelData.reduce(
-                  (sum: number, d: TreeNode) => sum + (d.commission?.totalEarned || 0),
-                  0
-                ),
-              };
-
-              return (
-                <div key={`level-${level}`} className="space-y-4">
-                  {/* Level Header */}
-                  <div className="flex flex-col items-center gap-2 mb-4">
-                    <div className="bg-gray-100 px-4 py-2 rounded-full">
-                      <span className="font-semibold text-gray-700">Cấp F{level}</span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap justify-center text-xs">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                        {levelStats.total} thành viên
-                      </span>
-                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
-                        Hoa hồng: {Number(levelStats.totalCommission).toLocaleString('vi-VN', {
-                          notation: 'compact',
-                        })}đ
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Level Nodes Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {levelData.map((member: TreeNode, index: number) => {
-                      const isHighlighted = highlightedUserId === member.userId;
-                      return (
-                        <Tooltip
-                          key={`${level}-${member.userId}-${index}`}
-                          title={
-                            <div className="text-sm space-y-1">
-                              <div className="font-semibold">{member.email}</div>
-                              <Divider style={{ margin: '4px 0' }} />
-                              <div>
-                                <strong>User ID:</strong> {member.userId}
-                              </div>
-                              <div>
-                                <strong>Hoa hồng:</strong>{' '}
-                                {Number(member.commission?.totalEarned || 0).toLocaleString('vi-VN')}đ
-                              </div>
-                              <div>
-                                <strong>Chờ xử lý:</strong>{' '}
-                                {Number(member.commission?.totalPending || 0).toLocaleString('vi-VN')}đ
-                              </div>
-                              <div>
-                                <strong>Đã thanh toán:</strong>{' '}
-                                {Number(member.commission?.totalPaid || 0).toLocaleString('vi-VN')}đ
-                              </div>
-                            </div>
-                          }
-                          placement="top"
-                        >
-                          <div
-                            id={`user-card-${member.userId}`}
-                            onClick={() => loadNodeDetails(member.userId)}
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${
-                              isHighlighted
-                                ? 'border-yellow-400 bg-yellow-100 shadow-lg ring-2 ring-yellow-300'
-                                : 'border-blue-300 bg-blue-50 hover:bg-blue-100'
-                            }`}
-                          >
-                            <div className="flex items-start gap-2 mb-2">
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
-                                style={{
-                                  backgroundColor: isHighlighted ? '#faad14' : '#52c41a',
-                                }}
-                              >
-                                {member.userId}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-sm truncate">
-                                  {member.email}
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  {Number(member.commission?.totalEarned || 0).toLocaleString('vi-VN', {
-                                    notation: 'compact',
-                                  })}đ
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex gap-1 flex-wrap">
-                              <Tag color={isHighlighted ? 'gold' : 'green'} icon={<CheckCircleOutlined />}>
-                                {isHighlighted ? '⭐ Được chọn' : 'Hoạt động'}
-                              </Tag>
-                              <Tag color="blue">F{level}</Tag>
-                            </div>
-                          </div>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-
-                  {/* Connector to next level */}
-                  {level < Math.max(...levels) && (
-                    <div className="flex justify-center py-4">
-                      <div className="text-2xl text-gray-400">↓</div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
           </div>
         ) : (
           <div className="text-center py-12 text-gray-500">
