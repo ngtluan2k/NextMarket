@@ -8,9 +8,9 @@ export type GroupOrderItemPayload = {
   productId: number;
   variantId?: number;
   quantity: number;
-  note?: string; 
+  note?: string;
   pricingRuleId?: number;
-  
+
 };
 
 export type GroupOrderCheckoutPayload = {
@@ -23,11 +23,14 @@ export type CreateGroupOrderPayload = {
   name: string;
   storeId: number;
   hostUserId: number;
+  joinExpiresAt?: string | null;
+
 };
 
 export type UpdateGroupOrderPayload = {
   name?: string;
   expiresAt?: string | null;
+  joinExpiresAt?: string | null;
   delivery_mode?: 'host_address' | 'member_address';
   targetMemberCount?: number;
 };

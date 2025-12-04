@@ -2,6 +2,7 @@ import React from 'react';
 import { groupOrdersApi } from '../../../../service/groupOrderItems.service';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { GroupExpiryCountdown } from './GroupExpiryCountdown';
 
 type Props = {
   groupId: number;
@@ -60,6 +61,12 @@ export default function GroupOrderInfoBar({ groupId }: Props) {
                     Trạng thái: {group?.status} • Mã tham gia:{' '}
                     {group?.join_code ?? '—'}
                   </div>
+
+                  {group?.join_expires_at && (
+                    <div className="text-xs text-slate-500">
+                      Hạn tham gia: {new Date(group.join_expires_at).toLocaleString('vi-VN')}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -78,6 +85,15 @@ export default function GroupOrderInfoBar({ groupId }: Props) {
                   Xem mọi người chọn gì
                 </button>
               </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-1">
+              {/* ✅ Countdown nhỏ gọn ở góc phải */}
+              <GroupExpiryCountdown
+                status={group?.status}
+                expiresAt={group?.expires_at}
+                variant="compact"
+              />
             </div>
 
             {/* Popup đơn giản hiển thị link + copy */}
@@ -115,7 +131,9 @@ export default function GroupOrderInfoBar({ groupId }: Props) {
               </div>
             )}
           </>
+
         )}
+
       </div>
     </div>
   );
