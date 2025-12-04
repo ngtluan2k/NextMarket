@@ -263,14 +263,23 @@ export default function BuyBox({
         showMessage('success', `${product.name} đã được thêm vào giỏ hàng`);
       }
     } catch (error: any) {
-      console.error('Failed to add to cart:', error);
-      if (showMessage) {
-        showMessage('error', error.message);
-      }
-    } finally {
-      setLoading(false);
+    let msg = 'Không thể thêm vào giỏ hàng';
+
+    // Nếu axios, lấy message từ response
+    if (error.response?.data?.message) {
+      msg = error.response.data.message;
+    } else if (error.message) {
+      msg = error.message;
     }
-  };
+
+    console.error('Failed to add to cart:', error);
+    if (showMessage) {
+      showMessage('error', msg);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAddToGroup = async () => {
     try {

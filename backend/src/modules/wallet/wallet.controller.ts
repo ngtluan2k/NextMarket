@@ -19,8 +19,8 @@ export class WalletController {
   @Get('transactions')
   async getMyTransactions(
     @Req() req: any,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
   ) {
     const userId = (req.user as any).sub;
     const skip = (page - 1) * limit;

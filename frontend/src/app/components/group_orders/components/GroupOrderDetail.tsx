@@ -25,6 +25,8 @@ import {
   WarningOutlined,
   CrownOutlined,
   SwapOutlined,
+  MessageOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import AddressModal from './../../../page/AddressModal';
 import { message } from 'antd';
@@ -714,7 +716,7 @@ export default function GroupOrderDetail() {
                     onClick={() => setChatOpen(true)}
                     className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                   >
-                    Mở chat nhóm
+                     <MessageOutlined/> Mở chat nhóm
                   </button>
                   <button
                     onClick={onManualLockGroup}
@@ -774,13 +776,13 @@ export default function GroupOrderDetail() {
                 onClick={onLeaveGroup}
                 className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
               >
-                🚪 Rời nhóm
+                <ArrowLeftOutlined /> Rời nhóm
               </button>
               <button
                     onClick={() => setChatOpen(true)}
                     className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                   >
-                    Mở chat nhóm
+                    <MessageOutlined/> Mở chat nhóm
                   </button>
             </div>
           )}
@@ -1017,9 +1019,9 @@ export default function GroupOrderDetail() {
                         <div className="font-medium text-sm">
                           {m?.user?.profile?.full_name || m?.user?.username}
                         </div>
-                        {m.is_host === 1 ? (
+                        {m.is_host === true ? (
                           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                            👑 Host
+                            <CrownOutlined style={{color: 'gold'}}/> Chủ Nhóm
                           </span>
                         ) : (
                           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">

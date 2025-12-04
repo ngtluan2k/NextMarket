@@ -67,6 +67,7 @@ import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
 import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
 import LoginPerformanceDebug from './components/debug/LoginPerformanceDebug';
 import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
+import NotFoundPage from './components/NotFoundPage';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -111,6 +112,10 @@ const App: React.FC = () => {
               path="/products/slug/:slug"
               element={<ProductDetailPage showMessage={showMessage} />}
             />
+            <Route
+            path="/404"
+            element={<NotFoundPage/>}
+            ></Route>
 
             <Route
               path="/cart"
@@ -183,7 +188,7 @@ const App: React.FC = () => {
             {/* Search */}
             <Route path="/search" element={<SearchPage />} />
             {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
             <Route path="/verify-otp" element={<OtpVerifyPage />} />
 
             <Route path="/affiliate" element={<AffiliateGate />} />

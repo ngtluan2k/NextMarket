@@ -1,5 +1,5 @@
 // src/components/admin/AdminDashboard.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RoleManager } from './RoleManager';
 import { PermissionManager } from './PermissionManager';
 import { UserRoleManager } from './UserRoleManager';
@@ -22,6 +22,11 @@ import PublishCampaignForm from './campaigns_components/PublishCampaignForm';
 import UpdateCampaignForm from './campaigns_components/UpdateCampaignForm';
 import FlashSaleManager, { FlashSale } from './FlashSaleManager';
 import FlashSaleStoreProducts from './flash_sale_components/FlashSaleStoreProducts';
+import {
+  checkIsAdmin,
+  AdminCheckResult,
+} from '../../../service/user-helper.service';
+import { useNavigate } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string>('1-2');
@@ -32,6 +37,8 @@ export const AdminDashboard: React.FC = () => {
   const [selectedFlashSale, setSelectedFlashSale] = useState<FlashSale | null>(
     null
   );
+  const [loading, setLoading] = useState(true); // loading khi check admin
+  const navigate = useNavigate(); // để redirect
 
   const handleSelectStore = (storeId: number) => {
     setSelectedStoreId(storeId);
@@ -180,16 +187,15 @@ export const AdminDashboard: React.FC = () => {
           />
         );
       case '8-3-store':
-  return selectedFlashSale ? (
-    <FlashSaleStoreProducts
-      scheduleId={selectedFlashSale.id}
-      scheduleStartsAt={selectedFlashSale.starts_at}
-      scheduleEndsAt={selectedFlashSale.ends_at}
-      storeId={selectedStoreId || undefined} // nếu null thì bỏ qua filter
-      onBack={() => setActiveKey('8-3')}
-    />
-  ) : null;
-
+        return selectedFlashSale ? (
+          <FlashSaleStoreProducts
+            scheduleId={selectedFlashSale.id}
+            scheduleStartsAt={selectedFlashSale.starts_at}
+            scheduleEndsAt={selectedFlashSale.ends_at}
+            storeId={selectedStoreId || undefined} // nếu null thì bỏ qua filter
+            onBack={() => setActiveKey('8-3')}
+          />
+        ) : null;
 
       case '9':
         return (
@@ -224,6 +230,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Check quyền admin khi load component
+  useEffect(() => {
+    const verifyAdmin = async () => {
+      try {
+        setLoading(true);
+        const adminData: AdminCheckResult = await checkIsAdmin();
+        console.log('✅ User is admin:', adminData);
+        setLoading(false);
+      } catch (error) {
+        console.error('❌ User is not admin:', error);
+        // redirect sang trang không có quyền
+        navigate('/404');
+      }
+    };
+
+    verifyAdmin();
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-gray-500 text-lg">Đang kiểm tra quyền admin...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="fixed top-0 left-0 right-0 z-50">
@@ -244,4 +276,3 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
-

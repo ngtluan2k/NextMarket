@@ -11,9 +11,9 @@ import { CartItem } from '../../types/cart';
 import { Voucher } from '../../types/voucher';
 import VoucherDiscountSection from '../checkout/VoucherDiscountSection';
 import AddressModal from '../../page/AddressModal';
-import { fetchMyWallet, Wallet } from '../../../service/wallet.service';
+import { fetchMyWallet } from '../../../service/wallet.service';
 import { orderService } from '../../../service/order.service';
-
+import { Wallet } from '../../types/wallet';
 const { Text } = Typography;
 
 type Props = {

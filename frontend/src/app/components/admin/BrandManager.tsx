@@ -19,7 +19,7 @@ import {
  * - Tìm kiếm, modal thêm/sửa, upload + preview logo, toast thông báo
  */
 
-const API_BASE = import.meta.env.VITE_BE_BASE_URL;;
+const API_BASE = import.meta.env.VITE_BE_BASE_URL;
 
 export type Brand = {
   id: number;
@@ -576,19 +576,20 @@ export default function BrandManager() {
           <CheckCircle2 className="h-4 w-4" /> {toast}
         </div>
       )}
-
-      <BrandModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={async ({ name, description, logoFile }, id) => {
-          const fd = new FormData();
-          if (name) fd.append('name', name);
-          fd.append('description', description || '');
-          if (logoFile) fd.append('logo', logoFile);
-          await onSubmit({ name, description, logoFile }, id);
-        }}
-        initial={editing}
-      />
+      {modalOpen && (
+        <BrandModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={async ({ name, description, logoFile }, id) => {
+            const fd = new FormData();
+            if (name) fd.append('name', name);
+            fd.append('description', description || '');
+            if (logoFile) fd.append('logo', logoFile);
+            await onSubmit({ name, description, logoFile }, id);
+          }}
+          initial={editing}
+        />
+      )}
     </div>
   );
 }

@@ -54,7 +54,7 @@ export default function GroupOrderInfoBar({ groupId }: Props) {
                 </div>
                 <div>
                   <div className="font-semibold text-slate-900">
-                    Đơn hàng nhóm: {group?.name ?? '—'}
+                     {group?.name ?? '—'}
                   </div>
                   <div className="text-xs text-slate-600">
                     Trạng thái: {group?.status} • Mã tham gia:{' '}

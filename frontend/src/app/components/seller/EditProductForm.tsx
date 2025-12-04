@@ -108,6 +108,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
       price: number;
       stock: number;
       barcode?: string;
+      weight?: number;
     }[];
     inventory: {
       id?: number;
@@ -1229,6 +1230,39 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                       {getErr(`variants.${i}.price`) && (
                         <p className="text-xs text-rose-600 mt-1">
                           {getErr(`variants.${i}.price`)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium">
+                        Trọng lượng (gam)
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          v.weight !== undefined
+                            ? new Intl.NumberFormat('vi-VN').format(v.weight)
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const numericValue = Number(
+                            e.target.value.replace(/\./g, '')
+                          ); // bỏ dấu chấm
+                          const next = [...form.variants];
+                          next[i].weight = numericValue;
+                          setForm({ ...form, variants: next });
+                        }}
+                        className={`mt-1 px-3 py-2 border rounded-md w-full ${
+                          getErr(`variants.${i}.weight`)
+                            ? 'border-rose-400'
+                            : 'border-slate-300'
+                        }`}
+                        placeholder="Nhập trọng lượng gram"
+                      />
+                      {getErr(`variants.${i}.weight`) && (
+                        <p className="text-xs text-rose-600 mt-1">
+                          {getErr(`variants.${i}.weight`)}
                         </p>
                       )}
                     </div>

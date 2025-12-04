@@ -90,48 +90,50 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(interval);
   }, [token]);
 
-  const addToCart = async (
-    productId: number,
-    quantity = 1,
-    variantId?: number,
-    type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
-    isGroup = false,
-    pricingRuleId?: number | null // ✅ thêm tham số này
-  ) => {
-    const currentToken = localStorage.getItem('token');
-    if (!currentToken) {
-      throw new Error('Vui lòng đăng nhập để thêm vào giỏ hàng');
-    }
+const addToCart = async (
+  productId: number,
+  quantity = 1,
+  variantId?: number,
+  type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale',
+  isGroup = false,
+  pricingRuleId?: number | null
+) => {
+  const currentToken = localStorage.getItem('token');
+  if (!currentToken) {
+    throw new Error('Vui lòng đăng nhập để thêm vào giỏ hàng');
+  }
 
-    try {
-      const response = await fetch(`${BE_BASE_URL}/cart/add`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${currentToken}`,
-        },
-        body: JSON.stringify({
-          productId,
-          quantity,
-          variantId,
-          type,
-          isGroup,
-          pricingRuleId, // ✅ gửi thêm vào body
-        }),
-      });
+  try {
+    const response = await fetch(`${BE_BASE_URL}/cart/add`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${currentToken}`,
+      },
+      body: JSON.stringify({
+        productId,
+        quantity,
+        variantId,
+        type,
+        isGroup,
+        pricingRuleId,
+      }),
+    });
 
-      if (response.ok) {
-        await loadCart(); // vẫn giữ nguyên
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Lỗi khi thêm vào giỏ hàng:', errorText);
-        throw new Error('Không thể thêm vào giỏ hàng');
-      }
-    } catch (error) {
-      console.error('Không thể thêm vào giỏ hàng:', error);
-      throw new Error('Không thể thêm vào giỏ hàng');
+    if (response.ok) {
+      await loadCart();
+    } else {
+      // parse JSON lỗi từ BE
+      const errorData = await response.json();
+      console.error('❌ Lỗi khi thêm vào giỏ hàng:', errorData);
+      throw new Error(errorData.message || 'Không thể thêm vào giỏ hàng');
     }
-  };
+  } catch (error: any) {
+    console.error('Không thể thêm vào giỏ hàng:', error);
+    throw new Error(error.message || 'Không thể thêm vào giỏ hàng');
+  }
+};
+
 
   const removeFromCart = async (
     productId: number,

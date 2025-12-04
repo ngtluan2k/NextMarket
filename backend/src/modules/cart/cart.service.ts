@@ -85,14 +85,6 @@ export class CartService {
     const cart = await this.getOrCreateCart(userId);
 
     // --- Tìm item trùng ---
-    const where: any = {
-      cart_id: cart.id,
-      product_id: productId,
-      variant_id: variantId ?? undefined,
-      is_group: isGroup,
-    };
-    if (pricingRuleId != null) where.pricing_rule_id = pricingRuleId;
-
     const duplicateItems = await this.cartItemRepository.find({
       where: {
         cart_id: cart.id,
@@ -106,9 +98,9 @@ export class CartService {
       if (
         ['bulk', 'normal'].includes(i.type) &&
         ['bulk', 'normal'].includes(type)
-      ) {
+      )
         return true;
-      }
+
       return i.type === type && i.pricing_rule_id === pricingRuleId;
     });
 
@@ -117,8 +109,6 @@ export class CartService {
 
     if (sameGroup.length > 0) {
       cartItem = sameGroup[0];
-
-      // ✅ Cộng tất cả số lượng cũ + mới
       totalQuantity =
         sameGroup.reduce((sum, i) => sum + i.quantity, 0) + quantity;
 
@@ -127,7 +117,6 @@ export class CartService {
         await this.cartItemRepository.delete(toRemove);
       }
     } else {
-      // --- Tạo mới ---
       cartItem = this.cartItemRepository.create({
         uuid: uuidv4(),
         cart_id: cart.id,
@@ -137,15 +126,51 @@ export class CartService {
         is_group: isGroup,
         added_at: new Date(),
       });
-      totalQuantity = quantity;
     }
 
-    // --- Kiểm tra tồn kho ---
-    if (variant && totalQuantity > (variant.stock ?? 0)) {
-      throw new BadRequestException('Không đủ hàng trong kho');
+    // --- ƯU TIÊN: pricingRuleId từ FE ---
+    if (pricingRuleId) {
+      const rule = await this.pricingRuleRepository.findOne({
+        where: { id: pricingRuleId },
+      });
+      if (rule) {
+        // Check flash_sale limit
+        if (rule.type === 'flash_sale') {
+          const soldQtyResult = await this.orderItemRepo
+            .createQueryBuilder('oi')
+            .select('SUM(oi.quantity)', 'total')
+            .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+            .getRawOne();
+          const totalSold = Number(soldQtyResult?.total ?? 0);
+          const remainingQty = Math.max(
+            0,
+            (rule.limit_quantity ?? 0) - totalSold
+          );
+
+          if (totalQuantity > remainingQty) {
+            throw new BadRequestException(
+              `Chỉ còn ${remainingQty} sản phẩm trong flash sale`
+            );
+          }
+        }
+
+        // Check stock
+        if (variant && totalQuantity > (variant.stock ?? 0)) {
+          throw new BadRequestException(
+            `Chỉ còn ${variant.stock} sản phẩm trong kho`
+          );
+        }
+
+        cartItem.pricing_rule_id = rule.id;
+        cartItem.price = Number(rule.price);
+        cartItem.quantity = totalQuantity;
+        cartItem.type = rule.type as any;
+
+        return this.cartItemRepository.save(cartItem);
+      }
     }
 
-    // --- Xử lý subscription ---
+    // --- Subscription ---
     if (type === 'subscription') {
       const subRule = (product.pricing_rules ?? []).find(
         (r) => r.type === 'subscription'
@@ -159,10 +184,12 @@ export class CartService {
         cartItem.pricing_rule_id = null;
         cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
       }
+
+      return this.cartItemRepository.save(cartItem);
     }
 
-    // --- Gộp xử lý bulk và normal ---
-    else if (type === 'bulk' || type === 'normal') {
+    // --- Bulk / Normal ---
+    if (type === 'bulk' || type === 'normal') {
       cartItem.quantity = totalQuantity;
 
       const bulkRules = (product.pricing_rules ?? []).filter(
@@ -170,7 +197,6 @@ export class CartService {
       );
       let matchedRule: PricingRules | null = null;
 
-      // Nếu là bulk thì tìm rule phù hợp, còn normal thì không ép buộc
       if (bulkRules.length > 0) {
         matchedRule =
           bulkRules
@@ -179,31 +205,59 @@ export class CartService {
           null;
       }
 
-      if (matchedRule) {
-        cartItem.pricing_rule_id = matchedRule.id;
-        cartItem.price = Number(matchedRule.price);
-        cartItem.type = 'bulk';
-      } else {
-        cartItem.pricing_rule_id = null;
-        cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
-        cartItem.type = 'normal';
+      cartItem.pricing_rule_id = matchedRule?.id ?? null;
+      cartItem.price = matchedRule
+        ? Number(matchedRule.price)
+        : variant?.price ?? Number(product.base_price ?? 0);
+      cartItem.type = matchedRule ? 'bulk' : 'normal';
+
+      // Check stock
+      if (variant && totalQuantity > (variant.stock ?? 0)) {
+        throw new BadRequestException(
+          `Chỉ còn ${variant.stock} sản phẩm trong kho`
+        );
       }
+
+      return this.cartItemRepository.save(cartItem);
     }
 
-    // --- Xử lý flash sale ---
-    else if (type === 'flash_sale') {
-      const flashRule = (product.pricing_rules ?? []).find(
-        (r) => r.type === 'flash_sale'
+    // --- Flash Sale ---
+    if (type === 'flash_sale') {
+      let flashRule = (product.pricing_rules ?? []).find(
+        (r) => r.type === 'flash_sale' && r.variant?.sku === variant?.sku
       );
+      if (!flashRule) {
+        flashRule = (product.pricing_rules ?? []).find(
+          (r) => r.type === 'flash_sale'
+        );
+      }
+
       if (flashRule) {
-        if (
-          flashRule.limit_quantity &&
-          totalQuantity > flashRule.limit_quantity
-        ) {
-          cartItem.quantity = flashRule.limit_quantity;
-        } else {
-          cartItem.quantity = totalQuantity;
+        const soldQtyResult = await this.orderItemRepo
+          .createQueryBuilder('oi')
+          .select('SUM(oi.quantity)', 'total')
+          .where('oi.pricing_rule_id = :ruleId', { ruleId: flashRule.id })
+          .getRawOne();
+        const totalSold = Number(soldQtyResult?.total ?? 0);
+        const remainingQty = Math.max(
+          0,
+          (flashRule.limit_quantity ?? 0) - totalSold
+        );
+
+        if (totalQuantity > remainingQty) {
+          throw new BadRequestException(
+            `Chỉ còn ${remainingQty} sản phẩm trong flash sale`
+          );
         }
+
+        // Check stock
+        if (variant && totalQuantity > (variant.stock ?? 0)) {
+          throw new BadRequestException(
+            `Chỉ còn ${variant.stock} sản phẩm trong kho`
+          );
+        }
+
+        cartItem.quantity = totalQuantity;
         cartItem.pricing_rule_id = flashRule.id;
         cartItem.price = Number(flashRule.price);
       } else {
@@ -211,20 +265,20 @@ export class CartService {
         cartItem.pricing_rule_id = null;
         cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
       }
+
+      return this.cartItemRepository.save(cartItem);
     }
 
-    // --- fallback nếu có pricingRuleId riêng ---
-    else if (pricingRuleId) {
-      const rule = await this.pricingRuleRepository.findOne({
-        where: { id: pricingRuleId },
-      });
-      if (rule) {
-        cartItem.pricing_rule_id = rule.id;
-        cartItem.price = Number(rule.price);
-      } else {
-        cartItem.pricing_rule_id = null;
-        cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
-      }
+    // --- fallback ---
+    cartItem.quantity = totalQuantity;
+    cartItem.pricing_rule_id = null;
+    cartItem.price = variant?.price ?? Number(product.base_price ?? 0);
+
+    // Check stock
+    if (variant && totalQuantity > (variant.stock ?? 0)) {
+      throw new BadRequestException(
+        `Chỉ còn ${variant.stock} sản phẩm trong kho`
+      );
     }
 
     return this.cartItemRepository.save(cartItem);
@@ -444,7 +498,7 @@ export class CartService {
       }
       case 'flash_sale': {
         const flashRule = (product.pricing_rules ?? []).find(
-          (r) => r.type === 'flash_sale'
+          (r) => r.id === pricing_rule_id
         );
 
         if (flashRule) {
