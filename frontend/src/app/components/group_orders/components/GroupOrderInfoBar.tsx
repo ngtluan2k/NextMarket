@@ -88,7 +88,7 @@ export default function GroupOrderInfoBar({ groupId }: Props) {
             </div>
 
             <div className="flex flex-col items-end gap-1">
-              {/* ✅ Countdown nhỏ gọn ở góc phải */}
+              {/*  Countdown nhỏ gọn ở góc phải */}
               <GroupExpiryCountdown
                 status={group?.status}
                 expiresAt={group?.expires_at}
