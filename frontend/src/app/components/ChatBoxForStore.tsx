@@ -7,6 +7,18 @@ import React, {
 } from 'react';
 import { SenderType, Conversation, Message } from '../types/chat.types';
 import { uploadMedia } from '../../service/chat.service';
+import {
+  Send,
+  Paperclip,
+  X,
+  MessageCircle,
+  Check,
+  CheckCheck,
+  Smile,
+} from 'lucide-react';
+
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 
 interface StoreChatProps {
   storeId: number;
@@ -33,10 +45,12 @@ export const StoreChat = ({
 }: StoreChatProps) => {
   const BE_BASE_URL =
     import.meta.env.VITE_BE_BASE_URL || 'http://localhost:3000';
+
   const getAvatarUrl = (url?: string, fallbackId?: number) =>
     url ? `${BE_BASE_URL}${url}` : `https://i.pravatar.cc/40?u=${fallbackId}`;
 
   const [input, setInput] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const selectedConv =
     conversations.find((c) => c.id === selectedConversationId) || null;
@@ -48,16 +62,16 @@ export const StoreChat = ({
 
     let mediaUrls: string[] = [];
 
-    // Upload file nếu có
     if (selectedFiles.length > 0) {
-      mediaUrls = await uploadMedia(selectedFiles); // gọi API upload mới
-      setSelectedFiles([]); // reset file sau khi upload
+      mediaUrls = await uploadMedia(selectedFiles);
+      setSelectedFiles([]);
+      setPreviewUrls([]);
     }
 
-    // Gửi tin nhắn (text + mediaUrls) qua socket
     if (input.trim() || mediaUrls.length > 0) {
       sendMessage(selectedConv.id, input.trim(), mediaUrls);
       setInput('');
+      setShowEmojiPicker(false);
     }
   };
 
@@ -66,13 +80,11 @@ export const StoreChat = ({
 
     const newFiles = Array.from(e.target.files);
 
-    // Cập nhật selectedFiles: giữ file cũ + thêm file mới, tối đa 10
     setSelectedFiles((prev) => {
       const combined = [...prev, ...newFiles].slice(0, 10);
       return combined;
     });
 
-    // Cập nhật previewUrls: giữ preview cũ + thêm preview mới
     const newUrls = newFiles.map((file) => URL.createObjectURL(file));
     setPreviewUrls((prev) => [...prev, ...newUrls].slice(0, 10));
   };
@@ -81,21 +93,20 @@ export const StoreChat = ({
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
     setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
-  // Auto scroll xuống dưới mỗi khi messages thay đổi
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedConv?.messages]);
 
-  // Tự động đánh dấu đã xem tin nhắn mới của user
   useEffect(() => {
     if (!selectedConv) return;
-    // Chỉ đánh dấu tin nhắn của user là chưa đọc
+
     const unreadMessages = selectedConv.messages.filter(
       (m) => m.sender_type === SenderType.USER && !m.is_read
     );
+
     if (unreadMessages.length > 0) {
-      markAsRead(selectedConv.id); // gọi server đánh dấu
-      // Cập nhật frontend: set tất cả tin nhắn của user là is_read = true + unreadCount = 0
+      markAsRead(selectedConv.id);
       setConversations((prev) =>
         prev.map((conv) => {
           if (conv.id === selectedConv.id) {
@@ -111,210 +122,347 @@ export const StoreChat = ({
         })
       );
     }
-  }, [selectedConv?.messages]);
+  }, [selectedConv, markAsRead, setConversations]);
 
   return (
-    <div className="flex h-full border rounded-lg overflow-hidden shadow-lg bg-white">
+    <div className="flex h-full rounded-2xl overflow-hidden shadow-2xl bg-white border border-gray-100">
       {/* Sidebar */}
-      <div className="w-56 bg-white border-r p-2 overflow-y-auto">
-        <h2 className="font-semibold mb-2 text-base text-gray-700 pl-1">
-          Khách hàng
-        </h2>
+      <div className="w-72 bg-gradient-to-b from-slate-50 to-white border-r border-gray-100 flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            Tin nhắn
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">
+            {conversations.length} cuộc hội thoại
+          </p>
+        </div>
 
-        {conversations.map((conv) => (
-          <div
-            key={conv.id}
-            className={`flex items-center p-2 rounded-md cursor-pointer mb-1 transition-all duration-150 ${
-              selectedConversationId === conv.id
-                ? 'bg-blue-100'
-                : 'hover:bg-gray-100'
-            }`}
-            onClick={() => setSelectedConversationId(conv.id)}
-          >
-            <img
-              src={
-                getAvatarUrl(conv.user?.profile?.avatar_url) ||
-                'https://i.pravatar.cc/40?u=' + conv.user?.id
-              }
-              alt="avatar"
-              className="w-8 h-8 rounded-full mr-2 object-cover"
-            />
+        {/* Conversation List */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {conversations.map((conv) => {
+            const lastMessage = conv.messages[conv.messages.length - 1];
 
-            <span className="flex-1 truncate text-sm font-medium text-gray-800">
-              {conv.user?.profile?.full_name || `Khách ${conv.user?.id}`}
-            </span>
+            return (
+              <div
+                key={conv.id}
+                className={`flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 group ${
+                  selectedConversationId === conv.id
+                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25 scale-[1.02]'
+                    : 'hover:bg-gray-100 text-gray-800'
+                }`}
+                onClick={() => setSelectedConversationId(conv.id)}
+              >
+                <div className="relative">
+                  <img
+                    src={
+                      getAvatarUrl(
+                        conv.user?.profile?.avatar_url,
+                        conv.user?.id
+                      ) || '/placeholder.svg'
+                    }
+                    alt="avatar"
+                    className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-md"
+                  />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+                </div>
 
-            {conv.unreadCount > 0 && (
-              <span className="ml-1 min-w-5 text-[10px] text-white bg-red-500 px-1.5 py-0.5 rounded-full font-semibold text-center">
-                {conv.unreadCount}
-              </span>
-            )}
-          </div>
-        ))}
+                <div className="ml-3 flex-1 min-w-0">
+                  <span
+                    className={`block truncate text-sm font-semibold ${
+                      selectedConversationId === conv.id
+                        ? 'text-white'
+                        : 'text-gray-800'
+                    }`}
+                  >
+                    {conv.user?.profile?.full_name || `Khách ${conv.user?.id}`}
+                  </span>
+
+                  {lastMessage && (
+                    <span
+                      className={`block truncate text-xs mt-0.5 ${
+                        selectedConversationId === conv.id
+                          ? 'text-blue-100'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {lastMessage.sender_type === SenderType.STORE
+                        ? 'Bạn: '
+                        : ''}
+                      {lastMessage.media_url
+                        ? '📷 Hình ảnh'
+                        : lastMessage.content}
+                    </span>
+                  )}
+                </div>
+
+                {conv.unreadCount > 0 && (
+                  <span className="ml-2 min-w-[22px] h-[22px] text-[11px] text-white bg-red-500 px-1.5 rounded-full font-bold flex items-center justify-center shadow-lg shadow-red-500/30">
+                    {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Chat box */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-          {selectedConv ? (
-            selectedConv.messages.map((m: Message, index: number) => {
-              const isStore = m.sender_type === SenderType.STORE;
-
-              // Kiểm tra tin nhắn này là cuối cùng liên tiếp của người gửi
-              const nextMsg = selectedConv.messages[index + 1];
-              const isLastMessageOfSender =
-                !nextMsg || nextMsg.sender_type !== m.sender_type;
-
-              return (
-                <div
-                  key={m.id}
-                  className={`flex items-end ${
-                    isStore ? 'justify-end' : 'justify-start'
-                  } relative`} // thêm relative để avatar absolute
+      <div className="flex-1 flex flex-col bg-gradient-to-b from-gray-50 to-white">
+        {selectedConv ? (
+          <>
+            {/* Chat Header */}
+            <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center gap-3 shadow-sm">
+              <div className="relative">
+                <img
+                  src={
+                    getAvatarUrl(
+                      selectedConv.user?.profile?.avatar_url,
+                      selectedConv.user?.id
+                    ) || '/placeholder.svg'
+                  }
+                  alt="avatar"
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100"
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  {selectedConv.user?.profile?.full_name ||
+                    `Khách ${selectedConv.user?.id}`}
+                </h3>
+                <p
+                  className={`text-xs font-medium ${
+                    selectedConv.user?.status === 'active'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}
                 >
-                  {/* Avatar người khác cho tin nhắn của user */}
-                  {!isStore && (
-                    <img
-                      src={getAvatarUrl(
-                        selectedConv.user?.profile?.avatar_url,
-                        selectedConv.user?.id
-                      )}
-                      alt="avatar"
-                      className="w-8 h-8 rounded-full mr-2 object-cover shadow-sm"
-                    />
-                  )}
+                  {selectedConv.user?.status === 'active'
+                    ? 'Đang hoạt động'
+                    : 'Ngừng hoạt động'}
+                </p>
+              </div>
+            </div>
 
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {selectedConv.messages.map((m: Message, index: number) => {
+                const isStore = m.sender_type === SenderType.STORE;
+                const nextMsg = selectedConv.messages[index + 1];
+                const isLastMessageOfSender =
+                  !nextMsg || nextMsg.sender_type !== m.sender_type;
+                const isLastMessage =
+                  index === selectedConv.messages.length - 1;
+
+                return (
                   <div
-                    className={`flex flex-col ${
-                      isStore ? 'items-end' : 'items-start'
+                    key={m.id}
+                    className={`flex items-end gap-2 ${
+                      isStore ? 'justify-end' : 'justify-start'
                     }`}
                   >
+                    {/* Avatar for user messages */}
+                    {!isStore && isLastMessageOfSender && (
+                      <img
+                        src={
+                          getAvatarUrl(
+                            selectedConv.user?.profile?.avatar_url,
+                            selectedConv.user?.id
+                          ) || '/placeholder.svg'
+                        }
+                        alt="avatar"
+                        className="w-8 h-8 rounded-full object-cover shadow-md flex-shrink-0"
+                      />
+                    )}
+                    {!isStore && !isLastMessageOfSender && (
+                      <div className="w-8 flex-shrink-0" />
+                    )}
+
                     <div
-                      className={`inline-block px-4 py-2 rounded-2xl max-w-[100%] break-normal leading-snug ${
-                        isStore
-                          ? 'bg-blue-500 text-white shadow-md'
-                          : 'bg-white text-gray-800 shadow-md border border-gray-200'
-                      }`}
+                      className={`flex flex-col ${
+                        isStore ? 'items-end' : 'items-start'
+                      } max-w-[70%]`}
                     >
-                      {/* Hiển thị media nếu có */}
-                      {m.media_url ? (
-                        m.media_url.endsWith('.mp4') ||
-                        m.media_url.endsWith('.webm') ||
-                        m.media_url.endsWith('.ogg') ? (
+                      <div
+                        className={`inline-block px-4 py-2.5 rounded-2xl break-words leading-relaxed ${
+                          isStore
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md shadow-lg shadow-blue-500/20'
+                            : 'bg-white text-gray-800 rounded-bl-md shadow-md border border-gray-100'
+                        }`}
+                      >
+                        {m.media_url ? (
+                          m.media_url.endsWith('.mp4') ||
+                          m.media_url.endsWith('.webm') ||
+                          m.media_url.endsWith('.ogg') ? (
+                            <video
+                              src={`${BE_BASE_URL}${m.media_url}`}
+                              controls
+                              className="max-w-xs rounded-lg"
+                            />
+                          ) : (
+                            <img
+                              src={`${BE_BASE_URL}${m.media_url}`}
+                              alt="media"
+                              className="max-w-xs rounded-lg"
+                            />
+                          )
+                        ) : (
+                          <span className="text-[15px]">{m.content}</span>
+                        )}
+                      </div>
+
+                      {/* Read status */}
+                      {isStore && isLastMessageOfSender && isLastMessage && (
+                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+                          {m.is_read ? (
+                            <>
+                              <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                              <span>Đã xem</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Đã gửi</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Small avatar when seen */}
+                    {isStore &&
+                      m.is_read &&
+                      isLastMessageOfSender &&
+                      isLastMessage && (
+                        <img
+                          src={
+                            getAvatarUrl(
+                              selectedConv.user?.profile?.avatar_url,
+                              selectedConv.user?.id
+                            ) || '/placeholder.svg'
+                          }
+                          alt="seen by"
+                          className="w-4 h-4 rounded-full object-cover shadow-sm flex-shrink-0"
+                        />
+                      )}
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-4 bg-white border-t border-gray-100">
+              {/* File Preview */}
+              {selectedFiles.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-3 mb-3 border-b border-gray-100">
+                  {previewUrls.map((url, idx) => {
+                    const file = selectedFiles[idx];
+                    const isVideo = file?.type.startsWith('video');
+                    return (
+                      <div key={idx} className="relative group flex-shrink-0">
+                        {isVideo ? (
                           <video
-                            src={`${BE_BASE_URL}${m.media_url}`}
-                            controls
-                            className="max-w-xs rounded"
+                            src={url}
+                            className="w-16 h-16 rounded-xl object-cover ring-2 ring-gray-100"
                           />
                         ) : (
                           <img
-                            src={`${BE_BASE_URL}${m.media_url}`}
-                            alt="media"
-                            className="max-w-xs rounded"
+                            src={url || '/placeholder.svg'}
+                            className="w-16 h-16 rounded-xl object-cover ring-2 ring-gray-100"
+                            alt="preview"
                           />
-                        )
-                      ) : (
-                        m.content
-                      )}
-                    </div>
-
-                    {/* Chỉ hiển thị trạng thái ở tin nhắn cuối cùng liên tiếp của bản thân */}
-                    {isStore &&
-                      isLastMessageOfSender &&
-                      index === selectedConv.messages.length - 1 && (
-                        <span className="text-xs text-gray-500 mt-1 pr-6">
-                          {m.is_read ? 'Đã xem' : 'Đã gửi'}
-                        </span>
-                      )}
-                  </div>
-
-                  {/* Avatar nhỏ cuối dòng của bản thân nếu đã xem */}
-                  {isStore &&
-                    m.is_read &&
-                    isLastMessageOfSender &&
-                    index === selectedConv.messages.length - 1 && (
-                      <img
-                        src={getAvatarUrl(
-                          selectedConv.user?.profile?.avatar_url,
-                          selectedConv.user?.id
                         )}
-                        alt="receiver avatar"
-                        className="w-4 h-4 rounded-full object-cover shadow-sm absolute -right-0 bottom-0"
-                      />
-                    )}
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })
-          ) : (
-            <div className="text-gray-500 text-center mt-20 font-medium">
-              Chọn khách hàng để bắt đầu trò chuyện
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+              )}
 
-        {selectedConv && (
-          <div className="flex flex-col gap-2 border-t bg-white shadow-inner p-2">
-            {/* Preview media */}
-            {selectedFiles.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {previewUrls.map((url, idx) => {
-                  const file = selectedFiles[idx];
-                  const isVideo = file.type.startsWith('video');
-                  return (
-                    <div key={idx} className="relative">
-                      {isVideo ? (
-                        <video
-                          src={url}
-                          className="w-20 h-20 rounded object-cover"
-                          controls
-                        />
-                      ) : (
-                        <img
-                          src={url}
-                          className="w-20 h-20 rounded object-cover"
-                          alt="preview"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeFile(idx)}
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
-                      >
-                        ×
-                      </button>
+              {/* Input Row */}
+              <div className="flex items-center gap-2 relative">
+                <label className="p-2.5 rounded-full hover:bg-gray-100 cursor-pointer transition-colors text-gray-500 hover:text-blue-500">
+                  <Paperclip className="w-5 h-5" />
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </label>
+
+                {/* Emoji button + Picker */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker((p) => !p)}
+                    className="p-2.5 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-yellow-500"
+                  >
+                    <Smile className="w-5 h-5" />
+                  </button>
+
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-12 left-0 z-50">
+                      <Picker
+                        data={data}
+                        theme="light"
+                        emojiSize={22}
+                        previewPosition="none"
+                        skinTonePosition="none"
+                        onEmojiSelect={(emoji: any) => {
+                          setInput((prev) => prev + (emoji.native || ''));
+                        }}
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                </div>
 
-            {/* Input + file button + send */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="flex-1 border border-gray-300 rounded-full px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-shadow"
-                placeholder="Nhập tin nhắn..."
-              />
-              <label className="bg-gray-200 px-3 py-2 rounded-full cursor-pointer hover:bg-gray-300 transition-colors text-sm">
-                Chọn file
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
-              <button
-                onClick={handleSend}
-                className="bg-blue-600 text-white px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors text-sm"
-              >
-                Gửi
-              </button>
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    className="w-full bg-gray-100 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-gray-400"
+                    placeholder="Nhập tin nhắn..."
+                  />
+                </div>
+
+                <button
+                  onClick={handleSend}
+                  className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
             </div>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <MessageCircle className="w-10 h-10 text-gray-300" />
+            </div>
+            <p className="text-lg font-medium text-gray-500">
+              Chọn cuộc hội thoại
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Chọn khách hàng để bắt đầu trò chuyện
+            </p>
           </div>
         )}
       </div>

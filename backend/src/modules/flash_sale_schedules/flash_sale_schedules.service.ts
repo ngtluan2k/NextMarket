@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
 import { FlashSaleSchedule } from './entities/flash_sale_schedule.entity';
 import { CreateFlashSaleScheduleDto } from './dto/create-flash_sale_schedule.dto';
 import { StoreLevel } from '../store-level/store-level.entity';
@@ -268,5 +268,90 @@ async updateStoreFlashSaleRegistration(
   };
 }
 
+async getActiveFlashSalesForPublic() {
+  const now = new Date();
+  
+  const schedules = await this.scheduleRepo.find({
+    where: [
+      { status: 'active' },
+      { 
+        status: 'upcoming',
+        starts_at: LessThanOrEqual(new Date(now.getTime() + 2 * 60 * 60 * 1000)) // Sắp diễn ra trong 2h tới
+      }
+    ],
+    order: { starts_at: 'ASC' },
+  });
+
+  return { 
+    total: schedules.length, 
+    data: schedules.map(schedule => ({
+      id: schedule.id,
+      name: schedule.name,
+      description: schedule.description,
+      starts_at: schedule.starts_at,
+      ends_at: schedule.ends_at,
+      status: schedule.status,
+      // Không trả về thông tin nhạy cảm
+    }))
+  };
+}
+
+async getProductsForPublic(scheduleId: number) {
+  // Kiểm tra schedule có tồn tại và active/upcoming không
+  const schedule = await this.scheduleRepo.findOne({
+    where: { id: scheduleId }
+  });
+  
+  if (!schedule) {
+    throw new NotFoundException('Flash sale không tồn tại');
+  }
+
+  const rules = await this.pricingRulesRepo.find({
+    where: { 
+      schedule: { id: scheduleId },
+      status: 'active',
+      type: 'flash_sale'
+    },
+    relations: ['product', 'variant', 'product.media', 'product.brand', 'product.store'],
+  });
+
+  return rules
+    .filter(rule => rule.product && rule.product.store && rule.price != null) // Thêm điều kiện rule.price != null
+    .map(rule => {
+      const product = rule.product;
+      const primaryImage = product.media?.find(media => media.is_primary)?.url 
+        || product.media?.[0]?.url 
+        || '/placeholder.svg';
+
+      // Tính toán giá gốc: ưu tiên giá từ variant, nếu không có thì từ product
+      const originalPrice = rule.variant?.price || product.base_price || 0;
+      // Giá flash sale đã được lọc nên rule.price không còn null/undefined
+      const salePrice = rule.price!; // Dùng non-null assertion vì đã lọc
+
+      // Tính phần trăm giảm giá
+      const discount = originalPrice > salePrice && originalPrice > 0
+        ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+        : 0;
+
+      return {
+        id: product.id,
+        name: product.name,
+        image: primaryImage,
+        rating: product.avg_rating || 0,
+        reviews: product.review_count || 0,
+        originalPrice: originalPrice,
+        salePrice: salePrice,
+        discount: discount,
+        badge: 'FLASH SALE',
+        brand: product.brand?.name,
+        store: {
+          id: product.store.id,
+          name: product.store.name,
+        },
+        limit_quantity: rule.limit_quantity,
+        remaining_quantity: rule.limit_quantity, // Có thể tính từ orders
+      };
+    });
+}
 
 }

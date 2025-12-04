@@ -1,3 +1,4 @@
+import { CloseCircleOutlined, GiftOutlined, TagOutlined } from '@ant-design/icons';
 import React from 'react';
 
 interface GroupOrderVoucherProps {
@@ -24,7 +25,7 @@ export const GroupOrderVoucher: React.FC<GroupOrderVoucherProps> = ({
     return (
         <div className="border-t border-green-300 pt-3 space-y-3">
             <div className="text-sm font-semibold text-slate-700">
-                🎫 Mã giảm giá
+                 <TagOutlined /> Mã giảm giá
             </div>
 
             {/* Input và button */}
@@ -58,7 +59,7 @@ export const GroupOrderVoucher: React.FC<GroupOrderVoucherProps> = ({
             {/* Hiển thị lỗi */}
             {voucherError && (
                 <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
-                    ❌ {voucherError}
+                    <CloseCircleOutlined /> {voucherError}
                 </div>
             )}
 
@@ -75,7 +76,7 @@ export const GroupOrderVoucher: React.FC<GroupOrderVoucherProps> = ({
                             </p>
                         </div>
                         <p className="text-sm font-bold text-green-600">
-                            -{voucherDiscount.toLocaleString()}đ
+                         <GiftOutlined />{voucherDiscount.toLocaleString()}đ
                         </p>
                     </div>
                 </div>

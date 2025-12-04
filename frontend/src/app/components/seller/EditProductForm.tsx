@@ -340,12 +340,17 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
             inventory: inventoryWithSKU,
             pricing_rules: pricingRules,
           });
+
+          setPriceText(
+            product.base_price ? String(Number(product.base_price)) : ''
+          );
         }
       } catch (err) {
         console.error('Không tải được thương hiệu/danh mục:', err);
       }
     })();
   }, [product]);
+  
 
   // ---- xử lý chung ----
   const handleChange = (
@@ -424,19 +429,8 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   });
 
   // ---------- trạng thái UI cho Bước 1 ----------
-  const [priceText, setPriceText] = useState<string>(
-    form.base_price
-      ? new Intl.NumberFormat('vi-VN').format(form.base_price)
-      : ''
-  );
-  useEffect(() => {
-    setPriceText(
-      form.base_price
-        ? new Intl.NumberFormat('vi-VN').format(form.base_price)
-        : ''
-    );
-  }, [form.base_price]);
-  const shortCount = form.short_description?.length ?? 0;
+  const [priceText, setPriceText] = useState<string>(''); // chỉ giữ số thô
+ const shortCount = form.short_description?.length ?? 0;
 
   // dropdown danh mục dài
   const [catOpen, setCatOpen] = useState(false);
@@ -464,12 +458,22 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
   const previewCats = selectedCats.slice(0, 6);
   const remain = selectedCats.length - previewCats.length;
 
-  // đổi text -> number (giữ phân cách nghìn)
   function onPriceChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const onlyDigits = e.target.value.replace(/[^0-9]/g, '');
-    const n = onlyDigits ? Number(onlyDigits) : 0;
-    setPriceText(onlyDigits ? new Intl.NumberFormat('vi-VN').format(n) : '');
-    setForm((prev) => ({ ...prev, base_price: n }));
+    const digits = e.target.value.replace(/[^0-9]/g, '');
+    setPriceText(digits);
+    setForm((prev) => ({
+      ...prev,
+      base_price: digits ? Number(digits) : 0,
+    }));
+  }
+
+  function onPriceBlur() {
+    setPriceText((prev) => {
+      const digits = prev.replace(/[^0-9]/g, '');
+      if (!digits) return '';
+      const n = Number(digits);
+      return new Intl.NumberFormat('vi-VN').format(n);
+    });
   }
 
   // bật/tắt danh mục (chips + dropdown)
@@ -789,6 +793,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({
                     inputMode="numeric"
                     value={priceText}
                     onChange={onPriceChange}
+                    onBlur={onPriceBlur}
                     placeholder="0"
                     className="w-full bg-transparent px-2 py-2.5 text-sm outline-none"
                   />

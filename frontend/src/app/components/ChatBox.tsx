@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SenderType, Message, Conversation } from '../types/chat.types';
 import { uploadMedia } from '../../service/chat.service';
+import {
+  MessageOutlined,
+  CloseOutlined,
+  PaperClipOutlined,
+  SendOutlined,
+  ArrowLeftOutlined,
+  SmileOutlined,
+} from '@ant-design/icons';
+import { Input, Button, Tooltip, Badge, Popover } from 'antd';
+
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
+
+const { TextArea } = Input;
 
 interface ChatBoxProps {
   userId?: number;
@@ -9,9 +23,7 @@ interface ChatBoxProps {
   conversations: Conversation[];
   setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
   selectedConversationId: number | null;
-  setSelectedConversationId: React.Dispatch<
-    React.SetStateAction<number | null>
-  >;
+  setSelectedConversationId: React.Dispatch<React.SetStateAction<number | null>>;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   sendMessage: (
@@ -41,24 +53,26 @@ export const ChatBox = ({
   onClose,
   senderType,
 }: ChatBoxProps) => {
+
+  // ❌ Hooks must be called unconditionally → KHÔNG ĐƯỢC IF TRƯỚC NÓ
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const BE_BASE_URL =
     import.meta.env.VITE_BE_BASE_URL || 'http://localhost:3000';
 
   const selectedConversation =
     conversations.find((c) => c.id === selectedConversationId) || null;
 
-  // Auto scroll + mark as read khi mở conversation
+  // ⬇ Hook được gọi đầy đủ trước khi return
   useEffect(() => {
     if (!selectedConversation) return;
 
-    // Scroll xuống cuối
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-    // Đánh dấu tin nhắn chưa đọc
     const unreadMessages = (selectedConversation.messages || []).filter(
       (msg) => msg.sender_type !== senderType && !msg.is_read
     );
@@ -84,6 +98,15 @@ export const ChatBox = ({
       })
     );
   }, [selectedConversationId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length, selectedConversationId]);
+
+  // ❗HOOK XONG → BẮT ĐẦU RETURN ĐIỀU KIỆN
+  if (senderType === SenderType.STORE) {
+    return null;
+  }
 
   const handleClose = () => {
     setSelectedConversationId(null);
@@ -121,38 +144,62 @@ export const ChatBox = ({
     }
   };
 
+  const handleEmojiSelect = (emoji: any) => {
+    setInput((prev) => prev + (emoji.native || ''));
+  };
+
   return (
-    <div className="fixed bottom-4 right-4 w-[450px] h-[500px] bg-white shadow-xl rounded-xl flex z-[9999]">
+    <div
+      className="
+        fixed z-40
+        bottom-2 right-2
+        sm:bottom-4 sm:right-4
+        w-[96vw] sm:w-[420px] md:w-[450px]
+        h-[60vh] sm:h-[500px]
+        bg-white shadow-xl rounded-xl flex
+      "
+    >
       {/* Sidebar */}
-      <div className="w-36 border-r bg-gray-100 rounded-l-xl overflow-y-auto p-2">
-        <h4 className="font-semibold mb-2 text-sm">📨 Chats</h4>
-        {conversations.map((c) => (
-          <div
-            key={c.id}
-            onClick={() => onSelectConversation(c.id)}
-            className={`p-2 rounded cursor-pointer text-sm mb-1 truncate ${
-              selectedConversationId === c.id
-                ? 'bg-blue-300'
-                : 'hover:bg-gray-300'
-            }`}
-          >
-            {c.store?.name ||
-              c.user?.profile?.full_name ||
-              `User #${c.user?.id}`}
-            {(c.unreadCount || 0) > 0 && (
-              <span className="ml-1 bg-red-500 text-white px-1 rounded text-xs">
-                {c.unreadCount}
+      <div className="w-28 sm:w-36 border-r bg-gray-100 rounded-l-xl overflow-y-auto p-2">
+        <h4 className="font-semibold mb-2 text-xs sm:text-sm flex items-center gap-1">
+          <MessageOutlined className="text-gray-700" />
+          <span>Chats</span>
+        </h4>
+        {conversations.map((c) => {
+          const unread = c.unreadCount || 0;
+          return (
+            <div
+              key={c.id}
+              onClick={() => onSelectConversation(c.id)}
+              className={`p-2 rounded cursor-pointer text-xs sm:text-sm mb-1 truncate flex items-center justify-between ${
+                selectedConversationId === c.id
+                  ? 'bg-blue-200'
+                  : 'hover:bg-gray-200'
+              }`}
+            >
+              <span className="truncate">
+                {c.store?.name ||
+                  c.user?.profile?.full_name ||
+                  `User #${c.user?.id}`}
               </span>
-            )}
-          </div>
-        ))}
+              {unread > 0 && (
+                <Badge
+                  count={unread}
+                  size="small"
+                  className="ml-1"
+                  style={{ backgroundColor: '#f5222d' }}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col rounded-r-xl">
         {/* Header */}
         <div className="flex justify-between items-center px-3 py-2 border-b">
-          <h3 className="font-semibold text-sm">
+          <h3 className="font-semibold text-xs sm:text-sm">
             {selectedConversation
               ? selectedConversation.store?.name
                 ? `Đang chat với ${selectedConversation.store.name}`
@@ -161,13 +208,17 @@ export const ChatBox = ({
                 : 'Đang load...'
               : 'Chọn cuộc chat'}
           </h3>
-          <button onClick={handleClose} className="text-red-500 font-bold">
-            ✕
-          </button>
+          <Button
+            type="text"
+            size="small"
+            onClick={handleClose}
+            icon={<CloseOutlined />}
+            className="text-red-500"
+          />
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+        <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50">
           {selectedConversation ? (
             (messages || []).map((m) => (
               <div
@@ -176,42 +227,46 @@ export const ChatBox = ({
                   m.sender_type === senderType ? 'justify-end' : 'justify-start'
                 }`}
               >
-                <span
-                  className={`inline-block p-2 rounded-lg max-w-[70%] break-words text-sm ${
-                    m.sender_type === senderType
-                      ? 'bg-green-100 text-gray-800'
-                      : 'bg-slate-200 text-gray-800'
-                  }`}
-                >
-                  {m.content}
-                  {m.media_url &&
-                    (m.media_url.endsWith('.mp4') ||
-                    m.media_url.endsWith('.webm') ||
-                    m.media_url.endsWith('.ogg') ? (
-                      <video
-                        src={`${BE_BASE_URL}${m.media_url}`}
-                        controls
-                        className="mt-1 max-w-xs rounded"
-                      />
-                    ) : (
-                      <img
-                        src={`${BE_BASE_URL}${m.media_url}`}
-                        alt="media"
-                        className="mt-1 max-w-xs rounded"
-                      />
-                    ))}
-                </span>
+                <div className="flex flex-col max-w-[75%]">
+                  <span
+                    className={`inline-block px-3 py-2 rounded-2xl break-words text-sm shadow-sm ${
+                      m.sender_type === senderType
+                        ? 'bg-blue-500 text-white rounded-br-sm'
+                        : 'bg-white text-gray-800 rounded-bl-sm'
+                    }`}
+                  >
+                    {m.content}
 
-                {m.sender_type === senderType && (
-                  <span className="text-xs text-gray-400 ml-1 self-end">
-                    {m.is_read ? 'Đã xem' : 'Đã gửi'}
+                    {m.media_url &&
+                      (m.media_url.endsWith('.mp4') ||
+                      m.media_url.endsWith('.webm') ||
+                      m.media_url.endsWith('.ogg') ? (
+                        <video
+                          src={`${BE_BASE_URL}${m.media_url}`}
+                          controls
+                          className="mt-1 max-w-xs rounded-lg"
+                        />
+                      ) : (
+                        <img
+                          src={`${BE_BASE_URL}${m.media_url}`}
+                          alt="media"
+                          className="mt-1 max-w-xs rounded-lg"
+                        />
+                      ))}
                   </span>
-                )}
+
+                  {m.sender_type === senderType && (
+                    <span className="text-[10px] text-gray-400 mt-1 self-end">
+                      {m.is_read ? 'Đã xem' : 'Đã gửi'}
+                    </span>
+                  )}
+                </div>
               </div>
             ))
           ) : (
-            <div className="text-gray-400 text-sm text-center mt-8">
-              👉 Chọn cuộc trò chuyện bên trái
+            <div className="text-gray-400 text-xs sm:text-sm text-center mt-9 flex flex-col items-center gap-1">
+              <ArrowLeftOutlined />
+              <span>Chọn cuộc trò chuyện bên trái</span>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -219,10 +274,9 @@ export const ChatBox = ({
 
         {/* Input + File Preview */}
         {selectedConversation && (
-          <div className="flex flex-col p-2 border-t gap-2">
-            {/* Previews */}
+          <div className="flex flex-col p-2 border-t gap-2 bg-white">
             {selectedFiles.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {previewUrls.map((url, idx) => {
                   const file = selectedFiles[idx];
                   const isVideo = file.type.startsWith('video');
@@ -254,16 +308,49 @@ export const ChatBox = ({
               </div>
             )}
 
-            <div className="flex gap-2">
-              <input
+            <div className="flex items-center gap-2">
+              {/* Emoji picker */}
+              <Popover
+                content={
+                  <div className="max-h-80 overflow-y-auto">
+                    <Picker
+                      data={data}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="light"
+                    />
+                  </div>
+                }
+                trigger="click"
+                placement="topLeft"
+                open={showEmojiPicker}
+                onOpenChange={setShowEmojiPicker}
+                overlayStyle={{ zIndex: 99999 }}
+              >
+                <Tooltip title="Thêm emoji">
+                  <Button
+                    type="text"
+                    icon={<SmileOutlined />}
+                    className="flex-shrink-0"
+                  />
+                </Tooltip>
+              </Popover>
+
+              <TextArea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="flex-1 border rounded-lg px-2 py-1 text-sm"
+                onPressEnter={(e) => {
+                  if (!e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                autoSize={{ minRows: 1, maxRows: 4 }}
                 placeholder="Nhập tin nhắn..."
+                className="text-sm flex-1"
               />
-              <label className="bg-gray-200 px-2 py-1 rounded cursor-pointer hover:bg-gray-300 text-sm">
-                📎
+
+              <label className="flex-shrink-0 bg-gray-100 px-2 py-1 rounded-lg cursor-pointer hover:bg-gray-200 text-sm flex items-center justify-center border border-dashed border-gray-300">
+                <PaperClipOutlined />
                 <input
                   type="file"
                   multiple
@@ -271,12 +358,16 @@ export const ChatBox = ({
                   onChange={handleFileChange}
                 />
               </label>
-              <button
-                onClick={handleSend}
-                className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 text-sm"
-              >
-                Gửi
-              </button>
+
+              <Tooltip title="Gửi">
+                <Button
+                  type="primary"
+                  shape="circle"
+                  icon={<SendOutlined />}
+                  onClick={handleSend}
+                  className="flex-shrink-0"
+                />
+              </Tooltip>
             </div>
           </div>
         )}

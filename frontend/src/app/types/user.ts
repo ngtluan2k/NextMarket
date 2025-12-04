@@ -32,6 +32,7 @@ export interface User {
   username: string;
   email: string;
   roles: string[];
+  status: string;
   permissions: string[];
   profile:{
     full_name?: string;

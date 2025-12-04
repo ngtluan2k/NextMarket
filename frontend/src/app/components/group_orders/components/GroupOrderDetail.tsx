@@ -24,7 +24,20 @@ import {
     WarningOutlined,
     CrownOutlined,
     SwapOutlined,
-} from '@ant-design/icons';
+    DeleteOutlined,
+    LogoutOutlined,
+    MessageOutlined,
+    ShoppingCartOutlined,
+    CreditCardOutlined,
+    CheckCircleOutlined,
+    ExclamationCircleOutlined,
+    PhoneOutlined,
+    CheckOutlined,
+    SmileOutlined,
+    GiftOutlined,
+    UnlockOutlined,
+
+  } from '@ant-design/icons';
 import AddressModal from './../../../page/AddressModal';
 import { message } from 'antd';
 import { GroupPaymentBox } from './GroupPaymentBox';
@@ -562,17 +575,7 @@ export default function GroupOrderDetail() {
         return myItems.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
     }, [myItems]);
 
-    // Tính tổng với logic mới
-    const totals = React.useMemo(() => {
-        const items =
-            Array.isArray(groupItems) && groupItems.length > 0
-                ? groupItems
-                : Array.isArray(group?.items)
-                    ? group.items
-                    : [];
-        const discountPercent = Number(group?.discount_percent || 0);
-        return calcTotals(items, discountPercent);
-    }, [groupItems, group?.items, group?.discount_percent]);
+    
 
     const getDisplayName = (item: any) => {
         // Thử lấy từ members array trước
@@ -599,6 +602,33 @@ export default function GroupOrderDetail() {
 
         return `Thành viên #${item?.member?.id}`;
     };
+    const baseItems = React.useMemo(() => {
+        if (Array.isArray(groupItems) && groupItems.length > 0) return groupItems;
+        if (Array.isArray(group?.items)) return group.items;
+        return [];
+      }, [groupItems, group?.items]);
+      
+      // Tính tổng với logic mới
+      const totals = React.useMemo(() => {
+        const discountPercent = Number(group?.discount_percent || 0);
+        return calcTotals(baseItems, discountPercent);
+      }, [baseItems, group?.discount_percent]);
+
+    const groupedItemsByMember = React.useMemo(() => {
+        const map = new Map<number, { member: any; items: any[] }>();
+      
+        baseItems.forEach((it: any) => {
+          const memberId = it?.member?.id ?? it?.member?.user?.id;
+          if (!memberId) return;
+      
+          if (!map.has(memberId)) {
+            map.set(memberId, { member: it.member, items: [] });
+          }
+          map.get(memberId)!.items.push(it);
+        });
+      
+        return Array.from(map.values());
+      }, [baseItems]);
 
     // Check nếu có member nào chưa có địa chỉ khi delivery_mode = member_address
     const membersWithoutAddress = React.useMemo(() => {
@@ -734,13 +764,13 @@ export default function GroupOrderDetail() {
                                                 onClick={onUnlockGroup}
                                                 className="px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition-colors"
                                             >
-                                                🔓 Mở khóa nhóm
+                                                <UnlockOutlined /> Mở khóa nhóm
                                             </button>
                                             <button
                                                 onClick={onDeleteGroup}
                                                 className="px-3 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
                                             >
-                                                🗑️ Xóa nhóm
+                                                <DeleteOutlined /> Xóa nhóm
                                             </button>
                                         </>
                                     ) : (
@@ -767,13 +797,13 @@ export default function GroupOrderDetail() {
                                 onClick={onLeaveGroup}
                                 className="px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
                             >
-                                🚪 Rời nhóm
+                                <LogoutOutlined /> Rời nhóm
                             </button>
                             <button
                                 onClick={() => setChatOpen(true)}
                                 className="px-4 py-2 bg-blue-600 text-white rounded"
                             >
-                                Mở chat nhóm
+                              <MessageOutlined />  Mở chat nhóm
                             </button>
                         </div>
                     )}
@@ -916,7 +946,7 @@ export default function GroupOrderDetail() {
                                             onClick={onEditDeliveryMode}
                                             className="w-full px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 rounded transition-colors font-medium"
                                         >
-                                            🔄 Thay đổi chế độ giao hàng
+                                            <SwapOutlined /> Thay đổi chế độ giao hàng
                                         </button>
                                     )}
                                 </div>
@@ -932,13 +962,13 @@ export default function GroupOrderDetail() {
                                         {myMember?.address_id ? (
                                             <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs space-y-1">
                                                 <div className="font-semibold text-green-900">
-                                                    ✅ {myMember.address_id.recipientName}
+                                                <CheckCircleOutlined />  {myMember.address_id.recipientName}
                                                 </div>
                                                 <div className="text-green-700">
-                                                    📞 {myMember.address_id.phone}
+                                                <PhoneOutlined />  {myMember.address_id.phone}
                                                 </div>
                                                 <div className="text-green-700">
-                                                    📍{' '}
+                                                <EnvironmentOutlined />{' '}
                                                     {[
                                                         myMember.address_id.street,
                                                         myMember.address_id.ward,
@@ -951,7 +981,7 @@ export default function GroupOrderDetail() {
                                             </div>
                                         ) : (
                                             <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg text-xs text-yellow-800 font-medium">
-                                                ⚠️ Bạn chưa chọn địa chỉ giao hàng!
+                                                <WarningOutlined /> Bạn chưa chọn địa chỉ giao hàng!
                                             </div>
                                         )}
 
@@ -959,9 +989,15 @@ export default function GroupOrderDetail() {
                                             onClick={() => setShowMemberAddressModal(true)}
                                             className="w-full px-3 py-2 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors font-medium"
                                         >
-                                            {myMember?.address_id
-                                                ? '📝 Thay đổi địa chỉ'
-                                                : '📍 Chọn địa chỉ'}
+                                            {myMember?.address_id ? (
+                                                <>
+                                                <EditOutlined /> Thay đổi địa chỉ
+                                                </>
+                                            ) : (
+                                                <>
+                                                <EnvironmentOutlined /> Chọn địa chỉ
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 )}
@@ -971,14 +1007,14 @@ export default function GroupOrderDetail() {
                         {/* PANEL 2: Thành viên */}
                         <section className="lg:col-span-4 bg-white rounded-xl shadow-sm border p-6">
                             <h2 className="font-bold text-lg mb-4">
-                                👥 Thành viên ({members.length})
+                            <TeamOutlined />  Thành viên ({members.length})
                             </h2>
 
                             {membersWithoutAddress.length > 0 &&
                                 group?.delivery_mode === 'member_address' && (
                                     <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                                         <p className="text-xs font-semibold text-yellow-800 mb-1">
-                                            ⚠️ Thành viên chưa có địa chỉ:
+                                        <WarningOutlined />Thành viên chưa có địa chỉ:
                                         </p>
                                         <ul className="text-xs text-yellow-700 space-y-0.5">
                                             {membersWithoutAddress.map((m) => (
@@ -1011,7 +1047,7 @@ export default function GroupOrderDetail() {
                                                 </div>
                                                 {m.is_host === 1 ? (
                                                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                                        👑 Host
+                                                        <CrownOutlined /> Host
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
@@ -1020,14 +1056,23 @@ export default function GroupOrderDetail() {
                                                 )}
 
                                                 {group?.status === 'locked' && (
-                                                    <span
-                                                        className={`ml-2 text-xs px-2 py-0.5 rounded ${m.has_paid
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-yellow-100 text-yellow-700'
-                                                            }`}
-                                                    >
-                                                        {m.has_paid ? '✅ Đã thanh toán' : '⏳ Chưa thanh toán'}
-                                                    </span>
+                                                <span
+                                                    className={`ml-2 text-xs px-2 py-0.5 rounded inline-flex items-center gap-1 ${
+                                                    m.has_paid
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-yellow-100 text-yellow-700'
+                                                    }`}
+                                                >
+                                                    {m.has_paid ? (
+                                                    <>
+                                                        <CheckCircleOutlined /> Đã thanh toán
+                                                    </>
+                                                    ) : (
+                                                    <>
+                                                        <ClockCircleOutlined /> Chưa thanh toán
+                                                    </>
+                                                    )}
+                                                </span>
                                                 )}
                                             </div>
                                         </div>
@@ -1046,19 +1091,15 @@ export default function GroupOrderDetail() {
                                             </span>
                                             {group?.delivery_mode === 'member_address' &&
                                                 (m.address_id ? (
-                                                    <span
-                                                        className="text-green-600"
-                                                        title="Đã có địa chỉ"
-                                                    >
-                                                        ✅
-                                                    </span>
+                                                    <CheckCircleOutlined
+                                                    className="text-green-600"
+                                                    title="Đã có địa chỉ"
+                                                    />
                                                 ) : (
-                                                    <span
-                                                        className="text-yellow-600"
-                                                        title="Chưa có địa chỉ"
-                                                    >
-                                                        ⚠️
-                                                    </span>
+                                                    <WarningOutlined
+                                                    className="text-yellow-600"
+                                                    title="Chưa có địa chỉ"
+                                                    />
                                                 ))}
                                         </div>
                                     </li>
@@ -1091,261 +1132,303 @@ export default function GroupOrderDetail() {
                         </section>
 
                         {/* PANEL 4: Sản phẩm đã chọn */}
-                        <section className={`bg-white rounded-xl shadow-sm border p-6 ${group?.delivery_mode === 'member_address' ? 'lg:col-span-8' : 'lg:col-span-8'
-                            }`}>
-                            <h2 className="font-bold text-lg mb-4">🛒 Sản phẩm đã chọn</h2>
+                        {/* PANEL 4: Sản phẩm đã chọn */}
+<section
+  className={`bg-white rounded-xl shadow-sm border p-6 ${
+    group?.delivery_mode === 'member_address' ? 'lg:col-span-8' : 'lg:col-span-8'
+  }`}
+>
+  <div className="flex items-center gap-2 mb-4">
+    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+      <ShoppingCartOutlined className="text-slate-700" />
+    </div>
+    <h2 className="font-bold text-lg text-slate-900">Sản phẩm đã chọn</h2>
+  </div>
 
-                            {Array.isArray(groupItems) && groupItems.length > 0 ? (
-                                <div className="space-y-4">
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-sm">
-                                            <thead className="bg-slate-50">
-                                                <tr className="text-left text-slate-700">
-                                                    <th className="py-3 px-4 font-semibold">
-                                                        Thành viên
-                                                    </th>
-                                                    <th className="py-3 px-4 font-semibold">Sản phẩm</th>
-                                                    <th className="py-3 px-4 font-semibold text-center">
-                                                        SL
-                                                    </th>
-                                                    <th className="py-3 px-4 font-semibold text-right">
-                                                        Giá
-                                                    </th>
+  {Array.isArray(groupItems) && groupItems.length > 0 ? (
+    <div className="space-y-5">
+      {/* Bảng sản phẩm */}
+      <div className="overflow-x-auto rounded-xl border border-slate-100">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50">
+            <tr className="text-left">
+              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Thành viên
+              </th>
+              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Sản phẩm
+              </th>
+              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">
+                SL
+              </th>
+              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">
+                Giá
+              </th>
 
-                                                    {/* THÊM CỘT MỚI: ĐỊA CHỈ */}
-                                                    {group?.delivery_mode === 'member_address' && (
-                                                        <th className="py-3 px-4 font-semibold">
-                                                            <div className="flex items-center gap-1">
-                                                                <EnvironmentOutlined className="text-blue-600" />
-                                                                <span>Địa chỉ giao hàng</span>
-                                                            </div>
-                                                        </th>
-                                                    )}
+              {group?.delivery_mode === 'member_address' && (
+                <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  <div className="flex items-center gap-1">
+                    <EnvironmentOutlined className="text-blue-600" />
+                    <span>Địa chỉ giao hàng</span>
+                  </div>
+                </th>
+              )}
 
-                                                    <th className="py-3 px-4 font-semibold">Ghi chú</th>
-                                                    <th className="py-3 px-4 font-semibold text-center">
-                                                        Thao tác
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {(Array.isArray(groupItems) && groupItems.length > 0
-                                                    ? groupItems
-                                                    : Array.isArray(group?.items)
-                                                        ? group.items
-                                                        : []
-                                                ).map((it: any) => {
-                                                    const canEdit = canEditItem(it);
+              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                Ghi chú
+              </th>
+              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">
+                Thao tác
+              </th>
+            </tr>
+          </thead>
 
-                                                    //  Lấy địa chỉ của member
-                                                    const memberAddress = it?.member?.address_id;
+          <tbody className="divide-y divide-slate-100">
+            {groupedItemsByMember.map((memberGroup) =>
+              memberGroup.items.map((it: any, index: number) => {
+                const canEdit = canEditItem(it);
+                const memberAddress = it?.member?.address_id;
+                const rowSpanCount = memberGroup.items.length;
 
-                                                    return (
-                                                        <tr
-                                                            key={it.id}
-                                                            className="hover:bg-slate-50 transition-colors"
-                                                        >
-                                                            <td className="py-3 px-4">
-                                                                <span className="font-medium text-slate-900">
-                                                                    {getDisplayName(it)}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className="font-medium">
-                                                                    {it?.product?.name ??
-                                                                        `Product #${it?.product?.id ?? ''}`}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4 text-center">
-                                                                <span className="font-semibold">
-                                                                    {it?.quantity}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4 text-right">
-                                                                <span className="font-semibold text-slate-900">
-                                                                    {getItemPreGroupPrice(
-                                                                        it,
-                                                                        Number(group?.discount_percent || 0)
-                                                                    ).toLocaleString()}{' '}
-                                                                    đ
-                                                                </span>
-                                                            </td>
+                return (
+                  <tr
+                    key={it.id}
+                    className="hover:bg-slate-50/70 transition-colors"
+                  >
+                    {/* Cột thành viên – gom theo group, chỉ hiện 1 lần */}
+                    {index === 0 && (
+                      <td
+                        className="py-4 px-4 align-top bg-slate-50/60 border-r border-slate-100"
+                        rowSpan={rowSpanCount}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                            {(
+                              (it?.member?.user?.profile?.full_name ||
+                                it?.member?.user?.username ||
+                                'U')[0] ?? 'U'
+                            )
+                              .toString()
+                              .toUpperCase()}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="font-semibold text-slate-900">
+                              {getDisplayName(it)}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {it?.member?.user?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    )}
 
-                                                            {/*  CỘT ĐỊA CHỈ MỚI */}
-                                                            {group?.delivery_mode === 'member_address' && (
-                                                                <td className="py-3 px-4">
-                                                                    {memberAddress ? (
-                                                                        <div className="text-xs space-y-0.5">
-                                                                            <div className="font-semibold text-green-700 flex items-center gap-1">
-                                                                                <span className="text-green-600">
-                                                                                    ✓
-                                                                                </span>
-                                                                                {memberAddress.recipientName}
-                                                                            </div>
-                                                                            <div className="text-slate-600">
-                                                                                {memberAddress.phone}
-                                                                            </div>
-                                                                            <div
-                                                                                className="text-slate-600 max-w-xs line-clamp-2"
-                                                                                title={[
-                                                                                    memberAddress.street,
-                                                                                    memberAddress.ward,
-                                                                                    memberAddress.district,
-                                                                                    memberAddress.province,
-                                                                                ]
-                                                                                    .filter(Boolean)
-                                                                                    .join(', ')}
-                                                                            >
-                                                                                {[
-                                                                                    memberAddress.street,
-                                                                                    memberAddress.ward,
-                                                                                    memberAddress.district,
-                                                                                ]
-                                                                                    .filter(Boolean)
-                                                                                    .join(', ')}
-                                                                            </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded inline-flex items-center gap-1">
-                                                                            <span>⚠️</span>
-                                                                            <span>Chưa có địa chỉ</span>
-                                                                        </div>
-                                                                    )}
-                                                                </td>
-                                                            )}
+                    {/* Sản phẩm */}
+                    <td className="py-4 px-4 align-top">
+                      <div className="space-y-1">
+                        <div className="font-medium text-slate-900">
+                          {it?.product?.name ?? `Product #${it?.product?.id ?? ''}`}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Mã SP: {it?.product?.sku || it?.product?.id || '—'}
+                        </div>
+                      </div>
+                    </td>
 
-                                                            <td className="py-3 px-4">
-                                                                <span className="text-slate-600 text-xs italic">
-                                                                    {it?.note || '—'}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                {canEdit ? (
-                                                                    <div className="flex gap-1 justify-center">
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                onEditItemNote(it.id, it.note)
-                                                                            }
-                                                                            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors font-medium"
-                                                                        >
-                                                                            📝
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() =>
-                                                                                onDeleteItem(
-                                                                                    it.id,
-                                                                                    it?.product?.name || 'Sản phẩm'
-                                                                                )
-                                                                            }
-                                                                            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors font-medium"
-                                                                        >
-                                                                            🗑️
-                                                                        </button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="text-slate-300 text-xs text-center block">
-                                                                        —
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                    {/* SL */}
+                    <td className="py-4 px-4 text-center align-top">
+                       <span className="font-semibold">{it?.quantity}</span>
+                    </td>
 
-                                    {/* Tổng tiền */}
-                                    <div className="mt-6 p-5 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200 space-y-3">
-                                        <div className="flex justify-between text-sm text-slate-700">
-                                            <span>Tạm tính (chưa giảm):</span>
-                                            <span className="font-semibold">
-                                                {totals.subtotalBefore.toLocaleString()} đ
-                                            </span>
-                                        </div>
+                    {/* Giá */}
+                    <td className="py-4 px-4 text-right align-top">
+                    <span className="font-semibold text-slate-900">
+                        {getItemPreGroupPrice(
+                        it,
+                        Number(group?.discount_percent || 0)
+                        ).toLocaleString()} đ
+                    </span>
+                    </td>
 
-                                        {group?.discount_percent > 0 && (
-                                            <div className="flex justify-between text-sm text-green-600 font-medium">
-                                                <span>
-                                                    🎉 Giảm giá nhóm (
-                                                    {Number(group?.discount_percent || 0)}%):
-                                                </span>
-                                                <span className="font-bold">
-                                                    -{totals.discountAmount.toLocaleString()} đ
-                                                </span>
-                                            </div>
-                                        )}
-                                        {/* Hiển thị giảm giá từ voucher nếu có */}
-                                        {voucherDiscount > 0 && (
-                                            <div className="flex justify-between text-sm text-orange-600 font-medium">
-                                                <span>🎟️ Giảm từ voucher:</span>
-                                                <span className="font-bold">
-                                                    -{voucherDiscount.toLocaleString()} đ
-                                                </span>
-                                            </div>
-                                        )}
+                    {/* Địa chỉ – chỉ trong mode member_address, gộp theo member */}
+                    {group?.delivery_mode === 'member_address' &&
+                      (index === 0 ? (
+                        <td
+                          className="py-4 px-4 align-top"
+                          rowSpan={rowSpanCount}
+                        >
+                          {memberAddress ? (
+                            <div className="text-xs space-y-1">
+                              <div className="font-semibold text-green-700 flex items-center gap-1">
+                                <CheckCircleOutlined />
+                                <span>{memberAddress.recipientName}</span>
+                              </div>
+                              <div className="text-slate-600 flex items-center gap-1">
+                                <PhoneOutlined />
+                                <span>{memberAddress.phone}</span>
+                              </div>
+                              <div
+                                className="text-slate-600 max-w-xs line-clamp-2 flex items-start gap-1"
+                                title={[
+                                  memberAddress.street,
+                                  memberAddress.ward,
+                                  memberAddress.district,
+                                  memberAddress.province,
+                                ]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              >
+                                <EnvironmentOutlined className="mt-0.5" />
+                                <span>
+                                  {[
+                                    memberAddress.street,
+                                    memberAddress.ward,
+                                    memberAddress.district,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded inline-flex items-center gap-1">
+                              <WarningOutlined />
+                              <span>Chưa có địa chỉ</span>
+                            </div>
+                          )}
+                        </td>
+                      ) : null)}
 
-                                        <div className="flex justify-between items-center text-xl font-bold border-t pt-3 border-green-300">
-                                            <span className="text-slate-900">Thành tiền:</span>
-                                            <span className="text-green-600">
-                                                {(totals.totalAfter - voucherDiscount).toLocaleString()} đ
-                                            </span>
-                                        </div>
+                    {/* Ghi chú */}
+                    <td className="py-4 px-4 align-top">
+                      <span className="text-slate-600 text-xs italic">
+                        {it?.note || '—'}
+                      </span>
+                    </td>
 
+                    {/* Thao tác */}
+                    <td className="py-4 px-4 align-top">
+                      {canEdit ? (
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => onEditItemNote(it.id, it.note)}
+                            className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-100 transition-colors font-medium flex items-center gap-1"
+                          >
+                            <EditOutlined />
+                          </button>
+                          <button
+                            onClick={() =>
+                              onDeleteItem(
+                                it.id,
+                                it?.product?.name || 'Sản phẩm'
+                              )
+                            }
+                            className="px-2 py-1 text-xs bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-100 transition-colors font-medium flex items-center gap-1"
+                          >
+                            <DeleteOutlined />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 text-xs text-center block">
+                          —
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
+      {/* Card tổng tiền */}
+      <div className="mt-2 p-5 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200 space-y-3">
+        <div className="flex justify-between text-sm text-slate-700">
+          <span>Tạm tính (chưa giảm):</span>
+          <span >
+            {totals.subtotalBefore.toLocaleString()} đ
+          </span>
+        </div>
 
+        {group?.discount_percent > 0 && (
+          <div className="flex justify-between text-sm text-green-600 font-medium">
+            <span>
+              Giảm giá nhóm ({Number(group?.discount_percent || 0)}%):
+            </span>
+            <span className="font-bold font-mono">
+              -{totals.discountAmount.toLocaleString()} đ
+            </span>
+          </div>
+        )}
 
+        {voucherDiscount > 0 && (
+          <div className="flex justify-between text-sm text-orange-600 font-medium">
+            <span>Giảm từ voucher:</span>
+            <span className="font-bold font-mono">
+              -{voucherDiscount.toLocaleString()} đ
+            </span>
+          </div>
+        )}
 
-                                    </div>
+        <div className="border-t border-green-200 pt-3 flex justify-between items-center">
+          <span className="text-slate-900 font-semibold text-base">
+            Thành tiền:
+          </span>
+          <span className="text-green-600 text-2xl ">
+            {(totals.totalAfter - voucherDiscount).toLocaleString()} đ
+          </span>
+        </div>
+      </div>
 
+      {/* Các banner thông báo giữ nguyên như cũ */}
+      {!isHost &&
+        group?.delivery_mode === 'host_address' &&
+        group?.status === 'open' &&
+        myItems.length > 0 && (
+          <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+            <p className="text-sm text-blue-700">
+              <ClockCircleOutlined /> Chờ host khóa nhóm và thanh toán
+            </p>
+          </div>
+        )}
 
-                                    {/* ========== THÔNG BÁO CHO MEMBER - MODE host_address & OPEN ========== */}
-                                    {!isHost &&
-                                        group?.delivery_mode === 'host_address' &&
-                                        group?.status === 'open' &&
-                                        myItems.length > 0 && (
-                                            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                                                <p className="text-sm text-blue-700">
-                                                    ⏳ Chờ host khóa nhóm và thanh toán
-                                                </p>
-                                            </div>
-                                        )}
-                                    {/* ========== THÔNG BÁO CHO MEMBER - MODE host_address & LOCKED ========== */}
-                                    {!isHost &&
-                                        group?.delivery_mode === 'host_address' &&
-                                        group?.status === 'locked' &&
-                                        myItems.length > 0 && (
-                                            <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
-                                                <p className="text-sm text-orange-700 font-medium">
-                                                    ⏳ Chờ host thanh toán cho nhóm
-                                                </p>
-                                            </div>
-                                        )}
+      {!isHost &&
+        group?.delivery_mode === 'host_address' &&
+        group?.status === 'locked' &&
+        myItems.length > 0 && (
+          <div className="mt-2 p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
+            <p className="text-sm text-orange-700 font-medium">
+              <ClockCircleOutlined /> Chờ host thanh toán cho nhóm
+            </p>
+          </div>
+        )}
 
+      {!isHost &&
+        group?.delivery_mode === 'member_address' &&
+        group?.status === 'open' &&
+        myItems.length > 0 && (
+          <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+            <p className="text-sm text-blue-700">
+              <ClockCircleOutlined /> Chờ host khóa nhóm hoặc đủ{' '}
+              {group?.target_member_count} người để thanh toán
+            </p>
+          </div>
+        )}
+    </div>
+  ) : (
+    <div className="text-center py-12">
+      <ShoppingCartOutlined style={{ fontSize: 48 }} />
+      <p className="text-slate-500 text-lg mt-3">
+        Chưa có sản phẩm nào được chọn
+      </p>
+      <p className="text-slate-400 text-sm mt-1">
+        Quay lại cửa hàng để thêm sản phẩm vào nhóm
+      </p>
+    </div>
+  )}
+</section>
 
-                                    {/* ========== THÔNG BÁO CHO MEMBER - MODE member_address & OPEN ========== */}
-                                    {!isHost &&
-                                        group?.delivery_mode === 'member_address' &&
-                                        group?.status === 'open' &&
-                                        myItems.length > 0 && (
-                                            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                                                <p className="text-sm text-blue-700">
-                                                    ⏳ Chờ host khóa nhóm hoặc đủ {group?.target_member_count} người để
-                                                    thanh toán
-                                                </p>
-                                            </div>
-                                        )}
-                                </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <div className="text-6xl mb-4">🛒</div>
-                                    <p className="text-slate-500 text-lg">Chưa có sản phẩm nào được chọn</p>
-                                    <p className="text-slate-400 text-sm mt-2">
-                                        Quay lại cửa hàng để thêm sản phẩm vào nhóm
-                                    </p>
-                                </div>
-                            )}
-                        </section>
                     </div>
                 )}
             </main>
