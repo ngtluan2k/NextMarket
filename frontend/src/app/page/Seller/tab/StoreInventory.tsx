@@ -274,6 +274,7 @@ export default function StoreInventory() {
             // ✅ pricing_rules
             pricing_rules:
               (apiProduct.pricing_rules as any[])?.map((rule) => ({
+                pricing_rule_id: rule.id,
                 type: rule.type,
                 min_quantity: rule.min_quantity,
                 price:

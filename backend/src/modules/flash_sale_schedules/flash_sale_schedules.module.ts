@@ -6,6 +6,7 @@ import { FlashSaleSchedule } from './entities/flash_sale_schedule.entity';
 import { StoreLevel } from '../store-level/store-level.entity';
 import { Product } from '../product/product.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
       FlashSaleSchedule, // 👈 phải khai báo entity này
       StoreLevel,   
       Product,
-      PricingRules     // 👈 và entity này nữa
+      PricingRules,
+      OrderItem     // 👈 và entity này nữa
     ]),
   ],
   controllers: [FlashSaleSchedulesController],

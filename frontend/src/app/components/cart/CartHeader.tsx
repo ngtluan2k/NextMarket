@@ -192,7 +192,7 @@ export const CartHeader: React.FC<Props> = ({
                   }
                 }}
               >
-                <Text strong>{storeName}</Text>
+                <Text strong>Cửa hàng : {storeName}</Text>
               </div>
             </div>
 

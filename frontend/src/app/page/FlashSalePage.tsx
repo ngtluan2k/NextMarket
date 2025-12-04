@@ -1,15 +1,15 @@
 // pages/FlashSalePage.tsx
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   getAllFlashSalesForStore,
   getRegisteredProductsForStore,
   getAllFlashSalesForPublic,
   getProductsForPublic,
-} from "../../service/flash_sale.service";
-import EveryMartHeader from "../components/Navbar";
-import Footer from "../components/Footer";
+} from '../../service/flash_sale.service';
+import EveryMartHeader from '../components/Navbar';
+import Footer from '../components/Footer';
 
 import type {
   FlashSaleApiProduct,
@@ -17,19 +17,26 @@ import type {
   FlashSaleSchedule,
   FlashSaleScheduleApi,
   FlashSaleTimeSlot,
-} from "../components/flash-sale/types";
-import { FlashSaleHeader } from "../components/flash-sale/Header";
-import { HeroBanner } from "../components/flash-sale/FlashSaleHero";
-import { TimeSlots } from "../components/flash-sale/CategoryTabs";
-import { CountdownTimer } from "../components/flash-sale/CountdownTimer";
-import { ProductGrid } from "../components/flash-sale/ProductGrid";
+} from '../components/flash-sale/types';
+import { FlashSaleHeader } from '../components/flash-sale/Header';
+import { HeroBanner } from '../components/flash-sale/FlashSaleHero';
+import { TimeSlots } from '../components/flash-sale/CategoryTabs';
+import { CountdownTimer } from '../components/flash-sale/CountdownTimer';
+import { ProductGrid } from '../components/flash-sale/ProductGrid';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const now = dayjs().tz('Asia/Ho_Chi_Minh');
 
 // helper convert bất cứ thứ gì -> number
 const toNumber = (value: unknown): number => {
   if (value == null) return 0;
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const cleaned = value.replace(/[^\d.-]/g, "");
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const cleaned = value.replace(/[^\d.-]/g, '');
     const parsed = Number(cleaned);
     return Number.isFinite(parsed) ? parsed : 0;
   }
@@ -41,8 +48,8 @@ const mapScheduleApiToSchedule = (
 ): FlashSaleSchedule => ({
   id: schedule.id,
   name: schedule.name,
-  startsAt: schedule.starts_at,
-  endsAt: schedule.ends_at,
+  startsAt: new Date(schedule.starts_at),
+  endsAt: new Date(schedule.ends_at),
   description: schedule.description,
   status: schedule.status,
 });
@@ -51,17 +58,20 @@ const mapScheduleApiToSchedule = (
 const mapApiProductToFlashSaleProduct = (
   apiProduct: FlashSaleApiProduct
 ): FlashSaleProduct => {
-  const name = apiProduct.product_name || apiProduct.name || "Sản phẩm";
+  // Name
+  const name = apiProduct.product_name || apiProduct.name || 'Sản phẩm';
 
+  // Image: ưu tiên image, fallback media, fallback placeholder
   const mediaPrimary =
     apiProduct.media?.find((m) => m.is_primary)?.url ||
     apiProduct.media?.[0]?.url;
+  const image = apiProduct.image || mediaPrimary || '/placeholder.svg';
 
-  const image = apiProduct.image || mediaPrimary || "/placeholder.svg";
-
+  // Rating & Reviews
   const rating = toNumber(apiProduct.rating ?? apiProduct.avg_rating);
   const reviews = toNumber(apiProduct.reviews ?? apiProduct.review_count);
 
+  // Giá bán
   const salePrice = toNumber(
     apiProduct.flash_sale_price ??
       apiProduct.salePrice ??
@@ -70,6 +80,7 @@ const mapApiProductToFlashSaleProduct = (
       apiProduct.variants?.[0]?.price
   );
 
+  // Giá gốc
   const originalPrice = toNumber(
     apiProduct.original_price ??
       apiProduct.originalPrice ??
@@ -78,18 +89,12 @@ const mapApiProductToFlashSaleProduct = (
       (salePrice ? salePrice * 1.3 : 0)
   );
 
+  // Tính discount
   let discount = 0;
-  const apiDiscount =
-    apiProduct.discount !== undefined && apiProduct.discount !== null
-      ? toNumber(apiProduct.discount)
-      : null;
-
-  if (apiDiscount !== null && apiDiscount > 0) {
-    discount = apiDiscount;
+  if (apiProduct.discount !== undefined && apiProduct.discount !== null) {
+    discount = toNumber(apiProduct.discount);
   } else if (originalPrice > salePrice && salePrice > 0) {
-    discount = Math.round(
-      ((originalPrice - salePrice) / originalPrice) * 100
-    );
+    discount = Math.round(((originalPrice - salePrice) / originalPrice) * 100);
   }
 
   return {
@@ -101,7 +106,9 @@ const mapApiProductToFlashSaleProduct = (
     originalPrice,
     salePrice,
     discount,
-    badge: apiProduct.badge || "FLASH SALE",
+    badge: apiProduct.badge || 'FLASH SALE',
+    remaining_quantity: toNumber(apiProduct.remaining_quantity),
+    limit_quantity: toNumber(apiProduct.limit_quantity),
   };
 };
 
@@ -115,10 +122,10 @@ export default function FlashSalePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const getToken = (): string => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("token") || "";
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token') || '';
     }
-    return "";
+    return '';
   };
 
   useEffect(() => {
@@ -137,47 +144,56 @@ export default function FlashSalePage() {
         response = await getAllFlashSalesForPublic();
       }
 
-      console.log("API Schedules Response:", response);
-
       let rawSchedules: FlashSaleScheduleApi[] = [];
 
       if (response && Array.isArray(response.data)) {
         rawSchedules = response.data;
       } else if (response && Array.isArray(response)) {
         rawSchedules = response;
-      } else if (response?.data && Array.isArray(response.data)) {
-        rawSchedules = response.data;
       }
 
       if (rawSchedules.length === 0) {
-        setError("Không có dữ liệu flash sale");
+        setError('Không có dữ liệu flash sale');
         return null;
       }
 
       const mappedSchedules = rawSchedules.map(mapScheduleApiToSchedule);
       setSchedules(mappedSchedules);
 
-      const now = new Date();
-      const currentSchedule =
-        mappedSchedules.find((schedule) => {
-          const startTime = new Date(schedule.startsAt);
-          const endTime = new Date(schedule.endsAt);
-          return (
-            startTime <= now &&
-            endTime >= now &&
-            schedule.status === "active"
-          );
-        }) || mappedSchedules[0] ||
-        null;
+      const now = dayjs().tz('Asia/Ho_Chi_Minh');
 
-      setActiveSchedule(currentSchedule);
-      return currentSchedule;
+      // 1. Tìm khung giờ đang diễn ra gần nhất
+      let active = mappedSchedules.find((schedule) => {
+        const start = dayjs(schedule.startsAt).tz('Asia/Ho_Chi_Minh');
+        const end = dayjs(schedule.endsAt).tz('Asia/Ho_Chi_Minh');
+        return (
+          (now.isAfter(start) &&
+            now.isBefore(end) &&
+            schedule.status === 'upcoming') ||
+          schedule.status === 'active'
+        );
+      });
+
+      // 2. Nếu không có, chọn slot sắp tới gần nhất
+      if (!active) {
+        const upcomingSchedules = mappedSchedules
+          .filter((s) => dayjs(s.startsAt).tz('Asia/Ho_Chi_Minh').isAfter(now))
+          .sort((a, b) =>
+            dayjs(a.startsAt)
+              .tz('Asia/Ho_Chi_Minh')
+              .diff(dayjs(b.startsAt).tz('Asia/Ho_Chi_Minh'))
+          );
+        active = upcomingSchedules[0] || mappedSchedules[0] || null; // fallback slot đầu tiên
+      }
+
+      setActiveSchedule(active);
+      return active;
     } catch (err: any) {
-      console.error("Lỗi khi lấy schedules:", err);
+      console.error('Lỗi khi lấy schedules:', err);
       if (err.response?.status === 401 && isAuthenticated) {
-        setError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+        setError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
       } else {
-        setError("Lỗi khi tải dữ liệu flash sale");
+        setError('Lỗi khi tải dữ liệu flash sale');
       }
       return null;
     }
@@ -185,46 +201,31 @@ export default function FlashSalePage() {
 
   const fetchProducts = async (scheduleId: number): Promise<void> => {
     try {
-      let response: any;
+      const response = await getProductsForPublic(scheduleId);
+      console.log('API Products Response (Public):', response);
 
-      if (isAuthenticated) {
-        const token = getToken();
-        response = await getRegisteredProductsForStore(scheduleId, token);
-      } else {
-        response = await getProductsForPublic(scheduleId);
-      }
-
-      console.log("API Products Response:", response);
-
-      let productsData: FlashSaleApiProduct[] = [];
-
-      if (response && Array.isArray(response.data)) {
-        productsData = response.data;
-      } else if (response && Array.isArray(response.products)) {
-        productsData = response.products;
-      } else if (response?.data && Array.isArray(response.data.products)) {
-        productsData = response.data.products;
-      } else if (response && Array.isArray(response)) {
-        productsData = response;
-      }
+      // Vì API đã trả đúng dạng mảng FlashSaleApiProduct
+      const productsData: FlashSaleApiProduct[] = Array.isArray(response)
+        ? response
+        : [];
 
       if (productsData.length > 0) {
-        const mappedProducts = productsData.map(mapApiProductToFlashSaleProduct);
-        console.log("Mapped products:", mappedProducts);
+        const mappedProducts = productsData.map(
+          mapApiProductToFlashSaleProduct
+        );
+        console.log('Mapped products:', mappedProducts);
         setProducts(mappedProducts);
       } else {
         setProducts([]);
       }
     } catch (err: any) {
-      console.error("Lỗi khi lấy sản phẩm:", err);
-      if (err.response?.status === 404) {
-        setProducts([]);
-      } else if (err.response?.status === 401 && isAuthenticated) {
-        setError("Không có quyền truy cập sản phẩm flash sale");
-      } else {
-        setError("Lỗi khi tải sản phẩm");
-      }
+      console.error('Lỗi khi lấy sản phẩm:', err);
       setProducts([]);
+      setError(
+        err.response?.status === 404
+          ? 'Không có sản phẩm flash sale'
+          : 'Lỗi khi tải sản phẩm'
+      );
     }
   };
 
@@ -246,36 +247,25 @@ export default function FlashSalePage() {
   }, [isAuthenticated]);
 
   const timeSlots: FlashSaleTimeSlot[] = schedules.map((schedule) => {
-    const start = new Date(schedule.startsAt);
-    const end = new Date(schedule.endsAt);
-
-    const startTime = start.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const endTime = end.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const timeDisplay = `${startTime} - ${endTime}`;
-
-    let label = "Sắp diễn ra";
-    let isHighlighted = false;
+    const startTime = dayjs(schedule.startsAt)
+      .tz('Asia/Ho_Chi_Minh')
+      .format('HH:mm');
+    const endTime = dayjs(schedule.endsAt)
+      .tz('Asia/Ho_Chi_Minh')
+      .format('HH:mm');
 
     const now = new Date();
-    if (start <= now && end > now) {
-      label = "Đang diễn ra";
+    let label = 'Sắp diễn ra';
+    let isHighlighted = false;
+
+    if (schedule.startsAt <= now && schedule.endsAt > now) {
+      label = 'Đang diễn ra';
       isHighlighted = true;
-    } else if (end <= now) {
-      label = "Đã kết thúc";
+    } else if (schedule.endsAt <= now) {
+      label = 'Đã kết thúc';
     }
 
-    return {
-      time: timeDisplay,
-      label,
-      isHighlighted,
-    };
+    return { time: `${startTime} - ${endTime}`, label, isHighlighted };
   });
 
   const handleTimeSlotChange = (index: number) => {
@@ -303,6 +293,9 @@ export default function FlashSalePage() {
         <div className="sticky top-[40px] z-40 bg-gray-900">
           <TimeSlots
             slots={timeSlots}
+            activeIndex={schedules.findIndex(
+              (s) => s.id === activeSchedule?.id
+            )}
             onSlotChange={(_, __) => handleTimeSlotChange(_)}
           />
         </div>
@@ -346,12 +339,12 @@ export default function FlashSalePage() {
             <h3 className="mb-2 text-xl font-bold text-gray-700">
               {activeSchedule
                 ? `Không có sản phẩm trong "${activeSchedule.name}"`
-                : "Không có flash sale đang diễn ra"}
+                : 'Không có flash sale đang diễn ra'}
             </h3>
             <p>
               {activeSchedule
-                ? "Hiện chưa có sản phẩm nào được đăng ký cho flash sale này."
-                : "Hiện không có đợt flash sale nào đang hoạt động."}
+                ? 'Hiện chưa có sản phẩm nào được đăng ký cho flash sale này.'
+                : 'Hiện không có đợt flash sale nào đang hoạt động.'}
             </p>
           </div>
         </div>

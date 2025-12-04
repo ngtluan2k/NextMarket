@@ -1,22 +1,28 @@
 // components/flash-sale/product-card.tsx
-import type { FlashSaleProduct } from "./types";
-
+import type { FlashSaleProduct } from './types';
+import { BE_BASE_URL } from '../../api/api';
+import { Progress } from 'antd';
 interface ProductCardProps {
   product: FlashSaleProduct;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  console.log('ProductCard props:', product);
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
+    new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
     }).format(price);
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:-translate-y-1 hover:border-red-300 hover:shadow-lg">
       <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
         <img
-          src={product.image || "/placeholder.svg"}
+          src={
+            product.image
+              ? `${BE_BASE_URL}${product.image}`
+              : '/placeholder.svg'
+          }
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
         />
@@ -53,6 +59,31 @@ export function ProductCard({ product }: ProductCardProps) {
             {formatPrice(product.originalPrice)}
           </span>
         </div>
+        {product.limit_quantity && product.remaining_quantity !== undefined && (
+          <div className="mt-3 relative">
+            <Progress
+              percent={
+                product.limit_quantity &&
+                product.remaining_quantity !== undefined
+                  ? Math.max(
+                      0,
+                      (product.remaining_quantity / product.limit_quantity) *
+                        100
+                    )
+                  : 100
+              }
+              showInfo={false}
+              strokeColor="#f43f5e"
+              trailColor="#fca5a5"
+              size={{ height: 15 }} // custom kích thước
+              className="mt-1.5"
+            />
+
+            <div className="absolute inset-0 flex items-center justify-center text-[10.5px] text-white font-medium pointer-events-none">
+              Còn lại: {product.remaining_quantity} sản phẩm
+            </div>
+          </div>
+        )}
 
         <button className="mt-2 w-full rounded-md bg-red-500 py-1.5 text-xs font-semibold text-white transition-all hover:bg-red-600 active:scale-95 md:text-sm">
           Mua ngay

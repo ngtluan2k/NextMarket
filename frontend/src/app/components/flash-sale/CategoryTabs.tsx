@@ -6,18 +6,17 @@ import type { FlashSaleTimeSlot } from "./types";
 
 interface TimeSlotsProps {
   slots: FlashSaleTimeSlot[];
+  activeIndex?: number; // index slot đang active
   onSlotChange?: (index: number, slot: FlashSaleTimeSlot) => void;
 }
 
-export function TimeSlots({ slots, onSlotChange }: TimeSlotsProps) {
-  const [activeSlotIndex, setActiveSlotIndex] = useState(0);
+export function TimeSlots({ slots, activeIndex = 0, onSlotChange }: TimeSlotsProps) {
+  const [localActiveIndex, setLocalActiveIndex] = useState(activeIndex);
 
   const handleSlotClick = (index: number) => {
-    setActiveSlotIndex(index);
+    setLocalActiveIndex(index);
     const slot = slots[index];
-    if (slot) {
-      onSlotChange?.(index, slot);
-    }
+    if (slot) onSlotChange?.(index, slot);
   };
 
   return (
@@ -29,7 +28,7 @@ export function TimeSlots({ slots, onSlotChange }: TimeSlotsProps) {
 
         <div className="grid grid-cols-3 gap-2 md:grid-cols-5 md:gap-3">
           {slots.map((slot, idx) => {
-            const isActive = activeSlotIndex === idx;
+            const isActive = idx === (localActiveIndex ?? activeIndex);
 
             return (
               <button

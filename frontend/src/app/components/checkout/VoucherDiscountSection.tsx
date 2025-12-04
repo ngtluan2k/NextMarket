@@ -334,7 +334,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
     if (voucher.discount_type === VoucherDiscountType.PERCENTAGE) {
       const discount = `Giảm ${voucher.discount_value}%`;
       return voucher.max_discount_amount
-        ? `${discount} Tối đa {Number(voucher.max_discount_amount).toLocaleString('vi-VN')}đ`
+        ? `${discount} Tối đa ${Number(voucher.max_discount_amount).toLocaleString('vi-VN')}đ`
         : discount;
     } else if (voucher.discount_type === VoucherDiscountType.FIXED) {
       return `Giảm ${voucher.discount_value.toLocaleString()}đ`;
@@ -716,8 +716,8 @@ const VoucherDiscountSection: React.FC<Props> = ({
       </div>
 
       <Spin
-        spinning={loading || !isDataReady}
-        tip={!isDataReady ? 'Loading...' : undefined}
+        spinning={loading}
+       
       >
         <Tabs defaultActiveKey="available">
           <Tabs.TabPane tab="Khả dụng" key="available">

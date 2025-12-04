@@ -34,6 +34,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.tz.setDefault('Asia/Ho_Chi_Minh');
 interface PricingRule {
+  id?: number;
   type: string;
   min_quantity: number | null;
   price: number;
@@ -44,7 +45,7 @@ interface PricingRule {
   name?: string;
   status?: 'active' | 'inactive';
   limit_quantity?: number;
-  schedule?: { id: number } | null; // chỉ dùng schedule
+  schedule?: { id: number } | null;
 }
 
 interface EditProductFormProps {

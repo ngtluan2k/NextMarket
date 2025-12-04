@@ -12,11 +12,12 @@ export interface FlashSaleScheduleApi {
 export interface FlashSaleSchedule {
   id: number;
   name: string;
-  startsAt: string;
-  endsAt: string;
+  startsAt: Date;
+  endsAt: Date;
   description?: string;
   status: string;
 }
+
 
 export interface FlashSaleApiProduct {
   id: number;
@@ -44,14 +45,25 @@ export interface FlashSaleApiProduct {
   originalPrice?: number | string;
   discount?: number | string;
 
+  // số lượng
   limit_quantity?: number;
   remaining_quantity?: number;
   stock?: number;
+
+  // thương hiệu
   brand?: { name: string } | string;
+
+  // variants, pricing rules
   variants?: Array<{ price: number | string; stock?: number }>;
   pricing_rules?: Array<{ price: number | string }>;
+
+  // badge
   badge?: string;
+
+  // store (không có trong mapping hiện tại nhưng vẫn giữ)
+  store?: { id: number; name: string };
 }
+
 
 export interface FlashSaleProduct {
   id: number;
@@ -63,6 +75,8 @@ export interface FlashSaleProduct {
   salePrice: number;
   discount: number;
   badge: string;
+  remaining_quantity: number;
+  limit_quantity: number;
 }
 
 export interface FlashSaleTimeSlot {

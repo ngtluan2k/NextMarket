@@ -1,3 +1,4 @@
+
 // components/flash-sale/hero-banner.tsx
 export function HeroBanner() {
   return (
@@ -17,7 +18,7 @@ export function HeroBanner() {
               <div className="relative text-center">
                 <div className="mb-3 text-4xl font-black md:text-5xl">
                   <span className="inline-block bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent">
-                    XỬ LÝ
+                    SĂN NGAY
                   </span>
                 </div>
                 <div className="rounded-full bg-yellow-300 px-4 py-2 text-xs font-bold text-red-700 shadow-lg md:text-sm">

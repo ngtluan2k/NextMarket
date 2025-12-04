@@ -9,6 +9,7 @@ import { RegisterFlashSaleDto } from './dto/register-flash_sale.dto';
 import { Product } from '../product/product.entity';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { UpdateFlashSaleScheduleDto } from './dto/update-flash_sale_schedule.dto';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Injectable()
 export class FlashSaleSchedulesService {
@@ -21,7 +22,9 @@ export class FlashSaleSchedulesService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @InjectRepository(PricingRules)
-    private readonly pricingRulesRepo: Repository<PricingRules>
+    private readonly pricingRulesRepo: Repository<PricingRules>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepo: Repository<OrderItem>
   ) {}
 
   ///////////////////////////////ADMIN///////////////////////////
@@ -297,7 +300,7 @@ async getActiveFlashSalesForPublic() {
 }
 
 async getProductsForPublic(scheduleId: number) {
-  // Kiểm tra schedule có tồn tại và active/upcoming không
+  // Kiểm tra schedule có tồn tại
   const schedule = await this.scheduleRepo.findOne({
     where: { id: scheduleId }
   });
@@ -315,43 +318,53 @@ async getProductsForPublic(scheduleId: number) {
     relations: ['product', 'variant', 'product.media', 'product.brand', 'product.store'],
   });
 
-  return rules
-    .filter(rule => rule.product && rule.product.store && rule.price != null) // Thêm điều kiện rule.price != null
-    .map(rule => {
-      const product = rule.product;
-      const primaryImage = product.media?.find(media => media.is_primary)?.url 
-        || product.media?.[0]?.url 
-        || '/placeholder.svg';
+  const result = [];
 
-      // Tính toán giá gốc: ưu tiên giá từ variant, nếu không có thì từ product
-      const originalPrice = rule.variant?.price || product.base_price || 0;
-      // Giá flash sale đã được lọc nên rule.price không còn null/undefined
-      const salePrice = rule.price!; // Dùng non-null assertion vì đã lọc
+  for (const rule of rules) {
+    if (!rule.product || !rule.product.store || rule.price == null) continue;
 
-      // Tính phần trăm giảm giá
-      const discount = originalPrice > salePrice && originalPrice > 0
-        ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
-        : 0;
+    const product = rule.product;
+    const primaryImage = product.media?.find(m => m.is_primary)?.url 
+      || product.media?.[0]?.url 
+      || '/placeholder.svg';
 
-      return {
-        id: product.id,
-        name: product.name,
-        image: primaryImage,
-        rating: product.avg_rating || 0,
-        reviews: product.review_count || 0,
-        originalPrice: originalPrice,
-        salePrice: salePrice,
-        discount: discount,
-        badge: 'FLASH SALE',
-        brand: product.brand?.name,
-        store: {
-          id: product.store.id,
-          name: product.store.name,
-        },
-        limit_quantity: rule.limit_quantity,
-        remaining_quantity: rule.limit_quantity, // Có thể tính từ orders
-      };
+    const originalPrice = rule.variant?.price || product.base_price || 0;
+    const salePrice = rule.price!;
+
+    const discount = originalPrice > salePrice && originalPrice > 0
+      ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+      : 0;
+
+    // Tính remaining_quantity từ orders
+    const soldQty = await this.orderItemRepo
+      .createQueryBuilder('oi')
+      .select('SUM(oi.quantity)', 'total')
+      .where('oi.pricing_rule_id = :ruleId', { ruleId: rule.id })
+      .getRawOne();
+    const totalSold = Number(soldQty?.total ?? 0);
+    const remainingQuantity = Math.max(0, (rule.limit_quantity ?? 0) - totalSold);
+
+    result.push({
+      id: product.id,
+      name: product.name,
+      image: primaryImage,
+      rating: product.avg_rating || 0,
+      reviews: product.review_count || 0,
+      originalPrice,
+      salePrice,
+      discount,
+      badge: 'FLASH SALE',
+      brand: product.brand?.name,
+      store: {
+        id: product.store.id,
+        name: product.store.name,
+      },
+      limit_quantity: rule.limit_quantity,
+      remaining_quantity: remainingQuantity,
     });
+  }
+
+  return result;
 }
 
 }
