@@ -29,8 +29,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Optimized token validation - no additional API calls on startup
- 
 
   // Kiểm tra token khi app khởi động
   useEffect(() => {

@@ -135,7 +135,9 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         quantity: i.quantity,
         is_group: i.is_group,
         pricingRuleId: i.pricing_rule?.id ?? undefined,
-        pricing_rule: i.pricing_rule?.id ? { id: i.pricing_rule.id } : undefined,
+        pricing_rule: i.pricing_rule?.id
+          ? { id: i.pricing_rule.id }
+          : undefined,
         product: {
           id: i.product.id,
           name: i.product.name,
@@ -149,8 +151,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         },
         variant: i.variant, // giữ nguyên để check sau
       }));
-      console.log('Checkout payload items:', JSON.stringify(items, null, 2));
-
+    console.log('Checkout payload items:', JSON.stringify(items, null, 2));
 
     const groupItems = items.filter((item) => item.is_group);
     const regularItems = items.filter((item) => !item.is_group);
@@ -350,9 +351,11 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                                 <Tag color="gold" icon={<CrownOutlined />}>
                                   Chủ nhóm
                                 </Tag>
-                              ) : <Tag color="green" icon={<TeamOutlined />}>
+                              ) : (
+                                <Tag color="green" icon={<TeamOutlined />}>
                                   Thành viên
-                                </Tag>}
+                                </Tag>
+                              )}
                               {group.status === 'CLOSING' && (
                                 <Tag color="red">Sắp đóng</Tag>
                               )}
@@ -427,9 +430,6 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                           <div className="flex items-start gap-6">
                             <div className="flex items-center gap-2">
                               <TeamOutlined style={{ color: '#1677ff' }} />
-                              {group.is_host ? (
-                                <CrownOutlined style={{ color: '#faad14' }} />
-                              ) : null}
                             </div>
 
                             <div>

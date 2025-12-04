@@ -109,7 +109,6 @@ export const GroupPaymentBox: React.FC<GroupPaymentBoxProps> = ({
                             onClick={onHostCheckout}
                             className="w-full px-6 py-4 text-lg font-bold rounded-xl shadow-lg bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all"
                         >
-                            <DollarOutlined /> Thanh toán cho nhóm
                             💳 Thanh toán {finalTotal.toLocaleString()} đ
                         </button>
 
