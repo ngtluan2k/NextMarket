@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { useAuth } from '../../../hooks/useAuth';
 import { useGroupOrderSocket } from './../../../hooks/useGroupOrderSocket';
 import { GroupOrderCheckout } from './GroupOrderCheckout';
+import { GroupDeadlineModal } from './GroupDeadlineModal';
 import {
     HomeOutlined,
     UserOutlined,
@@ -45,7 +46,7 @@ import { useState } from 'react';
 import GroupChatModal from './GroupChatModal';
 import { useChatSocket } from '../../../hooks/useChatSocket';
 import { SenderType } from '../../../types/chat.types';
-
+import { GroupExpiryCountdown } from './GroupExpiryCountdown';
 
 export default function GroupOrderDetail() {
     const { id } = useParams();
@@ -68,7 +69,7 @@ export default function GroupOrderDetail() {
     const [isValidatingVoucher, setIsValidatingVoucher] = React.useState(false);
     const [appliedVoucher, setAppliedVoucher] = React.useState<any>(null);
     const [isChatOpen, setChatOpen] = useState(false);
-
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
 
     const { socketService } = useGroupOrderSocket(Number(id), (event, data) => {
         switch (event) {
@@ -363,20 +364,37 @@ export default function GroupOrderDetail() {
         message.success('Đã cập nhật tên nhóm!');
     };
 
-    const onEditDeadline = async () => {
-        const def = group?.expires_at
-            ? dayjs(group.expires_at).format('YYYY-MM-DD HH:mm:ss')
-            : '';
-        const value = prompt(
-            'Nhập thời hạn (YYYY-MM-DD HH:mm:ss, để trống = bỏ hạn):',
-            def
-        );
-        const payload = value
-            ? { expiresAt: dayjs(value).toISOString() }
-            : { expiresAt: null };
-        await groupOrdersApi.update(groupId, payload);
-        await refresh();
-        message.success('Đã cập nhật thời hạn!');
+    // const onEditDeadline = async () => {
+    //     const def = group?.expires_at
+    //         ? dayjs(group.expires_at).format('YYYY-MM-DD HH:mm:ss')
+    //         : '';
+    //     const value = prompt(
+    //         'Nhập thời hạn (YYYY-MM-DD HH:mm:ss, để trống = bỏ hạn):',
+    //         def
+    //     );
+    //     const payload = value
+    //         ? { expiresAt: dayjs(value).toISOString() }
+    //         : { expiresAt: null };
+    //     await groupOrdersApi.update(groupId, payload);
+    //     await refresh();
+    //     message.success('Đã cập nhật thời hạn!');
+    // };
+
+    const onSaveDeadline = async (expiresAtIso: string | null) => {
+        try {
+            await groupOrdersApi.update(groupId, { joinExpiresAt: expiresAtIso });
+            await refresh();
+            if (expiresAtIso) {
+                message.success('Đã cập nhật thời hạn!');
+            } else {
+                message.success('Đã bỏ thời hạn của nhóm!');
+            }
+            setDeadlineModalOpen(false);
+        } catch (error: any) {
+            const errorMsg =
+                error?.response?.data?.message || 'Không thể cập nhật thời hạn';
+            message.error(errorMsg);
+        }
     };
 
     const onEditTargetCount = async () => {
@@ -559,11 +577,11 @@ export default function GroupOrderDetail() {
 
         // 2. Hoặc tìm member host
         return group?.members?.some(
-            (m: any) => m.is_host === 1 && m.user?.id === user.user_id
+            (m: any) => m.is_host === true && m.user?.id === user.user_id
         );
     }, [user?.user_id, group]);
 
-    console.log('isHost:', isHost);
+    console.log('isHost nha:', isHost);
 
     const myItems = React.useMemo(() => {
         if (!user?.user_id) return [];
@@ -716,16 +734,16 @@ export default function GroupOrderDetail() {
                                         <EditOutlined />  Sửa tên nhóm
                                     </button>
                                     <button
-                                        onClick={onEditDeadline}
+                                        onClick={() => setDeadlineModalOpen(true)}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        <ClockCircleOutlined /> Sửa thời hạn
+                                        <ClockCircleOutlined />  Sửa thời hạn tham gia
                                     </button>
                                     <button
                                         onClick={onEditTargetCount}
                                         className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold hover:bg-slate-50 transition-colors"
                                     >
-                                        <TeamOutlined />  Sửa mục tiêu
+                                        <TeamOutlined />  Sửa giới hạn thành viên
                                     </button>
                                     <button
                                         onClick={onAddMember}
@@ -862,13 +880,20 @@ export default function GroupOrderDetail() {
                                 </div>
 
                                 <div className="flex justify-between">
-                                    <span className="text-slate-600">Hết hạn:</span>
+                                    <span className="text-slate-600">Hết hạn tham gia nhóm:</span>
                                     <span className="font-medium">
-                                        {group?.expires_at
-                                            ? new Date(group.expires_at).toLocaleString('vi-VN')
+                                        {group?.join_expires_at
+                                            ? new Date(group.join_expires_at).toLocaleString('vi-VN')
                                             : '—'}
                                     </span>
                                 </div>
+
+                                <GroupExpiryCountdown
+                                    status={group?.status}
+                                    expiresAt={group?.expires_at}
+                                    variant="full"
+                                />
+
 
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-600">Giảm giá:</span>
@@ -1045,7 +1070,7 @@ export default function GroupOrderDetail() {
                                                 <div className="font-medium text-sm">
                                                     {m?.user?.profile?.full_name || m?.user?.username}
                                                 </div>
-                                                {m.is_host === 1 ? (
+                                                {m.is_host === true ? (
                                                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                                                         <CrownOutlined /> Host
                                                     </span>
@@ -1481,6 +1506,12 @@ export default function GroupOrderDetail() {
                 joinConversationRoom={joinConversationRoom}
             />
 
+            <GroupDeadlineModal
+                open={deadlineModalOpen}
+                initialExpiresAt={group?.join_expires_at}
+                onSubmit={onSaveDeadline}
+                onCancel={() => setDeadlineModalOpen(false)}
+            />
             {/* Modal chọn địa chỉ cho member */}
             <AddressModal
                 visible={showMemberAddressModal}

@@ -40,6 +40,10 @@ export class UpdateGroupOrderDto {
   @IsDateString()
   expiresAt?: string;
 
+  @IsOptional()
+  @IsDateString()
+  joinExpiresAt?: string;
+
   @ApiPropertyOptional({ description: 'Link mời tham gia' })
   @IsOptional()
   @IsString()
@@ -50,7 +54,7 @@ export class UpdateGroupOrderDto {
   @Min(0)
   @Max(7)
   order_status?: OrderStatuses;
-  
+
   @IsOptional()
   @IsInt()
   @Min(2)
