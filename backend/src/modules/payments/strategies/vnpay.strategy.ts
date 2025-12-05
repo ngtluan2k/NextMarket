@@ -228,11 +228,11 @@ export class VnpayStrategy implements PaymentStrategy {
 
   private async buildVnPayUrl(payment: Payment, config: any, orderId:number): Promise<string> {
     const vnp_TmnCode =
-      config.terminalId || process.env.VNPAY_TERMINAL_ID || 'FXUT2OHD';
+      config.terminalId || process.env.VNPAY_TERMINAL_ID || 'PZ999VA2';
     const vnp_HashSecret =
       config.secretKey ||
       process.env.VNPAY_SECRET_KEY ||
-      'O57JG2LMK8FD14E6I2DYFI20UCS84H4Q';
+      '4CU4RG6B8TC4HYXGMZNZTWA46P0XOVUY';
     const vnp_Url =
       config.baseUrl ||
       process.env.VNPAY_BASE_URL ||

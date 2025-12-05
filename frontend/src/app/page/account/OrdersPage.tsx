@@ -1,3 +1,4 @@
+// src/pages/account/OrdersPage.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Search,
@@ -10,7 +11,8 @@ import {
 import { orderService } from '../../../service/order.service';
 import CancelReasonModal from '../../components/account/CancelReasonModal';
 import ReviewModal from '../../components/account/ReviewModal';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
 /** Các trạng thái nội bộ cho tabs */
 type OrderTab =
   | 'all'
@@ -29,21 +31,21 @@ function mapStatus(status: number): OrderTab {
     case -1:
       return 'waiting_group';
     case 0:
-      return 'pending'; // Pending
+      return 'pending';
     case 1:
-      return 'confirmed'; // Confirmed
+      return 'confirmed';
     case 2:
-      return 'processing'; // Processing
+      return 'processing';
     case 3:
-      return 'shipping'; // Shipped
+      return 'shipping';
     case 4:
-      return 'delivered'; // Delivered
+      return 'delivered';
     case 5:
-      return 'completed'; // Delivered
+      return 'completed';
     case 6:
-      return 'cancelled'; // Cancelled
+      return 'cancelled';
     case 7:
-      return 'returned'; // Returned
+      return 'returned';
     default:
       return 'all';
   }
@@ -54,6 +56,7 @@ export type OrderSummary = {
   id: string;
   code: string;
   storeName?: string;
+  storeSlug?: string;
   status: OrderTab;
   createdAt?: string | number | Date;
   totalPrice?: number;
@@ -85,6 +88,7 @@ export type OrderSummary = {
     pricing_rule_id?: number | null;
     product?: {
       id: number;
+      slug: string;
       name: string;
       media?: Array<{ url: string; is_primary: boolean }>;
       reviews?: Array<{
@@ -111,6 +115,8 @@ const TABS: { key: OrderTab; label: string }[] = [
   { key: 'returned', label: 'Đã trả/Hoàn' },
 ];
 
+const PAGE_SIZE = 5; 
+
 const getUserIdFromStorage = (): number | null => {
   const raw = localStorage.getItem('user');
   if (!raw) return null;
@@ -124,6 +130,7 @@ const getUserIdFromStorage = (): number | null => {
 
 export default function OrdersPage() {
   const [tab, setTab] = useState<OrderTab>('all');
+
   const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
@@ -134,15 +141,18 @@ export default function OrdersPage() {
   const [q, setQ] = useState('');
   const [submittedQ, setSubmittedQ] = useState('');
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
+
+  // ❗ rawOrders: tất cả đơn lấy từ backend
+  const [rawOrders, setRawOrders] = useState<OrderSummary[]>([]);
+
+  const [page, setPage] = useState(1); // trang hiện tại
   const userId = getUserIdFromStorage();
   const [cancelModalOrderId, setCancelModalOrderId] = useState<number | null>(
     null
   );
+  const navigate = useNavigate();
 
-  // gọi API theo tab + q + page
+  // ===== GỌI API, chỉ fetch 1 lần theo userId =====
   useEffect(() => {
     if (!userId) return;
 
@@ -151,19 +161,22 @@ export default function OrdersPage() {
     (async () => {
       setLoading(true);
       try {
-        // Lấy dữ liệu từ backend
         const res = await orderService.getOrderByUser(userId);
-        console.log('Orders fetched:', res);
-        // Map dữ liệu backend về OrderSummary
+
         const items: OrderSummary[] = (res as any[]).map((o) => ({
           id: String(o.id),
           code: o.uuid,
           storeName: o.store?.name ?? '',
+          storeSlug: o.store?.slug ?? '',
           status: mapStatus(Number(o.status)),
           createdAt: o.createdAt,
           totalPrice: Number(o.totalAmount ?? 0),
           groupOrderId: o.group_order_id ?? null,
-          payment: o.payment ? (Array.isArray(o.payment) ? o.payment : [o.payment]) : undefined,
+          payment: o.payment
+            ? Array.isArray(o.payment)
+              ? o.payment
+              : [o.payment]
+            : undefined,
           items: (o.orderItem ?? []).map((it: any) => {
             const product = it.product;
             const image =
@@ -171,7 +184,6 @@ export default function OrdersPage() {
               product?.media?.[0]?.url ||
               undefined;
 
-            // check review **cùng order + cùng product**
             const isReviewed = (product?.reviews ?? []).some(
               (r: any) => r.user.id === userId && r.order.id === o.id
             );
@@ -183,6 +195,7 @@ export default function OrdersPage() {
               orderItemId: String(it.id),
               productId: product?.id,
               name: product?.name ?? it.name,
+              slug: product?.slug ?? '',
               image: image ? `${BE_BASE_URL}${image}` : undefined,
               qty: it.quantity,
               price: Number(it.price ?? 0),
@@ -190,37 +203,16 @@ export default function OrdersPage() {
               reviewId: existingReview?.id,
             };
           }),
+          orderItem: o.orderItem ?? [],
         }));
 
-        // Filter theo tab
-        let filteredItems = items;
-        if (tab !== 'all') {
-          filteredItems = items.filter((o) => o.status === tab);
-          console.log(`Filtered by tab (${tab}):`, filteredItems);
-        }
-
-        // Filter theo search
-        if (submittedQ) {
-          const qLower = submittedQ.toLowerCase();
-          filteredItems = filteredItems.filter(
-            (o) =>
-              o.code.toLowerCase().includes(qLower) ||
-              (o.storeName ?? '').toLowerCase().includes(qLower) || // fix ở đây
-              o.items.some((it) => it.name.toLowerCase().includes(qLower))
-          );
-        }
-
         if (!cancelled) {
-          setOrders(
-            page === 1 ? filteredItems : (prev) => [...prev, ...filteredItems]
-          );
-          setHasMore(filteredItems.length >= 10);
+          setRawOrders(items);
         }
       } catch (err) {
         if (!cancelled) {
           console.error('Lỗi khi lấy đơn hàng:', err);
-          setOrders([]);
-          setHasMore(false);
+          setRawOrders([]);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -230,13 +222,48 @@ export default function OrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [tab, submittedQ, page, userId]);
+  }, [userId]);
 
-  // đổi tab => reset trang & dữ liệu
+  // ===== Lọc theo tab + search (client-side) =====
+  const filteredOrders = useMemo(() => {
+    let filtered = [...rawOrders];
+
+    if (tab !== 'all') {
+      filtered = filtered.filter((o) => o.status === tab);
+    }
+
+    if (submittedQ.trim()) {
+      const qLower = submittedQ.toLowerCase();
+      filtered = filtered.filter(
+        (o) =>
+          o.code.toLowerCase().includes(qLower) ||
+          (o.storeName ?? '').toLowerCase().includes(qLower) ||
+          o.items.some((it) => it.name.toLowerCase().includes(qLower))
+      );
+    }
+
+    return filtered;
+  }, [rawOrders, tab, submittedQ]);
+
+  // Tổng số trang
+  const totalPages = useMemo(
+    () =>
+      filteredOrders.length === 0
+        ? 1
+        : Math.ceil(filteredOrders.length / PAGE_SIZE),
+    [filteredOrders.length]
+  );
+
+  // Slice theo page
+  const paginatedOrders = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredOrders.slice(start, start + PAGE_SIZE);
+  }, [filteredOrders, page]);
+
+  // đổi tab => reset trang về 1
   const changeTab = (t: OrderTab) => {
     setTab(t);
     setPage(1);
-    setSubmittedQ((s) => s); // giữ nguyên search hiện tại
   };
 
   const onSubmitSearch = (e?: React.FormEvent) => {
@@ -249,8 +276,6 @@ export default function OrdersPage() {
     const base =
       'inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium';
     switch (s) {
-
-
       case 'waiting_group':
         return (
           <span className={`${base} bg-amber-50 text-amber-700`}>
@@ -258,8 +283,6 @@ export default function OrdersPage() {
             Chờ nhóm hoàn tất
           </span>
         );
-
-
       case 'pending':
         return (
           <span className={`${base} bg-amber-50 text-amber-700`}>
@@ -314,7 +337,6 @@ export default function OrdersPage() {
     }
   };
 
-  // Helper hiển thị payment status
   const paymentStatusBadge = (payment: any) => {
     if (!payment || !payment[0]) {
       return (
@@ -327,28 +349,28 @@ export default function OrdersPage() {
     const status = Number(payment[0].status);
 
     switch (status) {
-      case 1: // Paid
+      case 1:
         return (
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-green-50 text-green-700">
             <CheckCircle className="h-3 w-3" />
             Đã thanh toán
           </span>
         );
-      case 0: // Unpaid
+      case 0:
         return (
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-orange-50 text-orange-700">
             <Clock className="h-3 w-3" />
             Chưa thanh toán
           </span>
         );
-      case 2: // Failed
+      case 2:
         return (
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-red-50 text-red-700">
             <XCircle className="h-3 w-3" />
             Thất bại
           </span>
         );
-      case 3: // Refunded
+      case 3:
         return (
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-xs font-medium bg-purple-50 text-purple-700">
             Hoàn tiền
@@ -369,8 +391,8 @@ export default function OrdersPage() {
         Đơn hàng của tôi
       </h1>
 
-      {/* Tabs */}
       <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow">
+        {/* Tabs */}
         <div className="border-b border-slate-200 px-3 pt-2">
           <div className="flex flex-wrap gap-2">
             {TABS.map((t) => {
@@ -379,10 +401,11 @@ export default function OrdersPage() {
                 <button
                   key={t.key}
                   onClick={() => changeTab(t.key)}
-                  className={`px-3 py-2 text-sm rounded-t-md ${active
-                    ? 'text-sky-700 border-b-2 border-sky-600'
-                    : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                  className={`px-3 py-2 text-sm rounded-t-md ${
+                    active
+                      ? 'text-sky-700 border-b-2 border-sky-600'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                   aria-pressed={active}
                 >
                   {t.label}
@@ -419,7 +442,7 @@ export default function OrdersPage() {
           {/* Loading skeleton */}
           {loading && (
             <ul className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
+              {Array.from({ length: PAGE_SIZE  }).map((_, i) => (
                 <li key={i} className="rounded-xl border border-slate-200 p-4">
                   <div className="h-4 w-40 bg-slate-100 rounded animate-pulse" />
                   <div className="mt-3 grid grid-cols-3 gap-3">
@@ -436,29 +459,57 @@ export default function OrdersPage() {
           )}
 
           {/* List */}
-          {!loading && orders.length > 0 && (
+          {!loading && paginatedOrders.length > 0 && (
             <>
               <ul className="space-y-3">
-                {orders.map((o) => {
+                {paginatedOrders.map((o) => {
                   const mergedProducts = Array.from(
-                    o.items.reduce((map, item) => {
-                      if (!item.productId) return map;
-                      const existing = map.get(item.productId);
-                      if (existing) {
-                        existing.qty += item.qty;
-                      } else {
-                        map.set(item.productId, {
-                          productId: item.productId, // chính xác
-                          name: item.name,
-                          image: item.image,
-                          qty: item.qty,
-                          price: item.price,
-                          isReviewed: item.isReviewed,
-                          reviewId: item.reviewId ?? null,
-                        });
-                      }
-                      return map;
-                    }, new Map<number, { productId?: number; name: string; image?: string; qty: number; price?: number; isReviewed?: boolean; reviewId?: number | null }>())
+                    o.items.reduce(
+                      (
+                        map,
+                        item
+                      ) => {
+                        if (!item.productId) return map;
+
+                        const orderItem = o.orderItem?.find(
+                          (oi) => oi.product?.id === item.productId
+                        );
+                        const slug =
+                          orderItem?.product?.slug ??
+                          (item as any).slug ??
+                          '';
+
+                        const existing = map.get(item.productId);
+                        if (existing) {
+                          existing.qty += item.qty;
+                        } else {
+                          map.set(item.productId, {
+                            productId: item.productId,
+                            name: item.name,
+                            image: item.image,
+                            qty: item.qty,
+                            price: item.price,
+                            isReviewed: item.isReviewed,
+                            reviewId: item.reviewId ?? null,
+                            slug,
+                          });
+                        }
+                        return map;
+                      },
+                      new Map<
+                        number,
+                        {
+                          productId?: number;
+                          name: string;
+                          image?: string;
+                          qty: number;
+                          price?: number;
+                          isReviewed?: boolean;
+                          reviewId?: number | null;
+                          slug?: string;
+                        }
+                      >()
+                    )
                   ).map(([_, v]) => v);
 
                   return (
@@ -471,7 +522,12 @@ export default function OrdersPage() {
                         <div className="text-sm text-slate-700">
                           <span className="font-medium">Mã đơn:</span> {o.code}
                           {o.storeName && (
-                            <span className="ml-3 text-slate-500">
+                            <span
+                              className="ml-3 text-slate-500 cursor-pointer hover:text-blue-600"
+                              onClick={() =>
+                                navigate(`/stores/slug/${o.storeSlug}`)
+                              }
+                            >
                               | {o.storeName}
                             </span>
                           )}
@@ -482,7 +538,12 @@ export default function OrdersPage() {
                           )}
                           {o.groupOrderId && (
                             <span className="ml-3 inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-600 px-2 py-0.5 rounded-full">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
                                 <path d="M12 2a5 5 0 0 1 5 5v3h2a3 3 0 0 1 3 3v6h-2v-6a1 1 0 0 0-1-1h-2v7h-2v-7h-4v7H9v-7H7a1 1 0 0 0-1 1v6H4v-6a3 3 0 0 1 3-3h2V7a5 5 0 0 1 5-5z" />
                               </svg>
                               Mua nhóm
@@ -496,8 +557,6 @@ export default function OrdersPage() {
                         </div>
                       </div>
 
-
-
                       {/* Products */}
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {mergedProducts.slice(0, 3).map((it) => (
@@ -507,6 +566,11 @@ export default function OrdersPage() {
                                 src={it.image || '/placeholder.png'}
                                 alt={it.name}
                                 className="h-full w-full object-cover"
+                                onClick={() => {
+                                  if (it.slug) {
+                                    navigate(`/products/slug/${it.slug}`);
+                                  }
+                                }}
                               />
                             </div>
                             <div className="min-w-0 flex flex-col">
@@ -519,23 +583,26 @@ export default function OrdersPage() {
 
                               {(o.status === 'delivered' ||
                                 o.status === 'completed') && (
-                                  <button
-                                    className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${it.isReviewed
+                                <button
+                                  className={`mt-1 rounded-lg px-3 py-1 text-xs text-white ${
+                                    it.isReviewed
                                       ? 'bg-sky-600 hover:bg-sky-700'
                                       : 'bg-emerald-600 hover:bg-emerald-700'
-                                      }`}
-                                    onClick={() => {
-                                      setOpenReview(true);
-                                      setSelectedProductId(
-                                        it.productId?.toString() ?? null
-                                      );
-                                      setSelectedOrderId(o.id);
-                                      setSelectedReviewId(it.reviewId ?? null);
-                                    }}
-                                  >
-                                    {it.isReviewed ? 'Đánh giá lại' : 'Đánh giá'}
-                                  </button>
-                                )}
+                                  }`}
+                                  onClick={() => {
+                                    setOpenReview(true);
+                                    setSelectedProductId(
+                                      it.productId?.toString() ?? null
+                                    );
+                                    setSelectedOrderId(o.id);
+                                    setSelectedReviewId(it.reviewId ?? null);
+                                  }}
+                                >
+                                  {it.isReviewed
+                                    ? 'Đánh giá lại'
+                                    : 'Đánh giá'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -573,7 +640,6 @@ export default function OrdersPage() {
                             </a>
                           )}
 
-                          {/* Nút Hủy đơn */}
                           {['pending'].includes(o.status) && (
                             <button
                               onClick={() =>
@@ -591,13 +657,43 @@ export default function OrdersPage() {
                 })}
               </ul>
 
-              {hasMore && (
-                <div className="mt-4 grid place-items-center">
+              {/* ===== PHÂN TRANG ===== */}
+              {filteredOrders.length > PAGE_SIZE && (
+                <div className="mt-4 flex items-center justify-center gap-1">
                   <button
-                    onClick={() => setPage((p) => p + 1)}
-                    className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1 text-sm rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Tải thêm
+                    Trước
+                  </button>
+
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    const pageNumber = idx + 1;
+                    const isActive = pageNumber === page;
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setPage(pageNumber)}
+                        className={`px-3 py-1 text-sm rounded-lg border border-slate-200 ${
+                          isActive
+                            ? 'bg-sky-600 text-white border-sky-600'
+                            : 'bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() =>
+                      setPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={page === totalPages}
+                    className="px-3 py-1 text-sm rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Sau
                   </button>
                 </div>
               )}
@@ -609,11 +705,10 @@ export default function OrdersPage() {
             <ReviewModal
               open={openReview}
               onClose={() => setOpenReview(false)}
-              orderId={Number(selectedOrderId)} // <--- convert sang number
-              productId={Number(selectedProductId)} // <--- convert sang number
+              orderId={Number(selectedOrderId)}
+              productId={Number(selectedProductId)}
               reviewId={selectedReviewId ?? undefined}
               onSubmitted={() => {
-                // Sau khi đánh giá xong có thể refresh danh sách hoặc update item
                 setOpenReview(false);
               }}
             />
@@ -626,19 +721,21 @@ export default function OrdersPage() {
               token={localStorage.getItem('token') || ''}
               onClose={() => setCancelModalOrderId(null)}
               onCancelled={() => {
-                setOrders((prev) =>
+                // cập nhật trạng thái đơn trong rawOrders
+                setRawOrders((prev) =>
                   prev.map((o) =>
                     o.id === String(cancelModalOrderId)
-                      ? { ...o, status: 'cancelled' } // cập nhật trạng thái hủy
+                      ? { ...o, status: 'cancelled' }
                       : o
                   )
                 );
-                setCancelModalOrderId(null); // đóng modal
+                setCancelModalOrderId(null);
               }}
             />
           )}
+
           {/* Empty */}
-          {!loading && orders.length === 0 && (
+          {!loading && paginatedOrders.length === 0 && (
             <div className="grid place-items-center py-14 text-center">
               <EmptyOrders />
               <div className="mt-3 text-slate-600">Chưa có đơn hàng</div>

@@ -14,13 +14,16 @@ import { OrdersService } from '../orders/orders.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { UpdateOrderDto } from '../orders/dto/update-order.dto';
 import { Order } from '../orders/order.entity';
+import { PermissionGuard } from '../../common/auth/permission.guard';
+import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 
 @Controller('admin/orders')
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('view_order')
   async findAll(): Promise<Order[]> {
     return this.ordersService.findAll();
   }

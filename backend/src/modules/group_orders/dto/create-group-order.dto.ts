@@ -32,6 +32,10 @@ export class CreateGroupOrderDto {
   @IsDateString()
   expiresAt?: string;
 
+  @IsOptional()
+  @IsDateString()
+  joinExpiresAt?: string;
+
   @ApiPropertyOptional({ description: 'Mã mời tham gia (nếu có)' })
   @IsOptional()
   join_code?: string;

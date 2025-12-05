@@ -22,10 +22,13 @@ import {
   RequestRegisterOtpDto,
   VerifyRegisterOtpDto,
 } from './dto/register-otp.dto';
-import { UploadedFile, UseInterceptors } from '@nestjs/common';
+import { UploadedFile, UseInterceptors, UnauthorizedException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerConfig } from '../../common/utils/multer.config';
 import { RequestPasswordResetDto, ResetPasswordByOtpDto } from './dto/password-reset.dto';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { PermissionGuard } from '../../common/auth/permission.guard';
+import { RequirePermissions as Permissions } from '../../common/auth/permission.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -35,11 +38,36 @@ export class UserController {
     private readonly jwtService: JwtService
   ) {}
 
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permissions('view_user')
   @Get()
   @ApiOperation({ summary: 'Get all users' })
   getAllUsers() {
     return this.userService.findAllUsers();
   }
+
+ @Get('check-admin')
+@UseGuards(JwtAuthGuard)
+async checkAdmin(@Req() req: any) {
+  const user = req.user;
+  if (!user) throw new UnauthorizedException('Chưa đăng nhập');
+
+  // chỉ cần check roles
+ if (!user.roles || !user.roles.some((r: string) => r.toLowerCase() === 'admin')) {
+  throw new UnauthorizedException('Bạn không có quyền admin hoặc chưa đăng nhập');
+}
+  return {
+    status: 200,
+    message: 'User is admin',
+    data: {
+      userId: user.userId,
+      email: user.email,
+      roles: user.roles,
+      permissions: user.permissions,
+    },
+  };
+}
+
 
   @Get('search')
   @ApiOperation({ summary: 'Search user by email' })
@@ -88,6 +116,7 @@ export class UserController {
         is_affiliate: userData.is_affiliate,
         roles: userData.roles,
         permissions: userData.permissions,
+        profile: userData.profile,
         
       },
       access_token: userData.access_token,

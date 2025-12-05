@@ -63,6 +63,7 @@ const AccountVoucher: React.FC = () => {
       // Chỉ lấy voucher ĐÃ THU THẬP
       const response = await userVoucherApi.getMyCollectedVouchers();
       setCollectedVouchers(response);
+      console.log(response)
       console.log('📦 Loaded collected vouchers:', response.length);
     } catch (error: any) {
       console.error('Error fetching collected vouchers:', error);
@@ -410,7 +411,8 @@ const VoucherCard: React.FC<{
                     <span
                       style={{ color: '#666', fontSize: '12px', marginLeft: 8 }}
                     >
-                      (Tối đa {voucher.max_discount_amount.toLocaleString()}đ)
+                      (Tối đa {Number(voucher.max_discount_amount).toLocaleString('vi-VN')}đ)
+
                     </span>
                   )}
                 </div>
@@ -422,8 +424,7 @@ const VoucherCard: React.FC<{
                   </div>
                   {voucher.min_order_amount > 0 && (
                     <div>
-                      Đơn tối thiểu: {voucher.min_order_amount.toLocaleString()}
-                      đ
+                      {Number(voucher.min_order_amount).toLocaleString('vi-VN')}đ
                     </div>
                   )}
                   <div>
@@ -504,11 +505,11 @@ const VoucherCard: React.FC<{
               )}
             </span>
             {voucher.max_discount_amount &&
-              ` (Tối đa ${voucher.max_discount_amount.toLocaleString()}đ)`}
+              ` (Tối đa {Number(voucher.max_discount_amount).toLocaleString('vi-VN')}đ)`}
           </div>
           <div>
             <strong>Đơn tối thiểu:</strong>{' '}
-            {voucher.min_order_amount.toLocaleString()}đ
+            {Number(voucher.min_order_amount).toLocaleString('vi-VN')}đ
           </div>
           <div>
             <strong>Ngày bắt đầu:</strong> {formatDate(voucher.start_date)}

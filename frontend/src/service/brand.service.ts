@@ -41,7 +41,15 @@ export const getBrandById = async (id: number): Promise<Brand> => {
 // Lấy toàn bộ brands
 export const fetchBrandsAPI = async (): Promise<Brand[]> => {
   const res = await axios.get(`${BE_BASE_URL}/brands`);
-  return res.data.data; // tuỳ backend trả về
+  // Handle both wrapped and unwrapped responses
+  const data = res.data;
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.data)) {
+    return data.data;
+  }
+  return [];
 };
 export const fetchCategoriesByBrandProducts = async (brandId: number) => {
   const token = localStorage.getItem('token') ?? undefined;

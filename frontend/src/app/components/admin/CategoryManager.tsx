@@ -674,13 +674,16 @@ const CategoryManager: React.FC = () => {
         </div>
       )}
 
-      <CategoryModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={onSubmit}
-        initial={editing}
-        categories={items}
-      />
+      {modalOpen && (
+        <CategoryModal
+          key={editing?.id ?? 'create'}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={onSubmit}
+          initial={editing}
+          categories={items}
+        />
+      )}
     </div>
   );
 };

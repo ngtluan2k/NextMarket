@@ -1,91 +1,62 @@
-import React from 'react';
-import { Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+// components/flash-sale/product-card.tsx
+import type { FlashSaleProduct } from "./types";
 
-export interface ProductCardType {
-  id: number | string;
-  uuid: string;
-  name: string;
-  slug?: string;
-  media?: Array<{ url: string }>;
-  avg_rating?: number | string;
-  review_count?: number;
-  pricing_rules?: Array<{ type: string; price: number | string }>;
+interface ProductCardProps {
+  product: FlashSaleProduct;
 }
 
-const formatVND = (n?: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-    n ?? 0
-  );
-const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
+export function ProductCard({ product }: ProductCardProps) {
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(price);
 
-export function ProductCard({ product }: { product: ProductCardType }) {
-  const navigate = useNavigate();
-
-  // Ưu tiên slug, fallback theo id
-  const to = product.slug
-    ? `/products/slug/${product.slug}`
-    : product.id
-    ? `/product/${product.id}`
-    : undefined;
-  const goDetail = () => {
-    if (to) navigate(to);
-  };
-
-  // Lấy giá flash sale nếu có
-  const flashPrice =
-    product.pricing_rules?.find((r) => r.type === 'flash_sale')?.price ?? 0;
-  const mediaUrl = product.media?.[0]?.url
-    ? `${BE_BASE_URL}${product.media[0].url}`
-    : '';
   return (
-    <div
-      className="group overflow-hidden rounded-xl border bg-white transition-all hover:shadow-lg cursor-pointer"
-      onClick={goDetail}
-      role="link"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && to) {
-          e.preventDefault();
-          navigate(to);
-        }
-      }}
-    >
-      {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100">
+    <div className="group flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:-translate-y-1 hover:border-red-300 hover:shadow-lg">
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
         <img
-          src={mediaUrl}
+          src={product.image || "/placeholder.svg"}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = '';
-          }}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
         />
+
+        <span className="absolute left-2 top-2 rounded-md bg-gradient-to-r from-red-500 to-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+          {product.badge}
+        </span>
+
+        {product.discount > 0 && (
+          <span className="absolute right-2 top-2 rounded-md bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
+            -{product.discount}%
+          </span>
+        )}
       </div>
 
-      {/* Info */}
-      <div className="p-3 md:p-4">
-        <h3 className="mb-2 line-clamp-2 text-sm font-semibold md:text-base">
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-2">
+        <h3 className="line-clamp-2 min-h-[32px] text-xs font-medium text-gray-800 md:text-sm">
           {product.name}
         </h3>
 
-        {/* Rating */}
-        <div className="mb-2 inline-flex items-center gap-1 text-yellow-500">
-          <Star className="h-3 w-3 fill-current md:h-4 md:w-4" />
-          <span className="text-xs font-medium md:text-sm text-gray-900">
-            {Number(product.avg_rating ?? 5).toFixed(1)}
+        <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
+          <span className="text-yellow-400">★</span>
+          <span className="font-semibold text-gray-700">
+            {product.rating.toFixed(1)}
           </span>
-          <span className="text-xs text-gray-500">
-            | {product.review_count ?? 0}
+          <span>({product.reviews})</span>
+        </div>
+
+        <div className="mt-2 flex items-end gap-1.5">
+          <span className="text-base font-bold text-red-600">
+            {formatPrice(product.salePrice)}
+          </span>
+          <span className="mb-[2px] text-[11px] text-gray-400 line-through">
+            {formatPrice(product.originalPrice)}
           </span>
         </div>
 
-        {/* Price */}
-        <div className="mb-1 flex items-baseline gap-2">
-          <span className="text-base font-bold text-indigo-600 md:text-lg">
-            {formatVND(Number(flashPrice))}
-          </span>
-        </div>
+        <button className="mt-2 w-full rounded-md bg-red-500 py-1.5 text-xs font-semibold text-white transition-all hover:bg-red-600 active:scale-95 md:text-sm">
+          Mua ngay
+        </button>
       </div>
     </div>
   );

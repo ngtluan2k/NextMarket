@@ -4,13 +4,14 @@ import { useNavigate, useParams, useLocation, useSearchParams } from "react-rout
 import { useAuth } from "../../context/AuthContext";
 import { groupOrdersApi } from '../../../service/groupOrderItems.service';
 import { getAffiliateDataForOrder } from '../../../utils/affiliate-tracking';
+import { GroupDeadlineModal } from "./components/GroupDeadlineModal";
 
 export default function GroupOrderCreate() {
     const navigate = useNavigate();
     const { storeId } = useParams();
     const location = useLocation();
     const [searchParams] = useSearchParams();
-    const { me } = useAuth();
+    const { user } = useAuth();
 
     const storeIdFromRoute = Number(storeId);
     const storeIdFromQuery = Number(searchParams.get("storeId"));
@@ -21,15 +22,30 @@ export default function GroupOrderCreate() {
         (Number.isFinite(Number(storeIdFromState)) && Number(storeIdFromState)) ||
         null;
 
-    const [groupName, setGroupName] = useState("Đơn hàng nhóm của");
+    const [groupName, setGroupName] = useState(
+        `Đơn hàng nhóm của ${user?.full_name || ''}`
+    );
     const [paymentType, setPaymentType] = useState("Mọi người tự thanh toán phần của mình");
-    const [extraTime, setExtraTime] = useState("Không có");
+    const [joinExpiresAt, setJoinExpiresAt] = useState<string | null>(null);
     const [discountPercent, setDiscountPercent] = useState(0);
     const [targetMemberCount, setTargetMemberCount] = useState(2);
+    const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
+
+    const extraTimeLabel = (() => {
+        if (!joinExpiresAt) return 'Không có';
+
+        const d = new Date(joinExpiresAt);
+        if (Number.isNaN(d.getTime())) {
+            return 'Không có';
+        }
+
+        // Hiển thị theo định dạng ngày giờ tiếng Việt
+        return d.toLocaleString('vi-VN');
+    })();
 
     const handleCreate = async () => {
         try {
-            const hostUserId = me?.user_id ?? null;
+            const hostUserId = user?.user_id ?? null;
 
             if (!resolvedStoreId || !hostUserId) {
                 alert("Thiếu storeId hoặc thông tin người dùng. Vui lòng kiểm tra lại.");
@@ -37,11 +53,14 @@ export default function GroupOrderCreate() {
             }
             const affiliateData = getAffiliateDataForOrder();
             console.log('🔍 Creating group with affiliate data:', affiliateData);
+            const fullName = user?.full_name || user?.username || '';
+            const finalGroupName = fullName ? `${groupName.trim()} - ${fullName}` : groupName.trim();
 
             const payload = {
-                name: groupName,
+                name: finalGroupName,
                 storeId: resolvedStoreId,
                 hostUserId,
+                joinExpiresAt,
                 targetMemberCount,
                 ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
             };
@@ -61,6 +80,11 @@ export default function GroupOrderCreate() {
             console.error(e);
             alert(e?.response?.data?.message ?? "Tạo nhóm thất bại");
         }
+    };
+
+    const handleSaveDeadline = (value: string | null) => {
+        setJoinExpiresAt(value);
+        setDeadlineModalOpen(false);
     };
 
     return (
@@ -153,16 +177,13 @@ export default function GroupOrderCreate() {
                             </div>
                             <div>
                                 <div className="font-semibold text-slate-800">
-                                    Thời hạn thêm món
+                                    Thời hạn tham gia nhóm
                                 </div>
-                                <div className="text-sm text-slate-500">{extraTime}</div>
+                                <div className="text-sm text-slate-500"> {extraTimeLabel}</div>
                             </div>
                         </div>
                         <button
-                            onClick={() => {
-                                const time = prompt("Nhập thời hạn thêm món:", extraTime);
-                                if (time) setExtraTime(time);
-                            }}
+                            onClick={() => setDeadlineModalOpen(true)}
                             className="text-slate-400 hover:text-sky-600 transition"
                         >
                             <Pencil size={18} />
@@ -177,7 +198,13 @@ export default function GroupOrderCreate() {
                             </div>
                             <div>
                                 <div className="font-semibold text-slate-800">Tên nhóm</div>
-                                <div className="text-sm text-slate-500">{groupName}</div>
+                                <div className="text-sm text-slate-500">
+                                    {groupName} - {
+                                        user?.full_name ||
+                                        user?.username ||
+                                        'Bạn'
+                                    }
+                                </div>
                             </div>
                         </div>
                         <button
@@ -190,7 +217,7 @@ export default function GroupOrderCreate() {
                             <Pencil size={18} />
                         </button>
                     </div>
-                    {/* ✅ THÊM: Số lượng thành viên mục tiêu */}
+                    {/*  THÊM: Số lượng thành viên mục tiêu */}
                     <div className="flex items-center justify-between border-t pt-4">
                         <div className="flex gap-3 items-center">
                             <div className="w-10 h-10 bg-sky-50 text-sky-600 flex items-center justify-center rounded-lg">
@@ -233,6 +260,16 @@ export default function GroupOrderCreate() {
                     </button>
                 </div>
             </div>
+
+            <GroupDeadlineModal
+                open={deadlineModalOpen}
+                initialExpiresAt={joinExpiresAt}
+                onSubmit={async (value) => handleSaveDeadline(value)}
+                onCancel={() => setDeadlineModalOpen(false)}
+            />
         </div>
     );
 }
+
+
+

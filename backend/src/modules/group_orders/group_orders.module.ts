@@ -1,4 +1,4 @@
-import { Module,forwardRef } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupOrder } from './../group_orders/group_orders.entity';
 import { GroupOrderMember } from '../group_orders_members/group_orders_member.entity';
@@ -23,14 +23,19 @@ import { AffiliateLinksModule } from '../affiliate-links/affiliate-links.module'
 import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 import { Referral } from '../referral/referrals.entity';
 import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
+import { Voucher } from '../vouchers/vouchers.entity';
+import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
+import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
+import { VouchersService } from '../vouchers/vouchers.service';
+import { VoucherUsageService } from '../voucher-usage/voucher-usage.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,Referral,AffiliateLink]), 
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,Referral,AffiliateLink, Voucher, VoucherUsage, VoucherCollection,]), 
   forwardRef(() => PaymentsModule),  
   AffiliateLinksModule,
   AffiliateCommissionsModule],
   controllers: [GroupOrdersController, GroupOrderItemsController],
-  providers: [GroupOrdersService, GroupOrderItemsService,GroupOrdersGateway],
-  exports: [GroupOrdersService,GroupOrdersGateway],
+  providers: [GroupOrdersService, GroupOrderItemsService, GroupOrdersGateway, VouchersService, VoucherUsageService,],
+  exports: [GroupOrdersService, GroupOrdersGateway],
 })
-export class GroupOrdersModule {}  
+export class GroupOrdersModule { }  

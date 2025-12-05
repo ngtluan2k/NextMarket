@@ -334,7 +334,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
     if (voucher.discount_type === VoucherDiscountType.PERCENTAGE) {
       const discount = `Giảm ${voucher.discount_value}%`;
       return voucher.max_discount_amount
-        ? `${discount} tối đa ${voucher.max_discount_amount.toLocaleString()}đ`
+        ? `${discount} Tối đa {Number(voucher.max_discount_amount).toLocaleString('vi-VN')}đ`
         : discount;
     } else if (voucher.discount_type === VoucherDiscountType.FIXED) {
       return `Giảm ${voucher.discount_value.toLocaleString()}đ`;
@@ -801,7 +801,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
                                 {voucher.min_order_amount > 0 && (
                                   <div style={{ color: '#999', fontSize: 12 }}>
                                     Đơn tối thiểu:{' '}
-                                    {voucher.min_order_amount.toLocaleString()}đ
+                                    {Number(voucher.min_order_amount).toLocaleString('vi-VN')}đ
                                   </div>
                                 )}
                               </div>
@@ -956,7 +956,7 @@ const VoucherDiscountSection: React.FC<Props> = ({
                                 {voucher.min_order_amount > 0 && (
                                   <div style={{ color: '#999', fontSize: 12 }}>
                                     Đơn tối thiểu:{' '}
-                                    {voucher.min_order_amount.toLocaleString()}đ
+                                    {Number(voucher.min_order_amount).toLocaleString('vi-VN')}đ
                                   </div>
                                 )}
                               </div>

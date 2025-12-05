@@ -32,6 +32,22 @@ export interface ProductItem {
   uuid: string;
 }
 
+export interface GroupOrderMember {
+  id: number;
+  is_host: boolean;
+  joined_at: string;
+  status: 'joined' | 'pending' | 'left';
+  has_paid: boolean;
+  user: {
+    id: number;
+    uuid: string;
+    username: string;
+    email: string;
+    profile?: UserProfile;
+  };
+}
+
+
 export interface GroupOrder {
   id: number;
   uuid: string;
@@ -47,14 +63,16 @@ export interface GroupOrder {
     email: string;
     profile?: UserProfile;
   };
+  members?: GroupOrderMember[]; // <-- thêm dòng này
 }
+
 
 export interface UserProfile {
   id: number;
   user_id: number;
   full_name?: string;
   phone?: string;
-  avatar?: string;
+  avatar_url?: string;
   date_of_birth?: string;
   gender?: string;
   bio?: string;
@@ -118,4 +136,26 @@ export interface Sale {
   notes?: string;
   group_order?: GroupOrder | null;
   group_order_id?: number | null;
+}
+
+export interface Order {
+  id: number;
+  uuid: string;
+  user_id?: number;
+  store_id?: number;
+  address_id?: number;
+  status?: string;
+  payment_status?: string;
+  shipping_fee?: number;
+  discount_total?: number;
+  total_amount?: number;
+  currency?: string;
+  sub_total?: number;
+  group_order_id?: number;
+  affiliate_user_id?: number;
+  affiliate_code?: string;
+  affiliate_program_id?: number;
+  affiliate_link_id?: number;
+  created_at: string;
+  updated_at: string;
 }

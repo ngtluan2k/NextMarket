@@ -221,6 +221,7 @@ export default function LoginModal({
       localStorage.setItem('cart', JSON.stringify(await cartRes.json()));
     }
     return data;
+    
   };
 
   const handleLogin = async (e?: React.FormEvent) => {
@@ -337,7 +338,7 @@ export default function LoginModal({
           onClose();
           popup.close();
           window.removeEventListener('message', listener);
-          navigate('/home');
+          navigate('/');
         }
       };
       window.addEventListener('message', listener);

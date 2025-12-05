@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity('affilate_calculateType')
+@Entity('affilate_calculatetype')
 export class CalculateCommissionType {
   @PrimaryGeneratedColumn()
   id!: number;

@@ -234,13 +234,19 @@ export const getCollectionTypeLabel = (type: VoucherCollectionType): string => {
 
 // Format discount value
 export const formatDiscountValue = (
-  value: number,
+  value: number | string,               // cho phép cả string nếu backend trả về string
   type: VoucherDiscountType
 ): string => {
+  // Chuyển về number và làm tròn về số nguyên (loại bỏ thập phân thừa)
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  const rounded = Math.round(Number(num));   // rất quan trọng: làm tròn + bỏ .00
+
   if (type === VoucherDiscountType.PERCENTAGE) {
-    return `${value}%`;
+    return `${rounded}%`;
   }
-  return `${value.toLocaleString('vi-VN')} VND`;
+
+  // FIXED amount (tiền)
+  return `${rounded.toLocaleString('vi-VN')}đ`;
 };
 
 // Check if voucher is active

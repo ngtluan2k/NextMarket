@@ -4,9 +4,13 @@
   "private": true,
   "dependencies": {
     "@ant-design/plots": "^2.6.5",
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "antd": "^5.27.3",
+    "html2canvas": "^1.4.1",
     "i": "^0.3.7",
     "js-cookie": "^3.0.5",
+    "jspdf": "^3.0.4",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.544.0",
     "react-countup": "^6.5.3",

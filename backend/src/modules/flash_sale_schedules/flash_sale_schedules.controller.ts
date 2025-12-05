@@ -108,4 +108,14 @@ export class FlashSaleSchedulesController {
       dto
     );
   }
+
+  @Get('public/active')
+  async getActiveFlashSales() {
+    return this.scheduleService.getActiveFlashSalesForPublic();
+  }
+
+  @Get(':id/products/public')
+  async getProductsForPublic(@Param('id') scheduleId: number) {
+    return this.scheduleService.getProductsForPublic(scheduleId);
+  }
 }

@@ -6,7 +6,7 @@ import { initializeAffiliateTracking } from '../utils/affiliate-tracking';
 import { SellerRegistration } from './components/register_seller/SellerRegistration';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationSocketProvider } from './components/NotificationSocketProvider';
 import Home from './page/Home';
 import CategoryPage from './page/CategoryPage';
@@ -62,6 +62,8 @@ import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
 import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
+import NotFoundPage from './components/NotFoundPage';
+import { AuthConsumerChat } from './components/AuthConsumerChat';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -88,6 +90,7 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
+      
       <NotificationSocketProvider>
         <CartProvider>
           {contextHolder}
@@ -105,6 +108,10 @@ const App: React.FC = () => {
               path="/products/slug/:slug"
               element={<ProductDetailPage showMessage={showMessage} />}
             />
+            <Route
+            path="/404"
+            element={<NotFoundPage/>}
+            ></Route>
 
             <Route
               path="/cart"
@@ -181,7 +188,7 @@ const App: React.FC = () => {
             {/* Search */}
             <Route path="/search" element={<SearchPage />} />
             {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
             <Route path="/verify-otp" element={<OtpVerifyPage />} />
 
             <Route path="/affiliate" element={<AffiliateGate />} />
@@ -225,6 +232,7 @@ const App: React.FC = () => {
             />
             <Route path="/group/:uuid" element={<GroupJoin />} />
           </Routes>
+          <AuthConsumerChat />
           <CampaignAdPopup />
         </CartProvider>
       </NotificationSocketProvider>

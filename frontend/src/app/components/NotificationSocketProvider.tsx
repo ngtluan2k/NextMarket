@@ -1,7 +1,7 @@
 import React from 'react';
 import { message } from 'antd';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../../hooks/useNotificationSocket';
+import { useNotifications } from '../hooks/useNotificationSocket';
 import { NotificationType } from '../../service/notification-socket.service';
 
 /**

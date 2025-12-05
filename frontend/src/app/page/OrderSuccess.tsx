@@ -84,7 +84,7 @@ const OrderSuccess: React.FC = () => {
       if (paymentUuid) {
         try {
           const user = JSON.parse(localStorage.getItem('user') || '{}');
-          const userId = user?.id || user?.sub;
+          const userId = user?.user_id || user?.sub;
 
           if (!userId) {
             setError('Không xác định được người dùng');
@@ -98,6 +98,7 @@ const OrderSuccess: React.FC = () => {
           );
           if (data) {
             setOrderData(data);
+            console.log('Dữ liệu đơn hàng:', data);
           } else {
             setError('Không lấy được thông tin đơn hàng.');
           }
@@ -175,6 +176,7 @@ const OrderSuccess: React.FC = () => {
       </div>
     );
   }
+
 
   return (
     <div
@@ -541,7 +543,9 @@ const OrderSuccess: React.FC = () => {
                               ? item.image
                               : `${BE_BASE_URL}${item.image}`
                             : '/placeholder.png'
+                            
                         }
+                        
                         alt={item.name}
                         width={60}
                         height={60}

@@ -58,6 +58,9 @@ export class Variant {
   @UpdateDateColumn()
   updated_at!: Date;
 
+  @Column({ type: 'int', default: 0 })
+  weight!: number;
+
   // === Relations ===
   @OneToMany(() => Inventory, (inventories) => inventories.variant)
   inventories!: Inventory[];

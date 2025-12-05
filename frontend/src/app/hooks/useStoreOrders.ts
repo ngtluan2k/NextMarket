@@ -132,6 +132,7 @@ export function useMyStoreOrders(params: UseStoreOrdersParams = {}) {
       console.log('✅ Mapped orders:', mappedOrders.length, 'Total:', total);
 
       setSales(mappedOrders);
+      console.log('Updated sales state with', mappedOrders.length, 'orders.');
       setPagination((prev) => ({
         ...prev,
         total,
@@ -164,17 +165,16 @@ export function useMyStoreOrders(params: UseStoreOrdersParams = {}) {
   }, [fetchSales]);
 
   // Handler cho Table onChange
-  const handleTableChange = useCallback(
-    (newPagination: any, filters?: any, sorter?: any) => {
-      console.log('📄 Table change:', newPagination);
-      setPagination((prev) => ({
-        ...prev,
-        current: newPagination.current || 1,
-        pageSize: newPagination.pageSize || 10,
-      }));
-    },
-    []
-  );
+const handleTableChange = useCallback(
+  (newPagination: any) => {
+    setPagination((prev) => ({
+      ...prev,
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+    }));
+  },
+  []
+);
 
   // Hàm tạo đơn hàng mới
   const createOrder = useCallback(

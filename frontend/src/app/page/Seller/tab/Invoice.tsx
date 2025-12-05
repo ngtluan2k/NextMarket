@@ -46,6 +46,10 @@ export default function StoreSubscriptionsPage() {
   };
 
   const getStatusTag = (sub: any) => {
+    const today = new Date();
+    const end = sub.endDate ? new Date(sub.endDate) : null;
+    if (end && end < today)
+      return <Tag color="gray">Hết hạn</Tag>; 
     if (sub.remainingQuantity === 0)
       return <Tag color="red">Hết lượt</Tag>;
     if (sub.remainingQuantity < sub.totalQuantity)

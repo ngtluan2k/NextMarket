@@ -20,7 +20,9 @@ export function useGroupOrderItems(groupId?: number | null) {
     if (!groupId) throw new Error('Missing groupId');
     await groupOrderItemsApi.add(groupId, payload);
     await refresh();
+    console.log('Added item to group', groupId, payload);
   }, [groupId, refresh]);
+   
 
   const updateItem = useCallback(async (itemId: number, payload: Partial<Omit<GroupOrderItemPayload, 'productId'>>) => {
     if (!groupId) throw new Error('Missing groupId');

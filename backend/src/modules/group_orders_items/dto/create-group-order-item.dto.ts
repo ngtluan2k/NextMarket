@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, MaxLength, Min , IsNumber} from 'class-validator';
 
 export class CreateGroupOrderItemDto {
 
@@ -19,4 +19,9 @@ export class CreateGroupOrderItemDto {
   @IsString()
   @MaxLength(255, { message: 'Ghi chú không được vượt quá 255 ký tự' })
   note?: string;
+
+  @IsOptional()
+  @IsNumber()
+  pricingRuleId?: number;
+
 }

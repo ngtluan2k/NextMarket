@@ -13,8 +13,14 @@ export class WalletTransaction {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', unique: true , nullable:false , default: () => 'gen_random_uuid()'})
-  uuid!: string;
+  @Column({
+    type: 'varchar',
+    length: 36,
+    unique: true,
+    nullable: true,
+    default: () => 'gen_random_uuid()',
+  })
+  uuid?: string;
 
   @ManyToOne(() => Wallet, (wallet) => wallet.transactions)
   @JoinColumn({ name: 'wallet_id' })

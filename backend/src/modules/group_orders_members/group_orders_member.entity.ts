@@ -13,7 +13,7 @@ import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { UserAddress } from '../user_address/user_address.entity';
 import { Order } from '../orders/order.entity';
 
-export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered' | 'paid';
+export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered' | 'paid'|'refunded';
 
 @Entity('group_order_members')
 export class GroupOrderMember {
@@ -32,7 +32,7 @@ export class GroupOrderMember {
 
   @Column({
     type: 'enum',
-    enum: ['joined', 'left', 'ordered', 'paid'],
+    enum: ['joined', 'left', 'ordered', 'paid','refunded'],
     default: 'joined',
   })
   status!: GroupOrderMemberStatus;

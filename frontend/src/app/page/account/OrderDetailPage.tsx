@@ -140,7 +140,7 @@ const StatusPill: React.FC<{ s: OrderTab }> = ({ s }) => {
     return (
       <span className={`${base} bg-amber-50 text-amber-700`}>
         <Clock className="h-3 w-3" />
-        Chờ thanh toán
+        Chờ xác nhận
       </span>
     );
   if (s === 'confirmed')
@@ -357,18 +357,18 @@ export default function OrderDetailPage() {
                 </div>
                 <div
                   className={
-                    order?.payment?.[0]?.status === 1
+                    order?.payment?.[0]?.status === '1'
                       ? 'text-emerald-600'
-                      : order?.payment?.[0]?.status === 2
+                      : order?.payment?.[0]?.status === '2'
                         ? 'text-red-600'
                         : 'text-amber-600'
                   }
                 >
-                  {order?.payment?.[0]?.status === 1
+                  {order?.payment?.[0]?.status === '1'
                     ? ' Đã thanh toán'
-                    : order?.payment?.[0]?.status === 2
+                    : order?.payment?.[0]?.status === '2'
                       ? ' Thanh toán thất bại'
-                      : order?.payment?.[0]?.status === 4
+                      : order?.payment?.[0]?.status === '4'
                         ? ' Đang xử lý'
                         : ' Chưa thanh toán'}
                 </div>

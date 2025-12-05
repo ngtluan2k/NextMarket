@@ -14,7 +14,7 @@ export class AffiliateCommission {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ unique: true, nullable: false, default: () => 'gen_random_uuid()' })
+  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'gen_random_uuid()' })
   uuid!: string;
 
   @ManyToOne(() => AffiliateLink, (link) => link.commissions, {

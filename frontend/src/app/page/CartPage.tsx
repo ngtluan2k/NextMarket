@@ -135,7 +135,9 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         quantity: i.quantity,
         is_group: i.is_group,
         pricingRuleId: i.pricing_rule?.id ?? undefined,
-        pricing_rule: i.pricing_rule?.id ? { id: i.pricing_rule.id } : undefined,
+        pricing_rule: i.pricing_rule?.id
+          ? { id: i.pricing_rule.id }
+          : undefined,
         product: {
           id: i.product.id,
           name: i.product.name,
@@ -149,8 +151,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         },
         variant: i.variant, // giữ nguyên để check sau
       }));
-      console.log('Checkout payload items:', JSON.stringify(items, null, 2));
-
+    console.log('Checkout payload items:', JSON.stringify(items, null, 2));
 
     const groupItems = items.filter((item) => item.is_group);
     const regularItems = items.filter((item) => !item.is_group);
@@ -235,6 +236,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   // ===== GroupNotification (thu gọn/mở rộng + search/filter + grid/list) =====
   const filteredGroups = useMemo(() => {
     let list = [...activeGroups];
+    list = list.filter((g) => g.status !== 'cancelled');
     if (groupFilter === 'host') list = list.filter((g) => g.is_host);
     if (groupFilter === 'expiring') list = list.filter((g) => !!g.expires_at);
     if (groupQuery.trim()) {
@@ -256,8 +258,9 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         </div>
       );
     }
+    const activeGroupsCount = activeGroups.filter((g) => g.status !== 'cancelled').length;
 
-    if (activeGroups.length === 0) return null;
+    if (activeGroupsCount === 0) return null;
 
     return (
       <div className="mb-6">
@@ -268,7 +271,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
             <div className="flex items-center gap-2">
               <TeamOutlined className="text-blue-500" />
               <span>
-                Bạn đang tham gia <b>{activeGroups.length}</b> đơn hàng nhóm
+                Bạn đang tham gia <b>{activeGroupsCount}</b> đơn hàng nhóm
               </span>
             </div>
           }
@@ -280,7 +283,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                   <div className="flex items-center gap-2">
                     <span>Chi tiết các nhóm</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>
-                      {activeGroups.length} nhóm
+                      {activeGroupsCount} nhóm
                     </Tag>
                   </div>
                 }
@@ -302,7 +305,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                   />
                   <Select
                     value={groupFilter}
-                    onChange={(v) => setGroupFilter(v)}
+                    onChange={(v: any) => setGroupFilter(v)}
                     options={[
                       { value: 'all', label: 'Tất cả' },
                       { value: 'host', label: 'Tôi là chủ nhóm' },
@@ -350,9 +353,11 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                                 <Tag color="gold" icon={<CrownOutlined />}>
                                   Chủ nhóm
                                 </Tag>
-                              ) : <Tag color="green" icon={<TeamOutlined />}>
+                              ) : (
+                                <Tag color="green" icon={<TeamOutlined />}>
                                   Thành viên
-                                </Tag>}
+                                </Tag>
+                              )}
                               {group.status === 'CLOSING' && (
                                 <Tag color="red">Sắp đóng</Tag>
                               )}
@@ -427,9 +432,6 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                           <div className="flex items-start gap-6">
                             <div className="flex items-center gap-2">
                               <TeamOutlined style={{ color: '#1677ff' }} />
-                              {group.is_host ? (
-                                <CrownOutlined style={{ color: '#faad14' }} />
-                              ) : null}
                             </div>
 
                             <div>

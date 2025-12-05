@@ -63,6 +63,10 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
           msgApi.error('Nhóm đã hết hạn, không thể tham gia.');
           return;
         }
+        if (group.join_expires_at && new Date(group.join_expires_at).getTime() <= Date.now()) {
+          msgApi.error('Đã quá thời hạn tham gia nhóm.');
+          return;
+        }
 
         // Kiểm tra “đã ở trong nhóm” bằng endpoint active
         try {
@@ -105,6 +109,7 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
           if (msg.includes('not open')) msgApi.error('Nhóm đã đóng, không thể tham gia.');
           else if (msg.includes('expired')) msgApi.error('Nhóm đã hết hạn, không thể tham gia.');
           else if (msg.includes('Mã tham gia không hợp lệ')) msgApi.error('Mã tham gia không hợp lệ.');
+          else if (msg.includes('đủ số lượng')) msgApi.error('Nhóm đã đủ số lượng thành viên.');
           else if (msg.toLowerCase().includes('not found')) msgApi.error('Không tìm thấy nhóm với mã này.');
           else msgApi.error('Không thể tham gia nhóm, vui lòng thử lại.');
         }

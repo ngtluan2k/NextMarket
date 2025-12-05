@@ -49,6 +49,6 @@ test-output
 /backend/src/config/.env
 /backend/src/config/.env.development
 /backend/src/config/.env.production
-
+mysql-data/
 .env
 .txt

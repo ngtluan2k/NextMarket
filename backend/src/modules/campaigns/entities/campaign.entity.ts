@@ -24,11 +24,19 @@ export class Campaign {
 
   @Column({ nullable: true, type: 'text' })
   description?: string;
-
-  @Column({ type: 'timestamp' })
+  @Column({
+    type: 'timestamp',
+    nullable: false,
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   starts_at!: Date;
 
-  @Column({ type: 'timestamp' })
+  // thời gian kết thúc
+  @Column({
+    type: 'timestamp',
+    nullable: false,
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   ends_at!: Date;
 
   @Column({ default: 'draft' })

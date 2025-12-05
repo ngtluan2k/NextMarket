@@ -10,16 +10,25 @@ type ProductRaw = {
   name: string;
   media?: { url: string; is_primary?: boolean }[];
   base_price?: string | number;
-  variants?: { price: string | number }[];
+  variants?: {
+    id: number;
+    variant_name: string; // thêm variant_name
+    price: string | number;
+    stock?: number;
+  }[];
   brand?: { name: string };
   originalPrice?: string | number;
   pricing_rules?: {
+    id: number;
     type: string;
+    name: string;
     price: string | number;
     limit_quantity?: number;
     remaining_quantity?: number;
+    variant_id?: number; // liên kết với variant nếu cần
   }[];
 };
+
 
 export type ProductFlashSaleItem = {
   id: number;
@@ -86,91 +95,100 @@ export default function ProductFlashSale({
   const trackRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let cancel = false;
+ useEffect(() => {
+  let cancel = false;
 
-    (async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${BE_BASE_URL}/products/flash-sale`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const raw = await res.json();
+  (async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token') || '';
+      const res = await fetch(`${BE_BASE_URL}/products/flash-sale`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const raw = await res.json();
 
-        if (DEBUG) {
-          console.groupCollapsed('[FlashSale] raw response');
-          console.log(raw);
-          console.groupEnd();
-        }
-
-        // chấp nhận [] hoặc { data: [] }
-        const arr: ProductRaw[] = Array.isArray(raw) ? raw : raw?.data ?? [];
-        if (DEBUG) {
-          console.groupCollapsed('[FlashSale] array extracted');
-          console.log('length:', arr.length, 'preview[0]:', arr[0]);
-          console.groupEnd();
-        }
-
-        const mapped: ProductFlashSaleItem[] = arr.map((p) => {
-          const primaryMedia =
-            p.media?.find((m) => m.is_primary) || p.media?.[0];
-          const img = toImageUrl(primaryMedia?.url);
-
-          // giá: ưu tiên variant đầu, sau đó base_price
-          // ưu tiên flash_sale > variant đầu > base_price
-          const flashSalePrice = p.pricing_rules?.find(
-            (r) => r.type === 'flash_sale'
-          )?.price;
-          const price = toNumber(
-            flashSalePrice ?? p.variants?.[0]?.price ?? p.base_price
-          );
-          const original = toNumber(p.base_price);
-
-          const flashRule = p.pricing_rules?.find(
-            (r) => r.type === 'flash_sale'
-          );
-          const limitQuantity = flashRule?.limit_quantity; // tổng số lượng tối đa
-          const remainingQuantity = flashRule?.remaining_quantity; // số lượng còn lại
-
-          const it: ProductFlashSaleItem = {
-            id: p.id,
-            slug: p.slug,
-            name: p.name,
-            image: img,
-            price,
-            originalPrice: original || undefined,
-            brandName: p.brand?.name,
-            limitQuantity,
-            remainingQuantity,
-          };
-
-          if (DEBUG) {
-            if (!p.name || !price) {
-              console.warn('[FlashSale] mapped item suspicious:', {
-                raw: p,
-                mapped: it,
-              });
-            }
-          }
-          return it;
-        });
-        console.log(mapped);
-
-        if (!cancel) setData(mapped);
-      } catch (e) {
-        console.error('[FlashSale] fetch error:', e);
-        if (!cancel) setData([]);
-      } finally {
-        if (!cancel) setLoading(false);
+      if (DEBUG) {
+        console.groupCollapsed('[FlashSale] raw response');
+        console.log(raw);
+        console.groupEnd();
       }
-    })();
 
-    return () => {
-      cancel = true;
-    };
-  }, []);
+      // chấp nhận [] hoặc { data: [] }
+      const arr: ProductRaw[] = Array.isArray(raw) ? raw : raw?.data ?? [];
+      if (DEBUG) {
+        console.groupCollapsed('[FlashSale] array extracted');
+        console.log('length:', arr.length, 'preview[0]:', arr[0]);
+        console.groupEnd();
+      }
+
+      // flatMap để tạo ra 1 item cho mỗi variant flash sale
+const mapped: ProductFlashSaleItem[] = arr.flatMap((p) => {
+  const primaryMedia = p.media?.find((m) => m.is_primary) || p.media?.[0];
+  const img = toImageUrl(primaryMedia?.url);
+
+  const flashRules = p.pricing_rules?.filter(r => r.type === 'flash_sale') || [];
+
+  if (flashRules.length > 0) {
+    return flashRules.map((rule) => {
+      // Lấy variant_name từ rule.name
+      let variantName: string | undefined = undefined;
+      const parts = rule.name.split(' - ');
+      if (parts.length >= 3) {
+        variantName = parts[2];
+      }
+
+      // fallback object để không bị undefined
+      const variant = p.variants?.find(v => v.variant_name === variantName) 
+        || p.variants?.[0] 
+        || { id: 0, variant_name: '', price: p.base_price ?? 0 };
+
+      return {
+        id: p.id * 1000 + variant.id, // tạo id unique
+        slug: p.slug,
+        name: variant.variant_name ? `${p.name} - ${variant.variant_name}` : p.name,
+        image: img,
+        price: toNumber(rule.price),
+        originalPrice: toNumber(variant.price),
+        brandName: p.brand?.name,
+        limitQuantity: rule.limit_quantity,
+        remainingQuantity: rule.remaining_quantity,
+      };
+    });
+  }
+
+  // Nếu không có flash sale
+  const price = toNumber(p.variants?.[0]?.price ?? p.base_price);
+  return [
+    {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      image: img,
+      price,
+      originalPrice: toNumber(p.base_price),
+      brandName: p.brand?.name,
+    },
+  ];
+});
+
+
+      if (DEBUG) console.log('[FlashSale] mapped items', mapped);
+
+      if (!cancel) setData(mapped);
+    } catch (e) {
+      console.error('[FlashSale] fetch error:', e);
+      if (!cancel) setData([]);
+    } finally {
+      if (!cancel) setLoading(false);
+    }
+  })();
+
+  return () => {
+    cancel = true;
+  };
+}, []);
+
 
   const scrollByCards = (dir: number) => {
     const el = trackRef.current;

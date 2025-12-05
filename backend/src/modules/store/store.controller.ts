@@ -15,6 +15,7 @@ import {
   ForbiddenException,
   UseInterceptors,
   UploadedFile,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { StoreService } from './store.service';

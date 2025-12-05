@@ -1,3 +1,5 @@
+import { PricingRule } from './../app/components/productDetail/Info';
+import { calculateTotalAmount } from './../utils/chart-helper';
 import { api } from '../app/api/api';
 
 
@@ -7,11 +9,14 @@ export type GroupOrderItemPayload = {
   variantId?: number;
   quantity: number;
   note?: string;
+  pricingRuleId?: number;
+
 };
 
 export type GroupOrderCheckoutPayload = {
   paymentMethodUuid: string;
   addressId?: number;
+  voucherCode?: string;
 };
 
 export type CreateGroupOrderPayload = {
@@ -19,11 +24,14 @@ export type CreateGroupOrderPayload = {
   storeId: number;
   hostUserId: number;
   affiliateCode?: string;
+  joinExpiresAt?: string | null;
+
 };
 
 export type UpdateGroupOrderPayload = {
   name?: string;
   expiresAt?: string | null;
+  joinExpiresAt?: string | null;
   delivery_mode?: 'host_address' | 'member_address';
   targetMemberCount?: number;
 };

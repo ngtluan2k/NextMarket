@@ -1,6 +1,6 @@
 'use client';
-import { Card, Typography, Spin } from 'antd';
-import { DollarOutlined, MoreOutlined } from '@ant-design/icons';
+import { Card, Typography, Spin, Button } from 'antd';
+import { BarChartOutlined, BulbOutlined, DollarOutlined, LineChartOutlined, MoreOutlined, SwapOutlined } from '@ant-design/icons';
 import {
   BarChart,
   Bar,
@@ -32,6 +32,44 @@ export default function SalesOverview({
 }) {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [analysisVisible, setAnalysisVisible] = useState(false);
+  const handleAnalysisClick = () => {
+    setAnalysisVisible(!analysisVisible);
+  };
+  const renderSalesAnalysis = () => {
+    if (!chartData.length) return null;
+
+    const totalSales = chartData.reduce((sum, item) => sum + item.sales, 0);
+    const totalTarget = chartData.reduce(
+      (sum, item) => sum + (item.target ?? 0),
+      0
+    );
+
+    // Tính % tăng/giảm
+    const diff = totalSales - totalTarget;
+    const percentChange = totalTarget > 0 ? (diff / totalTarget) * 100 : 100;
+
+    // Dự đoán doanh thu kỳ tới (ví dụ dựa trên % tăng/giảm)
+    const nextPeriodPrediction = totalSales * (1 + percentChange / 100);
+
+    return (
+      <div className="p-4 bg-gray-50 rounded-md text-sm space-y-2">
+        <div>
+          <BarChartOutlined /> <Text strong>Tổng doanh thu kỳ này:</Text> {totalSales.toLocaleString('vi-VN')} ₫
+        </div>
+        <div>
+          <LineChartOutlined /><Text strong> Tổng doanh thu kỳ trước:</Text> {totalTarget.toLocaleString('vi-VN')} ₫
+        </div>
+        <div>
+          <SwapOutlined /> <Text strong>Thay đổi:</Text> {diff.toLocaleString('vi-VN')} ₫ (
+          {percentChange.toFixed(2)}%)
+        </div>
+        <div>
+          <BulbOutlined /><Text strong> Dự đoán kỳ tới:</Text> {nextPeriodPrediction.toLocaleString('vi-VN')} ₫
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,6 +242,15 @@ export default function SalesOverview({
             {days > 7 ? 'Tháng Trước' : 'Tuần Trước'}
           </Text>
         </div>
+      </div>
+      {/* ====== Chỗ để thêm phân tích AI ====== */}
+      <div className="mt-4">
+        <Button type="primary" onClick={handleAnalysisClick}>
+          Phân tích doanh thu
+        </Button>
+
+        {analysisVisible && renderSalesAnalysis()}
+        
       </div>
     </Card>
   );

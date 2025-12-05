@@ -10,9 +10,8 @@ import { User } from '../user/user.entity';
 export class Referral {
   @PrimaryGeneratedColumn()
   id?: number;
-
-  @Column({type:'varchar', nullable:false , default: () => 'gen_random_uuid()'})
-  uuid?: string;
+  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'gen_random_uuid()' })
+  uuid!: string;
 
   @ManyToOne(() => User, (user) => user.id)
   @JoinColumn({ name: 'referrer_id' })

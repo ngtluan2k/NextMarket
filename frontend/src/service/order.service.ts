@@ -187,7 +187,28 @@ export const orderService = {
     return res.data;
   },
 
+  getCustomersFromOrders: async (storeId: number) => {
+    try {
+      // Không gửi params gì hết
+      const token = localStorage.getItem('token');
+      const res = await api.get(
+        `${API_ENDPOINTS.stores}/${storeId}/orders/customers`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      console.log('Kết quả lấy khách hàng từ đơn hàng:', res.data);
+      return res.data;
+    } catch (error: any) {
+      console.error(
+        'Lỗi khi lấy khách hàng từ đơn hàng:',
+        error.response?.data || error.message
+      );
+      throw error;
+    }
+  },
 
+  // ========== ADMIN ENDPOINTS ==========
 
   getAllOrders: async () => {
     const res = await api.get(`${API_ENDPOINTS.admin}/orders`);

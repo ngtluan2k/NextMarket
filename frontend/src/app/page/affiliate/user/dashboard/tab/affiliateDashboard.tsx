@@ -14,7 +14,7 @@ import {
   BalanceInfo,
   DashboardStats,
 } from '../../../../../types/affiliate-links';
-import { useNotifications } from '../../../../../../hooks/useNotificationSocket';
+import { useNotifications } from '../../../../../hooks/useNotificationSocket';
 import { NotificationType } from '../../../../../../service/notification-socket.service';
 import { useAuth } from '../../../../../context/AuthContext';
 import TransactionStatistic from '../../../../../components/affiliate/dashboard/TransactionStatistic';

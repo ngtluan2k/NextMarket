@@ -18,6 +18,7 @@ import StoreCampaignManager from './tab/StoreCampaignManager';
 import StoreCampaignDetail from './tab/StoreCampaignDetail';
 import FlashSaleManager from './tab/FlashSaleManager';
 import FlashSaleRegister from './tab/FlashSaleRegister';
+import { Modal } from 'antd';
 
 const { Content, Footer } = Layout;
 
@@ -42,6 +43,9 @@ const SellerMainLayout: React.FC = () => {
   const [selectedFlashSaleId, setSelectedFlashSaleId] = useState<number | null>(
     null
   );
+  const [isChatModalVisible, setIsChatModalVisible] = useState(false);
+  const openChatModal = () => setIsChatModalVisible(true);
+  const closeChatModal = () => setIsChatModalVisible(false);
 
   useEffect(() => {
     const checkStore = async () => {
@@ -145,7 +149,7 @@ const SellerMainLayout: React.FC = () => {
         }
       />
       <Layout>
-        <SellerHeader />
+        <SellerHeader />{' '}
         <Content
           style={{
             margin: '0 16px',
@@ -159,6 +163,7 @@ const SellerMainLayout: React.FC = () => {
         </Content>
         <Footer style={{ textAlign: 'center' }}></Footer>
       </Layout>
+      
     </Layout>
   );
 };

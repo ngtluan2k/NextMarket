@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { notificationSocket, NotificationType, NotificationData } from '../service/notification-socket.service';
+import { notificationSocket, NotificationType, NotificationData } from '../../service/notification-socket.service';
 
 /**
  * Generic Notification Hook Options

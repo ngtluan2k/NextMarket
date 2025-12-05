@@ -8,10 +8,11 @@ import { User } from '../user/user.entity';
 import { Variant } from '../variant/variant.entity';
 import { PricingRuleModule } from '../pricing-rule/pricing-rule.module';
 import { PricingRules } from '../pricing-rule/pricing-rule.entity';
+import { OrderItem } from '../order-items/order-item.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ShoppingCart, CartItem, Product, User, Variant, PricingRules]),
+    TypeOrmModule.forFeature([ShoppingCart, CartItem, Product, User, Variant, PricingRules, OrderItem]),
     forwardRef(() => PricingRuleModule),
   ],
   providers: [CartService],

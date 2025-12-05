@@ -25,6 +25,12 @@ export type User = {
   };
 };
 
+export type AdminCheckResult = {
+  userId: number;
+  email: string;
+  roles: string[];
+  permissions: string[];
+};
 
 function authHeaders() {
   const token = localStorage.getItem('token') || '';
@@ -168,6 +174,34 @@ export async function getUserById(userId: number): Promise<User> {
     return user;
   } catch (error: any) {
     console.error(`❌ Error getting user by ID:`, error);
+    throw error;
+  }
+}
+
+export async function checkIsAdmin(): Promise<AdminCheckResult> {
+  try {
+    const res = await fetch(`${BE_BASE_URL}/users/check-admin`, {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Bạn không có quyền admin hoặc chưa đăng nhập');
+      }
+      throw new Error(`Lỗi kiểm tra quyền admin (${res.status})`);
+    }
+
+    const response = await res.json();
+    console.log('✅ Admin check response:', response);
+
+    if (!response.data) {
+      throw new Error('Không nhận được dữ liệu admin');
+    }
+
+    return response.data as AdminCheckResult;
+  } catch (error: any) {
+    console.error('❌ Error checking admin:', error);
     throw error;
   }
 }

@@ -64,15 +64,18 @@ import { CalculationMethodModule } from './modules/affiliate-calculation-method/
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
 import { AffiliateRootTrackingModule } from './modules/affiliate-root-tracking/affiliate-root-tracking.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-  
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 10,
-    }]),
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 seconds
+        limit: 10, // 10 requests per TTL
+      },
+    ]),
     // Đọc file .env
     ConfigModule.forRoot({
       isGlobal: true, // để tất cả module khác đều dùng được
@@ -104,7 +107,7 @@ import { AffiliateRootTrackingModule } from './modules/affiliate-root-tracking/a
         ssl: true,
       }),
     }),
-    
+
     ProductModule,
     UserModule,
     CategoryModule,
@@ -162,6 +165,7 @@ import { AffiliateRootTrackingModule } from './modules/affiliate-root-tracking/a
     CampaignsModule,
     FlashSaleSchedulesModule,
     RevokedTokensModule,
+    ChatModule,
     AffiliateRootTrackingModule
   ],
   providers: [],

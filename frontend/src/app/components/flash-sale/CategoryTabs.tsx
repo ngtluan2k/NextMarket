@@ -1,45 +1,58 @@
+// components/flash-sale/time-slots.tsx
+"use client";
 
-import React from "react";
-import type { Category, LucideIcon } from "./types";
-import { Smartphone, Laptop, Watch, Headphones, Camera, Gamepad2 } from "lucide-react";
+import { useState } from "react";
+import type { FlashSaleTimeSlot } from "./types";
 
-const iconMap: Record<string, LucideIcon> = {
-  Smartphone,
-  Laptop,
-  Watch,
-  Headphones,
-  Camera,
-  Gamepad2,
-};
+interface TimeSlotsProps {
+  slots: FlashSaleTimeSlot[];
+  onSlotChange?: (index: number, slot: FlashSaleTimeSlot) => void;
+}
 
-export function CategoryTabs({
-  categories,
-  activeId,
-  onChange,
-}: {
-  categories: Category[];
-  activeId: string;
-  onChange: (id: string) => void;
-}) {
+export function TimeSlots({ slots, onSlotChange }: TimeSlotsProps) {
+  const [activeSlotIndex, setActiveSlotIndex] = useState(0);
+
+  const handleSlotClick = (index: number) => {
+    setActiveSlotIndex(index);
+    const slot = slots[index];
+    if (slot) {
+      onSlotChange?.(index, slot);
+    }
+  };
+
   return (
-    <div id="categories" className="mb-8 overflow-x-auto">
-      <div className="flex gap-2 pb-2">
-        {categories.map((c) => {
-          const Icon = c.iconKey ? iconMap[c.iconKey] : undefined;
-          const isActive = activeId === c.id;
-          return (
-            <button
-              key={c.id}
-              onClick={() => onChange(c.id)}
-              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                isActive ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {Icon ? <Icon className="h-4 w-4" /> : <span className="inline-block h-4 w-4" />}
-              <span className="leading-none">{c.name}</span>
-            </button>
-          );
-        })}
+    <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-4 shadow-lg">
+      <div className="mx-auto max-w-7xl">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-300">
+          Khung giờ bán hàng
+        </p>
+
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-5 md:gap-3">
+          {slots.map((slot, idx) => {
+            const isActive = activeSlotIndex === idx;
+
+            return (
+              <button
+                key={slot.time}
+                onClick={() => handleSlotClick(idx)}
+                className={`flex flex-col items-center rounded-xl px-2 py-3 text-xs font-bold transition-all md:text-sm
+                  ${
+                    isActive
+                      ? "scale-105 bg-red-500 text-white shadow-md"
+                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                  }
+                  ${slot.isHighlighted ? "ring-2 ring-red-300" : ""}`}
+              >
+                <span className="text-sm font-black md:text-base">
+                  {slot.time}
+                </span>
+                <span className="mt-1 text-[11px] leading-tight md:text-xs">
+                  {slot.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
