@@ -43,5 +43,8 @@ export function useProductDetail(slug: string) {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  console.log(`product detail fetched from backend: ${JSON.stringify(product, null, 2)}`)
+
+
   return { loading, product, combos };
 }

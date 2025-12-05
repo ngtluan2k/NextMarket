@@ -5,7 +5,6 @@ import {
   AffiliatedProduct,
   BalanceInfo,
   CommissionHistory,
-  CommissionSummaryPeriod,
   CreateLinkRequest,
   CreateLinkResponse,
   DashboardStats,
@@ -14,6 +13,10 @@ import {
   ProductSearchResponse,
   Program,
   ProgramsResponse,
+  CreateGroupAffiliateLinkRequest,
+  CreateGroupAffiliateLinkResponse,
+  MyGroupLinksResponse,
+  CommissionSummary,
 } from '../../app/types/affiliate-links';
 
 export const getAuthHeaders = () => {
@@ -48,6 +51,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 }
 
+
+
 export async function getCommissionHistory(
   page = 1,
   limit = 20
@@ -67,15 +72,13 @@ export async function getCommissionHistory(
   }
 }
 
+
 export async function getCommissionSummary(
-  period: 'daily' | 'weekly' | 'monthly' = 'monthly',
-  limit = 12
-): Promise<CommissionSummaryPeriod[]> {
+): Promise<CommissionSummary> {
   try {
     const res = await axios.get(
       `${BE_BASE_URL}/affiliate-links/commission-summary`,
       {
-        params: { period, limit },
         headers: getAuthHeaders(),
       }
     );
@@ -211,5 +214,42 @@ export async function deleteLink( id: number): Promise<any> {
   } catch (error: any) {
     const status = error.response?.status || 'unknown';
     throw new Error(`Xóa liên kết thất bại (${status})`);
+  }
+}
+
+// ==================== GROUP AFFILIATE LINKS ====================
+
+export async function createGroupAffiliateLink(
+  payload: CreateGroupAffiliateLinkRequest
+): Promise<CreateGroupAffiliateLinkResponse> {
+  try {
+    console.log('Creating group affiliate link:', payload);
+    const res = await axios.post(
+      `${BE_BASE_URL}/affiliate-links/create-group-link`,
+      payload,
+      { headers: getAuthHeaders() }
+    );
+    
+    message.success('Tạo nhóm affiliate thành công!');
+    return res.data;
+  } catch (error: any) {
+    console.error('Failed to create group affiliate link:', error);
+    const errorMessage = error.response?.data?.message || 'Tạo nhóm affiliate thất bại';
+    message.error(errorMessage);
+    throw error;
+  }
+}
+
+export async function getMyGroupAffiliateLinks(): Promise<MyGroupLinksResponse> {
+  try {
+    const res = await axios.get(
+      `${BE_BASE_URL}/affiliate-links/my-group-links`,
+      { headers: getAuthHeaders() }
+    );
+    return res.data;
+  } catch (error) {
+    console.error('Failed to fetch group affiliate links:', error);
+    handleApiError(error);
+    throw error;
   }
 }

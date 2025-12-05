@@ -14,7 +14,7 @@ export class AffiliateCommission {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'UUID()' })
+  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'gen_random_uuid()' })
   uuid!: string;
 
   @ManyToOne(() => AffiliateLink, (link) => link.commissions, {
@@ -60,7 +60,7 @@ export class AffiliateCommission {
   @Column({ type: 'int', nullable: true })
   program_id!: number | null;
 
-  @Column({ type: 'decimal', nullable: true })
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   reversed_amount?: number; // Số tiền đã reverse
 
   @Column({ type: 'timestamp', nullable: true })

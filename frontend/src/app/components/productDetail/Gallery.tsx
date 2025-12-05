@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 
 interface GalleryProps {
   images?: string[];
+  imageToVariantMap?: Record<string, number>;
+  onImageClick?: (imageUrl: string) => void;
+  scrollToIndex?: number | null;
+  onScrollIndexUsed?: () => void;
   width?: number;
   galleryHeight?: number;
   thumbHeight?: number;
@@ -11,6 +15,10 @@ interface GalleryProps {
 
 export default function Gallery({
   images,
+  imageToVariantMap,
+  onImageClick,
+  scrollToIndex,
+  onScrollIndexUsed,
   width,
   galleryHeight,
   thumbHeight,
@@ -20,7 +28,7 @@ export default function Gallery({
 
   // Debug log để xem số lượng và thứ tự ảnh
   useEffect(() => {
-    console.log('Gallery images loaded:', list);
+    // console.log('Gallery images loaded:', list);
   }, [list]);
 
   const [idx, setIdx] = useState(0);
@@ -29,6 +37,15 @@ export default function Gallery({
   useEffect(() => {
     setIdx(0);
   }, [list]);
+
+  // Handle scroll to specific index (when variant name is clicked)
+  useEffect(() => {
+    if (scrollToIndex !== null && scrollToIndex !== undefined) {
+      setIdx(scrollToIndex);
+      onScrollIndexUsed?.();
+    }
+  }, [scrollToIndex, onScrollIndexUsed]);
+
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const resolveUrl = (u: string) =>
@@ -67,7 +84,13 @@ export default function Gallery({
           return (
             <button
               key={i}
-              onClick={() => setIdx(i)}
+              onClick={() => {
+                setIdx(i);
+                // Trigger variant selection if image maps to a variant
+                if (onImageClick) {
+                  onImageClick(u);
+                }
+              }}
               className={`overflow-hidden rounded-lg ring-1 ${
                 idx === i ? 'ring-sky-500' : 'ring-slate-200'
               }`}

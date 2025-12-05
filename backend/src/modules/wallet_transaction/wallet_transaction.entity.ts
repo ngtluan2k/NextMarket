@@ -14,12 +14,13 @@ export class WalletTransaction {
   id!: number;
 
   @Column({
-    type: 'char',
+    type: 'varchar',
     length: 36,
     unique: true,
-    nullable: false,
+    nullable: true,
+    default: () => 'gen_random_uuid()',
   })
-  uuid!: string;
+  uuid?: string;
 
   @ManyToOne(() => Wallet, (wallet) => wallet.transactions)
   @JoinColumn({ name: 'wallet_id' })
@@ -31,7 +32,15 @@ export class WalletTransaction {
   @Column({ type: 'varchar', length: 50 })
   type!: string; // e.g., 'review_reward'
 
-  @Column({ type: 'decimal' })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string): number => parseFloat(value),
+    },
+  })
   amount!: number;
 
   @Column({ type: 'varchar', nullable: true })

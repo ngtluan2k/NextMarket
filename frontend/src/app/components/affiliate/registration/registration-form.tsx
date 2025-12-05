@@ -32,7 +32,6 @@ export function RegistrationForm() {
   const [codeSent, setCodeSent] = useState(false);
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
-  // ✅ Lấy danh sách platform từ API
   useEffect(() => {
     const fetchPlatforms = async () => {
       try {

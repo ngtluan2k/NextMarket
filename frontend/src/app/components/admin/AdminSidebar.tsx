@@ -131,6 +131,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         },
         { key: '11-2', icon: dotIcon, label: 'Chương trình tiếp thị liên kết' },
         { key: '11-3', icon: dotIcon, label: 'Quy tắc hoa hồng (Rules)' },
+        { key: '11-4', icon: dotIcon, label: 'Cây Affiliate' },
       ],
     },
   ];

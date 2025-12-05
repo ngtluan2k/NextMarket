@@ -19,6 +19,10 @@ import { PaymentsModule } from '../payments/payments.module';
 import { UserAddress } from '../user_address/user_address.entity';
 import { User } from '../user/user.entity';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
+import { AffiliateLinksModule } from '../affiliate-links/affiliate-links.module';
+import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
+import { Referral } from '../referral/referrals.entity';
+import { AffiliateLink } from '../affiliate-links/affiliate-links.entity';
 import { Voucher } from '../vouchers/vouchers.entity';
 import { VoucherUsage } from '../voucher-usage/voucher_usage.entity';
 import { VoucherCollection } from '../voucher-collection/voucher-collection.entity';
@@ -26,7 +30,10 @@ import { VouchersService } from '../vouchers/vouchers.service';
 import { VoucherUsageService } from '../voucher-usage/voucher-usage.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant, PricingRules, Inventory, OrderItem, UserAddress, User, OrderStatusHistory, Voucher, VoucherUsage, VoucherCollection,]), forwardRef(() => PaymentsModule),],
+  imports: [TypeOrmModule.forFeature([GroupOrder, GroupOrderMember, GroupOrderItem, Order, Store, Product, Variant,PricingRules, Inventory,OrderItem,UserAddress,User,OrderStatusHistory,Referral,AffiliateLink, Voucher, VoucherUsage, VoucherCollection,]), 
+  forwardRef(() => PaymentsModule),  
+  AffiliateLinksModule,
+  AffiliateCommissionsModule],
   controllers: [GroupOrdersController, GroupOrderItemsController],
   providers: [GroupOrdersService, GroupOrderItemsService, GroupOrdersGateway, VouchersService, VoucherUsageService,],
   exports: [GroupOrdersService, GroupOrdersGateway],

@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Wallet, Users, TrendingUp, Link, Bell } from 'lucide-react';
 import { Button, Spin, message } from 'antd';
 import { Card } from 'antd';
@@ -15,10 +14,23 @@ import {
   BalanceInfo,
   DashboardStats,
 } from '../../../../../types/affiliate-links';
-import { useNotifications } from '../../../../../../hooks/useNotificationSocket';
+import { useNotifications } from '../../../../../hooks/useNotificationSocket';
 import { NotificationType } from '../../../../../../service/notification-socket.service';
 import { useAuth } from '../../../../../context/AuthContext';
 import TransactionStatistic from '../../../../../components/affiliate/dashboard/TransactionStatistic';
+
+// Memoized stat card component
+const StatCard = ({ icon: Icon, label, value, color }: any) => (
+  <Card className={`bg-${color}-50 border-${color}-200`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600">{label}</p>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+      </div>
+      <Icon className={`w-8 h-8 text-${color}-600`} />
+    </div>
+  </Card>
+);
 
 export function AffiliateDashboard() {
   const { me } = useAuth();
@@ -28,56 +40,62 @@ export function AffiliateDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Memoize refresh function
+  const refreshData = useCallback(async () => {
+    try {
+      const [statsData, balanceData, walletData] = await Promise.all([
+        getDashboardStats(),
+        getBalance(),
+        fetchMyWallet(),
+      ]);
+      setStats(statsData);
+      setBalance(balanceData);
+      setWalletBalance(walletData?.balance || 0);
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+    }
+  }, []);
+
   // Setup notification handlers for real-time updates
   useNotifications(me?.id || null, {
     handlers: {
       [NotificationType.COMMISSION_EARNED]: (data) => {
-        console.log(' Commission earned notification received:', data);
-
-        // Show success message
+        console.log('Commission earned notification received:', data);
         message.success({
           content: `🎉 Bạn vừa nhận ${data.amount?.toLocaleString(
             'vi-VN'
-          )} VND hoa hồng từ đơn hàng ${data.orderNumber}!`,
+          )} coin hoa hồng từ đơn hàng ${data.orderNumber}!`,
           duration: 5,
         });
-
-        // Refresh dashboard data
         refreshData();
       },
 
       [NotificationType.COMMISSION_PAID]: (data) => {
-        console.log(' Commission paid notification received:', data);
-
+        console.log('Commission paid notification received:', data);
         message.success({
           content: `💰 ${data.amount?.toLocaleString(
             'vi-VN'
-          )} VND đã được cộng vào ví của bạn!`,
+          )} coin đã được cộng vào ví của bạn!`,
           duration: 4,
         });
-
-        // Refresh dashboard data
         refreshData();
       },
 
       [NotificationType.COMMISSION_REVERSED]: (data) => {
         console.log('⚠️ Commission reversed notification received:', data);
-
         message.warning({
           content: `⚠️ Hoa hồng ${data.amount?.toLocaleString(
             'vi-VN'
-          )} VND từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
+          )} coin từ đơn #${data.orderId} đã bị hoàn trả: ${data.reason}`,
           duration: 6,
         });
-
-        // Refresh dashboard data
         refreshData();
       },
     },
 
     onNotification: (notification) => {
       console.log(
-        ' Dashboard received notification:',
+        'Dashboard received notification:',
         notification.type,
         notification
       );
@@ -112,27 +130,6 @@ export function AffiliateDashboard() {
     }
   };
 
-  // Function to refresh data (for notifications)
-  const refreshData = async () => {
-    try {
-      console.log(' Refreshing dashboard data due to notification...');
-      const [dashboardData, balanceData, wallet] = await Promise.all([
-        getDashboardStats(),
-        getBalance(),
-        fetchMyWallet(),
-      ]);
-
-      setStats(dashboardData);
-      setBalance(balanceData);
-      setWalletBalance(wallet.balance || 0);
-      setError(null);
-
-      console.log(' Dashboard data refreshed successfully');
-    } catch (error) {
-      console.error('Failed to refresh dashboard data:', error);
-    }
-  };
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -151,13 +148,6 @@ export function AffiliateDashboard() {
       icon: Link,
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
-    },
-    {
-      title: 'Người mua từ liên kết',
-      value: stats?.totalBuyers?.toString() || '0',
-      icon: Users,
-      iconBg: 'bg-purple-100',
-      iconColor: 'text-purple-600',
     },
   ];
 
@@ -199,11 +189,11 @@ export function AffiliateDashboard() {
           </Card>
         ))}
       </div>
-      <div className='grid grid-cols-3 gap-4 w-full'>
+      <div className="grid grid-cols-3 gap-4 w-full">
         <WalletTransactionHistory className="border-gray-200 shadow-sm" />
-        <Card className='col-span-2 bg-white rounded-lg shadow p-2'>
-        <TransactionStatistic />
-        </Card>
+        <div className="col-span-2">
+          <TransactionStatistic />
+        </div>
       </div>
     </div>
   );

@@ -82,13 +82,35 @@ export class FraudDetectionService {
       relations: ['orderItem'],
     });
 
-    // Check if same products (simplified check)
-    const isDuplicate = recentOrders.length > 5; // More than 5 orders in 24h
+    // Only flag as fraud if:
+    // 1. More than 10 orders in 24h (very suspicious)
+    // 2. AND orders have identical or very similar amounts (copy-paste fraud pattern)
+    if (recentOrders.length <= 10) {
+      return false; // Normal testing/shopping behavior
+    }
+
+    // Check if orders have identical amounts (copy-paste fraud pattern)
+    const orderAmounts = recentOrders.map((o) => o.totalAmount);
+    const uniqueAmounts = new Set(orderAmounts);
+
+    // If more than 70% of orders have same amount = likely fraud
+    const duplicateAmountCount = orderAmounts.filter(
+      (amount) => orderAmounts.filter((a) => a === amount).length > 1,
+    ).length;
+
+    const isDuplicate =
+      recentOrders.length > 10 &&
+      duplicateAmountCount / recentOrders.length > 0.7;
 
     if (isDuplicate) {
       await this.logFraud({
         type: 'DUPLICATE_ORDER',
-        details: { user_id: userId, recent_order_count: recentOrders.length },
+        details: {
+          user_id: userId,
+          recent_order_count: recentOrders.length,
+          duplicate_amount_count: duplicateAmountCount,
+          unique_amounts: Array.from(uniqueAmounts),
+        },
       });
       return true;
     }

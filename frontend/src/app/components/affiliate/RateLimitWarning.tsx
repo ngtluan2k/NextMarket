@@ -3,17 +3,12 @@ import { Alert, Progress } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 
 interface RateLimitWarningProps {
-  /** Current number of requests made in the current window */
   currentRequests?: number;
-  /** Maximum requests allowed per window */
   maxRequests?: number;
-  /** Time window in seconds */
   windowSeconds?: number;
 }
 
-/**
- * Component to show rate limit status and warnings to users
- */
+
 export const RateLimitWarning: React.FC<RateLimitWarningProps> = ({
   currentRequests = 0,
   maxRequests = 5,
@@ -23,7 +18,7 @@ export const RateLimitWarning: React.FC<RateLimitWarningProps> = ({
   const [isLimited, setIsLimited] = useState(false);
 
   const percentage = Math.round((currentRequests / maxRequests) * 100);
-  const isNearLimit = percentage >= 80; // Show warning at 80%
+  const isNearLimit = percentage >= 80; 
   const isAtLimit = currentRequests >= maxRequests;
 
   useEffect(() => {

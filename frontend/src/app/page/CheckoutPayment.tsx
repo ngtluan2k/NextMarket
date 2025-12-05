@@ -46,10 +46,18 @@ const CheckoutPayment: React.FC = () => {
 
   const checkoutItems: CheckoutItem[] = useMemo(() => {
     return items.map((i) => {
-      const primaryImage =
-        i.product.media?.find((m) => m.is_primary)?.url ??
-        i.product.media?.[0]?.url ??
-        '';
+      // Get image from variant media if available, otherwise from product media
+      let primaryImage = '';
+      if (i.variant?.media && Array.isArray(i.variant.media) && i.variant.media.length > 0) {
+        // Variant has media - use the first one (backend ensures it's the correct one)
+        primaryImage = i.variant.media[0]?.url ?? '';
+      } else if (i.product.media) {
+        // Fallback to product media
+        primaryImage =
+          i.product.media?.find((m) => m.is_primary)?.url ??
+          i.product.media?.[0]?.url ??
+          '';
+      }
 
       const variant =
         i.variant && i.variant.id && i.variant.variant_name && i.variant.price
@@ -57,6 +65,7 @@ const CheckoutPayment: React.FC = () => {
               id: i.variant.id,
               variant_name: i.variant.variant_name,
               price: i.variant.price,
+              media: i.variant.media,
             }
           : undefined;
 
@@ -231,7 +240,16 @@ const CheckoutPayment: React.FC = () => {
       return;
     }
 
-    const userId = me.user_id;
+    const userId = me.user_id || me.user?.id || me.id;
+    
+    if (!userId) {
+      console.error('❌ UserId is undefined:', { me });
+      message.error('Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('✅ Using userId:', userId);
 
     const fetchAllPaymentMethods = async () => {
       try {

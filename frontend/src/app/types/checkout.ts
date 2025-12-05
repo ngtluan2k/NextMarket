@@ -9,7 +9,12 @@ export type CheckoutItem = {
   oldPrice?: number | string;
   product?: Product;
   store?: StoreInfo;
-  variant?: { id: number; variant_name: string; price: number };
+  variant?: { 
+    id: number; 
+    variant_name: string; 
+    price: number;
+    media?: { url: string; is_primary?: boolean; sort_order?: number }[];
+  };
   type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
   pricing_rule?: { id: number } | undefined;
 };

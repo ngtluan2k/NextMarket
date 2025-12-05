@@ -81,7 +81,7 @@ export class AffiliateProgramsController {
   @UseGuards(JwtAuthGuard, PermissionGuard)
   @RequirePermissions('manage_affiliate')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: '(Admin) Soft delete an affiliate program' })
+  @ApiOperation({ summary: '(Admin) Soft delete an affiliate program (status change only)' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.manageStatus(id, 'delete');
   }
@@ -93,6 +93,15 @@ export class AffiliateProgramsController {
   @ApiOperation({ summary: '(Admin) Reopen a deleted affiliate program' })
   async reopen(@Param('id', ParseIntPipe) id: number) {
     return this.service.manageStatus(id, 'reopen');
+  }
+
+  @Delete('hard-delete/:id')
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermissions('manage_affiliate')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: '(Admin) Permanently delete an affiliate program and all associated data' })
+  async hardDelete(@Param('id', ParseIntPipe) id: number) {
+    return this.service.hardDelete(id);
   }
 
   @Patch(':id')

@@ -291,6 +291,7 @@ export class CartService {
         'items',
         'items.product',
         'items.variant',
+        'items.variant.media', // ← Thêm variant media
         'items.product.store',
         'items.product.media',
         'items.pricing_rule',
@@ -368,7 +369,6 @@ export class CartService {
                 email: item.product.store.email,
               }
             : null,
-          media: item.product.media.filter((media) => media.is_primary),
         },
 
         variant: item.variant
@@ -377,6 +377,14 @@ export class CartService {
               variant_name: item.variant.variant_name,
               price: item.variant.price,
               stock: item.variant.stock,
+              // Include variant media
+              media: item.variant.media
+                ? item.variant.media.map((m) => ({
+                    url: m.url,
+                    is_primary: m.is_primary,
+                    sort_order: m.sort_order,
+                  }))
+                : [],
             }
           : null,
       };

@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Card, List, Tag, Button, DatePicker, Input, Empty, Spin, Pagination } from 'antd';
-import { 
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import {
+  Card,
+  List,
+  Tag,
+  Button,
+  DatePicker,
+  Input,
+  Empty,
+  Spin,
+  Pagination,
+} from 'antd';
+import {
   WalletOutlined,
   SearchOutlined,
   FilterOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
-  DollarOutlined
+  DownCircleFilled,
+  UpCircleFilled,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -23,96 +36,134 @@ interface WalletTransactionHistoryProps {
   className?: string;
 }
 
-export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> = ({ className = '' }) => {
+const TransactionItem = memo(
+  ({
+    transaction,
+    formatCurrency,
+    getTransactionIcon,
+    getTransactionColor,
+    getTypeDisplay,
+  }: any) => (
+    <div className="flex items-center justify-between p-3 border-b">
+      <div className="flex items-center gap-3">
+        {getTransactionIcon(transaction.amount)}
+        <div>
+          <p className="font-semibold">{getTypeDisplay(transaction.type)}</p>
+          <p className="text-sm text-gray-500">{transaction.description}</p>
+        </div>
+      </div>
+      <Tag color={getTransactionColor(transaction.amount)}>
+        {formatCurrency(transaction.amount)}
+      </Tag>
+    </div>
+  )
+);
+
+export const WalletTransactionHistory: React.FC<
+  WalletTransactionHistoryProps
+> = ({ className = '' }) => {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<WalletTransaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<
+    WalletTransaction[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([
+    null,
+    null,
+  ]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+
+  const loadTransactions = useCallback(
+    async (page: number) => {
+      try {
+        setLoading(true);
+        const response = await fetchMyWalletTransactions(page, pageSize);
+        setTransactions(response.transactions);
+        setTotal(response.total);
+      } catch (error) {
+        console.error('Failed to load transactions:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageSize]
+  );
 
   useEffect(() => {
     loadTransactions(currentPage);
-  }, [currentPage]);
+  }, [currentPage, loadTransactions]);
 
-  useEffect(() => {
-    filterTransactions();
-  }, [transactions, searchText, dateRange]);
-
-  const loadTransactions = async (page: number) => {
-    try {
-      setLoading(true);
-      const response = await fetchMyWalletTransactions(page, pageSize);
-      setTransactions(response.transactions);
-      setTotal(response.total);
-    } catch (error) {
-      console.error('Failed to load transactions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterTransactions = () => {
+  const filteredTransactions_memo = useMemo(() => {
     let filtered = [...transactions];
 
-    // Filter by search text
     if (searchText) {
       const search = searchText.toLowerCase();
-      filtered = filtered.filter(t => 
-        t.type.toLowerCase().includes(search) ||
-        t.reference?.toLowerCase().includes(search) ||
-        t.description?.toLowerCase().includes(search)
+      filtered = filtered.filter(
+        (t) =>
+          t.type.toLowerCase().includes(search) ||
+          t.reference?.toLowerCase().includes(search) ||
+          t.description?.toLowerCase().includes(search)
       );
     }
 
     // Filter by date range
     if (dateRange[0] && dateRange[1]) {
-      filtered = filtered.filter(t => {
+      filtered = filtered.filter((t) => {
         const txDate = dayjs(t.created_at);
-        return txDate.isAfter(dateRange[0]) && txDate.isBefore(dateRange[1]?.add(1, 'day'));
+        return (
+          txDate.isAfter(dateRange[0]) &&
+          txDate.isBefore(dateRange[1]?.add(1, 'day'))
+        );
       });
     }
 
-    setFilteredTransactions(filtered);
-  };
+    return filtered;
+  }, [transactions, searchText, dateRange]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
-  };
+  const displayedTransactions = useMemo(() => {
+    const sortedTransactions = [...filteredTransactions_memo].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-  const getTransactionIcon = (amount: number) => {
+    return showAll ? sortedTransactions : sortedTransactions.slice(0, 5);
+  }, [filteredTransactions_memo, showAll]);
+  useEffect(() => {
+    setFilteredTransactions(filteredTransactions_memo);
+  }, [filteredTransactions_memo]);
+
+  const getTransactionIcon = useCallback((amount: number) => {
     return amount >= 0 ? (
       <ArrowUpOutlined style={{ color: '#52c41a' }} />
     ) : (
       <ArrowDownOutlined style={{ color: '#ff4d4f' }} />
     );
-  };
+  }, []);
 
-  const getTransactionColor = (amount: number) => {
+  const getTransactionColor = useCallback((amount: number) => {
     return amount >= 0 ? 'success' : 'error';
-  };
+  }, []);
 
   const getTypeDisplay = (type: string) => {
     const typeMap: { [key: string]: string } = {
-      'affiliate_commission': 'Hoa hồng Affiliate',
+      affiliate_commission: 'Hoa hồng Affiliate',
       'Hủy hoa hồng': 'Hoàn trả hoa hồng',
-      'review_reward': 'Thưởng đánh giá',
-      'withdrawal': 'Rút tiền',
-      'deposit': 'Nạp tiền',
-      'refund': 'Hoàn tiền',
-      'purchase': 'Mua hàng',
+      review_reward: 'Thưởng đánh giá',
+      withdrawal: 'Rút tiền',
+      deposit: 'Nạp tiền',
+      refund: 'Hoàn tiền',
+      purchase: 'Mua hàng',
     };
     return typeMap[type] || type;
   };
 
   const getReferenceDisplay = (reference?: string) => {
     if (!reference) return null;
-    
+
     if (reference.startsWith('commission:')) {
       return `Hoa hồng #${reference.split(':')[1]}`;
     }
@@ -126,17 +177,16 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
   };
 
   return (
-    <Card 
+    <Card
       className={className}
       title={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 !py-8">
           <WalletOutlined className="text-lg" />
-          <span>Lịch sử Giao dịch Ví</span>
+          <span className='text-2xl'>Lịch sử hoa hồng</span>
         </div>
       }
     >
-      {/* Search and Filter */}
-      <div className="mb-4 space-y-2">
+      <div className="mb-5 space-y-2">
         <Input
           placeholder="Tìm kiếm giao dịch..."
           prefix={<SearchOutlined />}
@@ -149,7 +199,9 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
           placeholder={['Từ ngày', 'Đến ngày']}
           format="DD/MM/YYYY"
           value={dateRange}
-          onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
+          onChange={(dates) =>
+            setDateRange(dates as [Dayjs | null, Dayjs | null])
+          }
           suffixIcon={<FilterOutlined />}
         />
       </div>
@@ -163,19 +215,17 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
         <Empty
           description={
             searchText || dateRange[0] || dateRange[1]
-              ? "Không tìm thấy giao dịch phù hợp"
-              : "Chưa có giao dịch nào"
+              ? 'Không tìm thấy giao dịch phù hợp'
+              : 'Chưa có giao dịch nào'
           }
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       ) : (
         <>
           <List
-            dataSource={filteredTransactions}
+            dataSource={displayedTransactions}
             renderItem={(transaction) => (
-              <List.Item
-                className="hover:bg-gray-50 transition-colors"
-              >
+              <List.Item className="hover:bg-gray-50 transition-colors">
                 <List.Item.Meta
                   avatar={
                     <div className="text-2xl">
@@ -188,7 +238,7 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
                         {getTypeDisplay(transaction.type)}
                       </span>
                       <Tag color={getTransactionColor(transaction.amount)}>
-                        {formatCurrency(transaction.amount)}
+                        {transaction.amount} coin
                       </Tag>
                     </div>
                   }
@@ -205,7 +255,10 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
                         </div>
                       )}
                       <div className="text-xs text-gray-400">
-                        {dayjs(transaction.created_at).fromNow()} • {dayjs(transaction.created_at).format('DD/MM/YYYY HH:mm')}
+                        {dayjs(transaction.created_at).fromNow()} •{' '}
+                        {dayjs(transaction.created_at).format(
+                          'DD/MM/YYYY HH:mm'
+                        )}
                       </div>
                     </div>
                   }
@@ -213,8 +266,20 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
               </List.Item>
             )}
           />
-
-          {/* Pagination */}
+          {!showAll && filteredTransactions_memo.length > 5 && (
+            <div className="mt-4 flex justify-center">
+              <Button type="primary" onClick={() => setShowAll(true)} icon={<DownCircleFilled/>}>
+                Xem thêm
+              </Button>
+            </div>
+          )}
+          {showAll && (
+            <div className="mt-4 flex justify-center">
+              <Button type="primary" onClick={() => setShowAll(false)} icon={<UpCircleFilled/>}>
+                Thu gọn
+              </Button>
+            </div>
+          )}
           {total > pageSize && (
             <div className="mt-4 flex justify-center">
               <Pagination
@@ -223,7 +288,9 @@ export const WalletTransactionHistory: React.FC<WalletTransactionHistoryProps> =
                 total={total}
                 onChange={(page) => setCurrentPage(page)}
                 showSizeChanger={false}
-                showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} giao dịch`}
+                showTotal={(total, range) =>
+                  `${range[0]}-${range[1]} của ${total} giao dịch`
+                }
               />
             </div>
           )}

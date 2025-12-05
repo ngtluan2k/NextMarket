@@ -132,6 +132,20 @@ export async function reopenAffiliateProgram(programId: number) {
   }
 }
 
+export async function hardDeleteAffiliateProgram(programId: number) {
+  try {
+    const res = await axios.delete(
+      `${BE_BASE_URL}/affiliate-programs/hard-delete/${programId}`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+    return res.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 export async function getAffiliateProgramDetail(id: number) {
   try {
     const res = await axios.get(`${BE_BASE_URL}/affiliate-programs/${id}`, {

@@ -102,4 +102,28 @@ export class GroupOrder {
       'Trạng thái đơn hàng của nhóm: 0=pending, 1=confirmed, 2=processing, 3=shipped, 4=delivered, 5=completed, 6=cancelled, 7=returned',
   })
   order_status!: OrderStatuses;
+
+  // Group-level affiliate tracking (host inheritance)
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  group_affiliate_code?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  group_affiliate_user_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  group_affiliate_program_id?: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  group_commission_rate?: number;
+
+  @Column({ 
+    type: 'varchar', 
+    length: 20, 
+    nullable: true,
+    comment: 'Method used to detect affiliate: host_inheritance, explicit, auto_detect'
+  })
+  affiliate_detection_method?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  affiliate_detected_at?: Date;
 }

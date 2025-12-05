@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,6 +20,56 @@ export class ReferralsService {
     private userService: UserService
   ) {}
 
+  /**
+   * Check if a user is an ancestor of another user in the affiliate tree
+   * Used to prevent circular references
+   */
+  private async checkIfAncestor(
+    potentialAncestorId: number,
+    potentialDescendantId: number
+  ): Promise<boolean> {
+    try {
+      const query = `
+        WITH RECURSIVE AncestorsCTE AS (
+          SELECT referrer_id, 1 AS level
+          FROM referrals
+          WHERE referee_id = $1 AND referrer_id IS NOT NULL
+          
+          UNION ALL
+          
+          SELECT r.referrer_id, a.level + 1
+          FROM referrals r
+          INNER JOIN AncestorsCTE a ON r.referee_id = a.referrer_id
+          WHERE a.level < 50 AND r.referrer_id IS NOT NULL
+        )
+        SELECT referrer_id FROM AncestorsCTE
+        WHERE referrer_id = $2
+        LIMIT 1
+      `;
+      
+      const result = await this.repository.query(query, [
+        potentialDescendantId,
+        potentialAncestorId
+      ]);
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error checking ancestor relationship:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if a user already has a referrer
+   * Used to prevent duplicate referrers (single tree rule)
+   */
+  private async checkDuplicateReferrer(userId: number): Promise<Referral | null> {
+    return this.repository.findOne({
+      where: { referee: { id: userId } },
+      relations: ['referrer', 'referee']
+    });
+  }
+
   async createForUser(
     userId: number,
     createDto: CreateReferralDto
@@ -34,6 +85,32 @@ export class ReferralsService {
     if (!referee) {
       throw new NotFoundException(
         `Referee with id ${createDto.referee_id} not found`
+      );
+    }
+
+    // VALIDATION 1: Prevent self-reference (A → A)
+    if (userId === createDto.referee_id) {
+      throw new BadRequestException(
+        'Người dùng không thể là referrer của chính mình'
+      );
+    }
+
+    // VALIDATION 2: Prevent duplicate referrer (single tree rule)
+    const existingReferral = await this.checkDuplicateReferrer(createDto.referee_id);
+    if (existingReferral) {
+      throw new BadRequestException(
+        `Người dùng ${createDto.referee_id} đã có referrer rồi. Không thể tạo referral mới.`
+      );
+    }
+
+    // VALIDATION 3: Prevent circular reference (A → B → C → A)
+    const isCircular = await this.checkIfAncestor(
+      createDto.referee_id,
+      userId
+    );
+    if (isCircular) {
+      throw new BadRequestException(
+        'Không thể tạo circular reference: referee là ancestor của referrer'
       );
     }
 

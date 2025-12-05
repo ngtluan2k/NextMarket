@@ -10,6 +10,8 @@ import { AffiliateProgram } from '../affiliate-program/affiliate-program.entity'
 import { Product } from '../product/product.entity';
 import { OrderItem } from '../order-items/order-item.entity';
 import { User } from '../user/user.entity';
+import { GroupOrder } from '../group_orders/group_orders.entity';
+import { Store } from '../store/store.entity';
 import { UserModule } from '../user/user.module';
 import { AffiliateCommissionsModule } from '../affiliate-commissions/affiliate-commissions.module';
 import { AffiliateProgramsModule } from '../affiliate-program/affiliate-program.module';
@@ -25,6 +27,8 @@ import { WalletModule } from '../wallet/wallet.module';
       Product,
       OrderItem,
       User,
+      GroupOrder,
+      Store,
     ]),
     UserModule,
     AffiliateCommissionsModule,

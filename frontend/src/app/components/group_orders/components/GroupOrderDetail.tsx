@@ -6,7 +6,8 @@ import {
 } from '../../../../service/groupOrderItems.service';
 import EveryMartHeader from '../../../components/Navbar';
 import Footer from '../../../components/Footer';
-import { useAuth } from '../../../hooks/useAuth';
+import dayjs from 'dayjs';
+import { useAuth } from '../../../context/AuthContext';
 import { useGroupOrderSocket } from './../../../hooks/useGroupOrderSocket';
 import { GroupOrderCheckout } from './GroupOrderCheckout';
 import { GroupDeadlineModal } from './GroupDeadlineModal';

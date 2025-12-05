@@ -46,7 +46,29 @@ export class EveryCoinStrategy {
       });
       await manager.save(history);
 
-      return payment;
+      // ✅ Reload payment with full relations including orderItem.subtotal
+      // Use query builder to explicitly select all columns including nullable ones
+      const paymentWithOrder = await manager
+        .createQueryBuilder(Payment, 'payment')
+        .leftJoinAndSelect('payment.order', 'order')
+        .leftJoinAndSelect('order.orderItem', 'orderItem')
+        .leftJoinAndSelect('orderItem.product', 'product')
+        .leftJoinAndSelect('orderItem.variant', 'variant')
+        .leftJoinAndSelect('order.group_order', 'group_order')
+        .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+        .addSelect([
+          'orderItem.id',
+          'orderItem.uuid',
+          'orderItem.quantity',
+          'orderItem.price',
+          'orderItem.discount',
+          'orderItem.subtotal', // ✅ Explicitly select subtotal
+          'orderItem.note',
+        ])
+        .where('payment.id = :id', { id: payment.id })
+        .getOne();
+
+      return paymentWithOrder || payment;
     });
   }
 

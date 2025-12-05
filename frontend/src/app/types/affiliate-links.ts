@@ -106,8 +106,7 @@ export type Program = {
 
 
 
-export interface CommissionSummaryPeriod {
-  period: string;
+export interface CommissionSummary {
   totalEarned: number;
   totalPending: number;
   totalPaid: number;
@@ -202,4 +201,48 @@ export interface CommissionHistory {
     total: number;
     totalPages: number;
   };
+}
+
+// ==================== GROUP AFFILIATE LINKS ====================
+
+export interface CreateGroupAffiliateLinkRequest {
+  storeId: number;
+  programId?: number;
+  groupName?: string;
+  targetMemberCount?: number;
+  expiresAt?: string;
+}
+
+export interface CreateGroupAffiliateLinkResponse {
+  group_id: number;
+  group_uuid: string;
+  link_id: number;
+  invite_link: string;
+  join_code: string;
+  affiliate_code: string;
+  program_id?: number;
+  program_name?: string;
+  expires_at?: string;
+  target_member_count: number;
+  created_at: string;
+}
+
+export interface MyGroupLink {
+  group_id: number;
+  group_uuid: string;
+  name: string;
+  status: 'open' | 'locked' | 'completed' | 'cancelled';
+  invite_link: string;
+  join_code: string;
+  affiliate_code: string;
+  program_id?: number;
+  store_name: string;
+  expires_at?: string;
+  target_member_count: number;
+  created_at: string;
+}
+
+export interface MyGroupLinksResponse {
+  message: string;
+  group_links: MyGroupLink[];
 }

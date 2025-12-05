@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { notificationSocket, NotificationType, NotificationData } from '../service/notification-socket.service';
+import { notificationSocket, NotificationType, NotificationData } from '../../service/notification-socket.service';
 
 /**
  * Generic Notification Hook Options
@@ -85,34 +85,46 @@ export function useNotifications(
 
   // Setup event listeners
   useEffect(() => {
+    console.log('[useNotificationSocket] Setting up event listeners');
+    console.log('[useNotificationSocket] Handlers:', Object.keys(handlers || {}));
+    
     // Generic notification handler
     const handleNotification = (event: CustomEvent<NotificationData>) => {
       const notification = event.detail;
+      console.log('[useNotificationSocket] Generic notification handler called:', notification.type);
       
       // Apply filters
       if (filter?.types && !filter.types.includes(notification.type)) {
+        console.log('[useNotificationSocket] Filtered out by type');
         return;
       }
       
       if (filter?.priorities && !filter.priorities.includes(notification.priority)) {
+        console.log('[useNotificationSocket] Filtered out by priority');
         return;
       }
       
       // Call generic handler
       if (onNotification) {
+        console.log('[useNotificationSocket] Calling generic handler');
         onNotification(notification);
       }
     };
 
     // Specific type handlers
     const handleSpecificType = (type: NotificationType) => (event: CustomEvent) => {
+      console.log(`[useNotificationSocket] Specific handler for ${type} called`);
       const handler = handlers?.[type];
       if (handler) {
+        console.log(`[useNotificationSocket] Calling handler for ${type}`);
         handler(event.detail);
+      } else {
+        console.warn(`[useNotificationSocket] No handler found for ${type}`);
       }
     };
 
     // Add generic listener
+    console.log('[useNotificationSocket] Adding generic "notification" listener');
     window.addEventListener('notification', handleNotification as EventListener);
 
     // Add specific listeners for all notification types
@@ -120,14 +132,18 @@ export function useNotifications(
     
     if (handlers) {
       Object.keys(handlers).forEach((type) => {
+        console.log(`[useNotificationSocket] Adding listener for ${type}`);
         const listener = handleSpecificType(type as NotificationType) as EventListener;
         window.addEventListener(type, listener);
         eventListeners.push([type, listener]);
       });
     }
 
+    console.log('[useNotificationSocket] Event listeners setup complete');
+
     // Cleanup
     return () => {
+      console.log('[useNotificationSocket] Cleaning up event listeners');
       window.removeEventListener('notification', handleNotification as EventListener);
       eventListeners.forEach(([type, listener]) => {
         window.removeEventListener(type, listener);

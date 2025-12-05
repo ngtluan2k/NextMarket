@@ -50,6 +50,18 @@ export class GroupOrderMember {
   @JoinColumn({ name: 'address_id' })
   address_id?: UserAddress;
 
+  // Affiliate tracking fields for group buying
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  referrer_affiliate_code?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  referrer_affiliate_user_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  referrer_affiliate_program_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  referrer_affiliate_link_id?: number;
   @Column({ type: 'boolean', default: false })
   has_paid!: boolean;
 

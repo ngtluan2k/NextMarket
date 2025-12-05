@@ -214,7 +214,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 		const saved = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: saved.id },
-			relations: ['member', 'member.user', 'product', 'variant','pricing_rule'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 		});
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', {
 			item: full,
@@ -278,7 +278,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 				// Broadcast cập nhật từng item để frontend cập nhật realtime
 				const updatedItem = await this.itemRepo.findOne({
 					where: { id: item.id },
-					relations: ['member', 'member.user', 'product', 'variant', 'member.user.profile', 'member.address_id'],
+					relations: ['member', 'member.user', 'product', 'product.media', 'variant', 'member.user.profile', 'member.address_id'],
 				});
 
 				if (updatedItem) {
@@ -306,6 +306,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 				'member',
 				'member.user',
 				'product',
+				'product.media',
 				'variant',
 				'member.user.profile',
 				'member.address_id',
@@ -319,7 +320,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 	async listMemberItems(groupId: number, memberId: number) {
 		return this.itemRepo.find({
 			where: { group_order: { id: groupId }, member: { id: memberId } },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 			order: { id: 'DESC' },
 		});
 	}
@@ -364,7 +365,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 		const updated = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: updated.id },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 		});
 		console.log('[WS] item-added emit', { groupId, id: full?.id });
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {

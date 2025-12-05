@@ -198,6 +198,17 @@ export const CartHeader: React.FC<Props> = ({
 
             {/* Danh sách sản phẩm trong shop */}
             {items.map((item) => {
+              // DEBUG: Log cart item
+              console.log('[CART ITEM]', {
+                id: item.id,
+                productName: item.product?.name,
+                variantName: item.variant?.variant_name,
+                variantId: item.variant?.id,
+                variantMedia: item.variant?.media,
+                productMedia: item.product?.media,
+                fullItem: item,
+              });
+
               // ✅ Nếu đang chọn subscription → disable các type khác
               const isDisabled =
                 selectedType === 'subscription' && item.type !== 'subscription';
@@ -209,11 +220,17 @@ export const CartHeader: React.FC<Props> = ({
                 item.type === 'subscription';
 
               const checked = selectedIds.includes(item.id);
-              const mediaArray = Array.isArray(item.product?.media)
-                ? item.product.media
-                : item.product?.media
-                ? [item.product.media]
-                : [];
+              
+              // If variant has media, use variant media; otherwise use product media
+              let mediaArray: any[] = [];
+              if (item.variant?.media && Array.isArray(item.variant.media)) {
+                mediaArray = item.variant.media;
+              } else if (Array.isArray(item.product?.media)) {
+                mediaArray = item.product.media;
+              } else if (item.product?.media) {
+                mediaArray = [item.product.media];
+              }
+              
               const imageUrl = toImageUrl(
                 mediaArray.find((m: any) => m?.is_primary)?.url ||
                   mediaArray[0]?.url ||

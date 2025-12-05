@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Pencil, Info, Users } from "lucide-react";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../context/AuthContext";
 import { groupOrdersApi } from '../../../service/groupOrderItems.service';
+import { getAffiliateDataForOrder } from '../../../utils/affiliate-tracking';
 import { GroupDeadlineModal } from "./components/GroupDeadlineModal";
 
 export default function GroupOrderCreate() {
@@ -22,7 +23,7 @@ export default function GroupOrderCreate() {
         null;
 
     const [groupName, setGroupName] = useState(
-        `Đơn hàng nhóm của ${user?.profile?.full_name || ''}`
+        `Đơn hàng nhóm của ${user?.full_name || ''}`
     );
     const [paymentType, setPaymentType] = useState("Mọi người tự thanh toán phần của mình");
     const [joinExpiresAt, setJoinExpiresAt] = useState<string | null>(null);
@@ -50,7 +51,9 @@ export default function GroupOrderCreate() {
                 alert("Thiếu storeId hoặc thông tin người dùng. Vui lòng kiểm tra lại.");
                 return;
             }
-            const fullName = user?.profile?.full_name || (user as any)?.full_name || user?.username || '';
+            const affiliateData = getAffiliateDataForOrder();
+            console.log('🔍 Creating group with affiliate data:', affiliateData);
+            const fullName = user?.full_name || user?.username || '';
             const finalGroupName = fullName ? `${groupName.trim()} - ${fullName}` : groupName.trim();
 
             const payload = {
@@ -59,8 +62,10 @@ export default function GroupOrderCreate() {
                 hostUserId,
                 joinExpiresAt,
                 targetMemberCount,
+                ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
             };
 
+            console.log(' Group creation payload:', payload);
             const group = await groupOrdersApi.create(payload);
             const storeSlug = group?.store?.slug; // service trả về group kèm relations
 
@@ -195,8 +200,7 @@ export default function GroupOrderCreate() {
                                 <div className="font-semibold text-slate-800">Tên nhóm</div>
                                 <div className="text-sm text-slate-500">
                                     {groupName} - {
-                                        user?.profile?.full_name ||
-                                        (user as any)?.full_name ||
+                                        user?.full_name ||
                                         user?.username ||
                                         'Bạn'
                                     }
@@ -266,3 +270,6 @@ export default function GroupOrderCreate() {
         </div>
     );
 }
+
+
+

@@ -53,7 +53,12 @@ export default function YouMayAlsoLikeProducts({
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        const data: any[] = await res.json();
+        const responseData: any = await res.json();
+        
+        // Handle both wrapped and unwrapped responses
+        const data: any[] = Array.isArray(responseData) 
+          ? responseData 
+          : (Array.isArray(responseData.data) ? responseData.data : []);
 
         const mapped: LikeItem[] = data.map((p) => {
           const primaryMedia =
