@@ -32,37 +32,38 @@ const CheckoutPayment: React.FC = () => {
     items: [],
     subtotal: 0,
   }) as CheckoutLocationState;
-  // Payment
+  
   const [method, setMethod] = useState<PaymentMethodType>('cod');
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>(
-    []
-  );
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodResponse[]>([]);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethodType>('economy');
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedVouchers, setSelectedVouchers] = useState<Voucher[]>([]);
+  const [discountTotal, setDiscountTotal] = useState(0);
+  const [shippingFee, setShippingFee] = useState<number>(0);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
+
   const items = state.items ?? [];
-  const subtotalNum =
-    typeof state.subtotal === 'string'
-      ? Number(state.subtotal)
-      : state.subtotal ?? 0;
+  const subtotalNum = typeof state.subtotal === 'string'
+    ? Number(state.subtotal)
+    : state.subtotal ?? 0;
 
   const checkoutItems: CheckoutItem[] = useMemo(() => {
     return items.map((i) => {
-      const primaryImage =
-        i.product.media?.find((m) => m.is_primary)?.url ??
-        i.product.media?.[0]?.url ??
-        '';
+      const primaryImage = i.product.media?.find((m) => m.is_primary)?.url ??
+        i.product.media?.[0]?.url ?? '';
 
-      const variant =
-        i.variant && i.variant.id && i.variant.variant_name && i.variant.price
-          ? {
-              id: i.variant.id,
-              variant_name: i.variant.variant_name,
-              price: i.variant.price,
-            }
-          : undefined;
+      const variant = i.variant && i.variant.id && i.variant.variant_name && i.variant.price
+        ? {
+            id: i.variant.id,
+            variant_name: i.variant.variant_name,
+            price: i.variant.price,
+          }
+        : undefined;
 
-      // Chỉ lấy id nếu selectedPricingRule tồn tại, không dùng null
-     const pricing_rule =
-      i.pricing_rule?.id !== undefined
+      const pricing_rule = i.pricing_rule?.id !== undefined
         ? { id: Number(i.pricing_rule.id) }
         : undefined;
 
@@ -79,21 +80,18 @@ const CheckoutPayment: React.FC = () => {
       };
     });
   }, [items]);
-  console.log('Checkout items built:', checkoutItems);
 
-  // Kiểm tra có subscription hay không
   const isSubscription = useMemo(
     () => checkoutItems.some((i) => i.type === 'subscription'),
     [checkoutItems]
   );
 
-  // Lọc payment methods cho COD ↔ EveryCoin
   const filteredMethods = useMemo(
     () =>
       paymentMethods.filter((m) => {
         if (m.type === 'cod') return !isSubscription;
         if (m.type === 'everycoin') return isSubscription;
-        return true; // các method khác luôn hiển thị
+        return true;
       }),
     [paymentMethods, isSubscription]
   );
@@ -105,47 +103,57 @@ const CheckoutPayment: React.FC = () => {
     }
   }, [items, navigate]);
 
-  // Shipping
-  const [shippingMethod, setShippingMethod] =
-    useState<ShippingMethodType>('economy');
-  const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
-  const etaDate = new Date(
-    Date.now() + (shippingMethod === 'economy' ? 3 : 1) * 24 * 60 * 60 * 1000
-  );
-  const etaLabel = `Giao ${etaDate.toLocaleDateString('vi-VN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'numeric',
-  })}`;
-
-  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
-  const [userAddress, setUserAddress] = useState<UserAddress | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const handleAddressChange = (addr: UserAddress) => {
-    setUserAddress(addr);
+  // Tính phí ship dựa trên địa chỉ và phương thức
+  const calculateShippingFee = async (method: ShippingMethodType): Promise<number> => {
+    if (!userAddress || checkoutItems.length === 0) return 0;
+    
+    setCalculatingShipping(true);
+    try {
+      const storeId = checkoutItems[0]?.product?.store?.id;
+      if (!storeId) return 0;
+      
+      const totalWeight = checkoutItems.reduce((sum, item) => {
+        return sum + (item.product?.weight || 200) * item.quantity;
+      }, 0);
+      
+      const response = await api.post('/orders/calculate-shipping-fee', {
+        storeId,
+        addressId: userAddress.id,
+        items: checkoutItems.map(item => ({
+          productId: item.product?.id,
+          variantId: item.variant?.id,
+          quantity: item.quantity,
+          weight: item.product?.weight || 200
+        })),
+        totalWeight,
+        serviceType: method === 'fast' ? 2 : 1 // 1: Standard, 2: Express
+      });
+      
+      const fee = response.data.data?.shippingFee || 0;
+      setShippingFee(fee);
+      return fee;
+    } catch (error) {
+      console.error('Lỗi tính phí ship:', error);
+      message.warning('Không thể tính phí ship. Sử dụng phí mặc định.');
+      const fallbackFee = method === 'economy' ? 0 : 30000;
+      setShippingFee(fallbackFee);
+      return fallbackFee;
+    } finally {
+      setCalculatingShipping(false);
+    }
   };
 
-  // Thêm state chung cho voucher
-  const [selectedVouchers, setSelectedVouchers] = useState<Voucher[]>([]);
-  const [discountTotal, setDiscountTotal] = useState(0);
+  const handleAddressChange = async (addr: UserAddress) => {
+    setUserAddress(addr);
+    // Tính lại phí ship khi thay đổi địa chỉ
+    if (checkoutItems.length > 0) {
+      await calculateShippingFee(shippingMethod);
+    }
+  };
 
-  const total = useMemo(
-    () => subtotalNum - discountTotal + (shippingFee || 0),
-    [subtotalNum, discountTotal, shippingFee]
-  );
-  const selectedCount = useMemo(
-    () => items.reduce((s, it) => s + it.quantity, 0),
-    [items]
-  );
-
-  const handleApplyVoucher = async (
-    vouchers: Voucher[],
-    partialDiscount: number
-  ) => {
+  const handleApplyVoucher = async (vouchers: Voucher[], partialDiscount: number) => {
     setSelectedVouchers(vouchers);
 
-    //  TÍNH LẠI TỔNG DISCOUNT (store + platform)
     if (vouchers.length === 0) {
       setDiscountTotal(0);
       return;
@@ -187,7 +195,6 @@ const CheckoutPayment: React.FC = () => {
       return;
     }
 
-    // Recalculate discount cho các voucher còn lại
     try {
       const res = await api.post('/vouchers/calculate-discount', {
         voucherCodes: updatedVouchers.map((v) => v.code),
@@ -208,17 +215,17 @@ const CheckoutPayment: React.FC = () => {
       setDiscountTotal(0);
     }
   };
-  useEffect(() => {
-    console.log(
-      '📋 Current selectedVouchers:',
-      selectedVouchers.map((v) => ({
-        id: v.id,
-        code: v.code,
-        store_id: v.store_id,
-        type: v.type,
-      }))
-    );
-  }, [selectedVouchers]);
+
+  const total = useMemo(
+    () => subtotalNum - discountTotal + shippingFee,
+    [subtotalNum, discountTotal, shippingFee]
+  );
+
+  const selectedCount = useMemo(
+    () => items.reduce((s, it) => s + it.quantity, 0),
+    [items]
+  );
+
   useEffect(() => {
     if (!me) {
       localStorage.setItem(
@@ -235,9 +242,7 @@ const CheckoutPayment: React.FC = () => {
 
     const fetchAllPaymentMethods = async () => {
       try {
-        const response = await api.get<PaymentMethodResponse[]>(
-          '/payment-methods'
-        );
+        const response = await api.get<PaymentMethodResponse[]>('/payment-methods');
         const systemMethods: PaymentMethodResponse[] = [];
         const userCards: SavedCard[] = [];
 
@@ -264,7 +269,7 @@ const CheckoutPayment: React.FC = () => {
           );
         }
       } catch (error) {
-        console.error(' Lỗi tải phương thức thanh toán:', error);
+        console.error('Lỗi tải phương thức thanh toán:', error);
         message.error('Không thể tải phương thức thanh toán.');
         setPaymentMethods([]);
       }
@@ -275,8 +280,7 @@ const CheckoutPayment: React.FC = () => {
         const response = await api.get(`/users/${userId}/addresses`);
         const addresses = response.data || [];
         if (addresses.length > 0) {
-          const defaultAddr =
-            addresses.find((a: any) => a.isDefault) || addresses[0];
+          const defaultAddr = addresses.find((a: any) => a.isDefault) || addresses[0];
           setUserAddress({
             id: defaultAddr.id,
             userId,
@@ -300,14 +304,17 @@ const CheckoutPayment: React.FC = () => {
               .join(', '),
             tag: defaultAddr.isDefault ? 'Mặc định' : undefined,
           });
+          
+          // Tính phí ship ban đầu
+          if (checkoutItems.length > 0) {
+            await calculateShippingFee(shippingMethod);
+          }
         } else {
-          message.warning(
-            'Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ.'
-          );
+          message.warning('Bạn chưa có địa chỉ giao hàng. Vui lòng thêm địa chỉ.');
           navigate('/account/addresses');
         }
       } catch (error) {
-        console.error(' Lỗi tải địa chỉ:', error);
+        console.error('Lỗi tải địa chỉ:', error);
         message.error('Không thể tải địa chỉ giao hàng.');
       }
     };
@@ -362,7 +369,7 @@ const CheckoutPayment: React.FC = () => {
               items={checkoutItems}
               selected={shippingMethod}
               onChange={setShippingMethod}
-              etaLabel={etaLabel}
+              etaLabel="Dự kiến giao trong 2-3 ngày"
               storeName={items[0]?.product?.store?.name ?? 'EveryMart'}
               saving={0}
               shippingFee={shippingFee}
@@ -370,6 +377,8 @@ const CheckoutPayment: React.FC = () => {
               onApplyVoucher={handleApplyVoucher}
               discountTotal={discountTotal}
               orderAmount={subtotalNum}
+              calculateShippingFee={calculateShippingFee}
+              onShippingFeeCalculated={setShippingFee}
             />
             <div style={{ marginTop: 12 }}>
               <PaymentMethods
@@ -392,11 +401,14 @@ const CheckoutPayment: React.FC = () => {
               userAddress={userAddress}
               onAddressChange={handleAddressChange}
               items={checkoutItems}
-              etaLabel={etaLabel}
+              etaLabel="Dự kiến giao trong 2-3 ngày"
               selectedVouchers={selectedVouchers}
               discountTotal={discountTotal}
               onApplyVoucher={handleApplyVoucher}
               onRemoveVoucher={handleRemoveVoucher}
+              shippingFee={shippingFee}
+              onShippingFeeChange={setShippingFee}
+              calculateShippingFee={() => calculateShippingFee(shippingMethod)}
             />
           </Col>
         </Row>

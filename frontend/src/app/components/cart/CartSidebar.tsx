@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Button, Tag, message, Modal } from 'antd';
+import { Card, Typography, Button, Tag, message, Modal, Spin } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../api/api';
@@ -33,6 +33,10 @@ type Props = {
   discountTotal?: number;
   onApplyVoucher?: (vouchers: Voucher[], totalDiscount: number) => void;
   onRemoveVoucher?: (voucherId: number) => void;
+  // Thêm props mới cho tính phí ship
+  shippingFee?: number;
+  onShippingFeeChange?: (fee: number) => void;
+  calculateShippingFee?: () => Promise<number>;
 };
 
 export const CartSidebar: React.FC<Props> = ({
@@ -52,6 +56,9 @@ export const CartSidebar: React.FC<Props> = ({
   discountTotal = 0,
   onApplyVoucher,
   onRemoveVoucher,
+  shippingFee: propShippingFee = 0,
+  onShippingFeeChange,
+  calculateShippingFee,
 }) => {
   const { } = useCart() as { cart: CartItem[] };
   const navigate = useNavigate();
@@ -63,8 +70,10 @@ export const CartSidebar: React.FC<Props> = ({
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(
     userAddress || null
   );
-  const [wallet, setWallet] = useState<Wallet | null>(null); // 2. state
+  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [shippingFee, setShippingFee] = useState<number>(propShippingFee);
+  const [calculatingShipping, setCalculatingShipping] = useState(false);
 
   useEffect(() => {
     const getWallet = async () => {
@@ -88,7 +97,64 @@ export const CartSidebar: React.FC<Props> = ({
     }
   }, [userAddress]);
 
-  const finalTotal = selectedTotal - discountTotal;
+  useEffect(() => {
+    setShippingFee(propShippingFee);
+  }, [propShippingFee]);
+
+  // Tính phí ship khi thay đổi địa chỉ
+  useEffect(() => {
+    if (mode === 'checkout' && selectedAddress && items.length > 0) {
+      calculateShipping();
+    }
+  }, [selectedAddress, items]);
+
+  const calculateShipping = async () => {
+    if (!selectedAddress || items.length === 0) return;
+    
+    setCalculatingShipping(true);
+    try {
+      let fee = 0;
+      
+      if (calculateShippingFee) {
+        // Nếu có function calculateShippingFee từ parent
+        fee = await calculateShippingFee();
+      } else {
+        // Tính toán mặc định
+        const storeId = items[0]?.product?.store?.id;
+        if (!storeId) return;
+        
+        const totalWeight = items.reduce((sum, item) => {
+          return sum + (item.product?.weight || 200) * item.quantity;
+        }, 0);
+        
+        const response = await api.post('/orders/calculate-shipping-fee', {
+          storeId,
+          addressId: selectedAddress.id,
+          items: items.map(item => ({
+            productId: item.product?.id,
+            variantId: item.variant?.id,
+            quantity: item.quantity,
+            weight: item.product?.weight || 200
+          })),
+          totalWeight
+        });
+        
+        fee = response.data.data?.shippingFee || 0;
+      }
+      
+      setShippingFee(fee);
+      onShippingFeeChange?.(fee);
+    } catch (error) {
+      console.error('Lỗi tính phí ship:', error);
+      message.warning('Không thể tính phí ship. Sử dụng phí mặc định.');
+      setShippingFee(30000); // Fallback
+      onShippingFeeChange?.(30000);
+    } finally {
+      setCalculatingShipping(false);
+    }
+  };
+
+  const finalTotal = selectedTotal - discountTotal + shippingFee;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -116,14 +182,16 @@ export const CartSidebar: React.FC<Props> = ({
       }
 
       const storeId = items[0]?.product?.store?.id;
-      const shippingFee = shippingMethod === 'economy' ? 0 : 22000;
+      
+      // Sử dụng phí ship đã tính toán
+      const shippingFeeToUse = shippingFee;
 
       const orderPayload = {
         userId,
         storeId,
         addressId: selectedAddress.id,
         subtotal: Number(selectedTotal),
-        shippingFee,
+        shippingFee: shippingFeeToUse, // Sử dụng phí ship đã tính
         voucherCodes: selectedVouchers.map((v) => v.code),
         items: items.map((item) => ({
           productId: Number(item.product?.id),
@@ -132,29 +200,29 @@ export const CartSidebar: React.FC<Props> = ({
           price: Number(item.price),
           type: item.type || 'bulk',
           pricingRuleId: item.pricing_rule?.id ?? undefined,
+          weight: item.product?.weight || 50, // Thêm weight
         })),
       };
-      console.log(
-        '📦 Order payload with affiliate tracking (BE will calculate):',
-        JSON.stringify(orderPayload, null, 2)
-      );
       
-      // Use orderService.createOrder which includes affiliate tracking
+      console.log('📦 Order payload:', JSON.stringify(orderPayload, null, 2));
+      
       const order = await orderService.createOrder(userId, orderPayload);
       console.log('Đơn hàng đã được tạo:', order);
       
       if (!order || !order.id) {
-        console.error('❌ Order creation failed - no order returned or missing ID');
+        console.error('❌ Order creation failed');
         message.error('Không thể tạo đơn hàng. Vui lòng thử lại.');
         return;
       }
-      console.log('✅ Order created by BE:', {
+      
+      console.log('✅ Order created:', {
         id: order.id,
         subtotal: order.subtotal,
         shippingFee: order.shippingFee,
         discountTotal: order.discountTotal,
         totalAmount: order.totalAmount,
       });
+      
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
       );
@@ -173,14 +241,9 @@ export const CartSidebar: React.FC<Props> = ({
         amount: Number(order.totalAmount),
       };
 
-      console.log(
-        '💳 Tạo thanh toán:',
-        JSON.stringify(paymentPayload, null, 2)
-      );
+      console.log('💳 Tạo thanh toán:', paymentPayload);
       const paymentRes = await api.post('/payments', paymentPayload);
       const { redirectUrl, payment } = paymentRes.data;
-
-      console.log('💳 Kết quả thanh toán:', paymentRes.data);
 
       const successState = {
         orderCode: order.uuid || order.id,
@@ -198,29 +261,21 @@ export const CartSidebar: React.FC<Props> = ({
             : payment?.status ?? 'pending',
       };
 
-      console.log('Navigating to OrderSuccess with state:', successState);
-
       if (redirectUrl) {
-        console.log('🔗 Chuyển hướng đến:', redirectUrl);
         window.location.href = redirectUrl;
       } else {
-        console.log('✅ Không cần chuyển hướng, chuyển đến trang thành công');
         navigate('/order-success', {
           state: successState,
           replace: true,
         });
       }
     } catch (err: any) {
-      console.error(
-        '❌ EveryCoin Payment Error:',
-        err.response?.data || err.message
-      );
+      console.error('❌ Order Error:', err.response?.data || err.message);
       message.error(err.message || 'Không thể tạo đơn hàng');
     } finally {
       setLoading(false);
     }
   };
-  
 
   const handleApplyVoucherProp = (vouchers: Voucher[], totalDiscount: number) => {
     onApplyVoucher?.(vouchers, totalDiscount);
@@ -243,9 +298,14 @@ export const CartSidebar: React.FC<Props> = ({
     setIsModalVisible(false);
   };
 
-  const handleAddressSelect = (address: UserAddress) => {
+  const handleAddressSelect = async (address: UserAddress) => {
     setSelectedAddress(address);
     onAddressChange?.(address);
+    
+    // Tính lại phí ship khi thay đổi địa chỉ
+    if (mode === 'checkout') {
+      await calculateShipping();
+    }
   };
 
   return (
@@ -348,9 +408,6 @@ export const CartSidebar: React.FC<Props> = ({
             <Text type="secondary">Chưa chọn voucher</Text>
           )}
         </div>
-        <Button type="link" style={{ padding: 0, marginTop: 8 }}>
-          Mua thêm để freeship 300k cho đơn này
-        </Button>
       </Card>
 
       <VoucherDiscountSection
@@ -360,7 +417,6 @@ export const CartSidebar: React.FC<Props> = ({
           productId: Number(item.product?.id),
           quantity: Number(item.quantity),
           price: Number(item.price),
-          
         }))}
         storeId={items[0]?.product?.store?.id || 1}
         orderAmount={selectedTotal}
@@ -374,36 +430,41 @@ export const CartSidebar: React.FC<Props> = ({
           <Text>Tổng tiền hàng ({selectedCount})</Text>
           <Text>{selectedTotal.toLocaleString()}đ</Text>
         </div>
+        
+        {/* Phí vận chuyển */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+          <Text>
+            Phí vận chuyển 
+            {calculatingShipping && (
+              <Spin size="small" style={{ marginLeft: 8 }} />
+            )}
+          </Text>
+          <Text>
+            {calculatingShipping ? 'Đang tính...' : `${shippingFee.toLocaleString()}đ`}
+            {shippingFee === 0 && ' (Miễn phí)'}
+          </Text>
+        </div>
+        
         {discountTotal > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 8,
-            }}
-          >
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <Text>Giảm giá</Text>
             <Text>-{discountTotal.toLocaleString()}đ</Text>
           </div>
         )}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: 8,
-          }}
-        >
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
           <Text strong>Tổng thanh toán</Text>
           <Text strong style={{ color: 'red', fontSize: 18 }}>
             {finalTotal.toLocaleString()}đ
           </Text>
         </div>
+        
         <Button
           type="primary"
           block
           size="large"
           style={{ marginTop: 16, borderRadius: 6 }}
-          disabled={selectedCount === 0 || loading}
+          disabled={selectedCount === 0 || loading || calculatingShipping}
           onClick={mode === 'checkout' ? showConfirmModal : onSubmit}
           loading={loading}
         >
@@ -412,6 +473,7 @@ export const CartSidebar: React.FC<Props> = ({
         </Button>
       </Card>
 
+      {/* Modal xác nhận đơn hàng */}
       <Modal
         title="Xác nhận đơn hàng"
         visible={isModalVisible}
@@ -498,35 +560,24 @@ export const CartSidebar: React.FC<Props> = ({
             </div>
           )}
 
-          <div
-            style={{
-              marginTop: 16,
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
             <Text>Tổng tiền hàng</Text>
             <Text>{selectedTotal.toLocaleString()}đ</Text>
           </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+            <Text>Phí vận chuyển</Text>
+            <Text>{shippingFee.toLocaleString()}đ</Text>
+          </div>
+          
           {discountTotal > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: 8,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
               <Text>Giảm giá</Text>
               <Text>-{discountTotal.toLocaleString()}đ</Text>
             </div>
           )}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 8,
-            }}
-          >
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <Text strong>Tổng thanh toán</Text>
             <Text strong style={{ color: 'red', fontSize: 16 }}>
               {finalTotal.toLocaleString()}đ

@@ -19,8 +19,9 @@ import { ReferralsModule } from '../referral/refferal.module';
 import { UserOrdersController } from './UserOrdersController';
 import { StoreOrdersController } from './StoreOrdersController';
 import { AdminOrdersController } from './AdminOrdersController';
-import{OrdersController} from './orders.controller'
-
+import { OrdersController} from './orders.controller'
+import { GhnModule } from '../ghn/ghn.module';
+import { StoreAddress } from '../store-address/store-address.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -32,12 +33,15 @@ import{OrdersController} from './orders.controller'
       Inventory,
       Payment,
       OrderStatusHistory,
+      StoreAddress,
+      
     ]),
     CartModule,
     VouchersModule,
     AffiliateLinksModule,
     AffiliateCommissionsModule,
     ReferralsModule,
+    GhnModule,
     forwardRef(() => ProductReviewsModule),
   ],
   controllers: [

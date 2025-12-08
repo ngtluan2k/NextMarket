@@ -77,4 +77,35 @@ changeStatus(
   async getOrdersByStore(@Param('storeId') storeId: number) {
     return this.ordersService.findByStore(storeId);
   }
+   @Post('calculate-shipping-fee')
+  async calculateShippingFee(
+    @Body() data: {
+      storeId: number;
+      addressId: number;
+      items: Array<{
+        productId: number;
+        variantId?: number;
+        quantity: number;
+        weight?: number; // gram
+      }>;
+    }
+  ) {
+    const totalWeight = data.items.reduce((sum, item) => {
+      return sum + (item.weight || 200) * item.quantity;
+    }, 0);
+
+    const fee = await this.ordersService.calculateShippingFee(
+      data.storeId,
+      data.addressId,
+      totalWeight
+    );
+
+    return {
+      success: true,
+      data: {
+        shippingFee: fee,
+        totalWeight,
+      },
+    };
+  }
 }

@@ -59,6 +59,8 @@ export type Product = {
   reviewsCount?: number;
   sellerName?: string;
   selectedPricingRule?: { id: number; type: 'bulk' | 'subscription' | 'normal' | 'flash_sale' } | null;
+    weight?:number;
+
 };
 
 export type LikeItem = {

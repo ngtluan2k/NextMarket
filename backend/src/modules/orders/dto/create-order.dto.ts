@@ -5,6 +5,7 @@ import {
   IsString,
   ValidateNested,
   IsEnum,
+  IsPositive,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -17,9 +18,11 @@ class OrderItemDto {
   variantId?: number;
 
   @IsNumber()
+  @IsPositive()
   quantity!: number;
 
   @IsNumber()
+  @IsPositive()
   price!: number;
 
   @IsEnum(['bulk', 'subscription', 'normal', 'flash_sale'])
@@ -27,7 +30,12 @@ class OrderItemDto {
   
   @IsOptional()
   @IsNumber()
-  pricingRuleId?: number;// ✅ thêm field này
+  pricingRuleId?: number; // ✅ thêm field này
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  weight?: number; // ✅ Thêm weight (gram)
 }
 
 export class CreateOrderDto {

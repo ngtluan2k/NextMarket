@@ -1,41 +1,27 @@
-import {
-  IsNotEmpty,
-  IsString,
-  IsBoolean,
-  IsOptional,
-  IsNumber,
-} from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 
 export class CreateUserAddressDto {
-  @IsNumber()
-  user_id!: number;
-
   @IsString()
-  @IsNotEmpty()
   recipientName!: string;
 
   @IsString()
-  @IsNotEmpty()
   phone!: string;
 
   @IsString()
-  @IsNotEmpty()
   street!: string;
 
   @IsString()
-  @IsNotEmpty()
   ward!: string;
 
   @IsString()
   district!: string;
 
   @IsString()
-  @IsNotEmpty()
   province!: string;
 
   @IsString()
-  @IsNotEmpty()
-  country!: string;
+  @IsOptional()
+  country?: string = 'Việt Nam';
 
   @IsString()
   @IsOptional()
@@ -43,5 +29,22 @@ export class CreateUserAddressDto {
 
   @IsBoolean()
   @IsOptional()
-  isDefault?: boolean;
+  isDefault?: boolean = false;
+
+  // GHN fields (optional - sẽ tự động map)
+  @IsNumber()
+  @IsOptional()
+  ghn_province_id?: number;
+
+  @IsNumber()
+  @IsOptional()
+  ghn_district_id?: number;
+
+  @IsString()
+  @IsOptional()
+  ghn_ward_code?: string;
+
+  @IsNumber()
+  @IsOptional()
+  user_id?: number;
 }

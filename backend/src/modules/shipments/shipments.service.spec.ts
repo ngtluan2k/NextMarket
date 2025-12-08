@@ -1,18 +1,26 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ShipmentsService } from './shipments.service';
+import { Injectable } from '@nestjs/common';
+import { CreateShipmentDto } from './dto/create-shipment.dto';
+import { UpdateShipmentDto } from './dto/update-shipment.dto';
 
-describe('ShipmentsService', () => {
-  let service: ShipmentsService;
+@Injectable()
+export class ShipmentsService {
+  create(createShipmentDto: CreateShipmentDto) {
+    return 'This action adds a new shipment';
+  }
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ShipmentsService],
-    }).compile();
+  findAll() {
+    return `This action returns all shipments`;
+  }
 
-    service = module.get<ShipmentsService>(ShipmentsService);
-  });
+  findOne(id: number) {
+    return `This action returns a #${id} shipment`;
+  }
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-});
+  update(id: number, updateShipmentDto: UpdateShipmentDto) {
+    return `This action updates a #${id} shipment`;
+  }
+
+  remove(id: number) {
+    return `This action removes a #${id} shipment`;
+  }
+}

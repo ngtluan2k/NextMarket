@@ -27,6 +27,11 @@ export class CreateOrderItemDto {
   @IsOptional()
   subtotal?: number;
 
+  @IsNumber()
+  @IsOptional()
+  @IsPositive()
+  weight?: number;
+
   @IsOptional()
   @IsString()
   note?: string;
