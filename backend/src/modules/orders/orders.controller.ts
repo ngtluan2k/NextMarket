@@ -79,32 +79,55 @@ changeStatus(
   }
    @Post('calculate-shipping-fee')
   async calculateShippingFee(
-    @Body() data: {
+    @Body()
+    body: {
       storeId: number;
       addressId: number;
-      items: Array<{
+      totalWeight?: number; // Frontend gửi sẵn → tin tưởng 100%
+      items?: Array<{
         productId: number;
         variantId?: number;
         quantity: number;
-        weight?: number; // gram
+        weight?: number;
       }>;
-    }
+    },
   ) {
-    const totalWeight = data.items.reduce((sum, item) => {
-      return sum + (item.weight || 200) * item.quantity;
-    }, 0);
+    let totalWeight = body.totalWeight;
+
+    // Nếu frontend không gửi totalWeight → tự tính (phòng thủ)
+    if (!totalWeight || totalWeight <= 0) {
+      if (!body.items || body.items.length === 0) {
+        totalWeight = 200; // ít nhất 1 món nhẹ
+      } else {
+        totalWeight = body.items.reduce((sum, item) => {
+          const weight = item.weight && item.weight > 0 ? item.weight : 200;
+          return sum + weight * item.quantity;
+        }, 0);
+      }
+    }
+
+    // Đảm bảo GHN không lỗi (tối thiểu 100g)
+    const weightForGHN = Math.max(totalWeight, 100);
 
     const fee = await this.ordersService.calculateShippingFee(
-      data.storeId,
-      data.addressId,
-      totalWeight
+      body.storeId,
+      body.addressId,
+      weightForGHN,
     );
 
     return {
       success: true,
       data: {
         shippingFee: fee,
-        totalWeight,
+        totalWeight: weightForGHN,
+        debug:
+          process.env.NODE_ENV === 'development'
+            ? {
+                fromFrontend: body.totalWeight,
+                calculated: totalWeight,
+                itemsCount: body.items?.length || 0,
+              }
+            : undefined,
       },
     };
   }

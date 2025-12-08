@@ -68,6 +68,11 @@ export class OrdersService {
     addressId: number,
     totalWeight: number
   ): Promise<number> {
+    console.log('🔧 calculateShippingFee called:', {
+      storeId,
+      addressId,
+      totalWeight // ✅ Kiểm tra giá trị này
+    });
     try {
       const storeAddress = await this.storeAddressRepository.findOne({
         where: { stores_id: storeId, is_default: true },
@@ -87,17 +92,24 @@ export class OrdersService {
         return 25000;
       }
 
-      const feeData = await this.ghnService.calculateShippingFee({
-        from_district_id: storeAddress.ghn_district_id!, // THÊM DÒNG NÀY
-        to_district_id: userAddress.ghn_district_id!,
-        to_ward_code: userAddress.ghn_ward_code!,
-        weight: Math.max(totalWeight, 100), // tối thiểu 100g
+      const ghnPayload = {
+        from_district_id: storeAddress.ghn_district_id,
+        to_district_id: userAddress.ghn_district_id,
+        to_ward_code: userAddress.ghn_ward_code,
+        weight: Math.max(totalWeight, 100),
         height: 10,
         width: 15,
         length: 20,
-        insurance_value: 500000, // bắt buộc nếu muốn bảo hiểm
-        service_type_id: 2, // 2 = Chuyển phát nhanh
-      });
+        insurance_value: 500000,
+        service_type_id: 2,
+      };
+
+      console.log('🚚 GHN PAYLOAD:', JSON.stringify(ghnPayload, null, 2));
+
+      const feeData = await this.ghnService.calculateShippingFee(ghnPayload);
+
+      console.log('📨 GHN RESPONSE:', JSON.stringify(feeData, null, 2));
+      console.log('💰 PHÍ SHIP TỪ GHN:', feeData.total || 25000);
 
       return feeData.total || 25000;
     } catch (error: any) {
@@ -129,9 +141,10 @@ export class OrdersService {
 
       // 📦 Tính tổng trọng lượng đơn hàng (từ items)
       const totalWeight = createOrderDto.items.reduce((sum, item) => {
-        // Giả sử mỗi item có weight, hoặc default 200g
-        return sum + (item.weight || 200) * item.quantity;
+        const itemWeight = item.weight || 5000;
+        return sum + itemWeight * item.quantity;
       }, 0);
+      console.log('🔍 Total weight từ DTO items:', totalWeight);  // ← Thêm log debug
 
       // 🚚 Tính phí ship từ GHN (nếu chưa có)
       let shippingFee = createOrderDto.shippingFee;
@@ -565,66 +578,147 @@ export class OrdersService {
   /**
    * Tạo đơn hàng GHN khi xác nhận đơn
    */
- async createGHNOrder(orderId: number): Promise<void> {
-  const order = await this.findOne(orderId);
+  async createGHNOrder(orderId: number): Promise<void> {
+    const order = await this.findOne(orderId);
 
-  const storeAddress = await this.storeAddressRepository.findOne({
-    where: { stores_id: order.store.id, is_default: true },
-  });
+    // DEBUG: Kiểm tra dữ liệu
+    console.log('🔍 DEBUG ORDER DATA:', {
+      orderId: order.id,
+      total_weight_in_db: order.total_weight,
+      orderItemsCount: order.orderItem?.length || 0,
+    });
 
-  if (!storeAddress?.ghn_district_id) {
-    throw new Error('Cửa hàng chưa có địa chỉ lấy hàng GHN');
+    // Log chi tiết từng item
+    if (order.orderItem && order.orderItem.length > 0) {
+      console.log('📦 ITEM DETAILS:');
+      order.orderItem.forEach((item, index) => {
+        console.log(`${index + 1}. ${item.product?.name}${item.variant ? ' - ' + item.variant.variant_name : ''}`);
+        console.log(`   Variant ID: ${item.variant?.id}`);
+        console.log(`   Variant Weight: ${item.variant?.weight}g`);
+        console.log(`   Quantity: ${item.quantity}`);
+        console.log(`   Total Weight: ${(item.variant?.weight || 5000) * item.quantity}g`);
+      });
+    }
+
+    const storeAddress = await this.storeAddressRepository.findOne({
+      where: { stores_id: order.store.id, is_default: true },
+    });
+
+    if (!storeAddress?.ghn_district_id) {
+      throw new Error('Cửa hàng chưa có địa chỉ lấy hàng GHN');
+    }
+
+    if (!order.to_district_id || !order.to_ward_code) {
+      throw new Error('Địa chỉ giao hàng chưa có mã GHN');
+    }
+
+    // Tạo items cho GHN với weight từ variant
+    const itemsForGHN = order.orderItem.map(item => {
+      // CHỈ sử dụng variant.weight, nếu không có thì dùng 200g
+      const itemWeight = item.variant?.weight || 5000;
+
+      const itemData = {
+        name: item.variant
+          ? `${item.product?.name || 'Sản phẩm'} - ${item.variant.variant_name}`
+          : item.product?.name || 'Sản phẩm',
+        code: item.variant?.sku || item.variant?.sku || `SP${item.id}`,
+        quantity: item.quantity,
+        price: Math.round(item.price || 0),
+        weight: itemWeight, // ✅ CHỈ dùng variant.weight hoặc 200
+      };
+
+      console.log(`📊 GHN Item: ${itemData.name}`, {
+        weight: itemData.weight,
+        quantity: itemData.quantity,
+        total: itemData.weight * itemData.quantity,
+      });
+
+      return itemData;
+    });
+
+    // Tính tổng weight cho GHN (chỉ từ variant)
+    const totalWeightForGHN = itemsForGHN.reduce(
+      (sum, item) => sum + (item.weight * item.quantity),
+      0
+    );
+
+    // Ưu tiên: total_weight từ DB → tính từ variant → fallback 500g
+    const finalWeight = order.total_weight && order.total_weight > 0
+      ? order.total_weight
+      : totalWeightForGHN || 500;
+
+    console.log('⚖️ WEIGHT CALCULATION FOR GHN:', {
+      fromDB: order.total_weight,
+      fromVariants: totalWeightForGHN,
+      finalUsed: finalWeight,
+      afterMaxCheck: Math.max(finalWeight, 100),
+      itemsCount: itemsForGHN.length,
+    });
+
+    const ghnOrderData = {
+      from_district_id: storeAddress.ghn_district_id,
+      from_ward_code: storeAddress.ghn_ward_code || '',
+
+      payment_type_id: 2, // Người nhận trả phí
+      required_note: 'CHOXEMHANGKHONGTHU',
+      note: order.note || 'Đơn từ hệ thống NextMarket',
+
+      to_name: order.userAddress?.recipientName || 'Khách hàng',
+      to_phone: order.userAddress?.phone || '',
+      to_address: order.userAddress?.street || '',
+      to_ward_code: order.to_ward_code,
+      to_district_id: order.to_district_id,
+
+      // ✅ Sử dụng weight đã tính toán (tối thiểu 100g cho GHN)
+      weight: Math.max(finalWeight, 100),
+      length: 20,
+      width: 15,
+      height: 10,
+
+      service_type_id: 2,
+      insurance_value: Math.round(order.totalAmount || 0),
+      cod_amount: Math.round(order.totalAmount || 0),
+
+      items: itemsForGHN, // ✅ Items có weight từ variant
+    };
+
+    console.log('🚚 FINAL GHN REQUEST:', {
+      weight: ghnOrderData.weight,
+      itemDetails: ghnOrderData.items.map(item => ({
+        name: item.name,
+        weight: item.weight,
+        quantity: item.quantity,
+      })),
+    });
+
+    try {
+      const result = await this.ghnService.createOrder(ghnOrderData);
+
+      order.ghn_order_code = result.order_code;
+      order.ghn_expected_delivery_time = result.expected_delivery_time;
+      order.ghn_status = 'ready_to_pick';
+
+      await this.ordersRepository.save(order);
+
+      console.log('✅ GHN Order Created Successfully:', {
+        orderCode: result.order_code,
+        ghOrderId: order.id,
+        weightUsed: ghnOrderData.weight,
+        totalAmount: order.totalAmount,
+      });
+    } catch (error: any) {
+      console.error('❌ GHN Order Creation Failed:', {
+        error: error.response?.data || error.message,
+        requestData: {
+          weight: ghnOrderData.weight,
+          fromDistrict: ghnOrderData.from_district_id,
+          toDistrict: ghnOrderData.to_district_id,
+          itemCount: ghnOrderData.items.length,
+        },
+      });
+      throw error;
+    }
   }
-
-  if (!order.to_district_id || !order.to_ward_code) {
-    throw new Error('Địa chỉ giao hàng chưa có mã GHN');
-  }
-
-  const ghnOrderData = {
-    from_district_id: storeAddress.ghn_district_id,
-    from_ward_code: storeAddress.ghn_ward_code || '',
-
-    payment_type_id: 2, // Người nhận trả phí
-    required_note: 'CHOXEMHANGKHONGTHU',
-    note: order.note || 'Đơn từ hệ thống NextMarket',
-
-    to_name: order.userAddress.recipientName,
-    to_phone: order.userAddress.phone,
-    to_address: order.userAddress.street,
-    to_ward_code: order.to_ward_code,
-    to_district_id: order.to_district_id,
-
-    weight: Math.max(order.total_weight ?? 500, 200),
-    length: 20,
-    width: 15,
-    height: 10,
-
-    service_type_id: 2,
-    insurance_value: Math.round(order.totalAmount ?? 0),
-    cod_amount: Math.round(order.totalAmount ?? 0),
-
-    items: order.orderItem.map(item => ({
-      name: item.variant 
-        ? `${item.product.name} - ${item.variant.variant_name}` 
-        : item.product.name,
-      code: item.variant?.sku ?? item.variant?.sku ?? `SP${item.id}`,
-      quantity: item.quantity,
-      price: Math.round(item.price),
-      weight: 200,
-    })),
-  };
-
-  const result = await this.ghnService.createOrder(ghnOrderData);
-
-  order.ghn_order_code = result.order_code;
-  order.ghn_expected_delivery_time = result.expected_delivery_time;
-  order.ghn_status = 'ready_to_pick';
-
-  await this.ordersRepository.save(order);
-
-  console.log('Tạo đơn GHN thành công:', result.order_code);
-}
-
   async findAll(): Promise<Order[]> {
     return this.ordersRepository.find({
       where: {

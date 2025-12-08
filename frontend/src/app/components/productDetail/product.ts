@@ -5,6 +5,7 @@ export type Variant = {
   price?: number | string; // API có thể trả string, convert khi dùng
   sku?: string;
   stock?: number;
+  weight?:number;
   // thêm field tùy bạn (attributes, options, ...)
 };
 

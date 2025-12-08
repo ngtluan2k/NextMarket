@@ -109,51 +109,114 @@ export const CartSidebar: React.FC<Props> = ({
   }, [selectedAddress, items]);
 
   const calculateShipping = async () => {
-    if (!selectedAddress || items.length === 0) return;
-    
+    if (!selectedAddress || items.length === 0) {
+      console.log('⚠️ Không thể tính phí ship: thiếu địa chỉ hoặc items');
+      return;
+    }
+
     setCalculatingShipping(true);
+
+    console.log('═══════════════════════════════════');
+    console.log('🚀 BẮT ĐẦU TÍNH PHÍ SHIP');
+    console.log('═══════════════════════════════════');
+
     try {
       let fee = 0;
-      
+
+      // Nếu có prop calculateShippingFee từ parent, dùng nó
       if (calculateShippingFee) {
-        // Nếu có function calculateShippingFee từ parent
+        console.log('ℹ️ Sử dụng hàm calculateShippingFee từ props');
         fee = await calculateShippingFee();
-      } else {
-        // Tính toán mặc định
-        const storeId = items[0]?.product?.store?.id;
-        if (!storeId) return;
-        
-        const totalWeight = items.reduce((sum, item) => {
-          return sum + (item.product?.weight || 200) * item.quantity;
-        }, 0);
-        
-        const response = await api.post('/orders/calculate-shipping-fee', {
-          storeId,
-          addressId: selectedAddress.id,
-          items: items.map(item => ({
-            productId: item.product?.id,
-            variantId: item.variant?.id,
-            quantity: item.quantity,
-            weight: item.product?.weight || 200
-          })),
-          totalWeight
-        });
-        
-        fee = response.data.data?.shippingFee || 0;
+        setShippingFee(fee);
+        onShippingFeeChange?.(fee);
+        return;
       }
-      
+
+      // Ngược lại, tính phí ship trong component này
+      const storeId = items[0]?.product?.store?.id;
+      if (!storeId) {
+        throw new Error('Không tìm thấy cửa hàng');
+      }
+
+      console.log('🏪 Store ID:', storeId);
+      console.log('📍 Address ID:', selectedAddress.id);
+      console.log('📦 Số lượng items:', items.length);
+
+      // ✅ TÍNH TOTAL WEIGHT CHI TIẾT
+      let totalWeight = 0;
+
+      items.forEach((item, index) => {
+        const variantWeight = item.variant?.weight;
+        const productWeight = item.product?.weight;
+        const fallbackWeight = 5000; // 5kg mặc định
+
+        // Ưu tiên: variant.weight > product.weight > 5000g
+        const itemWeight = variantWeight || productWeight || fallbackWeight;
+        const itemTotal = itemWeight * item.quantity;
+        totalWeight += itemTotal;
+
+        console.log(`📦 Item ${index + 1}: ${item.product?.name || 'Unknown'}`);
+        console.log(`   - Variant: ${item.variant?.variant_name || 'N/A'}`);
+        console.log(`   - Variant Weight: ${variantWeight}g`);
+        console.log(`   - Product Weight: ${productWeight}g`);
+        console.log(`   - Weight Used: ${itemWeight}g`);
+        console.log(`   - Quantity: ${item.quantity}`);
+        console.log(`   - Subtotal Weight: ${itemTotal}g`);
+      });
+
+      console.log('⚖️ TỔNG WEIGHT TÍNH RA:', totalWeight, 'grams');
+      console.log('⚖️ TỔNG WEIGHT (kg):', (totalWeight / 1000).toFixed(2), 'kg');
+
+      // Tạo payload
+      const payload = {
+        storeId,
+        addressId: selectedAddress.id,
+        totalWeight, // Giá trị đã tính
+        items: items.map(item => ({
+          productId: item.product?.id,
+          variantId: item.variant?.id,
+          quantity: item.quantity,
+          weight: item.variant?.weight || item.product?.weight || 5000
+        }))
+      };
+
+      console.log('📤 PAYLOAD CHUẨN BỊ GỬI:');
+      console.log(JSON.stringify(payload, null, 2));
+      console.log('🔢 typeof payload.totalWeight:', typeof payload.totalWeight);
+      console.log('🔢 payload.totalWeight value:', payload.totalWeight);
+      console.log('🔢 Is NaN?:', Number.isNaN(payload.totalWeight));
+      console.log('🔢 Is Finite?:', Number.isFinite(payload.totalWeight));
+
+      // Gọi API
+      console.log('🌐 Đang gọi API...');
+      const response = await api.post('/orders/calculate-shipping-fee', payload);
+
+      console.log('📥 RESPONSE NHẬN ĐƯỢC:');
+      console.log(JSON.stringify(response.data, null, 2));
+
+      fee = response.data.data?.shippingFee || 0;
+
+      console.log('💰 Phí ship cuối cùng:', fee, 'đ');
+      console.log('═══════════════════════════════════');
+
       setShippingFee(fee);
       onShippingFeeChange?.(fee);
-    } catch (error) {
-      console.error('Lỗi tính phí ship:', error);
-      message.warning('Không thể tính phí ship. Sử dụng phí mặc định.');
-      setShippingFee(30000); // Fallback
+
+    } catch (error: any) {
+      console.error('═══════════════════════════════════');
+      console.error('❌ LỖI TÍNH PHÍ SHIP:');
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      console.error('Error config:', error.config?.data);
+      console.error('═══════════════════════════════════');
+
+      message.warning('Không thể tính phí ship. Đang dùng phí mặc định 30.000đ');
+      setShippingFee(30000);
       onShippingFeeChange?.(30000);
     } finally {
       setCalculatingShipping(false);
     }
   };
-
   const finalTotal = selectedTotal - discountTotal + shippingFee;
 
   const handleSubmit = async () => {
@@ -182,7 +245,7 @@ export const CartSidebar: React.FC<Props> = ({
       }
 
       const storeId = items[0]?.product?.store?.id;
-      
+
       // Sử dụng phí ship đã tính toán
       const shippingFeeToUse = shippingFee;
 
@@ -200,21 +263,21 @@ export const CartSidebar: React.FC<Props> = ({
           price: Number(item.price),
           type: item.type || 'bulk',
           pricingRuleId: item.pricing_rule?.id ?? undefined,
-          weight: item.product?.weight || 50, // Thêm weight
+          weight: item.variant?.weight ?? 800
         })),
       };
-      
+
       console.log('📦 Order payload:', JSON.stringify(orderPayload, null, 2));
-      
+
       const order = await orderService.createOrder(userId, orderPayload);
       console.log('Đơn hàng đã được tạo:', order);
-      
+
       if (!order || !order.id) {
         console.error('❌ Order creation failed');
         message.error('Không thể tạo đơn hàng. Vui lòng thử lại.');
         return;
       }
-      
+
       console.log('✅ Order created:', {
         id: order.id,
         subtotal: order.subtotal,
@@ -222,7 +285,7 @@ export const CartSidebar: React.FC<Props> = ({
         discountTotal: order.discountTotal,
         totalAmount: order.totalAmount,
       });
-      
+
       const selectedMethod = paymentMethods.find(
         (m) => m.type === selectedPaymentMethod
       );
@@ -301,7 +364,7 @@ export const CartSidebar: React.FC<Props> = ({
   const handleAddressSelect = async (address: UserAddress) => {
     setSelectedAddress(address);
     onAddressChange?.(address);
-    
+
     // Tính lại phí ship khi thay đổi địa chỉ
     if (mode === 'checkout') {
       await calculateShipping();
@@ -358,8 +421,8 @@ export const CartSidebar: React.FC<Props> = ({
           {walletLoading
             ? 'Đang tải...'
             : wallet
-            ? `${wallet.balance.toLocaleString()} ${wallet.currency}`
-            : 'Chưa có thông tin ví'}
+              ? `${wallet.balance.toLocaleString()} ${wallet.currency}`
+              : 'Chưa có thông tin ví'}
         </p>
       </Card>
 
@@ -390,9 +453,8 @@ export const CartSidebar: React.FC<Props> = ({
               >
                 <Text strong className="text-blue-600">
                   {voucher.discount_type === 0
-                    ? `Giảm ${
-                        voucher.discount_value
-                      }% tối đa ${voucher.max_discount_amount?.toLocaleString()}đ`
+                    ? `Giảm ${voucher.discount_value
+                    }% tối đa ${voucher.max_discount_amount?.toLocaleString()}đ`
                     : `Giảm ${voucher.discount_value.toLocaleString()}đ`}
                 </Text>
                 <Button
@@ -430,11 +492,11 @@ export const CartSidebar: React.FC<Props> = ({
           <Text>Tổng tiền hàng ({selectedCount})</Text>
           <Text>{selectedTotal.toLocaleString()}đ</Text>
         </div>
-        
+
         {/* Phí vận chuyển */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
           <Text>
-            Phí vận chuyển 
+            Phí vận chuyển
             {calculatingShipping && (
               <Spin size="small" style={{ marginLeft: 8 }} />
             )}
@@ -444,21 +506,21 @@ export const CartSidebar: React.FC<Props> = ({
             {shippingFee === 0 && ' (Miễn phí)'}
           </Text>
         </div>
-        
+
         {discountTotal > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <Text>Giảm giá</Text>
             <Text>-{discountTotal.toLocaleString()}đ</Text>
           </div>
         )}
-        
+
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
           <Text strong>Tổng thanh toán</Text>
           <Text strong style={{ color: 'red', fontSize: 18 }}>
             {finalTotal.toLocaleString()}đ
           </Text>
         </div>
-        
+
         <Button
           type="primary"
           block
@@ -550,9 +612,8 @@ export const CartSidebar: React.FC<Props> = ({
                 <div key={voucher.id} style={{ marginTop: 8 }}>
                   <Text>
                     {voucher.discount_type === 0
-                      ? `Giảm ${
-                          voucher.discount_value
-                        }% tối đa ${voucher.max_discount_amount?.toLocaleString()}đ`
+                      ? `Giảm ${voucher.discount_value
+                      }% tối đa ${voucher.max_discount_amount?.toLocaleString()}đ`
                       : `Giảm ${voucher.discount_value.toLocaleString()}đ`}
                   </Text>
                 </div>
@@ -564,19 +625,19 @@ export const CartSidebar: React.FC<Props> = ({
             <Text>Tổng tiền hàng</Text>
             <Text>{selectedTotal.toLocaleString()}đ</Text>
           </div>
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <Text>Phí vận chuyển</Text>
             <Text>{shippingFee.toLocaleString()}đ</Text>
           </div>
-          
+
           {discountTotal > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
               <Text>Giảm giá</Text>
               <Text>-{discountTotal.toLocaleString()}đ</Text>
             </div>
           )}
-          
+
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
             <Text strong>Tổng thanh toán</Text>
             <Text strong style={{ color: 'red', fontSize: 16 }}>

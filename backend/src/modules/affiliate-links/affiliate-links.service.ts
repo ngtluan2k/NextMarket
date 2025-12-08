@@ -485,6 +485,7 @@ export class AffiliateLinksService {
           sku: variant.sku,
           price: variant.price,
           stock: variant.stock,
+          weight: variant.weight,
         })) || [],
       };
     });

@@ -81,6 +81,7 @@ export interface Product {
     barcode: string;
     created_at: string;
     updated_at: string;
+    weight?:number;
     inventories?: Array<{
       id: number;
       uuid: string;
@@ -94,6 +95,7 @@ export interface Product {
     id: number;
     uuid: string;
     type: string;
+    weight?:number;
     min_quantity: number;
     price: string | number;
     cycle: string;

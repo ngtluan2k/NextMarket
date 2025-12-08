@@ -517,6 +517,7 @@ export class ProductService {
         variant_name: v.variant_name,
         price: v.price,
         stock: v.stock,
+        weight:v.weight,
         // For now, include all product media for each variant
         // TODO: Implement variant-specific media in the future
         media: product.media.map((m) => ({
@@ -767,6 +768,7 @@ export class ProductService {
         variant_name: v.variant_name,
         price: v.price,
         stock: v.stock,
+        weight: v.weight,
         // Include all product media for each variant (consistent with findBySlug)
         media: product.media.map((m) => ({
           url: m.url,

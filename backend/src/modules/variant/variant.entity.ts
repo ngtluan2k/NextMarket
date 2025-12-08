@@ -51,6 +51,13 @@ export class Variant {
   @Column({ nullable: true })
   barcode?: string;
 
+  // ✅ THÊM 2 FIELD NÀY ĐÚNG CÚ PHÁP
+  @Column({ type: 'int', nullable: true })
+  weight?: number; // Cân nặng (gram)
+
+  @Column({ length: 10, nullable: true, default: 'g' })
+  weight_unit?: string; // Đơn vị: g, kg, etc.
+
   @CreateDateColumn()
   created_at!: Date;
 
@@ -63,17 +70,16 @@ export class Variant {
 
   @OneToMany(() => OrderItem, (item) => item.variant)
   orderItems!: OrderItem[];
+
   @OneToMany(() => Subscription, (sub) => sub.variant)
   subscriptions!: Subscription[];
+
   @OneToMany(() => PricingRules, (rule) => rule.variant)
   pricingRules!: PricingRules[];
 
   @OneToMany(() => InventoryTransaction, (transaction) => transaction.variant)
   inventoryTransactions!: InventoryTransaction[];
 
-  @OneToMany(
-    () => CampaignStoreProduct,
-    (csp) => csp.variant // 👈 liên kết ngược lại
-  )
+  @OneToMany(() => CampaignStoreProduct, (csp) => csp.variant)
   campaignStoreProducts!: CampaignStoreProduct[];
 }

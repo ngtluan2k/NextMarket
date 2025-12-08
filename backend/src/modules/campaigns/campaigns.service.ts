@@ -449,6 +449,7 @@ export class CampaignsService {
               id: p.variant.id,
               variant_name: p.variant.variant_name,
               price: p.variant.price,
+              weight: p.variant.weight,
             }
           : undefined,
         promo_price: p.promo_price,

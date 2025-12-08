@@ -60,6 +60,7 @@ const CheckoutPayment: React.FC = () => {
             id: i.variant.id,
             variant_name: i.variant.variant_name,
             price: i.variant.price,
+            weight: i.variant.weight ?? 200,
           }
         : undefined;
 
@@ -113,7 +114,7 @@ const CheckoutPayment: React.FC = () => {
       if (!storeId) return 0;
       
       const totalWeight = checkoutItems.reduce((sum, item) => {
-        return sum + (item.product?.weight || 200) * item.quantity;
+        return sum + (item.variant?.weight || 200) * item.quantity;
       }, 0);
       
       const response = await api.post('/orders/calculate-shipping-fee', {
@@ -123,7 +124,7 @@ const CheckoutPayment: React.FC = () => {
           productId: item.product?.id,
           variantId: item.variant?.id,
           quantity: item.quantity,
-          weight: item.product?.weight || 200
+          weight: item.variant?.weight || 5000
         })),
         totalWeight,
         serviceType: method === 'fast' ? 2 : 1 // 1: Standard, 2: Express
