@@ -24,6 +24,9 @@ export type Props = {
   onApplyVoucher?: (vouchers: Voucher[], totalDiscount: number) => void;
   discountTotal?: number;
   orderAmount?: number;
+  // Thêm props mới cho tính phí ship
+  calculateShippingFee?: (method: ShippingMethodType) => Promise<number>;
+  onShippingFeeCalculated?: (fee: number) => void;
 };
 
 const toNum = (v: number | string | null | undefined): number | null => {
@@ -46,19 +49,24 @@ export const ShippingMethod: React.FC<Props> = ({
   saving,
   shippingFee,
   shippingFeeOld,
-  methodLabel = 'Giao tiết kiệm',
-  badgeLabel = 'GIAO TIẾT KIỆM',
+  methodLabel = 'Giao hàng nhanh',
+  badgeLabel = 'GHN EXPRESS',
   selectedVouchers = [],
   onApplyVoucher,
   orderAmount = 0,
+  calculateShippingFee,
+  onShippingFeeCalculated,
 }) => {
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [storeDiscount, setStoreDiscount] = useState(0);
+  const [currentShippingFee, setCurrentShippingFee] = useState<number | null>(
+    toNum(shippingFee)
+  );
+  const [calculating, setCalculating] = useState(false);
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
 
   const storeId = items[0]?.product?.store?.id ?? 0;
 
-  //  CHỈ LẤY VOUCHER CỦA STORE NÀY
   const storeVouchers = useMemo(() => {
     return selectedVouchers.filter(
       (v) =>
@@ -75,7 +83,7 @@ export const ShippingMethod: React.FC<Props> = ({
     price: Number(item.price),
   }));
 
-  //  TÍNH DISCOUNT CHỈ CỦA STORE VOUCHER
+  // Tính discount của store voucher
   useEffect(() => {
     const calculateStoreDiscount = async () => {
       if (storeVouchers.length === 0 || !orderAmount || !storeId) {
@@ -96,7 +104,6 @@ export const ShippingMethod: React.FC<Props> = ({
         };
         const res = await api.post('/vouchers/calculate-discount', payload);
         const { discountTotal } = res.data;
-        
         setStoreDiscount(discountTotal || 0);
       } catch (error) {
         setStoreDiscount(0);
@@ -106,39 +113,53 @@ export const ShippingMethod: React.FC<Props> = ({
     calculateStoreDiscount();
   }, [storeVouchers.map(v => v.id).join(','), orderAmount, storeId]);
 
-  const handleApply = async (newStoreVouchers: Voucher[], totalDiscount: number) => {
+  // Tính phí ship khi thay đổi phương thức
+  useEffect(() => {
+    const fetchShippingFee = async () => {
+      if (calculateShippingFee) {
+        setCalculating(true);
+        try {
+          const fee = await calculateShippingFee(selected);
+          setCurrentShippingFee(fee);
+          onShippingFeeCalculated?.(fee);
+        } catch (error) {
+          console.error('Lỗi tính phí ship:', error);
+          // Fallback
+          const fallbackFee = selected === 'economy' ? 0 : 30000;
+          setCurrentShippingFee(fallbackFee);
+          onShippingFeeCalculated?.(fallbackFee);
+        } finally {
+          setCalculating(false);
+        }
+      }
+    };
 
-    // (Không phải từ modal, vì modal chỉ có store vouchers)
+    fetchShippingFee();
+  }, [selected, calculateShippingFee]);
+
+  const handleApply = async (newStoreVouchers: Voucher[], totalDiscount: number) => {
     const platformVouchers = selectedVouchers.filter((v) => {
       const isStoreMismatch = v.store_id !== storeId;
       const notInApplicableStores = !v.applicable_store_ids || !v.applicable_store_ids.includes(storeId);
       return isStoreMismatch && notInApplicableStores;
     });
 
-    console.log('  - Filtered PLATFORM vouchers:', platformVouchers.map(v => ({ id: v.id, code: v.code, store_id: v.store_id })));
-
     const allVouchers = [...newStoreVouchers, ...platformVouchers];
-
-    console.log('  - FINAL vouchers to send to parent:', allVouchers.map(v => ({ id: v.id, code: v.code, store_id: v.store_id })));
-
-    onApplyVoucher?.(allVouchers, 0); // Truyền 0 vì parent sẽ tự tính
+    onApplyVoucher?.(allVouchers, 0);
     setShowVoucherModal(false);
   };
 
   const handleRemoveVoucher = () => {
-    console.log('❌ [ShippingMethod] Removing store voucher');
-    console.log('Current selected vouchers:', selectedVouchers.map(v => ({ id: v.id, code: v.code, store_id: v.store_id })));
-    
-    //  CHỈ XÓA VOUCHER STORE, GIỮ LẠI VOUCHER PLATFORM
     const platformVouchers = selectedVouchers.filter(
       (v) =>
         v.store_id !== storeId &&
         (!v.applicable_store_ids || !v.applicable_store_ids.includes(storeId))
     );
+    onApplyVoucher?.(platformVouchers, 0);
+  };
 
-    console.log('🔄 [ShippingMethod] Platform vouchers after remove:', platformVouchers.map(v => ({ id: v.id, code: v.code, store_id: v.store_id })));
-
-    onApplyVoucher?.(platformVouchers, 0); 
+  const handleMethodChange = (method: ShippingMethodType) => {
+    onChange(method);
   };
 
   return (
@@ -146,7 +167,7 @@ export const ShippingMethod: React.FC<Props> = ({
       <Card title="Chọn hình thức giao hàng" bodyStyle={{ paddingTop: 12 }}>
         <Radio.Group
           value={selected}
-          onChange={(e) => onChange(e.target.value as ShippingMethodType)}
+          onChange={(e) => handleMethodChange(e.target.value as ShippingMethodType)}
           style={{ width: '100%' }}
         >
           <Card
@@ -160,9 +181,10 @@ export const ShippingMethod: React.FC<Props> = ({
           >
             <div className="flex items-center gap-8">
               <Radio value="economy">{methodLabel}</Radio>
-              {typeof saving === 'number' && saving > 0 && (
-                <Text style={{ color: '#52c41a' }}>-{Math.round(saving / 1000)}K</Text>
+              {currentShippingFee === 0 && (
+                <Tag color="green">MIỄN PHÍ</Tag>
               )}
+              {calculating && <Text type="secondary">Đang tính...</Text>}
             </div>
           </Card>
         </Radio.Group>
@@ -236,7 +258,7 @@ export const ShippingMethod: React.FC<Props> = ({
             </div>
 
             <div className="flex flex-col gap-2">
-              {(toNum(shippingFee) !== null || toNum(shippingFeeOld) !== null) && (
+              {currentShippingFee !== null && (
                 <div className="flex items-center gap-10">
                   {toNum(shippingFeeOld) !== null && toNum(shippingFeeOld)! > 0 && (
                     <Text delete type="secondary">
@@ -244,10 +266,10 @@ export const ShippingMethod: React.FC<Props> = ({
                     </Text>
                   )}
 
-                  {toNum(shippingFee) === 0 ? (
+                  {currentShippingFee === 0 ? (
                     <Tag color="green">MIỄN PHÍ</Tag>
                   ) : (
-                    toNum(shippingFee) !== null && <Text strong>{fmt(shippingFee)}</Text>
+                    <Text strong>{fmt(currentShippingFee)}</Text>
                   )}
                 </div>
               )}

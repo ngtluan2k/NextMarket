@@ -32,7 +32,10 @@ import { WalletTransaction } from '../wallet_transaction/wallet_transaction.enti
 import { OrderStatuses } from './types/orders';
 import { OrderFilters } from './types/orders';
 import { CustomerFromOrderDto } from './dto/get-order-customer.dto';
+import { GhnService } from '../ghn/ghn.service';
+import { StoreAddress } from '../store-address/store-address.entity';
 import { randomUUID } from 'crypto';
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -49,11 +52,76 @@ export class OrdersService {
     private readonly commissionCalcService: CommissionCalcService,
     private readonly referralsService: ReferralsService,
     @InjectRepository(OrderStatusHistory)
-    private orderStatusHistoryRepository: Repository<OrderStatusHistory>
-  ) {}
+    private orderStatusHistoryRepository: Repository<OrderStatusHistory>,
+    private readonly ghnService: GhnService,
+    @InjectRepository(StoreAddress)
+    private readonly storeAddressRepository: Repository<StoreAddress>,
+    @InjectRepository(UserAddress)
+    private readonly userAddressRepository: Repository<UserAddress>,
+  ) { }
 
+  /**
+   * Tính phí ship tự động khi tạo đơn
+   */
+  async calculateShippingFee(
+    storeId: number,
+    addressId: number,
+    totalWeight: number
+  ): Promise<number> {
+    console.log('🔧 calculateShippingFee called:', {
+      storeId,
+      addressId,
+      totalWeight // ✅ Kiểm tra giá trị này
+    });
+    try {
+      const storeAddress = await this.storeAddressRepository.findOne({
+        where: { stores_id: storeId, is_default: true },
+      });
+
+      if (!storeAddress?.ghn_district_id) {
+        console.warn('Store không có địa chỉ GHN hợp lệ');
+        return 25000; // fallback giá cố định
+      }
+
+      const userAddress = await this.userAddressRepository.findOne({
+        where: { id: addressId },
+      });
+
+      if (!userAddress?.ghn_district_id || !userAddress.ghn_ward_code) {
+        console.warn('User address thiếu GHN info');
+        return 25000;
+      }
+
+      const ghnPayload = {
+        from_district_id: storeAddress.ghn_district_id,
+        to_district_id: userAddress.ghn_district_id,
+        to_ward_code: userAddress.ghn_ward_code,
+        weight: Math.max(totalWeight, 100),
+        height: 10,
+        width: 15,
+        length: 20,
+        insurance_value: 500000,
+        service_type_id: 2,
+      };
+
+      console.log('🚚 GHN PAYLOAD:', JSON.stringify(ghnPayload, null, 2));
+
+      const feeData = await this.ghnService.calculateShippingFee(ghnPayload);
+
+      console.log('📨 GHN RESPONSE:', JSON.stringify(feeData, null, 2));
+      console.log('💰 PHÍ SHIP TỪ GHN:', feeData.total || 25000);
+
+      return feeData.total || 25000;
+    } catch (error: any) {
+      console.error('Lỗi tính phí ship GHN:', error.response?.data || error.message);
+      return 30000; // fallback an toàn
+    }
+  }
+  /**
+   * Cập nhật method create để tự động tính phí ship
+   */
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    console.log('🚀 Starting order creation with data:', JSON.stringify(createOrderDto, null, 2));
+    console.log('🚀 Starting order creation with GHN integration');
 
     return this.ordersRepository.manager.transaction(async (manager) => {
       console.log('📝 Starting database transaction for order creation');
@@ -69,6 +137,25 @@ export class OrdersService {
         throw new BadRequestException(
           'Không tìm thấy User, Store hoặc Address'
         );
+      }
+
+      // 📦 Tính tổng trọng lượng đơn hàng (từ items)
+      const totalWeight = createOrderDto.items.reduce((sum, item) => {
+        const itemWeight = item.weight || 5000;
+        return sum + itemWeight * item.quantity;
+      }, 0);
+      console.log('🔍 Total weight từ DTO items:', totalWeight);  // ← Thêm log debug
+
+      // 🚚 Tính phí ship từ GHN (nếu chưa có)
+      let shippingFee = createOrderDto.shippingFee;
+
+      if (!shippingFee || shippingFee === 0) {
+        shippingFee = await this.calculateShippingFee(
+          createOrderDto.storeId,
+          createOrderDto.addressId,
+          totalWeight
+        );
+        console.log('💰 Auto-calculated shipping fee:', shippingFee);
       }
 
       // BE TỰ TÍNH TOÁN subtotal (kiểm tra tính đúng đắn)
@@ -91,7 +178,7 @@ export class OrdersService {
         // Có thể throw error hoặc sử dụng calculatedSubtotal tùy nghiệp vụ
       }
 
-      //  BE TỰ TÍNH DISCOUNT
+      // BE TỰ TÍNH DISCOUNT
       let discountTotal = 0;
       const appliedVouchers: { voucherId: number; discount: number }[] = [];
 
@@ -117,14 +204,13 @@ export class OrdersService {
         }
       }
 
-      //  BE TỰ TÍNH TOTAL AMOUNT
-      const totalAmount =
-        calculatedSubtotal + createOrderDto.shippingFee - discountTotal;
+      // BE TỰ TÍNH TOTAL AMOUNT
+      const totalAmount = calculatedSubtotal + shippingFee - discountTotal;
 
       console.log('💰 BE Calculation:', {
         subtotalFromFE: createOrderDto.subtotal,
         subtotalCalculated: calculatedSubtotal,
-        shippingFee: createOrderDto.shippingFee,
+        shippingFee,
         discountTotal,
         totalAmount,
       });
@@ -156,9 +242,6 @@ export class OrdersService {
             console.log('✅ Affiliate resolved:', affiliateInfo);
           } else {
             console.warn('⚠️ Invalid affiliate code - user not found or not active:', createOrderDto.affiliateCode);
-            // For better user experience, continue with order but log the issue
-            // In production, you might want to throw an error instead:
-            // throw new BadRequestException(`Invalid affiliate code: ${createOrderDto.affiliateCode}`);
           }
         } catch (error) {
           console.error('❌ Affiliate resolution error:', error);
@@ -171,28 +254,31 @@ export class OrdersService {
           console.error('Error details:', error instanceof Error ? error.message : String(error));
           console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
 
-          // For database/network errors, continue without affiliate tracking
-          // but log the issue for monitoring
           affiliateInfo = null;
           console.warn('⚠️ Continuing order creation without affiliate tracking due to resolution error');
         }
       }
 
-      // Tạo order với các giá trị BE đã tính
+      // Tạo order với các giá trị BE đã tính và thông tin GHN
       const order = manager.create(Order, {
         status: OrderStatuses.pending,
         subtotal: calculatedSubtotal, // Sử dụng giá trị BE tính
-        shippingFee: createOrderDto.shippingFee,
+        shippingFee: shippingFee,
         discountTotal, // BE tính
         totalAmount, // BE tính
         currency: createOrderDto.currency ?? 'VND',
         user,
         store,
         userAddress: address,
-        // Affiliate tracking - use resolved info if available, otherwise use provided values
+        // Affiliate tracking
         affiliate_code: createOrderDto.affiliateCode?.trim() || null,
         affiliate_user_id: affiliateInfo?.userId || createOrderDto.affiliateUserId || null,
         affiliate_program_id: createOrderDto.affiliateProgramId || null,
+        // GHN info
+        total_weight: totalWeight,
+        to_district_id: address?.ghn_district_id,
+        to_ward_code: address?.ghn_ward_code,
+        ghn_service_type_id: 2, // Express
       } as any);
 
       // 🐛 DEBUG: Log affiliate data being saved
@@ -206,7 +292,6 @@ export class OrdersService {
       console.log('✅ Order saved successfully with ID:', savedOrder.id);
 
       // === Tạo Referral Relationship nếu có affiliate ===
-      // Single-Parent Model: User chỉ có 1 referrer duy nhất (first come first serve)
       if (affiliateInfo && affiliateInfo.isValid && affiliateInfo.userId) {
         try {
           console.log('🔗 Attempting to create referral relationship:', {
@@ -231,7 +316,7 @@ export class OrdersService {
             console.log('⚠️ Skipping referral creation - First referrer wins!');
             console.log('💰 Note: Current affiliate will still receive commission for this order');
           } else {
-            // CHECK 2: Tránh duplicate với cùng 1 affiliate (không cần thiết nhưng để chắc chắn)
+            // CHECK 2: Tránh duplicate với cùng 1 affiliate
             const existingReferral = await manager.findOne(Referral, {
               where: {
                 referrer: { id: affiliateInfo.userId },
@@ -262,7 +347,6 @@ export class OrdersService {
           }
         } catch (error) {
           console.error('❌ Error creating referral relationship:', error);
-          // Don't fail the order if referral creation fails
           console.warn('⚠️ Continuing order creation despite referral error');
         }
       }
@@ -307,8 +391,8 @@ export class OrdersService {
             );
           }
         }
+
         // Kiểm tra pricing rules
-        // ✅ Nếu có truyền pricing_rule_id từ client
         let appliedRule: PricingRules | null = null;
 
         if (itemDto.pricingRuleId) {
@@ -377,9 +461,8 @@ export class OrdersService {
               wallet_id: wallet.id,
               type: 'subscription_purchase',
               amount: -itemPrice,
-              reference: `subscription:${itemDto.productId}:${
-                itemDto.variantId ?? '0'
-              }`,
+              reference: `subscription:${itemDto.productId}:${itemDto.variantId ?? '0'
+                }`,
               created_at: new Date(),
             });
             await manager.save(tx);
@@ -418,7 +501,6 @@ export class OrdersService {
             console.log(`Tạo subscription mới: #${subscription.id} (${cycle})`);
           }
         } else {
-          // ❌ Nếu không có pricing_rule_id thì fallback sang logic cũ (tuỳ bạn giữ hoặc bỏ)
           console.warn(
             '⚠️ Không có pricing_rule_id, fallback sang logic tự động tìm rule'
           );
@@ -493,10 +575,154 @@ export class OrdersService {
     });
   }
 
+  /**
+   * Tạo đơn hàng GHN khi xác nhận đơn
+   */
+  async createGHNOrder(orderId: number): Promise<void> {
+    const order = await this.findOne(orderId);
+
+    // DEBUG: Kiểm tra dữ liệu
+    console.log('🔍 DEBUG ORDER DATA:', {
+      orderId: order.id,
+      total_weight_in_db: order.total_weight,
+      orderItemsCount: order.orderItem?.length || 0,
+    });
+
+    // Log chi tiết từng item
+    if (order.orderItem && order.orderItem.length > 0) {
+      console.log('📦 ITEM DETAILS:');
+      order.orderItem.forEach((item, index) => {
+        console.log(`${index + 1}. ${item.product?.name}${item.variant ? ' - ' + item.variant.variant_name : ''}`);
+        console.log(`   Variant ID: ${item.variant?.id}`);
+        console.log(`   Variant Weight: ${item.variant?.weight}g`);
+        console.log(`   Quantity: ${item.quantity}`);
+        console.log(`   Total Weight: ${(item.variant?.weight || 5000) * item.quantity}g`);
+      });
+    }
+
+    const storeAddress = await this.storeAddressRepository.findOne({
+      where: { stores_id: order.store.id, is_default: true },
+    });
+
+    if (!storeAddress?.ghn_district_id) {
+      throw new Error('Cửa hàng chưa có địa chỉ lấy hàng GHN');
+    }
+
+    if (!order.to_district_id || !order.to_ward_code) {
+      throw new Error('Địa chỉ giao hàng chưa có mã GHN');
+    }
+
+    // Tạo items cho GHN với weight từ variant
+    const itemsForGHN = order.orderItem.map(item => {
+      // CHỈ sử dụng variant.weight, nếu không có thì dùng 200g
+      const itemWeight = item.variant?.weight || 5000;
+
+      const itemData = {
+        name: item.variant
+          ? `${item.product?.name || 'Sản phẩm'} - ${item.variant.variant_name}`
+          : item.product?.name || 'Sản phẩm',
+        code: item.variant?.sku || item.variant?.sku || `SP${item.id}`,
+        quantity: item.quantity,
+        price: Math.round(item.price || 0),
+        weight: itemWeight, // ✅ CHỈ dùng variant.weight hoặc 200
+      };
+
+      console.log(`📊 GHN Item: ${itemData.name}`, {
+        weight: itemData.weight,
+        quantity: itemData.quantity,
+        total: itemData.weight * itemData.quantity,
+      });
+
+      return itemData;
+    });
+
+    // Tính tổng weight cho GHN (chỉ từ variant)
+    const totalWeightForGHN = itemsForGHN.reduce(
+      (sum, item) => sum + (item.weight * item.quantity),
+      0
+    );
+
+    // Ưu tiên: total_weight từ DB → tính từ variant → fallback 500g
+    const finalWeight = order.total_weight && order.total_weight > 0
+      ? order.total_weight
+      : totalWeightForGHN || 500;
+
+    console.log('⚖️ WEIGHT CALCULATION FOR GHN:', {
+      fromDB: order.total_weight,
+      fromVariants: totalWeightForGHN,
+      finalUsed: finalWeight,
+      afterMaxCheck: Math.max(finalWeight, 100),
+      itemsCount: itemsForGHN.length,
+    });
+
+    const ghnOrderData = {
+      from_district_id: storeAddress.ghn_district_id,
+      from_ward_code: storeAddress.ghn_ward_code || '',
+
+      payment_type_id: 2, // Người nhận trả phí
+      required_note: 'CHOXEMHANGKHONGTHU',
+      note: order.note || 'Đơn từ hệ thống NextMarket',
+
+      to_name: order.userAddress?.recipientName || 'Khách hàng',
+      to_phone: order.userAddress?.phone || '',
+      to_address: order.userAddress?.street || '',
+      to_ward_code: order.to_ward_code,
+      to_district_id: order.to_district_id,
+
+      // ✅ Sử dụng weight đã tính toán (tối thiểu 100g cho GHN)
+      weight: Math.max(finalWeight, 100),
+      length: 20,
+      width: 15,
+      height: 10,
+
+      service_type_id: 2,
+      insurance_value: Math.round(order.totalAmount || 0),
+      cod_amount: Math.round(order.totalAmount || 0),
+
+      items: itemsForGHN, // ✅ Items có weight từ variant
+    };
+
+    console.log('🚚 FINAL GHN REQUEST:', {
+      weight: ghnOrderData.weight,
+      itemDetails: ghnOrderData.items.map(item => ({
+        name: item.name,
+        weight: item.weight,
+        quantity: item.quantity,
+      })),
+    });
+
+    try {
+      const result = await this.ghnService.createOrder(ghnOrderData);
+
+      order.ghn_order_code = result.order_code;
+      order.ghn_expected_delivery_time = result.expected_delivery_time;
+      order.ghn_status = 'ready_to_pick';
+
+      await this.ordersRepository.save(order);
+
+      console.log('✅ GHN Order Created Successfully:', {
+        orderCode: result.order_code,
+        ghOrderId: order.id,
+        weightUsed: ghnOrderData.weight,
+        totalAmount: order.totalAmount,
+      });
+    } catch (error: any) {
+      console.error('❌ GHN Order Creation Failed:', {
+        error: error.response?.data || error.message,
+        requestData: {
+          weight: ghnOrderData.weight,
+          fromDistrict: ghnOrderData.from_district_id,
+          toDistrict: ghnOrderData.to_district_id,
+          itemCount: ghnOrderData.items.length,
+        },
+      });
+      throw error;
+    }
+  }
   async findAll(): Promise<Order[]> {
     return this.ordersRepository.find({
       where: {
-        status: Not(OrderStatuses.draft), 
+        status: Not(OrderStatuses.draft),
       },
       relations: [
         'user',
@@ -535,39 +761,41 @@ export class OrdersService {
   }
 
   async findOneForUser(id: number, userId: number): Promise<Order> {
-  const order = await this.ordersRepository
-    .createQueryBuilder('order')
-    .leftJoinAndSelect('order.user', 'user')
-    .leftJoinAndSelect('order.store', 'store')
-    .leftJoinAndSelect('order.userAddress', 'userAddress')
-    .leftJoinAndSelect('order.orderItem', 'orderItem')
-    .leftJoinAndSelect('orderItem.product', 'product')
-    .leftJoinAndSelect('product.media', 'media')
-    .leftJoinAndSelect('orderItem.variant', 'variant')
-    .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule')
-    .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
-    .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
-    .leftJoinAndSelect('product.reviews', 'reviews')
-    .leftJoinAndSelect('order.payment', 'payment')
-    .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
-    .leftJoinAndSelect('order.group_order', 'groupOrder')
-    .where('order.id = :id', { id })
-    .andWhere('user.id = :userId', { userId })   // 🔥 Quan trọng nhất
-    .getOne();
+    const order = await this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('order.store', 'store')
+      .leftJoinAndSelect('order.userAddress', 'userAddress')
+      .leftJoinAndSelect('order.orderItem', 'orderItem')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .leftJoinAndSelect('product.media', 'media')
+      .leftJoinAndSelect('orderItem.variant', 'variant')
+      .leftJoinAndSelect('orderItem.pricing_rule', 'pricingRule')
+      .leftJoinAndSelect('order.voucherUsages', 'voucherUsages')
+      .leftJoinAndSelect('voucherUsages.voucher', 'voucher')
+      .leftJoinAndSelect('product.reviews', 'reviews')
+      .leftJoinAndSelect('order.payment', 'payment')
+      .leftJoinAndSelect('payment.paymentMethod', 'paymentMethod')
+      .leftJoinAndSelect('order.group_order', 'groupOrder')
+      .where('order.id = :id', { id })
+      .andWhere('user.id = :userId', { userId }) // 🔥 Quan trọng nhất
+      .getOne();
 
-  if (!order) {
-    throw new NotFoundException('Không tìm thấy đơn hàng');
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
+
+    return order;
   }
-
-  return order;
-}
-
 
   async remove(id: number): Promise<void> {
     const order = await this.findOne(id);
     await this.ordersRepository.remove(order);
   }
 
+  /**
+   * Cập nhật changeStatus để tạo đơn GHN khi xác nhận
+   */
   async changeStatus(
     id: number,
     status: string,
@@ -644,7 +872,16 @@ export class OrdersService {
     history.note = note ?? '';
     await this.orderStatusHistoryRepository.save(history);
 
+    // 🚚 Tạo đơn GHN khi xác nhận đơn hàng
     if (newStatus === OrderStatuses.confirmed) {
+      try {
+        await this.createGHNOrder(id);
+      } catch (error) {
+        console.error('⚠️ Failed to create GHN order (non-blocking):', error);
+        // Không throw error để không block việc xác nhận đơn
+      }
+
+      // Cập nhật inventory
       const orderItems = await this.orderItemsRepository.find({
         where: { order: { id: order.id } },
         relations: ['product', 'variant'],
@@ -996,10 +1233,10 @@ export class OrdersService {
 
   async findByUser2(userId: number): Promise<Order[]> {
     return this.ordersRepository.find({
-      where: { 
-      user: { id: userId },
-      status: Not(OrderStatuses.draft), 
-    },
+      where: {
+        user: { id: userId },
+        status: Not(OrderStatuses.draft),
+      },
       relations: [
         'store',
         'user',
@@ -1021,6 +1258,7 @@ export class OrdersService {
       order: { id: 'DESC' },
     });
   }
+
   // Mở rộng findByUser để hỗ trợ filter và pagination
   async findByUser(
     userId: number,
@@ -1074,53 +1312,53 @@ export class OrdersService {
       pending,
     };
   }
+
   async getCustomersFromOrders(
-  storeId: number
-): Promise<CustomerFromOrderDto[]> {
-  // Lấy tất cả orders trong store
-  const allOrders = await this.ordersRepository
-    .createQueryBuilder('order')
-    .leftJoinAndSelect('order.user', 'user')
-    .leftJoinAndSelect('user.profile', 'userProfile')
-    .where('order.store_id = :storeId', { storeId })
-    .orderBy('order.id', 'DESC')
-    .getMany();
+    storeId: number
+  ): Promise<CustomerFromOrderDto[]> {
+    // Lấy tất cả orders trong store
+    const allOrders = await this.ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('user.profile', 'userProfile')
+      .where('order.store_id = :storeId', { storeId })
+      .orderBy('order.id', 'DESC')
+      .getMany();
 
-  // Nhóm theo user
-  const customersMap = new Map<number, CustomerFromOrderDto>();
+    // Nhóm theo user
+    const customersMap = new Map<number, CustomerFromOrderDto>();
 
-  allOrders.forEach((order) => {
-    const user = order.user;
-    if (!user || !user.id) return;
+    allOrders.forEach((order) => {
+      const user = order.user;
+      if (!user || !user.id) return;
 
-    const orderAmount = Number(order.totalAmount || 0);
-    const existing = customersMap.get(user.id);
+      const orderAmount = Number(order.totalAmount || 0);
+      const existing = customersMap.get(user.id);
 
-    if (!existing) {
-      customersMap.set(user.id, {
-        id: user.id,
-        name: user.username,
-        email: user.email,
-        phone: user.profile?.phone,
-        avatar: user.profile?.avatar_url,
-        totalOrders: 1,
-        totalSpent: orderAmount,
-        status: user.status || 'active', // dùng trực tiếp user.status
-        joinDate: user.created_at,
-        lastOrderDate: order.createdAt,
-      });
-    } else {
-      existing.totalOrders += 1;
-      existing.totalSpent += orderAmount;
-      if (!existing.lastOrderDate || new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
-        existing.lastOrderDate = order.createdAt;
+      if (!existing) {
+        customersMap.set(user.id, {
+          id: user.id,
+          name: user.username,
+          email: user.email,
+          phone: user.profile?.phone,
+          avatar: user.profile?.avatar_url,
+          totalOrders: 1,
+          totalSpent: orderAmount,
+          status: user.status || 'active', // dùng trực tiếp user.status
+          joinDate: user.created_at,
+          lastOrderDate: order.createdAt,
+        });
+      } else {
+        existing.totalOrders += 1;
+        existing.totalSpent += orderAmount;
+        if (!existing.lastOrderDate || new Date(order.createdAt) > new Date(existing.lastOrderDate)) {
+          existing.lastOrderDate = order.createdAt;
+        }
       }
-    }
-  });
+    });
 
-  return Array.from(customersMap.values());
-}
-
+    return Array.from(customersMap.values());
+  }
 
   /**
    * Update order status and trigger commission calculation if order is paid

@@ -22,6 +22,7 @@ export interface ProductItem {
     price: string;
     stock: number;
     variant_name: string;
+    weight: number;
     barcode: string;
     created_at?: string;
     updated_at?: string;

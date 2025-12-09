@@ -32,7 +32,7 @@ export class CartService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private pricingRulesService: PricingRulesService
-  ) {}
+  ) { }
 
   async getOrCreateCart(userId: number): Promise<ShoppingCart> {
     let cart = await this.cartRepository.findOne({
@@ -78,6 +78,7 @@ export class CartService {
     if (variantId) {
       variant = await this.variantRepository.findOne({
         where: { id: variantId },
+        select: ['id', 'variant_name', 'price', 'stock', 'weight', 'weight_unit'],
       });
       if (!variant) throw new NotFoundException('Biến thể không tìm thấy');
     }
@@ -306,12 +307,11 @@ export class CartService {
       };
     }
 
-    // ⚡ Sort cart items theo storeId rồi added_at để giữ thứ tự
+    // ⚡ Sort cart items
     const sortedItems = cart.items.sort((a, b) => {
       const storeA = a.product?.store?.id ?? 0;
       const storeB = b.product?.store?.id ?? 0;
       if (storeA !== storeB) return storeA - storeB;
-
       return a.added_at.getTime() - b.added_at.getTime();
     });
 
@@ -343,14 +343,14 @@ export class CartService {
 
         pricing_rule: item.pricing_rule
           ? {
-              id: item.pricing_rule.id,
-              name: item.pricing_rule.name,
-              type: item.pricing_rule.type,
-              price: item.pricing_rule.price,
-              min_quantity: item.pricing_rule.min_quantity,
-              starts_at: item.pricing_rule.starts_at,
-              ends_at: item.pricing_rule.ends_at,
-            }
+            id: item.pricing_rule.id,
+            name: item.pricing_rule.name,
+            type: item.pricing_rule.type,
+            price: item.pricing_rule.price,
+            min_quantity: item.pricing_rule.min_quantity,
+            starts_at: item.pricing_rule.starts_at,
+            ends_at: item.pricing_rule.ends_at,
+          }
           : null,
 
         product: {
@@ -361,23 +361,25 @@ export class CartService {
           base_price: item.product.base_price,
           store: item.product.store
             ? {
-                id: item.product.store.id,
-                name: item.product.store.name,
-                slug: item.product.store.slug,
-                logo_url: item.product.store.logo_url,
-                email: item.product.store.email,
-              }
+              id: item.product.store.id,
+              name: item.product.store.name,
+              slug: item.product.store.slug,
+              logo_url: item.product.store.logo_url,
+              email: item.product.store.email,
+            }
             : null,
           media: item.product.media.filter((media) => media.is_primary),
         },
 
         variant: item.variant
           ? {
-              id: item.variant.id,
-              variant_name: item.variant.variant_name,
-              price: item.variant.price,
-              stock: item.variant.stock,
-            }
+            id: item.variant.id,
+            variant_name: item.variant.variant_name,
+            price: item.variant.price,
+            stock: item.variant.stock,
+            weight: item.variant.weight ?? 200,  // ✅ Thêm fallback
+            weight_unit: item.variant.weight_unit ?? 'g',  // ✅ Thêm unit
+          }
           : null,
       };
     });

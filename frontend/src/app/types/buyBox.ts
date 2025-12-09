@@ -27,6 +27,7 @@ export type CheckoutLocationState = {
       variant_name?: string;
       price?: number;
       stock?: number;
+      weight?:number;
     };
     type?: 'bulk' | 'subscription' | 'normal' | 'flash_sale';
     pricing_rule?: { id: number } | undefined;

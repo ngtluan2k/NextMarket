@@ -5,5 +5,6 @@ export class CreateVariantDto {
   price!: number;
   stock!: number;
   barcode?: string;
-  weight?: number;
+  weight?: number; 
+  weight_unit?: string; 
 }

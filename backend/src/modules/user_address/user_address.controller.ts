@@ -1,3 +1,4 @@
+// src/user-address/user_address.controller.ts
 import {
   Controller,
   Get,
@@ -6,7 +7,7 @@ import {
   Patch,
   Param,
   Delete,
-  ForbiddenException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UserAddressService } from './user_address.service';
 import { CreateUserAddressDto } from './dto/create-user_address.dto';
@@ -14,49 +15,70 @@ import { UpdateUserAddressDto } from './dto/update-user_address.dto';
 
 @Controller('users/:userId/addresses')
 export class UserAddressController {
-  constructor(private readonly userAddressService: UserAddressService) {}
+  constructor(private readonly userAddressService: UserAddressService) { }
 
+  // POST /users/1/addresses → tạo mới
   @Post()
-  create(
-    @Param('userId') userId: string,
-    @Body() createUserAddressDto: CreateUserAddressDto
+  async create(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Body() createUserAddressDto: CreateUserAddressDto,
   ) {
-    // Đảm bảo user_id trong DTO khớp với userId từ URL
-    if (
-      createUserAddressDto.user_id &&
-      createUserAddressDto.user_id !== +userId
-    ) {
-      throw new ForbiddenException(
-        'user_id trong payload không khớp với userId trong URL'
-      );
-    }
+    // Bỏ hoàn toàn việc kiểm tra user_id từ body
+    // Vì frontend có thể gửi hoặc không gửi → ta luôn ưu tiên userId từ URL (an toàn hơn)
     return this.userAddressService.create({
       ...createUserAddressDto,
-      userId: +userId,
+      userId, // ghi đè userId từ URL → 100% đúng
     });
   }
 
+  // GET /users/1/addresses → danh sách
   @Get()
-  findAll(@Param('userId') userId: string) {
-    return this.userAddressService.findAllByUserId(+userId);
+  async findAll(@Param('userId', ParseIntPipe) userId: number) {
+    return this.userAddressService.findAllByUserId(userId);
   }
 
+  // GET /users/1/addresses/10 → lấy 1 cái
   @Get(':id')
-  findOne(@Param('userId') userId: string, @Param('id') id: string) {
-    return this.userAddressService.findOne(+id, +userId);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('userId') userId: string,
-    @Param('id') id: string,
-    @Body() updateUserAddressDto: UpdateUserAddressDto
+  async findOne(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.userAddressService.update(+id, +userId, updateUserAddressDto);
+    return this.userAddressService.findOne(id, userId);
   }
 
+  // PATCH /users/1/addresses/10 → cập nhật
+  @Patch(':id')
+  async update(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserAddressDto: UpdateUserAddressDto,
+  ) {
+    return this.userAddressService.update(id, userId, updateUserAddressDto);
+  }
+
+  // DELETE /users/1/addresses/10 → xóa
   @Delete(':id')
-  remove(@Param('userId') userId: string, @Param('id') id: string) {
-    return this.userAddressService.remove(+id, +userId);
+  async remove(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    await this.userAddressService.remove(id, userId);
+    return { success: true, message: 'Đã xóa địa chỉ thành công' };
+  }
+
+  // API ADMIN / DEV: Fix lại toàn bộ mã GHN cho tất cả người dùng (chỉ gọi 1 lần)
+  @Post('fix-all-ghn') // tự viết guard hoặc bỏ nếu dev
+  async fixAllGhn() {
+    const userIds = await this.userAddressService.getAllUserIdsWithAddresses();
+    let success = 0;
+    let failed = 0;
+
+    for (const userId of userIds) {
+      const result = await this.userAddressService.updateAllGHNInfoForUser(userId);
+      success += result.updated;
+      failed += result.failed;
+    }
+
+    return { success, failed, message: 'Đã fix xong toàn bộ địa chỉ' };
   }
 }

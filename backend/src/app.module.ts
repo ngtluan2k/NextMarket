@@ -66,6 +66,7 @@ import { CalculationMethodModule } from './modules/affiliate-calculation-method/
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { GhnModule } from './modules/ghn/ghn.module';
 
 @Module({
   imports: [
@@ -167,6 +168,7 @@ import { ChatModule } from './modules/chat/chat.module';
     FlashSaleSchedulesModule,
     RevokedTokensModule,
     ChatModule,
+    GhnModule,
   ],
   providers: [],
 })

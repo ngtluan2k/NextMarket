@@ -69,4 +69,13 @@ export class UserAddress {
   @OneToMany(() => GroupOrderMember, (gom) => gom.address_id)
   groupOrderMembers!: GroupOrderMember[];
 
+  @Column({ name: 'ghn_province_id', nullable: true })
+  ghn_province_id?: number;
+
+  @Column({ name: 'ghn_district_id', nullable: true })
+  ghn_district_id?: number;
+
+  @Column({ name: 'ghn_ward_code', nullable: true, length: 20 })
+  ghn_ward_code?: string;
+
 }

@@ -21,6 +21,7 @@ import { Refund } from '../refunds/refund.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
 import { OrderStatuses } from './types/orders';
 import { GroupOrder } from '../group_orders/group_orders.entity';
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn()
@@ -131,8 +132,36 @@ export class Order {
   affiliate_code?: string;
 
   @Column({ name: 'affiliate_program_id', nullable: true })
-  affiliate_program_id?: number; 
+  affiliate_program_id?: number;
 
   @Column({ name: 'affiliate_link_id', nullable: true })
   affiliate_link_id?: number;
+
+  // GHN fields
+  @Column({ name: 'ghn_order_code', nullable: true, length: 50 })
+  ghn_order_code?: string;
+
+  @Column({ name: 'ghn_expected_delivery_time', type: 'timestamp', nullable: true })
+  ghn_expected_delivery_time?: Date;
+
+  @Column({ name: 'ghn_tracking_url', type: 'text', nullable: true }) // ✅ Thêm field này
+  ghn_tracking_url?: string;
+
+  @Column({ name: 'ghn_service_type_id', nullable: true })
+  ghn_service_type_id?: number;
+
+  @Column({ name: 'to_district_id', nullable: true })
+  to_district_id?: number;
+
+  @Column({ name: 'to_ward_code', length: 20, nullable: true }) // ✅ Thêm field này
+  to_ward_code?: string;
+
+  @Column({ name: 'total_weight', type: 'integer', nullable: true }) // ✅ Thêm field này (gram)
+  total_weight?: number;
+
+  @Column({ nullable: true })
+  note?: string; // cho phép khách ghi chú
+
+  @Column({ nullable: true })
+  ghn_status?: string;
 }

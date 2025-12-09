@@ -76,4 +76,58 @@ export class OrdersController {
   async getOrdersByStore(@Param('storeId') storeId: number) {
     return this.ordersService.findByStore(storeId);
   }
+   @Post('calculate-shipping-fee')
+  async calculateShippingFee(
+    @Body()
+    body: {
+      storeId: number;
+      addressId: number;
+      totalWeight?: number; // Frontend gửi sẵn → tin tưởng 100%
+      items?: Array<{
+        productId: number;
+        variantId?: number;
+        quantity: number;
+        weight?: number;
+      }>;
+    },
+  ) {
+    let totalWeight = body.totalWeight;
+
+    // Nếu frontend không gửi totalWeight → tự tính (phòng thủ)
+    if (!totalWeight || totalWeight <= 0) {
+      if (!body.items || body.items.length === 0) {
+        totalWeight = 200; // ít nhất 1 món nhẹ
+      } else {
+        totalWeight = body.items.reduce((sum, item) => {
+          const weight = item.weight && item.weight > 0 ? item.weight : 200;
+          return sum + weight * item.quantity;
+        }, 0);
+      }
+    }
+
+    // Đảm bảo GHN không lỗi (tối thiểu 100g)
+    const weightForGHN = Math.max(totalWeight, 100);
+
+    const fee = await this.ordersService.calculateShippingFee(
+      body.storeId,
+      body.addressId,
+      weightForGHN,
+    );
+
+    return {
+      success: true,
+      data: {
+        shippingFee: fee,
+        totalWeight: weightForGHN,
+        debug:
+          process.env.NODE_ENV === 'development'
+            ? {
+                fromFrontend: body.totalWeight,
+                calculated: totalWeight,
+                itemsCount: body.items?.length || 0,
+              }
+            : undefined,
+      },
+    };
+  }
 }
