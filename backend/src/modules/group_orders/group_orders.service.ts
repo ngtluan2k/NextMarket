@@ -91,6 +91,9 @@ export class GroupOrdersService {
                     status: 'cancelled',
                     order_status: OrderStatuses.cancelled,
                 });
+
+                await this.markRefundedForCancelledGroup(group.id);
+
                 await this.gateway.broadcastGroupUpdate(group.id, 'group-cancelled-timeout', {
                     groupId: group.id,
                     reason: 'Hết thời gian mở nhóm, không có thành viên hoạt động',
@@ -144,6 +147,9 @@ export class GroupOrdersService {
                     status: 'cancelled',
                     order_status: OrderStatuses.cancelled,
                 });
+
+                await this.markRefundedForCancelledGroup(group.id);
+
                 await this.gateway.broadcastGroupUpdate(group.id, 'group-cancelled-timeout', {
                     groupId: group.id,
                     reason: 'Không đủ thành viên sau khi loại bỏ người chưa chọn sản phẩm',
@@ -194,6 +200,9 @@ export class GroupOrdersService {
                 .execute();
 
             for (const g of lockedGroups) {
+
+                await this.markRefundedForCancelledGroup(g.id);
+
                 await this.gateway.broadcastGroupUpdate(g.id, 'group-cancelled-timeout', {
                     groupId: g.id,
                     message: '⏰ Nhóm đã bị hủy vì quá 30 phút sau khi khóa mà không hoàn tất.',
@@ -2000,6 +2009,36 @@ export class GroupOrdersService {
 
     private async getGroupVoucherInfo(groupId: number) {
         return this.groupVoucherCache.get(groupId) || null;
+    }
+
+    private async markRefundedForCancelledGroup(groupId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId } as any,
+            relations: ['members'],
+        });
+
+        if (!group) return;
+
+        // Chỉ áp dụng cho mode giao từng member
+        if (group.delivery_mode !== 'member_address') return;
+        if (!Array.isArray(group.members) || !group.members.length) return;
+
+        const paidMemberIds = group.members
+            .filter((m) => m.has_paid)
+            .map((m) => m.id);
+
+        if (!paidMemberIds.length) return;
+
+        await this.memberRepo
+            .createQueryBuilder()
+            .update(GroupOrderMember)
+            .set({ status: 'refunded' })
+            .whereInIds(paidMemberIds)
+            .execute();
+
+        this.logger.log(
+            `Marked ${paidMemberIds.length} group members as refunded for cancelled group #${groupId}`,
+        );
     }
 
 }

@@ -80,7 +80,7 @@ export class GroupOrderItemsService {
 		groupId?: number,
 		type?: 'bulk' | 'group' | 'flash_sale',
 		pricingRuleId?: number
-	): Promise<{ basePrice: number; finalPrice: number; discountPercent: number, appliedRule?: PricingRules | null  }> {
+	): Promise<{ basePrice: number; finalPrice: number; discountPercent: number, appliedRule?: PricingRules | null }> {
 
 		const product = await this.productRepo.findOne({
 			where: { id: productId },
@@ -118,47 +118,77 @@ export class GroupOrderItemsService {
 		const now = new Date();
 		let appliedRule: PricingRules | null = null;
 
+		//  Validate pricingRuleId nếu có
 		if (pricingRuleId) {
 			const directRule = (product.pricing_rules ?? []).find(r => r.id === pricingRuleId);
 			if (directRule) {
-				appliedRule = directRule;
-				basePrice = Number(directRule.price);
+				const minQty = directRule.min_quantity ?? 0;
+				const startsAt = directRule.starts_at ? new Date(directRule.starts_at) : new Date(0);
+				const endsAt = directRule.ends_at ? new Date(directRule.ends_at) : new Date(8640000000000000);
+
+				const isValidQty = quantity >= minQty;
+				const isValidTime = now >= startsAt && now <= endsAt;
+				const isActive = directRule.status === 'active';
+
+				if (isValidQty && isValidTime && isActive) {
+					appliedRule = directRule;
+					basePrice = Number(directRule.price);
+				}
 			}
 		}
 
-		if (type === 'flash_sale') {
-			// Lấy pricing rules flash_sale
-			const rules = await this.pricingRulesRepo
-				.createQueryBuilder('rule')
-				.leftJoinAndSelect('rule.flashSaleSchedule', 'schedule') // giả sử relation
-				.where('rule.product_id = :productId', { productId })
-				.andWhere('(rule.variant_id IS NULL OR rule.variant_id = :variantId)', { variantId: variantId ?? null })
-				.andWhere('rule.type = :type', { type: 'flash_sale' })
-				.andWhere('schedule.starts_at <= :now AND schedule.ends_at >= :now', { now })
-				.andWhere('rule.min_quantity <= :quantity', { quantity })
-				.orderBy('rule.min_quantity', 'DESC')
-				.getMany();
+		//  Chỉ tìm rule tự động nếu chưa có appliedRule
+		if (!appliedRule && type) {
+			if (type === 'flash_sale') {
+				const rules = await this.pricingRulesRepo
+					.createQueryBuilder('rule')
+					.leftJoinAndSelect('rule.schedule', 'schedule')
+					.where('rule.product_id = :productId', { productId })
+					.andWhere('(rule.variant_id IS NULL OR rule.variant_id = :variantId)', { variantId: variantId ?? null })
+					.andWhere('rule.type = :type', { type: 'flash_sale' })
+					.andWhere('rule.status = :status', { status: 'active' })
+					.andWhere('schedule.starts_at <= :now AND schedule.ends_at >= :now', { now })
+					.andWhere('COALESCE(rule.min_quantity, 0) <= :quantity', { quantity })
+					.orderBy('COALESCE(rule.min_quantity, 0)', 'DESC')
+					.getMany();
 
-			if (rules.length > 0) {
-				appliedRule = rules[0];
-				basePrice = Number(appliedRule.price);
-			}
+				if (rules.length > 0) {
+					appliedRule = rules[0];
+					basePrice = Number(appliedRule.price);
+				}
+			} else {
+				//  bulk / group - cho phép cả 2 type
+				const rules = await this.pricingRulesRepo
+					.createQueryBuilder('rule')
+					.where('rule.product_id = :productId', { productId })
+					.andWhere('(rule.variant_id IS NULL OR rule.variant_id = :variantId)', { variantId: variantId ?? null })
+					.andWhere('rule.type IN (:...types)', { types: ['group', 'bulk'] })  //  Cho phép cả 2 type
+					.andWhere('rule.status = :status', { status: 'active' })  //  Check status
+					.andWhere('rule.starts_at <= :now AND rule.ends_at >= :now', { now })
+					.andWhere('COALESCE(rule.min_quantity, 0) <= :quantity', { quantity })  //  Xử lý NULL
+					.orderBy('COALESCE(rule.min_quantity, 0)', 'DESC')
+					.getMany();
 
-		} else {
-			// bulk / group
-			const rules = await this.pricingRulesRepo
-				.createQueryBuilder('rule')
-				.where('rule.product_id = :productId', { productId })
-				.andWhere('(rule.variant_id IS NULL OR rule.variant_id = :variantId)', { variantId: variantId ?? null })
-				.andWhere('rule.type IN (:...types)', { types:['group', 'bulk'] })
-				.andWhere('rule.starts_at <= :now AND rule.ends_at >= :now', { now })
-				.andWhere('rule.min_quantity <= :quantity', { quantity })
-				.orderBy('rule.min_quantity', 'DESC')
-				.getMany();
+				console.log('🔍 Tìm pricing rules:', {
+					productId,
+					variantId,
+					types: ['group', 'bulk'],
+					quantity,
+					foundRules: rules.length,
+					rules: rules.map(r => ({
+						id: r.id,
+						name: r.name,
+						type: r.type,
+						min_quantity: r.min_quantity,
+						price: r.price,
+						status: r.status
+					}))
+				});
 
-			if (rules.length > 0) {
-				appliedRule = rules[0];
-				basePrice = Number(appliedRule.price);
+				if (rules.length > 0) {
+					appliedRule = rules[0];
+					basePrice = Number(appliedRule.price);
+				}
 			}
 		}
 
@@ -175,8 +205,22 @@ export class GroupOrderItemsService {
 				}
 			}
 		}
-console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appliedRule });
-		return { basePrice, finalPrice, discountPercent,appliedRule };
+
+		console.log('Calculated prices:', {
+			quantity,
+			basePrice,
+			finalPrice,
+			discountPercent,
+			appliedRule: appliedRule ? {
+				id: appliedRule.id,
+				name: appliedRule.name,
+				type: appliedRule.type,
+				min_qty: appliedRule.min_quantity,
+				price: appliedRule.price
+			} : null
+		});
+
+		return { basePrice, finalPrice, discountPercent, appliedRule };
 	}
 
 
@@ -269,45 +313,146 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 
 		return full;
 	}
+
+	// Cập nhật discount của group dựa trên số thành viên
+	async updateGroupDiscount(groupId: number) {
+		const group = await this.groupOrderRepo.findOne({
+			where: { id: groupId },
+			relations: ['members'],
+		});
+
+		if (!group) return;
+
+		const memberCount = group.members?.length || 0;
+		const oldDiscountPercent = Number(group.discount_percent || 0);
+		const newDiscountPercent = this.calculateDiscountPercent(memberCount);
+
+		// Nếu discount không đổi, không cần làm gì
+		if (oldDiscountPercent === newDiscountPercent) {
+			return newDiscountPercent;
+		}
+
+		// Cập nhật discount của group
+		await this.groupOrderRepo.update(groupId, {
+			discount_percent: newDiscountPercent,
+		});
+
+		//  TÍNH LẠI GIÁ CHO TẤT CẢ ITEMS CŨ
+		if (newDiscountPercent !== oldDiscountPercent) {
+			// Lấy tất cả items hiện tại
+			const allItems = await this.itemRepo.find({
+				where: { group_order: { id: groupId } },
+				relations: ['product', 'variant'],
+			});
+
+			for (const item of allItems) {
+				// Tính basePrice (giá gốc trước discount) từ price hiện tại
+				let basePricePerUnit: number;
+
+				if (oldDiscountPercent === 0) {
+					// Item được tạo khi chưa có discount → price hiện tại = basePrice
+					basePricePerUnit = Number(item.price) / item.quantity;
+				} else {
+					// Item được tạo khi đã có discount → tính ngược lại basePrice
+					const factor = 1 - oldDiscountPercent / 100;
+					basePricePerUnit = (Number(item.price) / item.quantity) / factor;
+				}
+
+				// Áp dụng discount mới
+				const newFinalPricePerUnit = basePricePerUnit * (1 - newDiscountPercent / 100);
+				const newTotalPrice = newFinalPricePerUnit * item.quantity;
+
+				// Cập nhật giá trong DB
+				await this.itemRepo.update(
+					{ id: item.id },
+					{ price: newTotalPrice }
+				);
+
+				// Broadcast cập nhật từng item để frontend cập nhật realtime
+				const updatedItem = await this.itemRepo.findOne({
+					where: { id: item.id },
+					relations: ['member', 'member.user', 'product', 'variant', 'member.user.profile', 'member.address_id'],
+				});
+
+				if (updatedItem) {
+					await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {
+						item: updatedItem,
+					});
+				}
+			}
+		}
+
+		// Broadcast cập nhật discount
+		await this.gateway.broadcastGroupUpdate(groupId, 'discount-updated', {
+			discountPercent: newDiscountPercent,
+			memberCount,
+		});
+
+		return newDiscountPercent;
+	}
+
 	// Danh sách tất cả item trong group
 	async listGroupItems(groupId: number) {
-		return this.itemRepo.find({
+		const items = await this.itemRepo.find({
 			where: { group_order: { id: groupId } },
 			relations: [
 				'member',
 				'member.user',
-				'product',
-				'product.media',
-				'variant',
 				'member.user.profile',
+				'product',
+				'variant',
 				'member.address_id',
 				'pricing_rule',
 			],
 			order: { id: 'DESC' },
 		});
+
+		// Recalculate price cho từng item
+		for (const item of items) {
+			const { finalPrice, appliedRule } = await this.calculateItemPrice(
+				item.product.id,
+				item.variant?.id,
+				item.quantity,
+				groupId,
+				'group',
+				item.pricing_rule?.id
+			);
+
+			const newPrice = finalPrice * item.quantity;
+
+			// Chỉ update khi giá thay đổi
+			if (item.price !== newPrice || item.pricing_rule?.id !== appliedRule?.id) {
+				item.price = newPrice;
+				item.pricing_rule = appliedRule ? { id: appliedRule.id, name: appliedRule.name } as any : null;
+
+				await this.itemRepo.save(item);
+			}
+		}
+
+		return items;
 	}
+
 
 	// Danh sách item của 1 thành viên trong group
 	async listMemberItems(groupId: number, memberId: number) {
 		return this.itemRepo.find({
 			where: { group_order: { id: groupId }, member: { id: memberId } },
-			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
+			relations: ['member', 'member.user', 'product', 'variant'],
 			order: { id: 'DESC' },
 		});
 	}
 
-	// Cập nhật item (chỉ chủ sở hữu)
 	async updateItem(
 		groupId: number,
 		itemId: number,
-		dto: UpdateGroupOrderItemDto,
+		dto: UpdateGroupOrderItemDto & { pricingRuleId?: number },
 		userId: number
 	) {
 		await this.ensureGroupOpen(groupId);
 
 		const item = await this.itemRepo.findOne({
 			where: { id: itemId, group_order: { id: groupId } },
-			relations: ['member', 'member.user'],
+			relations: ['member', 'member.user', 'product', 'variant'],
 		});
 		if (!item)
 			throw new NotFoundException('Item không tồn tại trong group này');
@@ -319,14 +464,16 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 				throw new BadRequestException('Số lượng tối thiểu là 1');
 			item.quantity = dto.quantity;
 			// Tính lại giá nếu thay đổi số lượng
-			const { finalPrice } = await this.calculateItemPrice(
+			const { finalPrice, appliedRule } = await this.calculateItemPrice(
 				item.product.id,
 				item.variant?.id,
 				dto.quantity,
-				groupId
+				groupId,
+				'group',
+				undefined
 			);
 			item.price = finalPrice * dto.quantity;
-
+			item.pricing_rule = appliedRule ? ({ id: appliedRule.id } as any) : null;
 		}
 
 		if (dto.note !== undefined) {
@@ -336,7 +483,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 		const updated = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: updated.id },
-			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
+			relations: ['member', 'member.user', 'product', 'variant', 'pricing_rule'],
 		});
 		console.log('[WS] item-added emit', { groupId, id: full?.id });
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {
@@ -344,7 +491,6 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 		});
 		return full;
 	}
-
 	// Xóa item (chỉ chủ sở hữu)
 	async removeItem(groupId: number, itemId: number, userId: number) {
 		await this.ensureGroupOpen(groupId);
