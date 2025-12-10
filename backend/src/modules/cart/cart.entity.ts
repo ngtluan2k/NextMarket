@@ -48,8 +48,8 @@ export class CartItem {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'char', unique: true })
-  uuid!: string;
+  @Column({ type: 'varchar', length: 36, nullable: true, default: () => 'gen_random_uuid()' })
+  uuid?: string;
 
   @ManyToOne(() => ShoppingCart)
   @JoinColumn({ name: 'cart_id' })

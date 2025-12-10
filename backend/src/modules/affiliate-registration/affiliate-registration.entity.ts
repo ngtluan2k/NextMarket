@@ -26,7 +26,7 @@ export class AffiliateRegistration {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'UUID()' })
+  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'gen_random_uuid()' })
   uuid!: string;
 
   @Column({ type: 'text', nullable: true })

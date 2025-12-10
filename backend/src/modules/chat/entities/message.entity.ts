@@ -39,6 +39,6 @@ export class Message {
   @Column({ type: 'boolean', default: false })
   is_read?: boolean;
 
-  @CreateDateColumn({ type: 'datetime' })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at?: Date;
 }

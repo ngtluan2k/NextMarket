@@ -103,16 +103,16 @@ export default function ProductDetailPage({ showMessage }: Props) {
       
       if (variantExists && variantId !== selectedVariantId) {
         setSelectedVariantId(variantId);
-        console.log('🔗 Variant selected from affiliate link:', variantId);
+        console.log(' Variant selected from affiliate link:', variantId);
       }
     }
   }, [location.search, product?.variants, selectedVariantId]);
 
   useEffect(() => {
-    console.log(
-      '📦 [ProductDetailPage] selectedRuleId thay đổi:',
-      selectedRuleId
-    );
+    // console.log(
+    //   '📦 [ProductDetailPage] selectedRuleId thay đổi:',
+    //   selectedRuleId
+    // );
   }, [selectedRuleId]);
 
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
         setHasMoreReviews(data.data.length === 5);
         setReviewPage(page);
       } catch (err) {
-        console.error('Failed to fetch reviews', err);
+        // console.error('Failed to fetch reviews', err);
       } finally {
         setLoadingReviews(false);
       }
@@ -186,7 +186,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
   // Initialize affiliate tracking on product page load
   useEffect(() => {
     initializeAffiliateTracking();
-    console.log('🔗 Affiliate tracking initialized on product page');
+    // console.log('🔗 Affiliate tracking initialized on product page');
   }, []);
 
   const totalPrice = useMemo(
@@ -195,21 +195,63 @@ export default function ProductDetailPage({ showMessage }: Props) {
   );
 
  const galleryData = useMemo(() => {
-  if (!product || !Array.isArray(product.media)) return { images: [] };
+  if (!product) return { images: [], imageToVariantMap: {}, variantImageIndices: {} };
 
-  const images: string[] = product.media.map((m: any) => m.url);
+  const allImages: string[] = [];
+  const imageToVariantMap: Record<string, number> = {}; // Map image URL to variant ID
+  const variantImageIndices: Record<number, number[]> = {}; // Map variant ID to array of image indices
+  const seenUrls = new Set<string>();
 
-  // Đưa ảnh cuối cùng lên đầu
-  if (images.length > 1) {
-    const last = images.pop();
-    if (last) images.unshift(last);
+  // Add product-level media first
+  if (product.media?.length) {
+    product.media.forEach((m: any) => {
+      if (m.url && !seenUrls.has(m.url)) {
+        allImages.push(m.url);
+        seenUrls.add(m.url);
+      }
+    });
   }
 
-  return { images };
+  // Add all variant media
+  if (product.variants?.length) {
+    product.variants.forEach((variant: any) => {
+      if (variant.media?.length) {
+        variantImageIndices[variant.id] = [];
+        
+        variant.media.forEach((m: any) => {
+          if (m.url && !seenUrls.has(m.url)) {
+            const index = allImages.length;
+            allImages.push(m.url);
+            seenUrls.add(m.url);
+            imageToVariantMap[m.url] = variant.id;
+            variantImageIndices[variant.id].push(index);
+          }
+        });
+      }
+    });
+  }
+
+  return { images: allImages, imageToVariantMap, variantImageIndices };
 }, [product]);
 
+  // Handle image click to select variant
+  const handleImageClick = useCallback((imageUrl: string) => {
+    const variantId = galleryData.imageToVariantMap[imageUrl];
+    if (variantId) {
+      setSelectedVariantId(variantId);
+    }
+  }, [galleryData.imageToVariantMap]);
 
+  // Handle variant name click to highlight first image of that variant
+  const handleVariantNameClick = useCallback((variantId: number) => {
+    const imageIndices = galleryData.variantImageIndices[variantId];
+    if (imageIndices && imageIndices.length > 0) {
+      // Scroll to first image of this variant
+      setGalleryScrollIndex(imageIndices[0]);
+    }
+  }, [galleryData.variantImageIndices]);
 
+  const [galleryScrollIndex, setGalleryScrollIndex] = useState<number | null>(null);
 
   if (loading && !product) {
     return (
@@ -239,20 +281,31 @@ export default function ProductDetailPage({ showMessage }: Props) {
           <div className="lg:col-start-1 lg:row-start-1 lg:self-stretch">
             <MemoizedGallery
               images={galleryData.images}
-              // variantMap={galleryData.variantMap}
-              // selectedVariantId={selectedVariantId}
-              // setSelectedVariantId={setSelectedVariantId}
+              imageToVariantMap={galleryData.imageToVariantMap}
+              onImageClick={handleImageClick}
+              scrollToIndex={galleryScrollIndex}
+              onScrollIndexUsed={() => setGalleryScrollIndex(null)}
               width={L.leftWidth}
               galleryHeight={L.galleryHeight}
               thumbHeight={L.thumbHeight}
               stickyTop={L.buyBoxStickyTop}
             />
+            {/* Display selected variant name */}
+            {selectedVariantId && product?.variants?.length && (
+              <div className="mt-3 rounded-lg bg-white p-3 ring-1 ring-slate-200">
+                <p className="text-sm text-slate-600">Phiên bản được chọn:</p>
+                <p className="font-semibold text-slate-900">
+                  {product.variants.find((v: any) => v.id === selectedVariantId)?.variant_name || 'N/A'}
+                </p>
+              </div>
+            )}
           </div>
           <section className="lg:col-start-2 lg:row-start-1 space-y-4 min-w-0 self-start">
             <MemoizedInfo
               product={product}
               selectedVariantId={selectedVariantId}
               setSelectedVariantId={setSelectedVariantId}
+              onVariantNameClick={handleVariantNameClick}
               quantity={quantity}
               setQuantity={setQuantity}
               calculatedPrice={calculatedPrice}
@@ -260,7 +313,7 @@ export default function ProductDetailPage({ showMessage }: Props) {
               maxQuantity={stock}
               selectedType={selectedType}
               setSelectedType={setSelectedType}
-              selectedRuleId={selectedRuleId} // ✅ thêm dòng này
+              selectedRuleId={selectedRuleId}
               setSelectedRuleId={setSelectedRuleId}
             />
             <MemoizedShipping />

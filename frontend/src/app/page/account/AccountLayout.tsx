@@ -4,12 +4,18 @@ import { Breadcrumb } from 'antd';
 import EveryMartHeader from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AccountSidebar from '../../components/account/AccountSidebar';
+import { profile } from 'console';
 
 export default function AccountLayout() {
   const BE_BASE_URL = import.meta.env.VITE_BE_BASE_URL;
   const { pathname } = useLocation();
   const userStr = localStorage.getItem('user');
-  let user: { full_name?: string; avatar_url?: string } | null = null;
+  let user: { profile?: { avatar_url?: string; full_name?: string } } | null =
+    null;
+
+  if (userStr) {
+    user = JSON.parse(userStr);
+  }
 
   try {
     user = userStr ? JSON.parse(userStr) : null;
@@ -18,9 +24,11 @@ export default function AccountLayout() {
     user = null;
   }
 
-  const userName = user?.full_name || 'Tài khoản';
-  const avatarUrl = user?.avatar_url
-    ? `${BE_BASE_URL}${user.avatar_url}`
+  const userName = user?.profile?.full_name || 'Người dùng';
+
+  // Lấy full_name
+  const avatarUrl = user?.profile?.avatar_url
+    ? `${BE_BASE_URL}${user?.profile?.avatar_url}`
     : undefined;
 
   return (

@@ -19,10 +19,8 @@ import { VariantModule } from './modules/variant/variant.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { PricingRuleModule } from './modules/pricing-rule/pricing-rule.module';
 import { AuthModule } from './common/auth/auth.module';
-
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { VoucherUsageModule } from './modules/voucher-usage/voucher-usage.module';
-// eslint-disable-next-line @nx/enforce-module-boundaries
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { UserAddressModule } from './modules/user_address/user_address.module';
 import { StoreIdentificationModule } from './modules/store-identification/store-identification.module';
@@ -65,6 +63,7 @@ import { FlashSaleSchedulesModule } from './modules/flash_sale_schedules/flash_s
 import { CalculationMethodModule } from './modules/affiliate-calculation-method/affiliate-calculation.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { RevokedTokensModule } from './common/auth/revoked-tokens.module';
+import { AffiliateRootTrackingModule } from './modules/affiliate-root-tracking/affiliate-root-tracking.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { GhnModule } from './modules/ghn/ghn.module';
 
@@ -97,7 +96,7 @@ import { GhnModule } from './modules/ghn/ghn.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        type: 'mysql',
+        type: 'mysql',//chạy sql trên web thì sửa lại thành postgres và bỏ commemnt dòng ssl
         host: config.get('DB_HOST'),
         port: config.get('DB_PORT'),
         username: config.get('DB_USERNAME'),
@@ -169,6 +168,7 @@ import { GhnModule } from './modules/ghn/ghn.module';
     RevokedTokensModule,
     ChatModule,
     GhnModule,
+    AffiliateRootTrackingModule
   ],
   providers: [],
 })

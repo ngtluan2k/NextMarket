@@ -262,6 +262,7 @@ export default function StoreInventory() {
                   typeof v.price === 'string' ? parseFloat(v.price) : v.price,
                 stock: v.stock,
                 barcode: v.barcode,
+                weight: v.weight,
                 inventories:
                   v.inventories?.map((inv) => ({
                     id: inv.id,

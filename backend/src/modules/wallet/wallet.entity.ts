@@ -7,7 +7,7 @@ export class Wallet {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'UUID()' })
+  @Column({ type: 'varchar', length: 36, nullable: false, default: () => 'gen_random_uuid()' })
   uuid!: string;
 
   @Column()

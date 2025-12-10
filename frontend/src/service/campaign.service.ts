@@ -338,7 +338,15 @@ export const getCampaignDetailForStore = async (campaignId: number) => {
 
 export const getActiveCampaigns = async (): Promise<Campaign[]> => {
   const res = await axios.get(`${API_URL}/active`, {});
-  return res.data;
+  // Handle both wrapped and unwrapped responses
+  const data = res.data;
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.data)) {
+    return data.data;
+  }
+  return [];
 };
 
 export const getPublicCampaignDetail = async (

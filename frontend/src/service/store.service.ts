@@ -175,6 +175,11 @@ export class StoreService {
     const res = await axios.get(`${API_BASE_URL}/store-followers/${id}/count`);
     return res.data.data; // { count: number }
   }
+
+  async getAllStores(): Promise<Store[]> {
+    const res = await axios.get(`${API_BASE_URL}/stores`);
+    return res.data.data || res.data || [];
+  }
 }
 
 export const storeService = new StoreService();

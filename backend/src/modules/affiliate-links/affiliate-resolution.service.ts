@@ -56,6 +56,23 @@ export class AffiliateResolutionService {
       if (link) {
         result.programId = (link as any).program_id?.id;
       }
+    } else {
+      // 🎯 NEW: If no product specified, find any active affiliate link for this user
+      // This ensures programId is always populated when resolving affiliate code
+      const anyLink = await this.linkRepo.findOne({
+        where: {
+          user_id: { id: user.id } as any
+        },
+        relations: ['program_id'],
+        order: { created_at: 'DESC' }
+      });
+
+      if (anyLink) {
+        result.programId = (anyLink as any).program_id?.id;
+        console.log(`✅ Resolved program from affiliate link: programId=${result.programId}`);
+      } else {
+        console.warn(`⚠️ No affiliate link found for user ${user.id}, programId will be null`);
+      }
     }
 
     return result;

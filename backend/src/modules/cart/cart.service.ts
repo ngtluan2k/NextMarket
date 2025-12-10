@@ -32,7 +32,26 @@ export class CartService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private pricingRulesService: PricingRulesService
-  ) { }
+  ) {}
+
+  private isRuleValid(rule: PricingRules, variant: Variant | null): boolean {
+    const now = new Date();
+
+    if (!rule.status || rule.status !== 'active') return false;
+
+    const startsAt = rule.starts_at ? new Date(rule.starts_at) : new Date(0);
+    const endsAt = rule.ends_at
+      ? new Date(rule.ends_at)
+      : new Date(8640000000000000);
+
+    if (now < startsAt || now > endsAt) return false;
+
+    // Nếu rule có variant thì phải match variant
+    if (rule.variant && (!variant || rule.variant.id !== variant.id))
+      return false;
+
+    return true;
+  }
 
   async getOrCreateCart(userId: number): Promise<ShoppingCart> {
     let cart = await this.cartRepository.findOne({
@@ -78,7 +97,14 @@ export class CartService {
     if (variantId) {
       variant = await this.variantRepository.findOne({
         where: { id: variantId },
-        select: ['id', 'variant_name', 'price', 'stock', 'weight', 'weight_unit'],
+        select: [
+          'id',
+          'variant_name',
+          'price',
+          'stock',
+          'weight',
+          'weight_unit',
+        ],
       });
       if (!variant) throw new NotFoundException('Biến thể không tìm thấy');
     }
@@ -330,6 +356,17 @@ export class CartService {
         );
       }
 
+      // 📌 Ưu tiên media variant nếu có
+      const variantMedia = (item.variant as any)?.media ?? [];
+      const productMedia = (item.product.media ?? []) as any[];
+
+      const mediaToUse =
+        variantMedia.length > 0
+          ? variantMedia
+          : productMedia.sort(
+              (a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0)
+            );
+
       return {
         id: item.id,
         uuid: item.uuid,
@@ -343,14 +380,14 @@ export class CartService {
 
         pricing_rule: item.pricing_rule
           ? {
-            id: item.pricing_rule.id,
-            name: item.pricing_rule.name,
-            type: item.pricing_rule.type,
-            price: item.pricing_rule.price,
-            min_quantity: item.pricing_rule.min_quantity,
-            starts_at: item.pricing_rule.starts_at,
-            ends_at: item.pricing_rule.ends_at,
-          }
+              id: item.pricing_rule.id,
+              name: item.pricing_rule.name,
+              type: item.pricing_rule.type,
+              price: item.pricing_rule.price,
+              min_quantity: item.pricing_rule.min_quantity,
+              starts_at: item.pricing_rule.starts_at,
+              ends_at: item.pricing_rule.ends_at,
+            }
           : null,
 
         product: {
@@ -361,25 +398,34 @@ export class CartService {
           base_price: item.product.base_price,
           store: item.product.store
             ? {
-              id: item.product.store.id,
-              name: item.product.store.name,
-              slug: item.product.store.slug,
-              logo_url: item.product.store.logo_url,
-              email: item.product.store.email,
-            }
+                id: item.product.store.id,
+                name: item.product.store.name,
+                slug: item.product.store.slug,
+                logo_url: item.product.store.logo_url,
+                email: item.product.store.email,
+              }
             : null,
-          media: item.product.media.filter((media) => media.is_primary),
+
+          media:
+            mediaToUse?.map((m: any) => ({
+              id: m.id,
+              url: m.url,
+              is_primary: m.is_primary,
+              type: m.type ?? 'image',
+              status: m.status ?? 'active',
+              is_available: m.is_available ?? true,
+            })) ?? [],
         },
 
         variant: item.variant
           ? {
-            id: item.variant.id,
-            variant_name: item.variant.variant_name,
-            price: item.variant.price,
-            stock: item.variant.stock,
-            weight: item.variant.weight ?? 200,  // ✅ Thêm fallback
-            weight_unit: item.variant.weight_unit ?? 'g',  // ✅ Thêm unit
-          }
+              id: item.variant.id,
+              variant_name: item.variant.variant_name,
+              price: item.variant.price,
+              stock: item.variant.stock,
+              weight: item.variant.weight ?? 200,
+              weight_unit: item.variant.weight_unit ?? 'g',
+            }
           : null,
       };
     });
@@ -480,24 +526,59 @@ export class CartService {
 
       case 'bulk':
       case 'normal': {
+        const now = new Date();
+
+        // lọc danh sách rule đúng loại
         const bulkRules = (product.pricing_rules ?? []).filter(
           (r) => r.type === 'bulk'
         );
+
         const matchedBulkRule = bulkRules
-          .filter((r) => cartItem.quantity >= (r.min_quantity ?? 0))
+          .filter((r) => {
+            // Validate thời gian
+            const startsAt = r.starts_at ? new Date(r.starts_at) : new Date(0);
+            const endsAt = r.ends_at
+              ? new Date(r.ends_at)
+              : new Date(8640000000000000);
+            const dateValid = now >= startsAt && now <= endsAt;
+
+            // Validate số lượng theo min rule
+            const qtyValid = cartItem.quantity >= (r.min_quantity ?? 0);
+
+            // Validate trạng thái rule
+            const statusValid = r.status === 'active';
+
+            // Validate theo biến thể (nếu rule dành riêng cho variant)
+            const variantValid =
+              !r.variant || r.variant.id === cartItem.variant?.id;
+
+            // Validate số lượng giới hạn (nếu có)
+            const availableValid =
+              r.limit_quantity == null || r.limit_quantity > 0;
+
+            return (
+              dateValid &&
+              qtyValid &&
+              statusValid &&
+              variantValid &&
+              availableValid
+            );
+          })
           .sort((a, b) => (b.min_quantity ?? 0) - (a.min_quantity ?? 0))[0];
 
         if (matchedBulkRule) {
           appliedType = 'bulk';
-          appliedPricingRuleId = matchedBulkRule.id ?? null;
+          appliedPricingRuleId = matchedBulkRule.id;
           appliedPrice = Number(matchedBulkRule.price);
         } else {
           appliedType = 'normal';
           appliedPricingRuleId = null;
           appliedPrice = variant?.price ?? Number(product.base_price);
         }
+
         break;
       }
+
       case 'flash_sale': {
         const flashRule = (product.pricing_rules ?? []).find(
           (r) => r.id === pricing_rule_id
@@ -614,6 +695,7 @@ export class CartService {
 
     // Lọc các rule còn hiệu lực, đúng type, đúng variant, min_quantity
     const validRules = (product.pricing_rules ?? []).filter((rule) => {
+      if (!this.isRuleValid(rule, variant)) return false;
       const startsAt = rule.starts_at ? new Date(rule.starts_at) : new Date(0);
       const endsAt = rule.ends_at
         ? new Date(rule.ends_at)

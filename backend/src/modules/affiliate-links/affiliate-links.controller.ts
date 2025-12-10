@@ -77,11 +77,9 @@ export class AffiliateLinksController {
   @UseGuards(JwtAuthGuard)
   async getCommissionSummary(
     @Request() req: AuthRequest,
-    @Query('period') period?: 'daily' | 'weekly' | 'monthly',
-    @Query('limit') limit?: number
   ) {
     const userId = req.user.userId;
-    return this.service.getCommissionSummaryByPeriod(userId, period || 'monthly', limit || 12);
+    return this.service.getUserCommissionSummary(userId);
   }
 
   @Get('balance')

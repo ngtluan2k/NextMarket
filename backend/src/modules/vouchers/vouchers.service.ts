@@ -53,7 +53,7 @@ export class VouchersService {
     private readonly voucherUsageService: VoucherUsageService,
     @InjectRepository(VoucherCollection)
     private readonly voucherCollectionRepository: Repository<VoucherCollection>
-  ) { }
+  ) {}
 
   async create(
     createVoucherDto: CreateVoucherDto,
@@ -112,7 +112,7 @@ export class VouchersService {
     if (
       createVoucherDto.discount_type === VoucherDiscountType.FIXED &&
       (createVoucherDto.min_order_amount ?? 0) <
-      (createVoucherDto.discount_value ?? 0)
+        (createVoucherDto.discount_value ?? 0)
     ) {
       throw new BadRequestException(
         'Đơn hàng tối thiểu phải lớn hơn hoặc bằng giá trị giảm'
@@ -408,8 +408,8 @@ export class VouchersService {
     filterByStoreOnly = false
   ): Promise<Voucher[]> {
     if (userId) {
-    await this.autoCollectVouchersForUser(userId);  
-  }
+      await this.autoCollectVouchersForUser(userId);
+    }
     const now = new Date();
 
     const queryBuilder = this.vouchersRepository
@@ -443,11 +443,20 @@ export class VouchersService {
                 .andWhere(
                   new Brackets((innerQb) => {
                     innerQb
+                      // .where(
+                      //   // 'voucher.applicable_user_ids IS NULL OR jsonb_array_length(voucher.applicable_user_ids::jsonb) = 0'
+                      //       'voucher.applicable_user_ids IS NULL OR JSON_LENGTH(voucher.applicable_user_ids) = 0'
+
+                      // ) // Nếu empty, hiển thị tất
+                      // .orWhere(
+                      //   // 'voucher.applicable_user_ids::jsonb ? :userId',
+                      //   { userId: userId.toString() }
+                      // );
                       .where(
                         'voucher.applicable_user_ids IS NULL OR JSON_LENGTH(voucher.applicable_user_ids) = 0'
-                      ) // Nếu empty, hiển thị tất
+                      )
                       .orWhere(
-                        'JSON_SEARCH(voucher.applicable_user_ids, "one", :userId) IS NOT NULL',
+                        'JSON_CONTAINS(voucher.applicable_user_ids, JSON_QUOTE(:userId), "$")',
                         { userId: userId.toString() }
                       );
                   })
@@ -475,8 +484,11 @@ export class VouchersService {
           new Brackets((qb) => {
             qb.where('voucher.store_id = :storeId', { storeId });
             if (storeId) {
+              // qb.orWhere('voucher.applicable_store_ids::jsonb ? :storeId', {
+              //   storeId: storeId.toString(),
+              // });
               qb.orWhere(
-                'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
+                'JSON_CONTAINS(voucher.applicable_store_ids, JSON_QUOTE(:storeId), "$")',
                 { storeId: storeId.toString() }
               );
             }
@@ -489,8 +501,11 @@ export class VouchersService {
           qb.where('voucher.store_id IS NULL');
           qb.orWhere('voucher.store_id = :storeId', { storeId });
           if (storeId) {
+            // qb.orWhere('voucher.applicable_store_ids::jsonb ? :storeId', {
+            //   storeId: storeId.toString(),
+            // });
             qb.orWhere(
-              'JSON_SEARCH(voucher.applicable_store_ids, "one", :storeId) IS NOT NULL',
+              'JSON_CONTAINS(voucher.applicable_store_ids, JSON_QUOTE(:storeId), "$")',
               { storeId: storeId.toString() }
             );
           }
@@ -715,8 +730,8 @@ export class VouchersService {
           err instanceof Error
             ? err.message
             : typeof err === 'string'
-              ? err
-              : 'Voucher không hợp lệ';
+            ? err
+            : 'Voucher không hợp lệ';
 
         invalidVouchers.push({
           code,
@@ -759,8 +774,9 @@ export class VouchersService {
           .forEach((v) =>
             invalidVouchers.push({
               code: v.voucher.code,
-              error: `Không thể áp dụng vì đã chọn voucher ${bestNonStackable.voucher.code
-                } cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'}`,
+              error: `Không thể áp dụng vì đã chọn voucher ${
+                bestNonStackable.voucher.code
+              } cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'}`,
             })
           );
 
@@ -768,8 +784,9 @@ export class VouchersService {
         stackableVouchers.forEach((v) =>
           invalidVouchers.push({
             code: v.voucher.code,
-            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng ${groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'
-              }`,
+            error: `Không thể áp dụng vì đã chọn voucher không kết hợp cùng ${
+              groupKey.startsWith('store_') ? 'cửa hàng' : 'loại'
+            }`,
           })
         );
       } else {
@@ -884,7 +901,7 @@ export class VouchersService {
         voucher.total_used_count >= voucher.total_usage_limit)
     );
   }
-async autoCollectVouchersForUser(userId: number): Promise<void> {
+  async autoCollectVouchersForUser(userId: number): Promise<void> {
     console.log(`Tự động thu thập voucher AUTO cho user ${userId}`);
 
     const now = new Date();
@@ -1024,7 +1041,6 @@ async autoCollectVouchersForUser(userId: number): Promise<void> {
     console.log(`📦 Lấy voucher CÓ THỂ THU THẬP cho người dùng ${userId}`);
     await this.autoCollectVouchersForUser(userId);
 
-    
     // 1. Lấy TẤT CẢ voucher nền tảng active
     const now = new Date();
     const allPlatformVouchers = await this.vouchersRepository.find({

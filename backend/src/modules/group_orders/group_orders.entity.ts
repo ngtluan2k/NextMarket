@@ -23,9 +23,9 @@ export class GroupOrder {
   @PrimaryGeneratedColumn()
   id!: number;
 
-    @Column({ type: 'char', unique: true })
-    @Generated('uuid')
-    uuid!: string;
+  @Column({ type: 'char', unique: true })
+  @Generated('uuid')
+  uuid!: string;
 
   @Column({ type: 'varchar', nullable: false })
   name!: string;
@@ -43,11 +43,14 @@ export class GroupOrder {
   })
   status!: GroupOrderStatus;
 
-    @Column({ type: 'timestamp', nullable: true })
-    expires_at!: Date | null;
+  @Column({ type: 'timestamp', nullable: true })
+  expires_at!: Date | null;
 
-    @CreateDateColumn({ type: 'timestamp' })
-    created_at!: Date;
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at!: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  join_expires_at!: Date | null;
 
   @OneToMany(() => GroupOrderMember, (m) => m.group_order)
   members!: GroupOrderMember[];
@@ -99,4 +102,28 @@ export class GroupOrder {
       'Trạng thái đơn hàng của nhóm: 0=pending, 1=confirmed, 2=processing, 3=shipped, 4=delivered, 5=completed, 6=cancelled, 7=returned',
   })
   order_status!: OrderStatuses;
+
+  // Group-level affiliate tracking (host inheritance)
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  group_affiliate_code?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  group_affiliate_user_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  group_affiliate_program_id?: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  group_commission_rate?: number;
+
+  @Column({ 
+    type: 'varchar', 
+    length: 20, 
+    nullable: true,
+    comment: 'Method used to detect affiliate: host_inheritance, explicit, auto_detect'
+  })
+  affiliate_detection_method?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  affiliate_detected_at?: Date;
 }

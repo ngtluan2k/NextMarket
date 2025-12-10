@@ -3,15 +3,15 @@ import {
   Home,
   Link2,
   CreditCard,
-  Settings,
+  ArrowLeftFromLine,
   HelpCircle,
   X,
-  FolderOutputIcon
+  FolderOutputIcon,
+  Users,
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import logo from '../../../../../../public/logo.jpg';
 const Sidebar = () => {
-  const location = useLocation();
 
   const navigation = [
     {
@@ -25,26 +25,33 @@ const Sidebar = () => {
       icon: Link2,
     },
     {
-      name: 'Thanh toán',
+      name: 'Lịch sử affiliate',
       href: '/affiliate/dashboard/payments',
       icon: CreditCard,
     },
     {
       name: 'Cây affiliate',
       href: '/affiliate/dashboard/affiliate-tree',
-      icon: FolderOutputIcon ,
+      icon: FolderOutputIcon,
     },
   ];
 
   const bottomNavigation = [
-    { name: 'Cài đặt', href: '/affiliate/dashboard/setting', icon: Settings },
     {
       name: 'Hỗ trợ',
       href: '/affiliate/dashboard/support',
       icon: HelpCircle,
       badge: 'Trực tuyến',
     },
+    {
+      name: 'Thoát',
+      href: '/affiliate/dashboard/setting',
+      icon: ArrowLeftFromLine,
+    },
   ];
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   return (
     <aside
@@ -55,7 +62,7 @@ const Sidebar = () => {
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between px-6 border-b border-gray-200">
           <NavLink to="/" className="flex items-center gap-2">
-            <img src={logo} alt="everymart" className='w-44'/>
+            <img src={logo} alt="everymart" className="w-44" />
           </NavLink>
         </div>
 
@@ -96,35 +103,53 @@ const Sidebar = () => {
         </nav>
 
         <div className="px-3 py-4 border-t border-gray-200 space-y-1">
-          {bottomNavigation.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors group relative ${
-                  isActive ? 'bg-gray-100 text-blue-500' : ''
-                }`
-              }
-            >
-              <item.icon
-                className={`h-5 w-5 ${
-                  location.pathname === item.href
-                    ? 'text-blue-500'
-                    : 'text-gray-500 group-hover:text-blue-500'
-                }`}
-              />
-              <span className="text-sm font-medium">{item.name}</span>
-              {item.badge && (
-                <span className="ml-auto text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                  {item.badge}
-                </span>
-              )}
-            </NavLink>
-          ))}
+          {bottomNavigation.map((item) => {
+            const isLogout = item.name === 'Thoát';
+            if (isLogout) {
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => {
+                    navigate('/');
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors group relative"
+                >
+                  <ArrowLeftFromLine className="h-5 w-5 text-gray-500 group-hover:text-blue-500" />
+                  <span className="text-sm font-medium">Thoát</span>
+                </button>
+              );
+            }
+            return (
+              <NavLink
+                key={item.name}
+                to={item.href}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors group relative ${
+                    isActive ? 'bg-gray-100 text-blue-500' : ''
+                  }`
+                }
+              >
+                <item.icon
+                  className={`h-5 w-5 ${
+                    location.pathname === item.href
+                      ? 'text-blue-500'
+                      : 'text-gray-500 group-hover:text-blue-500'
+                  }`}
+                />
+                <span className="text-sm font-medium">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
 
         <div className="mx-3 mb-4 p-4 bg-gray-100 rounded-lg">
-          <button className="w-full text-left group">
+          <div className="w-full text-left group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-gray-900">
                 Mời bạn bè
@@ -152,12 +177,12 @@ const Sidebar = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                   />
                 </svg>
               </Button>
             </div>
-          </button>
+          </div>
         </div>
       </div>
     </aside>

@@ -1,3 +1,4 @@
+import { use } from 'react';
 import {
     Injectable,
     BadRequestException,
@@ -13,7 +14,7 @@ import { GroupOrderMember } from '../group_orders_members/group_orders_member.en
 import { Order } from '../orders/order.entity';
 import { CreateGroupOrderDto } from './dto/create-group-order.dto';
 import { ConfigService } from '@nestjs/config';
-// import { Cron, CronExpression } from '@nestjs/schedule'; // Commented out since @Cron is disabled
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Store } from '../store/store.entity';
 import { GroupOrdersGateway } from './group_orders.gateway';
 import { GroupOrderItemsService } from '../group_orders_items/group_orders_items.service';
@@ -26,6 +27,7 @@ import { OrderStatuses } from '../orders/types/orders';
 import { OrderStatusHistory } from '../order-status-history/order-status-history.entity';
 import { ForbiddenException } from '@nestjs/common/exceptions';
 import { historyStatus } from '../order-status-history/order-status-history.entity';
+import { AffiliateResolutionService } from '../affiliate-links/affiliate-resolution.service';
 import { VouchersService } from '../vouchers/vouchers.service';
 import { Voucher, VoucherType } from '../vouchers/vouchers.entity';
 
@@ -56,32 +58,149 @@ export class GroupOrdersService {
         private readonly userAddressRepo: Repository<UserAddress>,
         @InjectRepository(OrderStatusHistory)
         private orderStatusHistoryRepo: Repository<OrderStatusHistory>,
+        private readonly affiliateResolutionService: AffiliateResolutionService,
         @Inject(forwardRef(() => VouchersService))
         private readonly vouchersService: VouchersService,
 
     ) { }
 
-    // @Cron(CronExpression.EVERY_MINUTE)
-    async lockExpiredGroups() {
+    @Cron(CronExpression.EVERY_MINUTE)
+    async handleExpiredGroups() {
         const now = new Date();
-        const expired = await this.groupOrderRepo.find({
+
+        // 1) Nhóm đang OPEN, quá hạn => auto-lock + remove member chưa chọn sản phẩm
+        const openGroups = await this.groupOrderRepo.find({
             where: {
                 status: 'open',
                 expires_at: LessThan(now),
             },
+            relations: ['members', 'members.user'],
+        });
+
+        for (const group of openGroups) {
+            this.logger.log(` Auto-processing OPEN group #${group.id}`);
+
+            // Lấy tất cả members active (joined / ordered)
+            const activeMembers = group.members.filter((m) =>
+                ['joined', 'ordered'].includes(m.status)
+            );
+
+            if (!activeMembers.length) {
+                // Không còn ai => hủy luôn
+                await this.groupOrderRepo.update(group.id, {
+                    status: 'cancelled',
+                    order_status: OrderStatuses.cancelled,
+                });
+                await this.gateway.broadcastGroupUpdate(group.id, 'group-cancelled-timeout', {
+                    groupId: group.id,
+                    reason: 'Hết thời gian mở nhóm, không có thành viên hoạt động',
+                });
+                continue;
+            }
+
+            // Lấy tất cả items trong group để biết member nào đã chọn sản phẩm
+            const items = await this.groupOrderItemRepo.find({
+                where: { group_order: { id: group.id } as any },
+                relations: ['member'],
+            });
+
+            const memberIdsWithItems = new Set(items.map((it) => it.member.id));
+            const membersToRemove = activeMembers.filter(
+                (m) => !memberIdsWithItems.has(m.id) && !m.is_host //  không xóa host
+            );
+
+            if (membersToRemove.length) {
+                // Xóa items của các member này (nếu có) + xóa member
+                const memberIds = membersToRemove.map((m) => m.id);
+
+                await this.groupOrderItemRepo.delete({
+                    group_order: { id: group.id } as any,
+                    member: In(memberIds) as any,
+                });
+
+                await this.memberRepo.delete(memberIds);
+
+                // Broadcast cho group biết các member bị remove
+                for (const m of membersToRemove) {
+                    await this.gateway.broadcastGroupUpdate(group.id, 'member-auto-removed', {
+                        userId: m.user.id,
+                        memberId: m.id,
+                        reason: 'Hết thời gian chọn sản phẩm',
+                    });
+                }
+            }
+
+            // Đếm lại activeMembers sau khi remove
+            const remainingMembers = await this.memberRepo.count({
+                where: {
+                    group_order: { id: group.id } as any,
+                    status: In(['joined', 'ordered']) as any,
+                },
+            });
+
+            if (remainingMembers < 2) {
+                // Không đủ 2 người => HỦY nhóm
+                await this.groupOrderRepo.update(group.id, {
+                    status: 'cancelled',
+                    order_status: OrderStatuses.cancelled,
+                });
+                await this.gateway.broadcastGroupUpdate(group.id, 'group-cancelled-timeout', {
+                    groupId: group.id,
+                    reason: 'Không đủ thành viên sau khi loại bỏ người chưa chọn sản phẩm',
+                    remainingMembers,
+                });
+                continue;
+            }
+
+            // Đủ người => tự động LOCK + set expires_at mới (30 phút nữa để auto-cancel)
+            const nextExpires = new Date(now.getTime() + 2 * 60 * 1000);
+            await this.groupOrderRepo.update(group.id, {
+                status: 'locked',
+                expires_at: nextExpires,
+                order_status: OrderStatuses.waiting_group, // hoặc pending, tùy flow bạn
+            });
+
+            await this.gateway.broadcastGroupUpdate(group.id, 'group-auto-locked', {
+                groupId: group.id,
+                message:
+                    ' Nhóm đã tự động khóa sau 30 phút. Những thành viên chưa chọn sản phẩm đã bị loại khỏi nhóm.',
+                lockUntil: nextExpires,
+            });
+
+            this.logger.log(
+                ` Group #${group.id} auto-locked, next expires_at=${nextExpires.toISOString()}`
+            );
+        }
+
+        // 2) Nhóm đang LOCKED, quá hạn => CANCELLED
+        const lockedGroups = await this.groupOrderRepo.find({
+            where: {
+                status: 'locked',
+                expires_at: LessThan(now),
+            },
             select: { id: true },
         });
-        if (!expired.length) return;
-        await this.groupOrderRepo
-            .createQueryBuilder()
-            .update(GroupOrder)
-            .set({ status: 'locked' })
-            .whereInIds(expired.map((g) => g.id))
-            .execute();
-        for (const g of expired) {
-            await this.gateway.broadcastGroupUpdate(g.id, 'group-locked', {
-                groupId: g.id,
-            });
+
+        if (lockedGroups.length) {
+            const ids = lockedGroups.map((g) => g.id);
+            await this.groupOrderRepo
+                .createQueryBuilder()
+                .update(GroupOrder)
+                .set({
+                    status: 'cancelled',
+                    order_status: OrderStatuses.cancelled,
+                })
+                .whereInIds(ids)
+                .execute();
+
+            for (const g of lockedGroups) {
+                await this.gateway.broadcastGroupUpdate(g.id, 'group-cancelled-timeout', {
+                    groupId: g.id,
+                    message: '⏰ Nhóm đã bị hủy vì quá 30 phút sau khi khóa mà không hoàn tất.',
+                });
+            }
+
+            this.logger.log(`❌ Auto-cancelled ${lockedGroups.length} locked groups by timeout`);
         }
     }
 
@@ -108,9 +227,45 @@ export class GroupOrdersService {
         const store = await this.storeRepo.findOne({ where: { id: dto.storeId } });
         if (!store) throw new NotFoundException('Store not found');
         const now = new Date();
-        const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+
+
+        const expiresAt = dto.expiresAt
+            ? new Date(dto.expiresAt)
+            : new Date(now.getTime() + 30 * 60 * 1000);
         if (expiresAt && expiresAt <= now) {
             throw new BadRequestException('expiresAt must be in the future');
+        }
+
+        // 🎯 NEW: Resolve affiliate code if provided (host's affiliate)
+        let groupAffiliateCode: string | null = null;
+        let groupAffiliateUserId: number | null = null;
+        let groupAffiliateProgramId: number | null = null;
+
+        if (dto.affiliateCode) {
+            try {
+                console.log(`🔍 Resolving group affiliate code: ${dto.affiliateCode}`);
+                const affiliateInfo = await this.affiliateResolutionService.resolveAffiliateCode(dto.affiliateCode);
+                
+                if (affiliateInfo && affiliateInfo.isValid) {
+                    groupAffiliateUserId = affiliateInfo.userId;
+                    groupAffiliateProgramId = affiliateInfo.programId || null;
+                    groupAffiliateCode = dto.affiliateCode;
+                    console.log(`✅ Resolved group affiliate: userId=${groupAffiliateUserId}, programId=${groupAffiliateProgramId}`);
+                } else {
+                    console.warn(`⚠️ Could not resolve group affiliate code: ${dto.affiliateCode}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error resolving group affiliate code ${dto.affiliateCode}:`, error);
+            }
+        }
+
+        const joinExpiresAt = dto.joinExpiresAt ? new Date(dto.joinExpiresAt) : null;
+        if (joinExpiresAt && joinExpiresAt <= now) {
+            throw new BadRequestException('joinExpiresAt must be in the future');
+        }
+
+        if (expiresAt && joinExpiresAt && joinExpiresAt > expiresAt) {
+            throw new BadRequestException('joinExpiresAt must be before expiresAt');
         }
 
         const group = this.groupOrderRepo.create({
@@ -119,41 +274,54 @@ export class GroupOrdersService {
             name: dto.name,
             status: 'open',
             expires_at: expiresAt,
+            join_expires_at: joinExpiresAt,
             join_code: this.generateJoinCode(),
             invite_link: null,
             target_member_count: dto.targetMemberCount || 2,
-        });
+            // 🎯 NEW: Set group-level affiliate tracking
+            group_affiliate_code: groupAffiliateCode,
+            group_affiliate_user_id: groupAffiliateUserId,
+            group_affiliate_program_id: groupAffiliateProgramId,
+            affiliate_detection_method: groupAffiliateCode ? 'explicit' : null,
+            affiliate_detected_at: groupAffiliateCode ? new Date() : null,
+        } as any);
 
         const saved = await this.groupOrderRepo.save(group);
+        console.log(`✅ Group ${(saved as any).id} created with affiliate tracking:`, {
+            groupAffiliateCode,
+            groupAffiliateUserId,
+            groupAffiliateProgramId,
+        });
         // cập nhật invite_link dựa trên uuid
         console.log('FE_BASE_URL =', this.config.get<string>('FE_BASE_URL'));
 
         const baseUrl = this.config.get<string>('FE_BASE_URL');
-        const inviteLink = `${baseUrl}/group/${saved.uuid}`;
-        if (saved.invite_link !== inviteLink) {
+        const inviteLink = `${baseUrl}/group/${(saved as any).uuid}`;
+        if ((saved as any).invite_link !== inviteLink) {
             await this.groupOrderRepo.update(
-                { id: saved.id },
+                { id: (saved as any).id },
                 { invite_link: inviteLink }
             );
         }
 
         // ensure host is a member
         const hostMember = this.memberRepo.create({
-            group_order: { id: saved.id } as any,
+            group_order: { id: (saved as any).id } as any,
             user: { id: dto.hostUserId } as any,
             is_host: 1 as any, // Temporary fix: use 1 instead of true for integer column
             status: 'joined',
         });
         await this.memberRepo.save(hostMember);
         await this.gateway.notifyUser(dto.hostUserId, 'group-created', {
-            groupId: saved.id,
+            groupId: (saved as any).id,
             invite_link: inviteLink,
         });
 
-        return this.getGroupOrderById(saved.id);
+        return this.getGroupOrderById(saved.id, dto.hostUserId);
     }
 
-    async getGroupOrderById(id: number) {
+    async getGroupOrderById(id: number, userId: number) {
+        await this.assertUserIsMember(id, userId);
         const group = await this.groupOrderRepo.findOne({
             where: { id } as FindOptionsWhere<GroupOrder>,
             relations: [
@@ -176,8 +344,21 @@ export class GroupOrdersService {
         if (!group) throw new NotFoundException('Group order not found');
         return group;
     }
-
-    async joinGroupOrder(userId: number, groupId: number, joinCode?: string) {
+    
+    private async assertUserIsMember(groupId: number, userId: number) {
+        const group = await this.groupOrderRepo.findOne({
+            where: { id: groupId },
+            relations: ['members', 'members.user'],
+        });
+        if (!group) throw new NotFoundException('Group not found');
+    
+        const isMember = group.members.some((m) => m.user.id === userId);
+        if (!isMember) {
+            throw new ForbiddenException('Bạn không thuộc nhóm này');
+        }
+        return group;
+    }
+    async joinGroupOrder(userId: number, groupId: number, joinCode?: string, affiliateCode?: string) {
         const group = await this.groupOrderRepo.findOne({ where: { id: groupId } });
         if (!group) throw new NotFoundException('Group order not found');
         if (group.status !== 'open') {
@@ -186,8 +367,21 @@ export class GroupOrdersService {
         if (group.expires_at && group.expires_at.getTime() <= Date.now()) {
             throw new BadRequestException('Group is expired');
         }
+        if (group.join_expires_at && group.join_expires_at.getTime() <= Date.now()) {
+            throw new BadRequestException('Đã quá thời hạn tham gia nhóm');
+        }
         if (joinCode !== undefined && group.join_code && group.join_code !== joinCode.trim().toUpperCase()) {
             throw new BadRequestException('Mã tham gia không hợp lệ');
+        }
+
+        if (group.target_member_count) {
+            const currentCount = await this.memberRepo.count({
+                where: { group_order: { id: groupId } as any },
+            });
+
+            if (currentCount >= group.target_member_count) {
+                throw new BadRequestException('Nhóm đã đủ số lượng thành viên');
+            }
         }
 
         const existed = await this.memberRepo.findOne({
@@ -198,13 +392,49 @@ export class GroupOrdersService {
         });
         if (existed) return existed;
 
+        // 🎯 Resolve affiliate code if provided
+        let affiliateUserId: number | null = null;
+        let affiliateProgramId: number | null = null;
+        let affiliateLinkId: number | null = null;
+
+        if (affiliateCode) {
+            try {
+                console.log(`🔍 Resolving affiliate code: ${affiliateCode}`);
+                const affiliateInfo = await this.affiliateResolutionService.resolveAffiliateCode(affiliateCode);
+                
+                if (affiliateInfo && affiliateInfo.isValid) {
+                    affiliateUserId = affiliateInfo.userId;
+                    affiliateProgramId = affiliateInfo.programId || null;
+                    // Note: linkId will be populated during commission calculation
+                    console.log(`✅ Resolved affiliate: userId=${affiliateUserId}, programId=${affiliateProgramId}`);
+                } else {
+                    console.warn(`⚠️ Could not resolve affiliate code: ${affiliateCode}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error resolving affiliate code ${affiliateCode}:`, error);
+                // Continue without affiliate tracking - graceful degradation
+            }
+        }
+
         const member = this.memberRepo.create({
             group_order: { id: groupId } as any,
             user: { id: userId } as any,
             is_host: 0 as any, // Temporary fix: use 0 instead of false for integer column
             status: 'joined',
-        });
+            // 🎯 NEW: Store affiliate tracking
+            referrer_affiliate_code: affiliateCode,
+            referrer_affiliate_user_id: affiliateUserId,
+            referrer_affiliate_program_id: affiliateProgramId,
+            referrer_affiliate_link_id: affiliateLinkId,
+        } as any);
         const savedMember = await this.memberRepo.save(member);
+        console.log(`✅ Member ${userId} joined group ${groupId} with affiliate tracking:`, {
+            affiliateCode,
+            affiliateUserId,
+            affiliateProgramId,
+            affiliateLinkId,
+        });
+
         // Cập nhật lại discount của group
         await this.groupOrderItemsService.updateGroupDiscount(groupId);
 
@@ -213,7 +443,7 @@ export class GroupOrdersService {
             userId,
             member: savedMember,
         });
-        await this.autoLockIfReachedTarget(groupId);
+        // await this.autoLockIfReachedTarget(groupId);
 
         return savedMember;
     }
@@ -245,15 +475,15 @@ export class GroupOrdersService {
         return group;
     }
 
-    async joinGroupOrderByJoinCode(joinCode: string, userId: number) {
+    async joinGroupOrderByJoinCode(joinCode: string, userId: number, affiliateCode?: string) {
         const group = await this.getGroupOrderByJoinCode(joinCode);
-        return this.joinGroupOrder(userId, group.id, joinCode);
+        return this.joinGroupOrder(userId, group.id, joinCode, affiliateCode);
     }
 
-    async joinGroupOrderByUuid(userId: number, uuid: string) {
+    async joinGroupOrderByUuid(userId: number, uuid: string, affiliateCode?: string) {
         const group = await this.groupOrderRepo.findOne({ where: { uuid } });
         if (!group) throw new NotFoundException('Group order not found');
-        return this.joinGroupOrder(userId, group.id);
+        return this.joinGroupOrder(userId, group.id, undefined, affiliateCode);
     }
 
     async updateGroupOrder(
@@ -263,6 +493,7 @@ export class GroupOrdersService {
             name?: string;
             delivery_mode?: 'host_address' | 'member_address'; // ← Thêm field này
             expiresAt?: string | null;
+            joinExpiresAt?: string | null;
             targetMemberCount?: number;
         }
     ) {
@@ -272,7 +503,7 @@ export class GroupOrdersService {
         });
         if (!group) throw new NotFoundException('Group order not found');
 
-        // 🔒 Kiểm tra quyền
+        //  Kiểm tra quyền
         if (group.user.id !== userId) {
             throw new BadRequestException('Bạn không có quyền sửa nhóm này');
         }
@@ -301,6 +532,20 @@ export class GroupOrdersService {
                 patch.expires_at = expiresAt;
             }
         }
+
+
+        if ('joinExpiresAt' in dto) {
+            if (dto.joinExpiresAt === null) {
+                patch.join_expires_at = null;
+            } else if (dto.joinExpiresAt) {
+                const joinExpiresAt = new Date(dto.joinExpiresAt);
+                if (joinExpiresAt <= new Date()) {
+                    throw new BadRequestException('joinExpiresAt must be in the future');
+                }
+                patch.join_expires_at = joinExpiresAt;
+            }
+        }
+
         if (typeof dto.targetMemberCount === 'number') {
             if (dto.targetMemberCount < 2 || dto.targetMemberCount > 100) {
                 throw new BadRequestException('targetMemberCount phải từ 2 đến 100');
@@ -320,7 +565,7 @@ export class GroupOrdersService {
 
 
         await this.groupOrderRepo.update({ id }, patch as any);
-        const updated = await this.getGroupOrderById(id);
+        const updated = await this.getGroupOrderById(id, userId);
 
         // Broadcast cập nhật group
         await this.gateway.broadcastGroupUpdate(id, 'group-updated', {
@@ -505,7 +750,7 @@ export class GroupOrdersService {
         // 2) Lấy items của group
         const items = await this.groupOrderItemRepo.find({
             where: { group_order: { id: groupId } as any },
-            relations: ['product', 'variant', 'member', 'member.user', 'member.address_id'],
+            relations: ['product', 'product.media', 'variant', 'member', 'member.user', 'member.address_id'],
             order: { id: 'ASC' },
         });
 
@@ -610,6 +855,36 @@ export class GroupOrdersService {
 
         const totalAmount = Math.max(0, subtotal + shippingFee - discountTotal);
 
+        // 🎯 NEW: Resolve affiliate tracking from group members
+        let affiliateCode: string | null = null;
+        let affiliateUserId: number | null = null;
+        let affiliateProgramId: number | null = null;
+        let affiliateLinkId: number | null = null;
+
+        // Get all members with affiliate tracking
+        const members = await this.memberRepo.find({
+            where: { group_order: { id: group.id } as any },
+        });
+
+        // Priority 1: Check member-specific affiliate (from referrer_affiliate_*)
+        const memberWithAffiliate = members.find(m => m.referrer_affiliate_user_id);
+        if (memberWithAffiliate) {
+            affiliateCode = memberWithAffiliate.referrer_affiliate_code || null;
+            affiliateUserId = memberWithAffiliate.referrer_affiliate_user_id || null;
+            affiliateProgramId = memberWithAffiliate.referrer_affiliate_program_id || null;
+            affiliateLinkId = memberWithAffiliate.referrer_affiliate_link_id || null;
+            console.log(`✅ Using member-specific affiliate: code=${affiliateCode}, userId=${affiliateUserId}`);
+        }
+        // Priority 2: Check group-level affiliate (host inheritance)
+        else if (group.group_affiliate_user_id) {
+            affiliateCode = group.group_affiliate_code || null;
+            affiliateUserId = group.group_affiliate_user_id || null;
+            affiliateProgramId = group.group_affiliate_program_id || null;
+            console.log(`✅ Using group-level affiliate: code=${affiliateCode}, userId=${affiliateUserId}`);
+        } else {
+            console.log(`ℹ️ No affiliate tracking found for group ${group.id}`);
+        }
+
         // Tạo 1 Order duy nhất
         const order = this.orderRepo.create({
             user: { id: userId } as any,
@@ -621,17 +896,30 @@ export class GroupOrdersService {
             discountTotal,
             totalAmount,
             status: 0,
-        });
+            // 🎯 NEW: Set affiliate tracking on order
+            affiliate_code: affiliateCode,
+            affiliate_user_id: affiliateUserId,
+            affiliate_program_id: affiliateProgramId,
+            affiliate_link_id: affiliateLinkId,
+        } as any);
         const savedOrder = await this.orderRepo.save(order);
+        console.log(`✅ Order ${(savedOrder as any).id} created with affiliate tracking:`, {
+            affiliateCode,
+            affiliateUserId,
+            affiliateProgramId,
+            affiliateLinkId,
+        });
 
         // Tạo OrderItems
         for (const it of items) {
+            const itemSubtotal = Number(it.price || 0) * (it.quantity || 1);
             const oi = this.orderItemsRepo.create({
-                order: { id: savedOrder.id } as any,
+                order: { id: (savedOrder as any).id } as any,
                 product: { id: it.product.id } as any,
                 variant: it.variant ? ({ id: it.variant.id } as any) : null,
                 quantity: it.quantity,
                 price: it.price,
+                subtotal: itemSubtotal,
                 groupOrderItem: { id: it.id } as any,
                 note: it.note,
             });
@@ -660,7 +948,7 @@ export class GroupOrdersService {
         }
 
         const result = await this.paymentsService.create({
-            orderUuid: savedOrder.uuid,
+            orderUuid: (savedOrder as any).uuid,
             paymentMethodUuid,
             amount: Number(totalAmount || 0),
             isGroup: true,
@@ -670,7 +958,7 @@ export class GroupOrdersService {
         const redirectUrl = 'redirectUrl' in result ? result.redirectUrl : null;
 
         return {
-            orderUuid: savedOrder.uuid,
+            orderUuid: (savedOrder as any).uuid,
             payment,
             redirectUrl,
             voucherApplied: appliedVoucher ? {
@@ -685,104 +973,103 @@ export class GroupOrdersService {
         };
     }
 
+      private async checkoutMemberAddresses(
+        group: GroupOrder,
+        userId: number,
+        paymentMethodUuid: string,
+        items: GroupOrderItem[]
+    ) {
+        // Validate: Tất cả members phải có địa chỉ
+        const membersWithoutAddress = group.members.filter(m => !m.address_id);
+        if (membersWithoutAddress.length > 0) {
+            const names = membersWithoutAddress
+                .map(m => m.user?.username || `User #${m.user?.id}`)
+                .join(', ');
+            throw new BadRequestException(
+                `Các thành viên sau chưa có địa chỉ: ${names}`
+            );
+        }
 
+        // Nhóm items theo member
+        const itemsByMember = new Map<number, GroupOrderItem[]>();
 
-    // private async checkoutMemberAddresses(
-    //     group: GroupOrder,
-    //     userId: number,
-    //     paymentMethodUuid: string,
-    //     items: GroupOrderItem[]
-    // ) {
-    //     // Validate: Tất cả members phải có địa chỉ
-    //     const membersWithoutAddress = group.members.filter(m => !m.address_id);
-    //     if (membersWithoutAddress.length > 0) {
-    //         const names = membersWithoutAddress
-    //             .map(m => m.user?.username || `User #${m.user?.id}`)
-    //             .join(', ');
-    //         throw new BadRequestException(
-    //             `Các thành viên sau chưa có địa chỉ: ${names}`
-    //         );
-    //     }
+        for (const item of items) {
+            const memberId = item.member.id;
+            if (!itemsByMember.has(memberId)) {
+                itemsByMember.set(memberId, []);
+            }
+            itemsByMember.get(memberId)!.push(item);
+        }
 
-    //     // Nhóm items theo member
-    //     const itemsByMember = new Map<number, GroupOrderItem[]>();
+        const createdOrders = [];
+        let grandTotal = 0;
 
-    //     for (const item of items) {
-    //         const memberId = item.member.id;
-    //         if (!itemsByMember.has(memberId)) {
-    //             itemsByMember.set(memberId, []);
-    //         }
-    //         itemsByMember.get(memberId)!.push(item);
-    //     }
+        // Tạo Order cho mỗi member
+        for (const [memberId, memberItems] of itemsByMember.entries()) {
+            const member = group.members.find(m => m.id === memberId);
+            if (!member || !member.address_id) {
+                throw new BadRequestException(
+                    `Member #${memberId} không có địa chỉ`
+                );
+            }
 
-    //     const createdOrders = [];
-    //     let grandTotal = 0;
+            const subtotal = memberItems.reduce((s, it) => s + Number(it.price || 0), 0);
+            grandTotal += subtotal;
 
-    //     // Tạo Order cho mỗi member
-    //     for (const [memberId, memberItems] of itemsByMember.entries()) {
-    //         const member = group.members.find(m => m.id === memberId);
-    //         if (!member || !member.address_id) {
-    //             throw new BadRequestException(
-    //                 `Member #${memberId} không có địa chỉ`
-    //             );
-    //         }
+            // Tạo order cho member này
+            const order = this.orderRepo.create({
+                user: { id: member.user.id } as any,  // Host vẫn là người thanh toán
+                store: { id: group.store.id } as any,
+                userAddress: { id: member.address_id.id } as any,  // ← Địa chỉ của member
+                group_order: { id: group.id } as any,
+                subtotal,
+                shippingFee: 0,
+                discountTotal: 0,
+                totalAmount: subtotal,
+                status: 0,
+            });
+            const savedOrder = await this.orderRepo.save(order);
+            createdOrders.push(savedOrder);
 
-    //         const subtotal = memberItems.reduce((s, it) => s + Number(it.price || 0), 0);
-    //         grandTotal += subtotal;
+            // Tạo OrderItems cho order này
+            for (const it of memberItems) {
+                const itemSubtotal = Number(it.price || 0) * (it.quantity || 1);
+                const oi = this.orderItemsRepo.create({
+                    order: { id: savedOrder.id } as any,
+                    product: { id: it.product.id } as any,
+                    variant: it.variant ? ({ id: it.variant.id } as any) : null,
+                    quantity: it.quantity,
+                    price: it.price,
+                    subtotal: itemSubtotal,
+                    groupOrderItem: { id: it.id } as any,
+                    note: it.note,
+                });
+                await this.orderItemsRepo.save(oi);
+            }
+        }
 
-    //         // Tạo order cho member này
-    //         const order = this.orderRepo.create({
-    //             user: { id: member.user.id } as any,  // Host vẫn là người thanh toán
-    //             store: { id: group.store.id } as any,
-    //             userAddress: { id: member.address_id.id } as any,  // ← Địa chỉ của member
-    //             group_order: { id: group.id } as any,
-    //             subtotal,
-    //             shippingFee: 0,
-    //             discountTotal: 0,
-    //             totalAmount: subtotal,
-    //             status: 0,
-    //         });
-    //         const savedOrder = await this.orderRepo.save(order);
-    //         createdOrders.push(savedOrder);
+        // Gọi thanh toán cho order đầu tiên (đại diện)
+        if (!paymentMethodUuid) {
+            throw new BadRequestException('Thiếu paymentMethodUuid');
+        }
 
-    //         // Tạo OrderItems cho order này
-    //         for (const it of memberItems) {
-    //             const oi = this.orderItemsRepo.create({
-    //                 order: { id: savedOrder.id } as any,
-    //                 product: { id: it.product.id } as any,
-    //                 variant: it.variant ? ({ id: it.variant.id } as any) : null,
-    //                 quantity: it.quantity,
-    //                 price: it.price,
-    //                 groupOrderItem: { id: it.id } as any,
-    //                 note: it.note,
-    //             });
-    //             await this.orderItemsRepo.save(oi);
-    //         }
-    //     }
+        const result = await this.paymentsService.create({
+            orderUuid: createdOrders[0].uuid,
+            paymentMethodUuid,
+            amount: Number(grandTotal || 0),
+            isGroup: true,
+        });
 
-    //     // Gọi thanh toán cho order đầu tiên (đại diện)
-    //     if (!paymentMethodUuid) {
-    //         throw new BadRequestException('Thiếu paymentMethodUuid');
-    //     }
+        const payment = 'payment' in result ? result.payment : result;
+        const redirectUrl = 'redirectUrl' in result ? result.redirectUrl : null;
 
-    //     const result = await this.paymentsService.create({
-    //         orderUuid: createdOrders[0].uuid,
-    //         paymentMethodUuid,
-    //         amount: Number(grandTotal || 0),
-    //         isGroup: true,
-    //     });
-
-    //     const payment = 'payment' in result ? result.payment : result;
-    //     const redirectUrl = 'redirectUrl' in result ? result.redirectUrl : null;
-
-    //     return {
-    //         orderUuid: createdOrders[0].uuid,
-    //         orderCount: createdOrders.length,
-    //         payment,
-    //         redirectUrl,
-    //     };
-    // }
-
+        return {
+            orderUuid: createdOrders[0].uuid,
+            orderCount: createdOrders.length,
+            payment,
+            redirectUrl,
+        };
+    }
 
     async getGroupOrderWithAllOrders(groupId: number) {
         const group = await this.groupOrderRepo.findOne({
@@ -1033,97 +1320,97 @@ export class GroupOrdersService {
         };
     }
 
-    // THÊM METHOD MỚI (private helper):
-    private async autoLockIfReachedTarget(groupId: number) {
-        const group = await this.groupOrderRepo.findOne({
-            where: { id: groupId },
-            relations: ['members', 'store'],
-        });
+    // // THÊM METHOD MỚI (private helper):
+    // private async autoLockIfReachedTarget(groupId: number) {
+    //     const group = await this.groupOrderRepo.findOne({
+    //         where: { id: groupId },
+    //         relations: ['members', 'store'],
+    //     });
 
-        if (!group) return;
+    //     if (!group) return;
 
-        // Chỉ lock nếu đang ở trạng thái open
-        if (group.status !== 'open') return;
+    //     // Chỉ lock nếu đang ở trạng thái open
+    //     if (group.status !== 'open') return;
 
-        // Không có target → không auto lock
-        if (!group.target_member_count) return;
+    //     // Không có target → không auto lock
+    //     if (!group.target_member_count) return;
 
-        // Đếm số thành viên active
-        const activeMembers = group.members.filter(
-            (m) => m.status === 'joined' || m.status === 'ordered'
-        );
+    //     // Đếm số thành viên active
+    //     const activeMembers = group.members.filter(
+    //         (m) => m.status === 'joined' || m.status === 'ordered'
+    //     );
 
-        console.log(
-            `Group #${groupId}: ${activeMembers.length}/${group.target_member_count} members`
-        );
+    //     console.log(
+    //         `Group #${groupId}: ${activeMembers.length}/${group.target_member_count} members`
+    //     );
 
-        // Nếu đủ số lượng → TỰ ĐỘNG KHÓA
-        if (activeMembers.length >= group.target_member_count) {
-            // Validate: Tất cả members phải có items
-            const items = await this.groupOrderItemRepo.find({
-                where: { group_order: { id: groupId } },
-                relations: ['member'],
-            });
+    //     // Nếu đủ số lượng → TỰ ĐỘNG KHÓA
+    //     if (activeMembers.length >= group.target_member_count) {
+    //         // Validate: Tất cả members phải có items
+    //         const items = await this.groupOrderItemRepo.find({
+    //             where: { group_order: { id: groupId } },
+    //             relations: ['member'],
+    //         });
 
-            const memberIdsWithItems = new Set(items.map((it) => it.member.id));
-            const membersWithoutItems = activeMembers.filter(
-                (m) => !memberIdsWithItems.has(m.id)
-            );
+    //         const memberIdsWithItems = new Set(items.map((it) => it.member.id));
+    //         const membersWithoutItems = activeMembers.filter(
+    //             (m) => !memberIdsWithItems.has(m.id)
+    //         );
 
-            if (membersWithoutItems.length > 0) {
-                // Có member chưa chọn SP → broadcast cảnh báo
-                await this.gateway.broadcastGroupUpdate(
-                    groupId,
-                    'target-reached-warning',
-                    {
-                        groupId,
-                        message:
-                            '⚠️ Đã đủ số lượng thành viên! Vui lòng chọn sản phẩm để nhóm có thể khóa.',
-                        membersWithoutItems: membersWithoutItems.map((m) => ({
-                            id: m.id,
-                            name: m.user?.profile?.full_name || m.user?.username,
-                        })),
-                    }
-                );
-                return;
-            }
+    //         if (membersWithoutItems.length > 0) {
+    //             // Có member chưa chọn SP → broadcast cảnh báo
+    //             await this.gateway.broadcastGroupUpdate(
+    //                 groupId,
+    //                 'target-reached-warning',
+    //                 {
+    //                     groupId,
+    //                     message:
+    //                         '⚠️ Đã đủ số lượng thành viên! Vui lòng chọn sản phẩm để nhóm có thể khóa.',
+    //                     membersWithoutItems: membersWithoutItems.map((m) => ({
+    //                         id: m.id,
+    //                         name: m.user?.profile?.full_name || m.user?.username,
+    //                     })),
+    //                 }
+    //             );
+    //             return;
+    //         }
 
-            // Validate địa chỉ nếu member_address mode
-            if (group.delivery_mode === 'member_address') {
-                const membersWithoutAddress = activeMembers.filter(
-                    (m) => !m.address_id
-                );
-                if (membersWithoutAddress.length > 0) {
-                    await this.gateway.broadcastGroupUpdate(
-                        groupId,
-                        'target-reached-warning',
-                        {
-                            groupId,
-                            message: '⚠️ Đã đủ số lượng! Vui lòng chọn địa chỉ giao hàng.',
-                            membersWithoutAddress: membersWithoutAddress.map((m) => ({
-                                id: m.id,
-                                name: m.user?.profile?.full_name || m.user?.username,
-                            })),
-                        }
-                    );
-                    return;
-                }
-            }
+    //         // Validate địa chỉ nếu member_address mode
+    //         if (group.delivery_mode === 'member_address') {
+    //             const membersWithoutAddress = activeMembers.filter(
+    //                 (m) => !m.address_id
+    //             );
+    //             if (membersWithoutAddress.length > 0) {
+    //                 await this.gateway.broadcastGroupUpdate(
+    //                     groupId,
+    //                     'target-reached-warning',
+    //                     {
+    //                         groupId,
+    //                         message: '⚠️ Đã đủ số lượng! Vui lòng chọn địa chỉ giao hàng.',
+    //                         membersWithoutAddress: membersWithoutAddress.map((m) => ({
+    //                             id: m.id,
+    //                             name: m.user?.profile?.full_name || m.user?.username,
+    //                         })),
+    //                     }
+    //                 );
+    //                 return;
+    //             }
+    //         }
 
-            //  TẤT CẢ OK → KHÓA NHÓM
-            await this.groupOrderRepo.update(groupId, { status: 'locked' });
+    //         //  TẤT CẢ OK → KHÓA NHÓM
+    //         await this.groupOrderRepo.update(groupId, { status: 'locked' });
 
-            await this.gateway.broadcastGroupUpdate(groupId, 'group-auto-locked', {
-                groupId,
-                message: `🔒 Nhóm đã đủ ${group.target_member_count} người và tự động khóa! Mỗi thành viên hãy thanh toán phần của mình.`,
-                targetCount: group.target_member_count,
-            });
+    //         await this.gateway.broadcastGroupUpdate(groupId, 'group-auto-locked', {
+    //             groupId,
+    //             message: `🔒 Nhóm đã đủ ${group.target_member_count} người và tự động khóa! Mỗi thành viên hãy thanh toán phần của mình.`,
+    //             targetCount: group.target_member_count,
+    //         });
 
-            console.log(
-                `🔒 Group #${groupId} auto-locked (reached ${group.target_member_count} members)`
-            );
-        }
-    }
+    //         console.log(
+    //             `🔒 Group #${groupId} auto-locked (reached ${group.target_member_count} members)`
+    //         );
+    //     }
+    // }
 
     // THÊM: Member thanh toán riêng phần của mình
     async checkoutMemberItems(
@@ -1411,7 +1698,7 @@ export class GroupOrdersService {
     private async checkAndCompleteGroup(groupId: number) {
         const group = await this.groupOrderRepo.findOne({
             where: { id: groupId },
-            relations: ['members', 'members.user','orders', 'user'],
+            relations: ['members', 'members.user', 'orders', 'user'],
         });
 
         if (!group || group.status !== 'locked') return;

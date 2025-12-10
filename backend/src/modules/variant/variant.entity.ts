@@ -17,6 +17,7 @@ import { PricingRules } from '../pricing-rule/pricing-rule.entity';
 import { ProductReview } from '../product_reviews/product_review.entity';
 import { InventoryTransaction } from '../inventory-transactions/inventory-transaction.entity';
 import { CampaignStoreProduct } from '../campaigns/entities/campaign_store_products.entity';
+import { ProductMedia } from '../product_media/product_media.entity';
 
 @Entity('variants')
 export class Variant {

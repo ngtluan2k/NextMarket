@@ -537,7 +537,7 @@ const CreateRuleCardWithPreview: React.FC<CreateRuleCardWithPreviewProps> = ({
               </Col>
 
               <Col span={12}>
-                <Form.Item noStyle shouldUpdate>
+                {/* <Form.Item noStyle shouldUpdate>
                   {({ getFieldValue }) => {
                     const programId = getFieldValue('program_id');
                     const currentProgram = programId ? affiliatePrograms.find(p => p.id.toString() === programId) : null;
@@ -600,7 +600,7 @@ const CreateRuleCardWithPreview: React.FC<CreateRuleCardWithPreviewProps> = ({
                       </Form.Item>
                     );
                   }}
-                </Form.Item>
+                </Form.Item> */}
               </Col>
             </Row>
 

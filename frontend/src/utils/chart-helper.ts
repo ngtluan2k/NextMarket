@@ -37,10 +37,9 @@ export const aggregateByDate = (transactions: WalletTransaction[]): AggregatedTr
       const amount = tx.amount || 0;
       grouped[date].amount += amount;
 
+      // Since we're filtering by type in the hook, all transactions here should be affiliate_commission
       if (tx.type === 'affiliate_commission') {
         grouped[date].commission += amount;
-      } else if (tx.type === 'withdrawal') {
-        grouped[date].withdrawal += amount;
       }
 
       grouped[date].count += 1;
@@ -137,7 +136,7 @@ const translateType = (type: string): string => {
 export const formatCurrency = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
-  return value;
+  return value.toFixed(0);
 };
 
 // Get display text for transaction type
@@ -145,7 +144,12 @@ export const getTransactionTypeDisplay = (type: string): string => {
   return type.replace(/_/g, ' ').toUpperCase();
 };
 
-// Calculate total amount
-export const calculateTotalAmount = (transactions: WalletTransaction[]): number => {
-  return transactions.reduce((sum, tx) => sum + tx.amount, 0);
+// Calculate total amount (only affiliate commission)
+export const calculateTotalAmount = (transactions: WalletTransaction[] | undefined): number => {
+  if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+    return 0;
+  }
+  return transactions
+    .filter(tx => tx.type === 'affiliate_commission')
+    .reduce((sum, tx) => sum + (tx.amount || 0), 0);
 };

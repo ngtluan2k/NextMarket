@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
-import { useAuth } from '../hooks/useAuth'; 
+import { useAuth } from '../context/AuthContext'; 
 import { groupOrdersApi } from './../../service/groupOrderItems.service';
+import { getAffiliateDataForOrder } from '../../utils/affiliate-tracking';
 
 type JoinGroupModalProps = {
   open: boolean;
@@ -14,7 +15,7 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
   const [loading, setLoading] = React.useState(false);
   const [msgApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
-  const { user } = useAuth(); // user.user_id || user.id
+  const { me } = useAuth();
 
   if (!open) return null;
 
@@ -23,7 +24,7 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
     const raw = code.trim();
     if (!raw) return;
 
-    const uid = user?.user_id ?? user?.id;
+    const uid = me?.user_id ?? me?.id;
     if (uid == null) {
       msgApi.warning('Vui lòng đăng nhập trước khi tham gia nhóm.');
       return;
@@ -62,6 +63,10 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
           msgApi.error('Nhóm đã hết hạn, không thể tham gia.');
           return;
         }
+        if (group.join_expires_at && new Date(group.join_expires_at).getTime() <= Date.now()) {
+          msgApi.error('Đã quá thời hạn tham gia nhóm.');
+          return;
+        }
 
         // Kiểm tra “đã ở trong nhóm” bằng endpoint active
         try {
@@ -82,7 +87,19 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
 
         // Join bằng joinCode
         try {
-          await groupOrdersApi.join(groupId, { userId: Number(uid), joinCode });
+          // 🎯 NEW: Get affiliate code from localStorage
+          const affiliateData = getAffiliateDataForOrder();
+          console.log('🔍 Joining group with affiliate data:', affiliateData);
+
+          const joinPayload = { 
+            userId: Number(uid), 
+            joinCode,
+            // 🎯 NEW: Pass affiliate code
+            ...(affiliateData.affiliateCode && { affiliateCode: affiliateData.affiliateCode }),
+          };
+
+          console.log('📤 Join group payload:', joinPayload);
+          await groupOrdersApi.join(groupId, joinPayload);
           msgApi.success('Tham gia nhóm thành công!');
           navigate(`/group-orders/${groupId}/detail`);
           setCode('');
@@ -92,6 +109,7 @@ export const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ open, onClose })
           if (msg.includes('not open')) msgApi.error('Nhóm đã đóng, không thể tham gia.');
           else if (msg.includes('expired')) msgApi.error('Nhóm đã hết hạn, không thể tham gia.');
           else if (msg.includes('Mã tham gia không hợp lệ')) msgApi.error('Mã tham gia không hợp lệ.');
+          else if (msg.includes('đủ số lượng')) msgApi.error('Nhóm đã đủ số lượng thành viên.');
           else if (msg.toLowerCase().includes('not found')) msgApi.error('Không tìm thấy nhóm với mã này.');
           else msgApi.error('Không thể tham gia nhóm, vui lòng thử lại.');
         }

@@ -13,4 +13,11 @@ export class JoinGroupOrderDto {
   @IsOptional()
   @IsString()
   joinCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Mã affiliate để tracking commission (ví dụ: AFF123)',
+  })
+  @IsOptional()
+  @IsString()
+  affiliateCode?: string;
 }

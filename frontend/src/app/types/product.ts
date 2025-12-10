@@ -24,8 +24,10 @@ export type VariantInfo = {
   id?: number;
   sku?: string;
   name?: string;
+  variant_name?: string;
   price?: number;
   stock?: number;
+  media?: MediaInfo[];
 };
 
 export type PricingRuleInfo = {

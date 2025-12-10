@@ -198,6 +198,17 @@ export const CartHeader: React.FC<Props> = ({
 
             {/* Danh sách sản phẩm trong shop */}
             {items.map((item) => {
+              // DEBUG: Log cart item
+              console.log('[CART ITEM]', {
+                id: item.id,
+                productName: item.product?.name,
+                variantName: item.variant?.variant_name,
+                variantId: item.variant?.id,
+                variantMedia: item.variant?.media,
+                productMedia: item.product?.media,
+                fullItem: item,
+              });
+
               // ✅ Nếu đang chọn subscription → disable các type khác
               const isDisabled =
                 selectedType === 'subscription' && item.type !== 'subscription';
@@ -209,16 +220,22 @@ export const CartHeader: React.FC<Props> = ({
                 item.type === 'subscription';
 
               const checked = selectedIds.includes(item.id);
-              const mediaArray = Array.isArray(item.product?.media)
-                ? item.product.media
-                : item.product?.media
-                ? [item.product.media]
-                : [];
-              const imageUrl = toImageUrl(
-                mediaArray.find((m: any) => m?.is_primary)?.url ||
-                  mediaArray[0]?.url ||
-                  item.product?.url
-              );
+
+              // If variant has media, use variant media; otherwise use product media
+              const mediaArray =
+                Array.isArray(item.variant?.media) &&
+                item.variant.media.length > 0
+                  ? item.variant.media
+                  : Array.isArray(item.product?.media)
+                  ? item.product.media
+                  : [];
+
+              // Ưu tiên ảnh có is_primary, nếu không có lấy ảnh đầu tiên
+              const primaryImage =
+                mediaArray.find((m) => m?.is_primary) || mediaArray[0];
+
+              // Convert thành URL hợp lệ
+              const imageUrl = toImageUrl(primaryImage?.url);
 
               const oldPrice: number | undefined = (item as any)?.old_price;
               const deliveryDate: string | undefined = (item as any)

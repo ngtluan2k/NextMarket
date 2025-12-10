@@ -1,38 +1,108 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Table, Card, Tag, Button, Pagination, Spin, Image, Tooltip } from 'antd';
-import { Eye, Package, Calendar, DollarSign } from 'lucide-react';
-import { 
-  getCommissionHistory, 
+import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  Table,
+  Card,
+  Tag,
+  Button,
+  Pagination,
+  Spin,
+  Image,
+  Tooltip,
+  message,
+} from 'antd';
+import {
+  Eye,
+  Package,
+  Calendar,
+  RefreshCw,
+  Coins,
+  CoinsIcon,
+} from 'lucide-react';
+import {
+  getCommissionHistory,
+  getCommissionSummary,
 } from '../../../../../../service/afiliate/affiliate-links.service';
-import { CommissionHistory, CommissionHistoryItem } from '../../../../../types/affiliate-links';
+import {
+  CommissionHistory,
+  CommissionHistoryItem,
+  CommissionSummary,
+} from '../../../../../types/affiliate-links';
 
 const AffiliateTransaction = () => {
-  const [commissionData, setCommissionData] = useState<CommissionHistory | null>(null);
+  const [commissionData, setCommissionData] =
+    useState<CommissionHistory | null>(null);
+  const [commissionSummary, setCommissionSummary] =
+    useState<CommissionSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
 
-  const fetchCommissions = async (page: number) => {
-    try {
-      setLoading(true);
-      const data = await getCommissionHistory(page, pageSize);
-      setCommissionData(data);
-    } catch (error) {
-      console.error('Failed to fetch commission history:', error);
-    } finally {
-      setLoading(false);
+  const fetchCommissions = useCallback(
+    async (page: number, isRefresh = false) => {
+      try {
+        if (isRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        const data = await getCommissionHistory(page, pageSize);
+        setCommissionData(data);
+
+        const sumdata = await getCommissionSummary();
+
+        setCommissionSummary(sumdata);
+
+        console.log(`summary data: `, sumdata);
+
+        lastFetchTimeRef.current = Date.now();
+
+        if (isRefresh) {
+          message.success(' Dữ liệu đã cập nhật');
+        }
+      } catch (error) {
+        console.error('Failed to fetch commission history:', error);
+        if (isRefresh) {
+          message.error(' Cập nhật thất bại');
+        }
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [pageSize]
+  );
+
+  const handleRefresh = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+
+    if (timeSinceLastFetch < 2000) {
+      message.warning(' Vui lòng chờ trước khi cập nhật lại');
+      return;
     }
-  };
+
+    fetchCommissions(currentPage, true);
+  }, [currentPage, fetchCommissions]);
 
   useEffect(() => {
     fetchCommissions(currentPage);
 
-    // Listen for commission events to refresh transaction list
     const handleCommissionUpdate = () => {
-      console.log('💰 Commission update - refreshing transaction list...');
-      fetchCommissions(currentPage);
+      console.log('Commission update - refreshing transaction list...');
+
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+
+      refreshTimeoutRef.current = setTimeout(() => {
+        fetchCommissions(currentPage, false);
+      }, 1000);
     };
 
     window.addEventListener('commission-earned', handleCommissionUpdate);
@@ -43,8 +113,12 @@ const AffiliateTransaction = () => {
       window.removeEventListener('commission-earned', handleCommissionUpdate);
       window.removeEventListener('commission-paid', handleCommissionUpdate);
       window.removeEventListener('commission-reversed', handleCommissionUpdate);
+
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
-  }, [currentPage]);
+  }, [currentPage, fetchCommissions]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -78,7 +152,9 @@ const AffiliateTransaction = () => {
       key: 'order',
       render: (record: CommissionHistoryItem) => (
         <div>
-          <p className="font-medium text-gray-900">#{record.order.order_number}</p>
+          <p className="font-medium text-gray-900">
+            #{record.order.order_number}
+          </p>
           <p className="text-sm text-gray-500">
             Tổng: VND {record.order.total_amount}
           </p>
@@ -90,7 +166,9 @@ const AffiliateTransaction = () => {
       key: 'commission',
       render: (record: CommissionHistoryItem) => (
         <div>
-          <p className="font-bold text-green-600">VND {record.amount.toFixed(2)}</p>
+          <p className="font-bold text-green-600">
+            VND {record.amount.toFixed(2)}
+          </p>
           <p className="text-sm text-gray-500">
             {record.rate_percent}% - Cấp {record.level}
           </p>
@@ -127,12 +205,11 @@ const AffiliateTransaction = () => {
       render: (record: CommissionHistoryItem) => (
         <div className="flex space-x-2">
           <Tooltip title="Xem chi tiết đơn hàng">
-            <Button 
-              type="text" 
-              size="small" 
+            <Button
+              type="text"
+              size="small"
               icon={<Eye className="h-4 w-4" />}
               onClick={() => {
-                // Navigate to order detail
                 console.log('View order:', record.order.id);
               }}
             />
@@ -152,17 +229,16 @@ const AffiliateTransaction = () => {
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-gray-200 shadow-sm">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="h-5 w-5 text-green-600" />
+              <Coins className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Tổng hoa hồng</p>
+              <p className="text-sm text-gray-600">Hoa hồng tích lũy</p>
               <p className="text-lg font-bold text-gray-900">
-                VND {commissionData?.commissions.reduce((sum, c) => sum + c.amount, 0).toFixed(2) || '0.00'}
+                {commissionSummary?.totalEarned} coins
               </p>
             </div>
           </div>
@@ -174,9 +250,9 @@ const AffiliateTransaction = () => {
               <Package className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Số giao dịch</p>
+              <p className="text-sm text-gray-600">Tổng đơn hàng</p>
               <p className="text-lg font-bold text-gray-900">
-                {commissionData?.commissions.length || 0}
+                {commissionSummary?.totalOrders} đơn
               </p>
             </div>
           </div>
@@ -185,15 +261,12 @@ const AffiliateTransaction = () => {
         <Card className="border-gray-200 shadow-sm">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="h-5 w-5 text-green-600" />
+              <CoinsIcon className="h-5 w-5 text-green-600" />
             </div>
             <div>
               <p className="text-sm text-gray-600">Đã thanh toán</p>
               <p className="text-lg font-bold text-green-600">
-                VND {commissionData?.commissions
-                  .filter(c => c.status === 'PAID')
-                  .reduce((sum, c) => sum + c.amount, 0)
-                  .toFixed(2) || '0.00'}
+                {commissionSummary?.totalPaid} coins
               </p>
             </div>
           </div>
@@ -207,23 +280,39 @@ const AffiliateTransaction = () => {
             <div>
               <p className="text-sm text-gray-600">Đang chờ</p>
               <p className="text-lg font-bold text-orange-600">
-                VND {commissionData?.commissions
-                  .filter(c => c.status === 'PENDING')
-                  .reduce((sum, c) => sum + c.amount, 0)
-                  .toFixed(2) || '0.00'}
+                {commissionSummary?.totalPending} coins
               </p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Commission History Table */}
       <Card className="border-gray-200 shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Lịch sử hoa hồng</h3>
-          <p className="text-sm text-gray-600">
-            Theo dõi tất cả hoa hồng từ các đơn hàng thành công
-          </p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Giao dịch gần đây
+            </h3>
+            <p className="text-sm text-gray-600">
+              Theo dõi tất cả hoa hồng từ các đơn hàng thành công
+            </p>
+          </div>
+          <Tooltip title="Cập nhật dữ liệu mới nhất">
+            <Button
+              type="primary"
+              ghost
+              icon={
+                <RefreshCw
+                  className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+              }
+              onClick={handleRefresh}
+              loading={refreshing}
+              disabled={refreshing}
+            >
+              Cập nhật
+            </Button>
+          </Tooltip>
         </div>
 
         <Table
@@ -239,7 +328,8 @@ const AffiliateTransaction = () => {
                 <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Chưa có hoa hồng nào</p>
                 <p className="text-sm text-gray-400">
-                  Hoa hồng sẽ xuất hiện khi có đơn hàng thành công từ liên kết của bạn
+                  Hoa hồng sẽ xuất hiện khi có đơn hàng thành công từ liên kết
+                  của bạn
                 </p>
               </div>
             ),

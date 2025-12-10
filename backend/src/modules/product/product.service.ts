@@ -189,6 +189,7 @@ export class ProductService {
         'categories',
         'media',
         'variants',
+        'variants.media', // 🔥 Thêm relation để load media cho từng variant
         'variants.inventories',
         'pricing_rules',
       ],
@@ -487,9 +488,31 @@ export class ProductService {
       .leftJoinAndSelect('pc.category', 'category')
       .leftJoinAndSelect('product.pricing_rules', 'pricing_rules')
       .leftJoinAndSelect('pricing_rules.variant', 'pricing_rule_variant')
+      .leftJoinAndSelect('pricing_rules.schedule', 'flash_schedule')
       .leftJoinAndSelect('product.store', 'store')
       .where('product.slug = :slug', { slug })
       .getOne();
+
+    // Lấy số lượng bán theo từng rule
+    const ruleIds = product?.pricing_rules.map((r) => r.id) ?? [];
+
+    let ruleOrders: any[] = [];
+
+    if (ruleIds.length > 0) {
+      ruleOrders = await this.orderItemRepo
+        .createQueryBuilder('oi')
+        .select('oi.pricing_rule_id', 'pricing_rule_id')
+        .addSelect('SUM(oi.quantity)', 'total_sold')
+        .where('oi.pricing_rule_id IN (:...ids)', { ids: ruleIds })
+        .groupBy('oi.pricing_rule_id')
+        .getRawMany();
+    }
+
+    // Convert thành map
+    const ruleOrderMap: Record<number, number> = {};
+    ruleOrders.forEach((row) => {
+      ruleOrderMap[row.pricing_rule_id] = Number(row.total_sold);
+    });
 
     if (!product) throw new NotFoundException('Product not found');
 
@@ -505,6 +528,18 @@ export class ProductService {
       }));
     });
 
+    // Separate product-level media from variant-specific media
+    const productLevelMedia = product.media.filter((m) => !m.variant_id);
+    const variantMediaMap: Record<number, any[]> = {};
+    product.media.forEach((m) => {
+      if (m.variant_id) {
+        if (!variantMediaMap[m.variant_id]) {
+          variantMediaMap[m.variant_id] = [];
+        }
+        variantMediaMap[m.variant_id].push(m);
+      }
+    });
+
     // Map product sang DTO
     const response: ProductResponseDto = {
       id: product.id,
@@ -516,25 +551,40 @@ export class ProductService {
       base_price: product.base_price,
       avg_rating: product.avg_rating, // thêm dòng này
       review_count: product.review_count, // thêm dòng này
-      media: product.media.map((m) => ({
+      media: productLevelMedia.map((m) => ({
         url: m.url,
       })),
-      variants: product.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        variant_name: v.variant_name,
-        price: v.price,
-        stock: v.stock,
-        weight:v.weight,
-        // For now, include all product media for each variant
-        // TODO: Implement variant-specific media in the future
-        media: product.media.map((m) => ({
-          url: m.url,
-          is_primary: m.is_primary,
-          sort_order: m.sort_order,
-        })),
-        inventory: variantInventoryMap[v.sku] || [],
-      })),
+      variants: product.variants.map((v) => {
+        // Get variant-specific media
+        const variantSpecificMedia = variantMediaMap[v.id];
+
+        // If variant has its own media, use it; otherwise use product-level media (primary first)
+        let mediaToDisplay = variantSpecificMedia;
+        if (!mediaToDisplay || mediaToDisplay.length === 0) {
+          // Use product-level media (primary first, then first available)
+          const primaryMedia = productLevelMedia.find((m) => m.is_primary);
+          mediaToDisplay = primaryMedia
+            ? [primaryMedia]
+            : productLevelMedia.length > 0
+            ? [productLevelMedia[0]]
+            : [];
+        }
+
+        return {
+          id: v.id,
+          sku: v.sku,
+          variant_name: v.variant_name,
+          price: v.price,
+          stock: v.stock,
+          // Display variant-specific media if available, otherwise product-level media
+          media: mediaToDisplay.map((m) => ({
+            url: m.url,
+            is_primary: m.is_primary,
+            sort_order: m.sort_order,
+          })),
+          inventory: variantInventoryMap[v.sku] || [],
+        };
+      }),
       inventories: variantInventoryMap, // toàn bộ inventory map
       brand: product.brand
         ? { id: product.brand.id, name: product.brand.name }
@@ -544,18 +594,41 @@ export class ProductService {
         name: pc.category.name,
       })),
 
-      pricing_rules: product.pricing_rules.map((pr) => ({
-        id: pr.id,
-        type: pr.type,
-        min_quantity: pr.min_quantity,
-        price: pr.price,
-        cycle: pr.cycle,
-        starts_at: pr.starts_at,
-        ends_at: pr.ends_at,
-        name: pr.name,
-        status: pr.status,
-        variant_sku: pr.variant ? pr.variant.sku : null,
-      })),
+      pricing_rules: product.pricing_rules.map((pr) => {
+        const sold = ruleOrderMap[pr.id] || 0;
+
+        // Maintain backward friendly logic for rule availability
+        let remaining_quantity = Infinity;
+        if (pr.limit_quantity != null) {
+          remaining_quantity = Math.max(pr.limit_quantity - sold, 0);
+        }
+
+        return {
+          id: pr.id,
+          type: pr.type,
+          min_quantity: pr.min_quantity,
+          price: pr.price,
+          cycle: pr.cycle,
+          starts_at: pr.starts_at,
+          ends_at: pr.ends_at,
+          name: pr.name,
+          status: pr.status,
+          variant_sku: pr.variant ? pr.variant.sku : null,
+
+          schedule: pr.schedule
+            ? {
+                starts_at: pr.schedule.starts_at,
+                ends_at: pr.schedule.ends_at,
+              }
+            : null,
+
+          sold,
+          remaining_quantity:
+            remaining_quantity === Infinity ? null : remaining_quantity,
+          is_available: remaining_quantity > 0,
+        };
+      }),
+
       store: product.store
         ? {
             id: product.store.id,
@@ -762,6 +835,18 @@ export class ProductService {
       }));
     });
 
+    // Separate product-level media from variant-specific media
+    const productLevelMedia = product.media.filter((m) => !m.variant_id);
+    const variantMediaMap: Record<number, any[]> = {};
+    product.media.forEach((m) => {
+      if (m.variant_id) {
+        if (!variantMediaMap[m.variant_id]) {
+          variantMediaMap[m.variant_id] = [];
+        }
+        variantMediaMap[m.variant_id].push(m);
+      }
+    });
+
     // Map to consistent DTO format (same as findBySlug)
     const response: ProductResponseDto = {
       id: product.id,
@@ -773,24 +858,27 @@ export class ProductService {
       base_price: product.base_price,
       avg_rating: product.avg_rating,
       review_count: product.review_count,
-      media: product.media.map((m) => ({
+      media: productLevelMedia.map((m) => ({
         url: m.url,
       })),
-      variants: product.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        variant_name: v.variant_name,
-        price: v.price,
-        stock: v.stock,
-        weight: v.weight,
-        // Include all product media for each variant (consistent with findBySlug)
-        media: product.media.map((m) => ({
-          url: m.url,
-          is_primary: m.is_primary,
-          sort_order: m.sort_order,
-        })),
-        inventory: variantInventoryMap[v.sku] || [],
-      })),
+      variants: product.variants.map((v) => {
+        // Get variant-specific media, fallback to product-level media if none exist
+        const variantSpecificMedia = variantMediaMap[v.id] || productLevelMedia;
+        return {
+          id: v.id,
+          sku: v.sku,
+          variant_name: v.variant_name,
+          price: v.price,
+          stock: v.stock,
+          // Display variant-specific media if available, otherwise product-level media
+          media: variantSpecificMedia.map((m) => ({
+            url: m.url,
+            is_primary: m.is_primary,
+            sort_order: m.sort_order,
+          })),
+          inventory: variantInventoryMap[v.sku] || [],
+        };
+      }),
       inventories: variantInventoryMap,
       brand: product.brand
         ? { id: product.brand.id, name: product.brand.name }

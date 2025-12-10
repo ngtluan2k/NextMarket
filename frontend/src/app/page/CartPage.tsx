@@ -25,7 +25,7 @@ import {
   Empty,
 } from 'antd';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeftOutlined,
   TeamOutlined,
@@ -236,6 +236,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
   // ===== GroupNotification (thu gọn/mở rộng + search/filter + grid/list) =====
   const filteredGroups = useMemo(() => {
     let list = [...activeGroups];
+    list = list.filter((g) => g.status !== 'cancelled');
     if (groupFilter === 'host') list = list.filter((g) => g.is_host);
     if (groupFilter === 'expiring') list = list.filter((g) => !!g.expires_at);
     if (groupQuery.trim()) {
@@ -257,8 +258,9 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
         </div>
       );
     }
+    const activeGroupsCount = activeGroups.filter((g) => g.status !== 'cancelled').length;
 
-    if (activeGroups.length === 0) return null;
+    if (activeGroupsCount === 0) return null;
 
     return (
       <div className="mb-6">
@@ -269,7 +271,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
             <div className="flex items-center gap-2">
               <TeamOutlined className="text-blue-500" />
               <span>
-                Bạn đang tham gia <b>{activeGroups.length}</b> đơn hàng nhóm
+                Bạn đang tham gia <b>{activeGroupsCount}</b> đơn hàng nhóm
               </span>
             </div>
           }
@@ -281,7 +283,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                   <div className="flex items-center gap-2">
                     <span>Chi tiết các nhóm</span>
                     <Tag color="blue" style={{ marginLeft: 8 }}>
-                      {activeGroups.length} nhóm
+                      {activeGroupsCount} nhóm
                     </Tag>
                   </div>
                 }
@@ -303,7 +305,7 @@ const CartPage: React.FC<CartProps> = ({ showMessage }) => {
                   />
                   <Select
                     value={groupFilter}
-                    onChange={(v) => setGroupFilter(v)}
+                    onChange={(v: any) => setGroupFilter(v)}
                     options={[
                       { value: 'all', label: 'Tất cả' },
                       { value: 'host', label: 'Tôi là chủ nhóm' },

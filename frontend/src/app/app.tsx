@@ -45,6 +45,7 @@ import OtpVerifyPage from './page/OtpVerify';
 import { MySubscriptionsPage } from './page/account/MySubscriptionPage';
 import StoreOwnerVoucherManager from '../app/components/seller/StoreOwnerVoucherManager';
 import AffiliateRulesManager from './page/affiliate/admin/AffiliateRulesManager';
+import AdminAffiliateTreeView from './page/affiliate/admin/AdminAffiliateTreeView';
 import OrderDetailPage from './page/account/OrderDetailPage';
 import GroupOrders from './components/group_orders/GroupOrders';
 import GroupOrderDetail from './components/group_orders/components/GroupOrderDetail';
@@ -60,14 +61,9 @@ import AdminCampaignStoreProductsWrapper from './components/admin/AdminCampaignS
 import PublicCampaignPageWrapper from './components/PublicCampaignPageWrapper';
 import CampaignAdPopup from './components/CampaignAdPopup';
 import AffiliateTransaction from './page/affiliate/user/dashboard/tab/affiliateTransaction';
-import AffiliateVariantTest from './components/debug/AffiliateVariantTest';
-import { AuthConsumerChat } from './components/AuthConsumerChat';
-import AffiliateRulesDebug from './components/debug/AffiliateRulesDebug';
-import CommissionTreeDebug from './components/debug/CommissionTreeDebug';
-import CommissionDatabaseDebug from './components/debug/CommissionDatabaseDebug';
-import LoginPerformanceDebug from './components/debug/LoginPerformanceDebug';
 import UserAffiliateTree from './page/affiliate/user/dashboard/tab/UserAffiliateTree';
 import NotFoundPage from './components/NotFoundPage';
+import { AuthConsumerChat } from './components/AuthConsumerChat';
 
 interface CartProps {
   showMessage: (type: 'success' | 'error' | 'warning', content: string) => void;
@@ -132,6 +128,10 @@ const App: React.FC = () => {
             <Route
               path="/admin/affiliate-rules"
               element={<AffiliateRulesManager />}
+            />
+            <Route
+              path="/admin/affiliate-tree"
+              element={<AdminAffiliateTreeView />}
             />
             <Route path="/admin/stores/:id" element={<StoreManagerDetail />} />
 
@@ -231,28 +231,6 @@ const App: React.FC = () => {
               element={<GroupOrderDetail />}
             />
             <Route path="/group/:uuid" element={<GroupJoin />} />
-
-            {/* Debug Routes */}
-            <Route
-              path="/debug/affiliate-variant"
-              element={<AffiliateVariantTest />}
-            />
-            <Route
-              path="/debug/affiliate-rules"
-              element={<AffiliateRulesDebug />}
-            />
-            <Route
-              path="/debug/commission-tree"
-              element={<CommissionTreeDebug />}
-            />
-            <Route
-              path="/debug/commission-database"
-              element={<CommissionDatabaseDebug />}
-            />
-            <Route
-              path="/debug/login-performance"
-              element={<LoginPerformanceDebug />}
-            />
           </Routes>
           <AuthConsumerChat />
           <CampaignAdPopup />

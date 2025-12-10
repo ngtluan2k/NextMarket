@@ -38,9 +38,9 @@ export class Conversation {
   @OneToMany(() => Message, (message) => message.conversation)
   messages!: Message[];
 
-  @CreateDateColumn({ type: 'datetime' })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at?: Date;
 
-  @UpdateDateColumn({ type: 'datetime' })
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at?: Date;
 }

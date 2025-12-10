@@ -22,6 +22,17 @@ export interface UserProfile {
   };
 }
 
+export interface ApiUserResponse {
+  user_id: number;
+  username: string;
+  email: string;
+  full_name: string | null;
+  is_affiliate: boolean | null;
+  roles: string[];
+  permissions: string[];
+  profile: UserProfile; // cái bạn đã có
+}
+
 export interface UserProfileResponse {
   status: number;
   message: string;
@@ -35,37 +46,26 @@ const API_BASE = import.meta.env.VITE_BE_BASE_URL;
  * @param userId - User ID
  * @returns Promise<UserProfile>
  */
-export async function getUserProfile(userId: number): Promise<UserProfile> {
+export async function getUserProfile(userId: number): Promise<ApiUserResponse> {
   const token = localStorage.getItem('token');
+  if (!token) throw new Error('No authentication token found');
 
-  if (!token) {
-    throw new Error('No authentication token found');
-  }
+  const response = await fetch(`${API_BASE}/users/${userId}/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-  try {
-    const response = await fetch(`${API_BASE}/users/${userId}/profile`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+  const result: { status: number; message?: string; data: ApiUserResponse } =
+    await response.json();
 
-    const result: UserProfileResponse = await response.json();
+  if (result.status !== 200)
+    throw new Error(result.message || 'Failed to fetch user profile');
 
-    if (result.status !== 200) {
-      throw new Error(result.message || 'Failed to fetch user profile');
-    }
-
-    return result.data;
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    throw error;
-  }
+  return result.data; // đây chính là ApiUserResponse
 }
 
 /**

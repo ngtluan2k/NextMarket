@@ -13,7 +13,7 @@ import { GroupOrderItem } from '../group_orders_items/group_orders_item.entity';
 import { UserAddress } from '../user_address/user_address.entity';
 import { Order } from '../orders/order.entity';
 
-export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered' | 'paid';
+export type GroupOrderMemberStatus = 'joined' | 'left' | 'ordered' | 'paid'|'refunded';
 
 @Entity('group_order_members')
 export class GroupOrderMember {
@@ -32,7 +32,7 @@ export class GroupOrderMember {
 
   @Column({
     type: 'enum',
-    enum: ['joined', 'left', 'ordered', 'paid'],
+    enum: ['joined', 'left', 'ordered', 'paid','refunded'],
     default: 'joined',
   })
   status!: GroupOrderMemberStatus;
@@ -50,6 +50,18 @@ export class GroupOrderMember {
   @JoinColumn({ name: 'address_id' })
   address_id?: UserAddress;
 
+  // Affiliate tracking fields for group buying
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  referrer_affiliate_code?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  referrer_affiliate_user_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  referrer_affiliate_program_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  referrer_affiliate_link_id?: number;
   @Column({ type: 'boolean', default: false })
   has_paid!: boolean;
 

@@ -13,7 +13,7 @@ import {
 } from '../../../../service/groupOrderItems.service';
 import AddressModal from '../../../page/AddressModal';
 import { UserAddress } from '../../../types/user';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
@@ -179,6 +179,22 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
 
         onClose();
 
+        // Map groupItems to include image field for OrderSuccess display
+        const itemsWithImages = groupItems.map((item: any) => {
+          const image =
+            item.product?.media?.find((m: any) => m.is_primary)?.url ||
+            item.product?.media?.[0]?.url ||
+            undefined;
+          return {
+            id: item.id,
+            name: item.product?.name || 'Unknown Product',
+            image: image,
+            quantity: item.quantity,
+            price: item.price,
+            oldPrice: item.product?.base_price,
+          };
+        });
+
         navigate('/order-success', {
           state: {
             status: 'success',
@@ -187,7 +203,7 @@ export const GroupOrderCheckout: React.FC<GroupOrderCheckout> = ({
             paymentMethodLabel:
               paymentMethods.find((pm) => pm.uuid === selectedPaymentMethod)
                 ?.name || 'Unknown',
-            items: groupItems,
+            items: itemsWithImages,
             isGroupOrder: true,
             groupId: groupId,
             discountPercent: discountPercent,

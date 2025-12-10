@@ -4,6 +4,7 @@ import {
   getUserProfile,
   getCurrentUserId,
   UserProfile,
+  ApiUserResponse,
 } from '../../../service/user-profile.service';
 import { BE_BASE_URL } from '../../api/api';
 
@@ -53,6 +54,20 @@ export default function AccountProfileForm({
   );
   const [uploading, setUploading] = useState(false);
 
+  const normalizeGender = (
+  value?: string | null
+): 'male' | 'female' | 'other' | undefined => {
+  if (!value) return undefined;
+
+  const g = value.trim().toLowerCase();
+
+  if (['male', 'm', 'nam', '1'].includes(g)) return 'male';
+  if (['female', 'f', 'nu', 'nữ', '2', '0'].includes(g)) return 'female';
+
+  return 'other';
+};
+
+
   useEffect(() => {
     fetch('https://restcountries.com/v3.1/all?fields=name,cca2')
       .then((res) => res.json())
@@ -73,41 +88,29 @@ export default function AccountProfileForm({
   }, []);
 
   // Helper function to convert API response to form values
-  const convertApiToFormValues = (profile: UserProfile): ProfileFormValues => {
-    let dobParts: {
-      day?: number | undefined;
-      month?: number | undefined;
-      year?: number | undefined;
-    } = {
-      day: undefined,
-      month: undefined,
-      year: undefined,
-    };
+  const convertApiToFormValues = (data: ApiUserResponse): ProfileFormValues => {
+    const profile = data.profile; // đúng nhất
 
-    if (profile.dob) {
+    let dobParts: {
+      day?: number;
+      month?: number;
+      year?: number;
+    } = {};
+
+    if (profile?.dob) {
       const date = new Date(profile.dob);
       if (!isNaN(date.getTime())) {
         dobParts = {
           day: date.getDate(),
-          month: date.getMonth() + 1, // JavaScript months are 0-indexed
+          month: date.getMonth() + 1,
           year: date.getFullYear(),
         };
       }
     }
-    const normalizeGender = (
-      g?: string | null
-    ): 'male' | 'female' | 'other' | undefined => {
-      if (!g) return undefined;
-      const raw = String(g).trim().toLowerCase();
-      if (['male', 'm', 'nam', '1'].includes(raw)) return 'male';
-      if (['female', 'f', 'nu', 'nữ', '2', '0'].includes(raw)) return 'female';
-      if (raw.length > 0) return 'other';
-      return undefined;
-    };
 
     return {
       fullName: profile.full_name || '',
-      nickname: profile.user?.username || '',
+      nickname: data.username || '',
       dob: dobParts,
       gender: normalizeGender(profile.gender),
       country: profile.country || '',
@@ -195,8 +198,10 @@ export default function AccountProfileForm({
 
       try {
         const profile = await getUserProfile(userId);
+        console.log('Fetched profile from API:', profile);
         const formValues = convertApiToFormValues(profile);
         setVal(formValues);
+        console.log('Loaded profile values:', formValues);
       } catch (err) {
         console.error('Error loading profile:', err);
         setError(

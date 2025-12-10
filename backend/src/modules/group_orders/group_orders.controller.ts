@@ -28,14 +28,17 @@ export class GroupOrdersController {
     return this.service.createGroupOrder(dto);
   }
 
-  @Get(':id') //xem thông tin group.
-  getById(@Param('id', ParseIntPipe) id: number) {
-    return this.service.getGroupOrderById(id);
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  getById(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    const userId = req.user.userId;
+    return this.service.getGroupOrderById(id, userId);
   }
+
 
   @Post(':id/join') //tham gia group.
   join(@Param('id', ParseIntPipe) id: number, @Body() dto: JoinGroupOrderDto) {
-    return this.service.joinGroupOrder(dto.userId, id, dto.joinCode);
+    return this.service.joinGroupOrder(dto.userId, id, dto.joinCode, dto.affiliateCode);
   }
 
   @Get('code/:code')
@@ -45,7 +48,7 @@ export class GroupOrdersController {
 
   @Post('join-code/:code')
   joinByCode(@Param('code') code: string, @Body() dto: JoinGroupOrderDto) {
-    return this.service.joinGroupOrderByJoinCode(code, dto.userId);
+    return this.service.joinGroupOrderByJoinCode(code, dto.userId, dto.affiliateCode);
   }
 
   @Get(':id/orders') //lấy danh sách order của group.
@@ -55,7 +58,7 @@ export class GroupOrdersController {
 
   @Post('join/:uuid') // link join group
   joinByUuid(@Param('uuid') uuid: string, @Body() dto: JoinGroupOrderDto) {
-    return this.service.joinGroupOrderByUuid(dto.userId, uuid);
+    return this.service.joinGroupOrderByUuid(dto.userId, uuid, dto.affiliateCode);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -167,7 +170,7 @@ export class GroupOrdersController {
   @Post(':id/checkout-my-items')
   async checkoutMyItems(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { paymentMethodUuid: string; addressId?: number ; voucherCode?: string;},
+    @Body() body: { paymentMethodUuid: string; addressId?: number; voucherCode?: string; },
     @Req() req: any
   ) {
     const userId = req.user.userId;
@@ -176,7 +179,7 @@ export class GroupOrdersController {
       userId,
       body.paymentMethodUuid,
       body.addressId,
-       body.voucherCode
+      body.voucherCode
     );
   }
   @UseGuards(JwtAuthGuard)

@@ -24,7 +24,6 @@ export class AuthService {
   ) {}
 
   async googleLogin(profile: any) {
-    // 🔍 Tìm user theo email + load relations
     let user = await this.userRepository.findOne({
       where: { email: profile.email },
       relations: [
@@ -37,18 +36,17 @@ export class AuthService {
     });
 
     if (!user) {
-      // ❌ Nếu chưa có thì tạo mới
       user = this.userRepository.create({
         email: profile.email,
-        password: Math.random().toString(36).slice(-8), // random password
+        password: Math.random().toString(36).slice(-8),
         profile: {
           full_name: `${profile.firstName ?? ''} ${profile.lastName ?? ''}`,
+          avatar_url: profile.picture, // nếu Google có ảnh
         } as UserProfile,
       });
 
       await this.userRepository.save(user);
 
-      // ⚡ Gán role mặc định "user"
       const defaultRole = await this.roleRepository.findOne({
         where: { name: 'User' },
         relations: ['rolePermissions', 'rolePermissions.permission'],
@@ -60,9 +58,9 @@ export class AuthService {
           role: defaultRole,
           assigned_at: new Date(),
         });
+
         await this.userRoleRepository.save(userRole);
 
-        // Refresh lại user với role
         user = await this.userRepository.findOne({
           where: { id: user.id },
           relations: [
@@ -76,20 +74,15 @@ export class AuthService {
       }
     }
 
-    if (!user) {
-      throw new BadRequestException('Không tạo được user Google');
-    }
+    if (!user) throw new BadRequestException('Không tạo được user Google');
 
-    // ✅ Lấy roles
     const roles = user.roles?.map((ur) => ur.role.name) || ['User'];
 
-    // ✅ Lấy permissions qua bảng rolePermissions
     const permissions =
       user.roles?.flatMap((ur) =>
         ur.role.rolePermissions?.map((rp) => rp.permission.code)
       ) || [];
 
-    // JWT payload
     const payload = {
       sub: user.id,
       email: user.email,
@@ -104,9 +97,18 @@ export class AuthService {
       user: {
         user_id: user.id,
         email: user.email,
-        full_name: user.profile?.full_name || '',
+        full_name: user.profile?.full_name,
         roles,
         permissions,
+        profile: user.profile
+          ? {
+              id: user.profile.id,
+              full_name: user.profile.full_name,
+              phone: user.profile.phone,
+              gender: user.profile.gender,
+              avatar_url: user.profile.avatar_url,
+            }
+          : null,
       },
     };
   }

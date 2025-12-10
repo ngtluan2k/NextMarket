@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
-import { message, notification } from 'antd';
+import { message } from 'antd';
 
-const SOCKET_URL = 'http://localhost:3000/notifications';
+// 🎯 NEW: Use environment variable for socket URL
+const SOCKET_URL = `${import.meta.env.VITE_BE_BASE_URL || 'http://localhost:3000'}/notifications`;
 
 /**
  * Generic Notification System - Frontend Service
@@ -181,18 +182,9 @@ class NotificationSocketService {
     });
 
     // ========================================
-    // GENERIC NOTIFICATION LISTENER
+    // GENERIC NOTIFICATION LISTENER (Removed - using specific type listeners instead)
     // ========================================
-    this.socket.on('notification', (data: NotificationData) => {
-      console.log('[NotificationSocket] Received notification:', data.type, data);
-      
-      // Show notification popup based on priority
-      this.showNotificationPopup(data);
-      
-      // Dispatch custom event for components to listen
-      window.dispatchEvent(new CustomEvent('notification', { detail: data }));
-      window.dispatchEvent(new CustomEvent(data.type, { detail: data.data }));
-    });
+    // Removed to prevent duplicate notifications
 
     // ========================================
     // AFFILIATE NOTIFICATIONS (✅ Implemented)
@@ -259,52 +251,15 @@ class NotificationSocketService {
   }
 
   /**
-   * Show notification popup based on priority and type
+   * 🔧 REMOVED: showNotificationPopup and getNotificationDuration
+   * 
+   * These methods were showing notifications globally on any page.
+   * Now components handle their own notification display based on context.
+   * This ensures notifications only appear where they're relevant:
+   * - Commission notifications only in affiliate dashboard
+   * - Order notifications only in order pages
+   * - etc.
    */
-  private showNotificationPopup(data: NotificationData) {
-    const config = {
-      message: data.title,
-      description: data.message,
-      placement: 'topRight' as const,
-      duration: this.getNotificationDuration(data.priority),
-      onClick: data.actionUrl ? () => {
-        window.location.href = data.actionUrl!;
-      } : undefined,
-    };
-
-    switch (data.priority) {
-      case NotificationPriority.URGENT:
-        notification.error(config);
-        break;
-      case NotificationPriority.HIGH:
-        notification.warning(config);
-        break;
-      case NotificationPriority.MEDIUM:
-        notification.info(config);
-        break;
-      case NotificationPriority.LOW:
-      default:
-        notification.success(config);
-        break;
-    }
-  }
-
-  /**
-   * Get notification duration based on priority
-   */
-  private getNotificationDuration(priority: NotificationPriority): number {
-    switch (priority) {
-      case NotificationPriority.URGENT:
-        return 0; // Don't auto-close
-      case NotificationPriority.HIGH:
-        return 10;
-      case NotificationPriority.MEDIUM:
-        return 5;
-      case NotificationPriority.LOW:
-      default:
-        return 3;
-    }
-  }
 
   /**
    * Disconnect from socket

@@ -117,8 +117,8 @@ export default function AccountSecurityPanel({
       setError(null);
       try {
         const profile = await getUserProfile(userId);
-        if (phone == null) setLocalPhone(profile.phone ?? null);
-        if (email == null) setLocalEmail(profile.user?.email ?? null);
+        if (phone == null) setLocalPhone(profile.profile.phone ?? null);
+        if (email == null) setLocalEmail(profile.email ?? null);
       } catch (e) {
         setError(
           e instanceof Error ? e.message : 'Không thể tải thông tin bảo mật'

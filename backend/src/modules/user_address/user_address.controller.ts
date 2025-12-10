@@ -8,12 +8,17 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  ForbiddenException,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UserAddressService } from './user_address.service';
 import { CreateUserAddressDto } from './dto/create-user_address.dto';
 import { UpdateUserAddressDto } from './dto/update-user_address.dto';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 
 @Controller('users/:userId/addresses')
+@UseGuards(JwtAuthGuard)
 export class UserAddressController {
   constructor(private readonly userAddressService: UserAddressService) { }
 

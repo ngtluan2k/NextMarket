@@ -150,7 +150,7 @@ export class GroupOrderItemsService {
 				.createQueryBuilder('rule')
 				.where('rule.product_id = :productId', { productId })
 				.andWhere('(rule.variant_id IS NULL OR rule.variant_id = :variantId)', { variantId: variantId ?? null })
-				.andWhere('rule.type = :type', { type })
+				.andWhere('rule.type IN (:...types)', { types:['group', 'bulk'] })
 				.andWhere('rule.starts_at <= :now AND rule.ends_at >= :now', { now })
 				.andWhere('rule.min_quantity <= :quantity', { quantity })
 				.orderBy('rule.min_quantity', 'DESC')
@@ -183,14 +183,60 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 	// Thêm sản phẩm vào group
 	async addItem(
 		groupId: number,
-		dto: CreateGroupOrderItemDto & { userId: number , pricingRuleId?: number}
+		dto: CreateGroupOrderItemDto & { userId: number; pricingRuleId?: number }
 	) {
 		const group = await this.ensureGroupOpen(groupId);
 		const member = await this.ensureMember(groupId, dto.userId);
 
+		// Tìm item đã có 
+		const existing = await this.itemRepo.findOne({
+			where: {
+				group_order: { id: groupId },
+				member: { id: member.id },
+				product: { id: dto.productId },
+				variant: dto.variantId ? { id: dto.variantId } : IsNull(),
+			},
+			relations: ['member', 'member.user', 'product', 'variant', 'pricing_rule'],
+		});
 
-		//  Tính đơn giá theo logic order
-		const { basePrice, finalPrice, discountPercent ,appliedRule} = await this.calculateItemPrice(
+		// ============= ITEM ĐÃ TỒN TẠI =============
+
+		if (existing) {
+			const newQty = existing.quantity + dto.quantity;
+
+			// Tính giá lại theo newQty
+			const { finalPrice, appliedRule } = await this.calculateItemPrice(
+				dto.productId,
+				dto.variantId,
+				newQty,
+				groupId,
+				'group',
+				undefined
+			);
+
+			existing.quantity = newQty;
+			existing.price = finalPrice * newQty;
+			existing.pricing_rule = appliedRule ? ({ id: appliedRule.id } as any) : null;
+
+
+			// Note: chỉ cập nhật nếu người dùng gửi note mới
+			if (dto.note !== undefined) {
+				existing.note = dto.note;
+			}
+
+			const updated = await this.itemRepo.save(existing);
+
+			await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {
+				item: updated,
+			});
+
+			return updated;
+		}
+
+
+		// ============= TẠO ITEM MỚI =================
+
+		const { finalPrice, appliedRule } = await this.calculateItemPrice(
 			dto.productId,
 			dto.variantId,
 			dto.quantity,
@@ -205,99 +251,24 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 			product: { id: dto.productId } as Product,
 			variant: dto.variantId ? ({ id: dto.variantId } as Variant) : null,
 			quantity: dto.quantity,
-			price: finalPrice * dto.quantity, //  finalPrice là number
+			price: finalPrice * dto.quantity,
 			note: dto.note ?? null,
-			 pricing_rule: appliedRule ? ({ id: appliedRule.id } as PricingRules) : null,
+			pricing_rule: appliedRule ? ({ id: appliedRule.id } as PricingRules) : null,
 		});
-
 
 		const saved = await this.itemRepo.save(item);
+
 		const full = await this.itemRepo.findOne({
 			where: { id: saved.id },
-			relations: ['member', 'member.user', 'product', 'variant','pricing_rule'],
+			relations: ['member', 'member.user', 'product', 'variant', 'pricing_rule'],
 		});
+
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-added', {
 			item: full,
 		});
+
 		return full;
 	}
-	// Cập nhật discount của group dựa trên số thành viên
-	async updateGroupDiscount(groupId: number) {
-		const group = await this.groupOrderRepo.findOne({
-			where: { id: groupId },
-			relations: ['members'],
-		});
-
-		if (!group) return;
-
-		const memberCount = group.members?.length || 0;
-		const oldDiscountPercent = Number(group.discount_percent || 0);
-		const newDiscountPercent = this.calculateDiscountPercent(memberCount);
-
-		// Nếu discount không đổi, không cần làm gì
-		if (oldDiscountPercent === newDiscountPercent) {
-			return newDiscountPercent;
-		}
-
-		// Cập nhật discount của group
-		await this.groupOrderRepo.update(groupId, {
-			discount_percent: newDiscountPercent,
-		});
-
-		//  TÍNH LẠI GIÁ CHO TẤT CẢ ITEMS CŨ
-		if (newDiscountPercent !== oldDiscountPercent) {
-			// Lấy tất cả items hiện tại
-			const allItems = await this.itemRepo.find({
-				where: { group_order: { id: groupId } },
-				relations: ['product', 'variant'],
-			});
-
-			for (const item of allItems) {
-				// Tính basePrice (giá gốc trước discount) từ price hiện tại
-				let basePricePerUnit: number;
-
-				if (oldDiscountPercent === 0) {
-					// Item được tạo khi chưa có discount → price hiện tại = basePrice
-					basePricePerUnit = Number(item.price) / item.quantity;
-				} else {
-					// Item được tạo khi đã có discount → tính ngược lại basePrice
-					const factor = 1 - oldDiscountPercent / 100;
-					basePricePerUnit = (Number(item.price) / item.quantity) / factor;
-				}
-
-				// Áp dụng discount mới
-				const newFinalPricePerUnit = basePricePerUnit * (1 - newDiscountPercent / 100);
-				const newTotalPrice = newFinalPricePerUnit * item.quantity;
-
-				// Cập nhật giá trong DB
-				await this.itemRepo.update(
-					{ id: item.id },
-					{ price: newTotalPrice }
-				);
-
-				// Broadcast cập nhật từng item để frontend cập nhật realtime
-				const updatedItem = await this.itemRepo.findOne({
-					where: { id: item.id },
-					relations: ['member', 'member.user', 'product', 'variant', 'member.user.profile', 'member.address_id'],
-				});
-
-				if (updatedItem) {
-					await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {
-						item: updatedItem,
-					});
-				}
-			}
-		}
-
-		// Broadcast cập nhật discount
-		await this.gateway.broadcastGroupUpdate(groupId, 'discount-updated', {
-			discountPercent: newDiscountPercent,
-			memberCount,
-		});
-
-		return newDiscountPercent;
-	}
-
 	// Danh sách tất cả item trong group
 	async listGroupItems(groupId: number) {
 		return this.itemRepo.find({
@@ -306,6 +277,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 				'member',
 				'member.user',
 				'product',
+				'product.media',
 				'variant',
 				'member.user.profile',
 				'member.address_id',
@@ -319,7 +291,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 	async listMemberItems(groupId: number, memberId: number) {
 		return this.itemRepo.find({
 			where: { group_order: { id: groupId }, member: { id: memberId } },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 			order: { id: 'DESC' },
 		});
 	}
@@ -364,7 +336,7 @@ console.log('Calculated prices:', { basePrice, finalPrice, discountPercent, appl
 		const updated = await this.itemRepo.save(item);
 		const full = await this.itemRepo.findOne({
 			where: { id: updated.id },
-			relations: ['member', 'member.user', 'product', 'variant'],
+			relations: ['member', 'member.user', 'product', 'product.media', 'variant'],
 		});
 		console.log('[WS] item-added emit', { groupId, id: full?.id });
 		await this.gateway.broadcastGroupUpdate(groupId, 'item-updated', {

@@ -50,7 +50,7 @@ export class UserService {
     private readonly otpService: OtpService,
     private readonly mailService: MailService,
     private readonly bcryptPerformanceService: BcryptPerformanceService
-  ) { }
+  ) {}
 
   // In-memory OTP store
   private otpStore = new Map<
@@ -91,7 +91,10 @@ export class UserService {
         throw new BadRequestException('Tên đăng nhập đã tồn tại');
     }
 
-    const hashed = await this.bcryptPerformanceService.hashPassword(dto.password, 10);
+    const hashed = await this.bcryptPerformanceService.hashPassword(
+      dto.password,
+      10
+    );
 
     const user = this.userRepository.create({
       uuid: uuidv4(),
@@ -151,7 +154,6 @@ export class UserService {
   async login(dto: LoginDto) {
     // console.time(' [Login] Total Time');
 
-
     const user = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.roles', 'userRole')
@@ -180,27 +182,36 @@ export class UserService {
 
     if (!user) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
-
-    const isMatch = await this.bcryptPerformanceService.comparePassword(dto.password, user.password);
+    const isMatch = await this.bcryptPerformanceService.comparePassword(
+      dto.password,
+      user.password
+    );
 
     if (!isMatch) throw new UnauthorizedException('Sai email hoặc mật khẩu');
 
-    const saltInfo = this.bcryptPerformanceService.detectHighSaltRounds(user.password);
+    const saltInfo = this.bcryptPerformanceService.detectHighSaltRounds(
+      user.password
+    );
     if (saltInfo.isHighSalt) {
-      console.log(` Rehashing legacy password for user ${user.id} (current salt: ${saltInfo.estimatedRounds})`);
-      const newHash = await this.bcryptPerformanceService.hashPassword(dto.password, 10);
+      console.log(
+        ` Rehashing legacy password for user ${user.id} (current salt: ${saltInfo.estimatedRounds})`
+      );
+      const newHash = await this.bcryptPerformanceService.hashPassword(
+        dto.password,
+        10
+      );
       await this.userRepository.update(user.id, {
         password: newHash,
-        updated_at: new Date()
+        updated_at: new Date(),
       });
       console.log(` Password rehashed successfully for user ${user.id}`);
     }
 
-
-    const roles = user.roles?.map(ur => ur.role.name) || ['User'];
-    const permissions = user.roles?.flatMap(ur =>
-      ur.role.rolePermissions?.map(rp => rp.permission.code) || []
-    ) || [];
+    const roles = user.roles?.map((ur) => ur.role.name) || ['User'];
+    const permissions =
+      user.roles?.flatMap(
+        (ur) => ur.role.rolePermissions?.map((rp) => rp.permission.code) || []
+      ) || [];
 
     const payload = {
       sub: user.id,
@@ -223,21 +234,34 @@ export class UserService {
       permissions,
       access_token: token,
       profile,
-
     };
   }
-
   async getProfile(userId: number) {
-    const profile = await this.userProfileRepository.findOne({
-      where: { user: { id: userId } },
-      relations: ['user'],
-    });
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'userRole')
+      .leftJoinAndSelect('userRole.role', 'role')
+      .leftJoinAndSelect('role.rolePermissions', 'rolePermission')
+      .leftJoinAndSelect('rolePermission.permission', 'permission')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .where('user.id = :id', { id: userId })
+      .getOne(); // 🚀 Không có select → lấy full tất cả column
 
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
+    if (!user) throw new NotFoundException('User not found');
 
-    return profile;
+    return {
+      user_id: user.id,
+      username: user.username,
+      email: user.email,
+      full_name: user.profile?.full_name,
+      is_affiliate: user.is_affiliate,
+      roles: user.roles?.map((r) => r.role.name) ?? [],
+      permissions:
+        user.roles?.flatMap((r) =>
+          r.role.rolePermissions?.map((rp) => rp.permission.code)
+        ) ?? [],
+      profile: user.profile, // full tất cả column luôn
+    };
   }
 
   async updateProfile(
@@ -509,7 +533,10 @@ export class UserService {
       throw new BadRequestException('Không tìm thấy người dùng tương ứng.');
     }
 
-    const hashed = await this.bcryptPerformanceService.hashPassword(newPassword, 10);
+    const hashed = await this.bcryptPerformanceService.hashPassword(
+      newPassword,
+      10
+    );
     user.password = hashed;
     user.updated_at = new Date();
     await this.userRepository.save(user);

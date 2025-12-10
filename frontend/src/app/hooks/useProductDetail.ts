@@ -43,5 +43,7 @@ export function useProductDetail(slug: string) {
       .finally(() => setLoading(false));
   }, [slug]);
 
+console.log('Product detail hook:', { loading, product, combos });
+
   return { loading, product, combos };
 }

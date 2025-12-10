@@ -76,6 +76,7 @@ export interface Product {
     barcode: string;
     created_at: string;
     updated_at: string;
+    weight?: number;
     inventories?: Array<{
       id: number;
       uuid: string;

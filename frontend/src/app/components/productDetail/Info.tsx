@@ -31,6 +31,9 @@ export type PricingRule = {
   name: string;
   status?: string;
   variant_sku?: string | null;
+  sold?: number;
+  remaining_quantity?: number;
+  is_available: false | true;
   schedule?: {
     id: number;
     name: string;
@@ -71,6 +74,7 @@ export default function Info({
   product,
   selectedVariantId,
   setSelectedVariantId,
+  onVariantNameClick,
   quantity,
   setQuantity,
   calculatedPrice,
@@ -84,6 +88,7 @@ export default function Info({
   product?: Product;
   selectedVariantId: number | null;
   setSelectedVariantId: (id: number) => void;
+  onVariantNameClick?: (variantId: number) => void;
   quantity: number;
   setQuantity: (qty: number) => void;
   calculatedPrice: number;
@@ -126,8 +131,8 @@ export default function Info({
   ]);
 
   useEffect(() => {
-  console.log('🧩 [Info] selectedRuleId (prop):', selectedRuleId);
-}, [selectedRuleId]);
+    // console.log('🧩 [Info] selectedRuleId (prop):', selectedRuleId);
+  }, [selectedRuleId]);
 
   /** --------------------- Stock & Max Quantity --------------------- */
   const stock = selectedVariant?.stock ?? 0;
@@ -187,9 +192,11 @@ export default function Info({
     const flashSale = product?.pricing_rules?.find(
       (r) =>
         r.type === 'flash_sale' &&
+        r.status === 'active' && // 👈 thêm
+        r.is_available === true &&
         (!r.variant_sku || r.variant_sku === selectedVariant?.sku) &&
-        new Date(r.starts_at ?? 0) <= now &&
-        new Date(r.ends_at ?? 8640000000000000) >= now
+        new Date(r?.schedule?.starts_at ?? 0) <= now &&
+        new Date(r?.schedule?.ends_at ?? 8640000000000000) >= now
     );
 
     if (flashSale) {
@@ -306,7 +313,11 @@ export default function Info({
                   ? 'border-blue-500 text-blue-600'
                   : 'border-gray-300'
               }`}
-              onClick={() => setSelectedVariantId(v.id)}
+              onClick={() => {
+                setSelectedVariantId(v.id);
+                // Trigger gallery scroll to variant's first image
+                onVariantNameClick?.(v.id);
+              }}
             >
               {v.variant_name} ({vnd(v.price)})
             </button>
@@ -343,28 +354,52 @@ export default function Info({
               )
               .sort((a, b) => a.min_quantity - b.min_quantity)
               .map((r) => {
+                console.log('Pricing rule debug:', r);
+
                 const now = new Date();
 
-                // ✅ Kiểm tra hợp lệ cho từng loại pricing rule
                 const isValid = (() => {
+                  const now = new Date();
+
+                  // ❗ Rule tắt thì auto skip
+                  if (r.status !== 'active' || r.is_available === false)
+                    return false;
+
+                  // 🔥 FLASH SALE dùng schedule object
                   if (r.type === 'flash_sale') {
-                    if (!r.schedule) return false;
-                    const start = new Date(r.schedule.starts_at);
-                    const end = new Date(r.schedule.ends_at);
+                    const schedule = r.schedule;
+                    if (!schedule) return false;
+
+                    const start = schedule.starts_at
+                      ? new Date(schedule.starts_at)
+                      : null;
+                    const end = schedule.ends_at
+                      ? new Date(schedule.ends_at)
+                      : null;
+
+                    if (!start || !end) return false;
+
                     return now >= start && now <= end;
                   }
 
-                  const start = new Date(r.starts_at ?? 0);
-                  const end = new Date(r.ends_at ?? 8640000000000000);
-                  return (
-                    now >= start &&
-                    now <= end &&
-                    ((r.type === 'bulk' && quantity >= r.min_quantity) ||
-                      (r.type === 'subscription' &&
-                        quantity >= r.min_quantity &&
-                        quantity % r.min_quantity === 0) ||
-                      r.type === 'normal')
-                  );
+                  // 🟢 Các rule khác dùng root dates
+                  const start = r.starts_at ? new Date(r.starts_at) : null;
+                  const end = r.ends_at ? new Date(r.ends_at) : null;
+
+                  const inTimeRange =
+                    (!start || now >= start) && (!end || now <= end);
+                  if (!inTimeRange) return false;
+
+                  // 📌 Phụ thuộc rule type
+                  if (r.type === 'bulk') return quantity >= r.min_quantity;
+
+                  if (r.type === 'subscription')
+                    return (
+                      quantity >= r.min_quantity &&
+                      quantity % r.min_quantity === 0
+                    );
+
+                  return true;
                 })();
 
                 const isActive = selectedRuleId === r.id;
