@@ -84,7 +84,7 @@ export class GroupOrdersGateway
       await client.join(room);
 
       // Lấy lại group từ DB/service
-      const group = await this.groupOrdersService.getGroupOrderById(groupId);
+      const group = await this.groupOrdersService.getGroupOrderById(groupId, userId);
 
       // Tìm thông tin member
       const member = (group.members ?? []).find((m: any) => m?.user?.id === userId) ?? null;
